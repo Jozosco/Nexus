@@ -1,0 +1,31 @@
+# llms.txt — Project Nexus
+# Structured manifest for AI agent and LLM ingestion.
+# Standard: https://llmstxt.org
+
+# Project
+> Nexus: Imported Raw Material Supply Chain Intelligence Hub
+> Soybean oil procurement risk minimization via hybrid quantitative + qualitative analysis.
+> Outputs: G1 variable importance alerts · G2 price band forecast · G3 Bear/Bull/Hold signal.
+
+## Core Documentation
+- README: /README.md
+- Agent operating rules: /CLAUDE.md
+- Agent memory + failure log: /MEMORY.md
+- Sub-agent skill definitions: /Skills.md
+
+## Path-Scoped Rules (load only when relevant)
+- Approved libraries (Python + R): /.claude/rules/libraries.md
+- G1/G2/G3 modeling protocols: /.claude/rules/modeling.md
+- Snowflake + API pipeline patterns: /.claude/rules/data_pipeline.md
+- Testing protocol (pytest, great_expectations): /.claude/rules/testing.md
+
+## External References (Approved Data Sources)
+- USDA WASDE reports: https://www.usda.gov/oce/commodity/wasde/
+- ENSO / El Niño monitor: https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/
+- US EPA Renewable Fuel Standard: https://www.epa.gov/renewable-fuel-standard-program
+- Baltic Dry Index: https://www.balticexchange.com/en/data/indices/bdi.html
+- FRED (Fed rates, CPI, FX): https://fred.stlouisfed.org/
+
+## Project Scope
+- In scope: Soybean oil (대두유) · Origins: US, Argentina, Brazil, Vietnam · CFR basis
+- Out of scope: Other raw materials · Autonomous procurement execution · On-premise systems
