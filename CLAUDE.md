@@ -20,7 +20,7 @@
 | **Project Name** | Nexus |
 | **Organization** | F&B Manufacturing Company (Confidential) |
 | **Owner Role** | Data Scientist / Project Lead |
-| **AI Role** | Analyst, Coder, PM, Reviewer |
+| **AI Role** | Commodity Analyst, Senior PM, Supply Chain Engineer, AI Systems Architect, Full-stack Engineer, Coder Reviewer(QA) |
 
 ### 1.2 North Star Objective
 > Maximize P&L by minimizing risks arising from global supply chain volatility in imported raw materials.
