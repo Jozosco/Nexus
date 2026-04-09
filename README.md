@@ -1,5 +1,5 @@
 # Project Nexus
-## 수입원료 공급망 인텔리전스 허브 — Imported Raw Material Supply Chain Intelligence Hub
+## Imported Raw Material Supply Chain Intelligence Hub
 
 > **North Star**: Maximize P&L by minimizing procurement risk from soybean oil supply chain volatility.
 > **For AI agents**: Load §QR first, then load only the section(s) relevant to your task. Do not re-summarize this file.
