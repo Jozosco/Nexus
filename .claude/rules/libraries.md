@@ -41,6 +41,10 @@ mapie >= 0.8            # G2: Conformal Quantile Regression (CQR) / prediction i
 pulp >= 2.7             # linear/mixed-integer programming
 scipy >= 1.12           # scipy.optimize as fallback
 
+# Multi-LLM Integration (src/utils/)
+openai >= 1.30              # OpenAI API + Perplexity (OpenAI-compatible endpoint)
+google-generativeai >= 0.7  # Gemini API (⚠ not the same as google-cloud-aiplatform)
+
 # Cloud Connectors
 snowflake-connector-python >= 3.5   # Snowflake access
 azureml-sdk >= 1.56                 # Azure ML pipeline integration

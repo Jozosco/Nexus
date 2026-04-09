@@ -1,0 +1,67 @@
+name: LLM API Health Check
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"   # 매주 월요일 오전 9시 (UTC) — 주간 시작 전 확인
+  workflow_dispatch:        # 수동 실행 허용
+
+jobs:
+  check-llm-apis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install openai google-generativeai httpx
+
+      - name: Check Perplexity API
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os
+          from openai import OpenAI
+          client = OpenAI(api_key=os.environ["PERPLEXITY_API_KEY"],
+                          base_url="https://api.perplexity.ai")
+          r = client.chat.completions.create(
+              model="llama-3.1-sonar-small-128k-online",
+              messages=[{"role":"user","content":"Ping: respond with OK only"}]
+          )
+          assert "ok" in r.choices[0].message.content.lower(), "Perplexity 응답 이상"
+          print("✅ Perplexity API 정상")
+          EOF
+
+      - name: Check Gemini API
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os
+          import google.generativeai as genai
+          genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+          model = genai.GenerativeModel("gemini-1.5-flash")
+          r = model.generate_content("Ping: respond with OK only")
+          assert "ok" in r.text.lower(), "Gemini 응답 이상"
+          print("✅ Gemini API 정상")
+          EOF
+
+      - name: Check OpenAI API
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os
+          from openai import OpenAI
+          client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+          r = client.chat.completions.create(
+              model="gpt-4o-mini",
+              messages=[{"role":"user","content":"Ping: respond with OK only"}]
+          )
+          assert "ok" in r.choices[0].message.content.lower(), "OpenAI 응답 이상"
+          print("✅ OpenAI API 정상")
+          EOF

@@ -53,3 +53,7 @@
 | Date | ID | Category | Issue | Resolution |
 |---|---|---|---|---|
 | 2026-04-03 | S-001 | Setup | Initial project scaffolding | CLAUDE.md, README.md, Skills.md, MEMORY.md, .claude/rules/ created |
+| 2026-04-09 | S-002 | Setup | Multi-LLM integration | src/utils/ created: llm_router.py, perplexity_client.py, gemini_client.py, openai_client.py. Keys: PERPLEXITY_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY (store in GitHub Secrets + Azure Key Vault — never in code) |
+| 2026-04-09 | L-004 | Library | ChatGPT Team ≠ OpenAI API | ChatGPT Team subscription does not include API access. Obtain separate API key from platform.openai.com with billing enabled |
+| 2026-04-09 | L-005 | Library | Gemini AI Pro ≠ Gemini API | Gemini AI Pro (Google One) subscription does not auto-provision API access. Use aistudio.google.com to generate a separate API key |
+| 2026-04-09 | L-006 | Library | Perplexity API model names change frequently | Use PERPLEXITY_ONLINE_MODEL constant in perplexity_client.py rather than hardcoding model strings |
