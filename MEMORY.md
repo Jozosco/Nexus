@@ -57,3 +57,4 @@
 | 2026-04-09 | L-004 | Library | ChatGPT Team ≠ OpenAI API | ChatGPT Team subscription does not include API access. Obtain separate API key from platform.openai.com with billing enabled |
 | 2026-04-09 | L-005 | Library | Gemini AI Pro ≠ Gemini API | Gemini AI Pro (Google One) subscription does not auto-provision API access. Use aistudio.google.com to generate a separate API key |
 | 2026-04-09 | L-006 | Library | Perplexity API model names change frequently | Use PERPLEXITY_ONLINE_MODEL constant in perplexity_client.py rather than hardcoding model strings |
+| 2026-04-10 | PM-001 | PM Session | Session 01: WBS 초안 수립, C-01/C-02 스킬 파일 완성, Phase 1 상세 WBS 작성 완료 | 다음 세션: B-001(Azure KV) 해결 확인 → phase1/ 스킬 파일 5개 작성 → WBS 1.1.1 착수 |
