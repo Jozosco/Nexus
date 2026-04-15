@@ -58,3 +58,7 @@
 | 2026-04-09 | L-005 | Library | Gemini AI Pro ≠ Gemini API | Gemini AI Pro (Google One) subscription does not auto-provision API access. Use aistudio.google.com to generate a separate API key |
 | 2026-04-09 | L-006 | Library | Perplexity API model names change frequently | Use PERPLEXITY_ONLINE_MODEL constant in perplexity_client.py rather than hardcoding model strings |
 | 2026-04-10 | PM-001 | PM Session | Session 01: WBS 초안 수립, C-01/C-02 스킬 파일 완성, Phase 1 상세 WBS 작성 완료 | 다음 세션: B-001(Azure KV) 해결 확인 → phase1/ 스킬 파일 5개 작성 → WBS 1.1.1 착수 |
+| 2026-04-15 | L-007 | Library | Perplexity 모델명 일괄 변경 (2025년) — llama-3.1-sonar-* 포맷 전면 폐기 | sonar-pro (구 large), sonar-deep-research (구 huge), sonar (구 small). perplexity_client.py 상수 업데이트 완료. llm_health_check.yml ping 모델도 sonar로 수정 |
+| 2026-04-15 | S-003 | Setup | Stream idle timeout 발생 원인 | Write 도구로 200줄 이상 파일 생성 시 스트림 타임아웃. 해결: 파일을 섹션별로 분할 작성 후 개별 커밋 |
+| 2026-04-15 | S-004 | Setup | GitHub 미반영 반복 원인 | 세션 컨텍스트 소진 시 git commit/push 단계 미도달. 해결: 파일 생성 즉시 소규모 커밋 → 대형 파일 작성 전 먼저 push |
+| 2026-04-15 | PM-002 | PM Session | Session 02-03: FRED/EIA/BOK ECOS API 등록 완료. P1-01/P1-02 스킬 파일, Phase 1 가이드, docs/research_desk/MEMORY.md, src/analytics/importance_matrix.json 생성. 작업 환경: Claude Code+GitHub → VS Code Web(Azure ML) → Snowflake | 다음 세션: WBS 한국어 개정(Plan/Execute 분리, 1.6 보고 체계 추가) → Gantt CSV → P1-03/P1-04/P1-05 스킬 파일 작성 → WBS 1.1.1 착수(C-04+P1-05) |

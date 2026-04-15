@@ -1,201 +1,130 @@
-# Phase 1 — Foundation: Detailed WBS
-> **Version**: 1.0 · **Date**: 2026-04-10 · **Owner**: C-01 Senior PM
-> **Phase Goal**: 모든 분석의 토대가 되는 데이터 파이프라인 구축 및 G1 변수 풀 확정
-> **Total Estimated Effort**: ~520h
-> **Dependencies**: 1.1 and 1.2 must be ≥ 80% complete before 1.3 can begin. 1.3 must be complete before 1.4. 1.4 must be complete before Phase 2 kickoff.
+# Phase 1 — Foundation: 상세 WBS (한국어)
+> **버전**: 2.0 · **기준일**: 2026-04-15 · **작성자**: C-01 Senior PM
+> **Phase 목표**: 외부·내부 데이터 파이프라인 구축 + G1 변수 풀 확정
+> **총 예상 공수**: ~560h (1.6 보고 체계 포함)
+> **실행 환경**: CC = Claude Code/GitHub · VS = VS Code Web (Azure ML) · SF = Snowflake · PP = Perplexity
+>
+> **열 설명**: `계획 시작/완료` = 최초 계획(고정) · `실제 시작/완료` = 실행 중 기록(빈칸=미착수)
 
 ---
 
-## Dependency Map
+## 의존성 구조
 
 ```
-1.1 External Pipeline ──┐
-                        ├──► 1.3 EDA ──► 1.4 Variable Pool ──► Phase 2
-1.2 Internal Pipeline ──┘
-                                          ↓
-                                     1.5 Baselines (parallel with 1.4)
-```
-
----
-
-## 1.1 External Data Pipeline (~152h)
-*담당 주요 에이전트: C-04 (인프라), P1-05 (API 설계)*
-*선행조건: .env.template에 API 키 환경 변수 설정 완료*
-
-### Deliverable: Snowflake Raw Schema
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.1.1 | Design Snowflake Raw Schema for External Indicators | C-04 + P1-05 | 16h | — | ⬜ |
-
-**1.1.1 상세 산출물**:
-- Snowflake DDL 스크립트: `soybean_oil.raw.economic_indicators`, `soybean_oil.raw.shipping_indices`, `soybean_oil.raw.crop_data`, `soybean_oil.raw.climate_data`, `soybean_oil.raw.geopolitical_indices`
-- 각 테이블: `price_date DATE`, `source_name VARCHAR`, `indicator_code VARCHAR`, `value FLOAT`, `unit VARCHAR`, `ingested_at TIMESTAMP` 컬럼 포함
-- YAML 스키마 파일: `data/schemas/external_*.yaml`
-
-### Deliverable: Economic & Trade Connectors
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.1.2 | Implement Economic Indicators Connector (Fed, CPI, KRW/USD, WTI) | C-04 | 24h | 1.1.1 | ⬜ |
-| 1.1.3 | Implement Shipping Index Connector (BDI, SCFI) | C-04 | 16h | 1.1.1 | ⬜ |
-
-**1.1.2 데이터 소스 매핑**:
-| 지표 | 소스 API | 업데이트 주기 | 비고 |
-|---|---|---|---|
-| Fed 기준금리 | FRED API (fred.stlouisfed.org) | 회의 시 | 무료 API키 필요 |
-| 글로벌 CPI | FRED / World Bank API | 월간 | |
-| KRW/USD 환율 | 한국은행 ECOS API | 일간 | T+2 결제일 오프셋 적용 필수 (MEMORY M-002) |
-| WTI/Brent 유가 | EIA API (eia.gov) | 일간 | 무료 API키 필요 |
-
-**1.1.3 데이터 소스 매핑**:
-| 지표 | 소스 | 업데이트 주기 | 비고 |
-|---|---|---|---|
-| BDI | Baltic Exchange (유료 또는 Perplexity 대체) | 일간 | 유료 직접 API — Perplexity로 대체 가능 (HITL 확인 필요) |
-| SCFI | Shanghai Shipping Exchange | 주간 | |
-
-### Deliverable: Agricultural & Climate Connectors
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.1.4 | Implement WASDE/USDA Crop Data Connector | P1-05 | 24h | 1.1.1 | ⬜ |
-| 1.1.5 | Implement ENSO/Weather Anomaly API Connector | P1-05 | 16h | 1.1.1 | ⬜ |
-
-**1.1.4 데이터 소스 매핑**:
-| 지표 | 소스 API | 업데이트 주기 |
-|---|---|---|
-| WASDE 대두 수급 | USDA PSD API (apps.fas.usda.gov) | 월간 (매월 둘째 주) |
-| 원산지별 작황 | USDA NASS API | 분기 |
-
-**1.1.5 데이터 소스 매핑**:
-| 지표 | 소스 | 업데이트 주기 |
-|---|---|---|
-| ENSO 페이즈 | NOAA CPC API (cpc.ncep.noaa.gov) | 격주 |
-| 원산지 날씨 이상 | OpenWeatherMap API (아르헨티나, 브라질, 미국 콩 재배 주요 지역) | 일간 |
-
-### Deliverable: Geopolitical Connector
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.1.6 | Implement Geopolitical Risk Index Connector | P1-05 | 24h | 1.1.1 | ⬜ |
-
-**1.1.6 접근 방법**: 공개 GPR 지수 (Caldara & Iacoviello) 다운로드 + Perplexity C-02 실시간 뉴스 스코어링으로 보완
-
-### Deliverable: Pipeline Operations
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.1.7 | Configure API Retry Logic and GitHub Actions Daily Schedule | C-04 | 16h | 1.1.2~1.1.6 | ⬜ |
-| 1.1.8 | Validate External Pipeline Data Quality (great_expectations suite) | C-08 | 8h | 1.1.7 | ⬜ |
-| 1.1.9 | Document External Data Schemas in data/schemas/ | C-07 | 8h | 1.1.8 | ⬜ |
-
-**1.1.7 GitHub Actions 스케줄**:
-```yaml
-# .github/workflows/external_data_refresh.yml
-schedule:
-  - cron: "0 1 * * 1-5"   # 평일 오전 1시 UTC (한국 오전 10시)
+즉시 착수 (선행 없음) : 1.1.1 · 1.2.1 · 1.2.2 · 1.2.3
+1.1.1 완료 후 (병행)  : 1.1.2 · 1.1.3 · 1.1.4 · 1.1.5 · 1.1.6
+1.1.2~6 완료 후       : 1.1.7 → 1.1.8 → 1.1.9
+1.1.8 완료 후 (병행)  : 1.3.1 · 1.3.2 · 1.5.1 · 1.5.2
+1.5.1+1.5.2 완료 후   : 1.5.3 → 1.5.4
+1.2.4 완료 후 (블로커): 1.2.5 → 1.2.6 → 1.3.3 · 1.3.4
+1.3.1~1.3.4 완료 후   : 1.3.5 → 1.4.1 → 1.4.2·1.4.3·1.4.4 → 1.4.5 → 1.4.6 → 1.4.7
+보고 체계 (1.6)        : 주간(1.1.7~) · 월간(1.4.1~) · 분기(1.4.7~)
 ```
 
 ---
 
-## 1.2 Internal Data Pipeline (~104h)
-*담당 주요 에이전트: C-04 (인프라 설계)*
-*⚠️ 주요 블로커: 사내 ERP → Snowflake 연동에 IT 부서 승인 및 DB 계정 발급 필요*
+## 1.1 외부 데이터 파이프라인 (~152h)
 
-### Deliverable: Internal Snowflake Schemas
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.2.1 | Design Snowflake Schema for S&OP Data | C-04 | 16h | — | ⬜ |
-| 1.2.2 | Design Snowflake Schema for Procurement History | C-04 | 16h | — | ⬜ |
-| 1.2.3 | Design Snowflake Schema for Inventory and Logistics | C-04 | 16h | — | ⬜ |
+| WBS ID | 작업명 | 담당 | h | 환경 | 계획 시작 | 계획 완료 | 실제 시작 | 실제 완료 | 선행 | 상태 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1.1.1 | 외부 지표 Snowflake Raw 스키마 설계 | C-04+P1-05 | 16 | CC | 2026-04-14 | 2026-04-15 | | | — | ⬜ |
+| 1.1.2 | 경제 지표 커넥터 구현 (Fed/CPI/FX/WTI) | C-04 | 24 | VS | 2026-04-16 | 2026-04-20 | | | 1.1.1 | ⬜ |
+| 1.1.3 | 해운 지수 커넥터 구현 (BDI/SCFI) | C-04 | 16 | VS | 2026-04-21 | 2026-04-22 | | | 1.1.1 | ⬜ |
+| 1.1.4 | WASDE/USDA 작황 커넥터 구현 | P1-05 | 24 | VS | 2026-04-16 | 2026-04-20 | | | 1.1.1 | ⬜ |
+| 1.1.5 | ENSO/기상이상 커넥터 구현 | P1-05 | 16 | VS | 2026-04-21 | 2026-04-22 | | | 1.1.1 | ⬜ |
+| 1.1.6 | 지정학 리스크 지수 커넥터 구현 | P1-05 | 24 | VS | 2026-04-16 | 2026-04-20 | | | 1.1.1 | ⬜ |
+| 1.1.7 | API 재시도 로직 + Actions 일일 스케줄 설정 | C-04 | 16 | CC | 2026-04-28 | 2026-04-29 | | | 1.1.2~1.1.6 | ⬜ |
+| 1.1.8 | 외부 파이프라인 데이터 품질 검증 (GE) | C-08 | 8 | VS | 2026-04-30 | 2026-04-30 | | | 1.1.7 | ⬜ |
+| 1.1.9 | 외부 데이터 스키마 문서화 (data/schemas/) | C-07 | 8 | CC | 2026-05-05 | 2026-05-05 | | | 1.1.8 | ⬜ |
 
-**1.2.1 S&OP 스키마 포함 필드**:
-`product_code`, `soybean_oil_input_kg_per_unit`, `production_plan_month`, `mps_qty`, `actual_qty`, `mape_pct`, `seasonality_coefficient`
+**1.1.2 API 소스 매핑** (키 모두 GitHub Secrets 등록 완료 ✅)
 
-**1.2.2 Procurement 스키마 포함 필드**:
-`order_id`, `order_date`, `eta_date`, `actual_arrival_date`, `qty_mt`, `contract_price_usd_mt`, `supplier_id`, `origin_country`, `contract_type`, `hedging_pnl_krw`, `lead_time_days_variance`
-
-**1.2.3 Inventory/Logistics 스키마 포함 필드**:
-`snapshot_date`, `crude_oil_stock_mt`, `refined_oil_stock_mt`, `monthly_consumption_mt`, `turnover_rate`, `inbound_stage` (`order|shipment|customs|arrival`), `stage_date`
-
-### Deliverable: ERP Sync Pipeline
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.2.4 | Implement Snowflake ERP Sync Pipeline | C-04 | 40h | 1.2.1~1.2.3 + IT 승인 | 🚫 |
-| 1.2.5 | Validate Internal Pipeline Data Quality | C-08 | 8h | 1.2.4 | ⬜ |
-| 1.2.6 | Document Internal Data Schemas | C-07 | 8h | 1.2.5 | ⬜ |
-
-> 🚫 **1.2.4 블로커 상세**: 사내 ERP(MES 포함) 직접 접속 불가 — IT 보안 정책상 외부 클라우드 직접 연결 제한. 해결 옵션: (A) 사내 IT 부서가 Snowflake 전용 계정 생성 및 정기 데이터 덤프 → Azure Blob 경유 수동 업로드, (B) 주간 Excel 추출 → Snowpark로 처리 (단, `openpyxl` 금지 — CSV로 중간 변환 필요). **HITL 승인 필요**: IT 부서 협의 경로 확정.
-
----
-
-## 1.3 EDA & Data Quality Reports (~72h)
-*담당 주요 에이전트: C-06 (EDA), C-08 (검증)*
-*선행조건: 1.1.8 + 1.2.5 완료 후 시작*
-
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.3.1 | Execute EDA on External Price Indicators (경제/무역 지표) | C-06 | 16h | 1.1.8 | ⬜ |
-| 1.3.2 | Execute EDA on Climate and Crop Yield Data | C-06 | 16h | 1.1.8 | ⬜ |
-| 1.3.3 | Execute EDA on Internal S&OP and Production Data | C-06 | 16h | 1.2.5 | ⬜ |
-| 1.3.4 | Execute EDA on Procurement and Logistics History | C-06 | 16h | 1.2.5 | ⬜ |
-| 1.3.5 | Compile Integrated EDA Summary Report | C-07 | 8h | 1.3.1~1.3.4 | ⬜ |
-
-**각 EDA 작업 산출물 (C-06 output contract 기준)**:
-- 결측값/이상값 리포트 (`reports/eda/[dataset]_quality.md`)
-- 시계열 시각화: 분포, ACF/PACF, STL 분해 (`reports/eda/[dataset]_*.html`)
-- ADF + KPSS 정상성 검정 결과
-- 최소 데이터 길이 확인 (24개월 이상 — MEMORY M-004)
-- 모델링 전 필수 처리 항목 목록
-
----
-
-## 1.4 G1 Variable Pool Definition (~120h)
-*담당 주요 에이전트: C-02, P1-01, P1-02, P1-03, P1-04, C-03*
-*선행조건: 1.3.5 EDA 통합 보고서 완료*
-
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.4.1 | Collect Global Market Intelligence Brief (6년 이력 + 현재 동향) | C-02 | 24h | 1.3.5 | ⬜ |
-| 1.4.2 | Analyze Geopolitical and Trade Risk Landscape | P1-02 | 24h | 1.4.1 | ⬜ |
-| 1.4.3 | Analyze Climate and Crop Risk Landscape (ENSO 중심) | P1-03 | 16h | 1.4.1 | ⬜ |
-| 1.4.4 | Analyze Supply Chain and Logistics Risk (BDI/SCFI/리드타임) | P1-04 | 16h | 1.4.1 | ⬜ |
-| 1.4.5 | Identify and Rank Top 20 Candidate Price Variables | P1-01 | 24h | 1.4.2~1.4.4 | ⬜ |
-| 1.4.6 | Score Variables by Data Availability and Predictive Value | C-03 | 8h | 1.4.5 | ⬜ |
-| 1.4.7 | Document Final Variable Pool and Rationale | C-07 | 8h | 1.4.6 | ⬜ |
-
-**1.4.5 변수 선정 기준**:
-1. 데이터 가용성: 2020–2025 6년간 연속 수집 가능 여부
-2. 업데이트 빈도: 일간 또는 주간 (월간은 G2/G3에서 사용)
-3. 선행 지표성: 대두유 가격 변동 최소 4주 전 시그널 발생 여부
-4. 수집 비용: 무료 API 우선; 유료는 HITL 승인 후 포함
-
-**1.4.7 산출물**: `reports/variable_pool/g1_variable_pool_v1.md` — 변수명, 소스, 업데이트 주기, 예상 시차(lag), 포함 근거 포함
-
----
-
-## 1.5 Baseline Model Benchmarks (~40h)
-*담당 주요 에이전트: C-03 (모델), C-05 (리뷰)*
-*선행조건: 1.3.1 (외부 가격 EDA) 완료 후 병행 가능*
-
-| WBS ID | 작업명 | 담당 | 공수 | 선행 | 상태 |
-|---|---|---|---|---|---|
-| 1.5.1 | Implement Seasonal Naive Price Baseline (전년 동기 대비) | C-03 | 8h | 1.3.1 | ⬜ |
-| 1.5.2 | Implement Last-Value Naive Baseline (전일 가격 = 예측) | C-03 | 8h | 1.3.1 | ⬜ |
-| 1.5.3 | Compute Baseline Performance Metrics (MAPE, RMSE, 방향 정확도) | C-03 | 16h | 1.5.1~1.5.2 | ⬜ |
-| 1.5.4 | Review Baseline Code Quality | C-05 | 8h | 1.5.3 | ⬜ |
-
-**1.5.3 산출물 형식** (testing.md Model Baseline Requirement 기준):
-```
-| 지표 | 계절 나이브 | 전일 값 나이브 |
-|---|---|---|
-| MAPE | X% | Y% |
-| RMSE | X | Y |
-| 방향 정확도 | X% | Y% |
-```
-
----
-
-## Phase 1 리스크 레지스터
-
-| # | 리스크 | 발생 가능성 | 영향도 | 완화 방안 |
+| 지표 | API | 환경변수 | 주기 | 비고 |
 |---|---|---|---|---|
-| R-01 | 사내 ERP 연동 IT 승인 지연 | 높음 | 높음 | 1.2.4 우선 IT 협의 착수; 임시 수동 CSV 추출 방식 병행 |
-| R-02 | BDI 직접 API 유료 — 비용 미승인 | 중간 | 중간 | Perplexity 기반 C-02 수집으로 대체 가능; HITL 확인 |
-| R-03 | 외부 API 데이터 품질 불량 (결측 > 5%) | 중간 | 중간 | 1.1.8 great_expectations gate; 데이터 충분성 기준 미달 시 1.4.5에서 해당 변수 제외 |
-| R-04 | 내부 S&OP 데이터 < 24개월 | 낮음 | 높음 | 1.3.3 EDA에서 조기 탐지; MEMORY M-004 fallback(ETS) 적용 |
+| Fed 기준금리 | FRED (fred.stlouisfed.org) | `FRED_API_KEY` | 회의 시 | 무료 |
+| 글로벌 CPI | FRED / World Bank | `FRED_API_KEY` | 월간 | |
+| KRW/USD 환율 | BOK ECOS (ecos.bok.or.kr) | `BOK_ECOS_API_KEY` | 일간 | **T+2 오프셋 필수 (M-002)** |
+| WTI/Brent 유가 | EIA (eia.gov/opendata) | `EIA_API_KEY` | 일간 | 무료 |
+
+---
+
+## 1.2 내부 데이터 파이프라인 (~104h)
+
+| WBS ID | 작업명 | 담당 | h | 환경 | 계획 시작 | 계획 완료 | 실제 시작 | 실제 완료 | 선행 | 상태 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1.2.1 | S&OP 스키마 설계 | C-04 | 16 | CC | 2026-04-14 | 2026-04-15 | | | — | ⬜ |
+| 1.2.2 | 구매 이력 스키마 설계 | C-04 | 16 | CC | 2026-04-14 | 2026-04-15 | | | — | ⬜ |
+| 1.2.3 | 재고·물류 스키마 설계 | C-04 | 16 | CC | 2026-04-14 | 2026-04-15 | | | — | ⬜ |
+| 1.2.4 | ERP 동기화 파이프라인 구현 | C-04 | 40 | VS+SF | 🚫 IT 승인 후 | — | | | 1.2.1~1.2.3+IT | 🚫 |
+| 1.2.5 | 내부 파이프라인 데이터 품질 검증 | C-08 | 8 | VS | 🚫 | — | | | 1.2.4 | 🚫 |
+| 1.2.6 | 내부 스키마 문서화 | C-07 | 8 | CC | 🚫 | — | | | 1.2.5 | 🚫 |
+
+> **1.2.4 블로커**: IT 보안 정책상 ERP → 외부 클라우드 직접 연결 제한.
+> 임시 방안 A: IT 부서 전용 계정 발급 → Azure Blob 수동 업로드.
+> 임시 방안 B: 주간 CSV 추출 → Snowpark 처리 (openpyxl 금지 — CSV 중간 변환).
+
+---
+
+## 1.3 EDA 및 데이터 품질 보고서 (~72h)
+
+| WBS ID | 작업명 | 담당 | h | 환경 | 계획 시작 | 계획 완료 | 실제 시작 | 실제 완료 | 선행 | 상태 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1.3.1 | 외부 가격 지표 EDA (경제·무역 지표) | C-06 | 16 | VS | 2026-05-06 | 2026-05-07 | | | 1.1.8 | ⬜ |
+| 1.3.2 | 기후·작황 데이터 EDA | C-06 | 16 | VS | 2026-05-06 | 2026-05-07 | | | 1.1.8 | ⬜ |
+| 1.3.3 | 내부 S&OP·생산 데이터 EDA | C-06 | 16 | VS | 🚫 | — | | | 1.2.5 | 🚫 |
+| 1.3.4 | 구매·물류 이력 EDA | C-06 | 16 | VS | 🚫 | — | | | 1.2.5 | 🚫 |
+| 1.3.5 | 통합 EDA 요약 보고서 | C-07 | 8 | CC | 2026-05-19 | 2026-05-19 | | | 1.3.1~1.3.4 | ⬜ |
+
+---
+
+## 1.4 G1 변수 풀 정의 (~120h)
+
+| WBS ID | 작업명 | 담당 | h | 환경 | 계획 시작 | 계획 완료 | 실제 시작 | 실제 완료 | 선행 | 상태 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1.4.1 | 글로벌 시장 인텔리전스 브리프 수집 | C-02+P1-01 | 24 | CC+PP | 2026-05-20 | 2026-05-22 | | | 1.3.5 | ⬜ |
+| 1.4.2 | 지정학·무역 리스크 현황 분석 | P1-02 | 24 | CC+PP | 2026-05-26 | 2026-05-28 | | | 1.4.1 | ⬜ |
+| 1.4.3 | 기후·작황 리스크 현황 분석 (ENSO 중심) | P1-03 | 16 | CC+PP | 2026-05-26 | 2026-05-27 | | | 1.4.1 | ⬜ |
+| 1.4.4 | 공급망·물류 리스크 분석 (BDI/SCFI/리드타임) | P1-04 | 16 | CC+PP | 2026-05-26 | 2026-05-27 | | | 1.4.1 | ⬜ |
+| 1.4.5 | 상위 20개 가격 후보 변수 식별·순위 결정 | P1-01 | 24 | CC | 2026-06-02 | 2026-06-04 | | | 1.4.2~1.4.4 | ⬜ |
+| 1.4.6 | 데이터 가용성·예측력 기준 변수 점수화 | C-03 | 8 | CC | 2026-06-09 | 2026-06-09 | | | 1.4.5 | ⬜ |
+| 1.4.7 | 최종 변수 풀 및 근거 문서화 | C-07 | 8 | CC | 2026-06-10 | 2026-06-10 | | | 1.4.6 | ⬜ |
+
+---
+
+## 1.5 기준선 모델 벤치마크 (~40h)
+
+| WBS ID | 작업명 | 담당 | h | 환경 | 계획 시작 | 계획 완료 | 실제 시작 | 실제 완료 | 선행 | 상태 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1.5.1 | 계절 나이브 기준선 구현 (전년 동기 대비) | C-03 | 8 | VS | 2026-05-07 | 2026-05-07 | | | 1.3.1 | ⬜ |
+| 1.5.2 | 전일 값 나이브 기준선 구현 | C-03 | 8 | VS | 2026-05-07 | 2026-05-07 | | | 1.3.1 | ⬜ |
+| 1.5.3 | 기준선 성능 지표 산출 (MAPE/RMSE/방향정확도) | C-03 | 16 | VS | 2026-05-12 | 2026-05-13 | | | 1.5.1~1.5.2 | ⬜ |
+| 1.5.4 | 기준선 코드 품질 리뷰 | C-05 | 8 | CC | 2026-05-14 | 2026-05-14 | | | 1.5.3 | ⬜ |
+
+---
+
+## 1.6 운영 보고 체계 (~32h, 반복 작업)
+
+| WBS ID | 작업명 | 담당 | h/회 | 환경 | 주기 | 최초 시작 | 선행 | 상태 |
+|---|---|---|---|---|---|---|---|---|
+| 1.6.1 | 주간 외부 파이프라인 상태 보고 | C-08+C-07 | 2 | CC | 매주 월요일 | 2026-04-30 | 1.1.7 | ⬜ |
+| 1.6.2 | 월간 시장 인텔리전스 브리프 | P1-01+C-02 | 8 | CC+PP | 매월 말일 | 2026-05-30 | 1.4.1 | ⬜ |
+| 1.6.3 | 월간 Phase 1 진행 보고 (PM 보고서) | C-01 | 4 | CC | 매월 말일 | 2026-04-30 | — | ⬜ |
+| 1.6.4 | 분기별 변수 풀·기준선 검토 보고 | P1-01+C-03 | 8 | CC | 분기말 | 2026-06-30 | 1.4.7 | ⬜ |
+
+**보고서 저장 경로**:
+- 1.6.1 → `reports/pipeline/YYYY-WNN_pipeline_status.md`
+- 1.6.2 → `reports/market/YYYY-MM_market_brief.md`
+- 1.6.3 → `reports/pm/YYYY-MM-DD_nexus_pm_report_NN.md`
+- 1.6.4 → `reports/quarterly/YYYY-QN_variable_pool_review.md`
+
+---
+
+## Phase 1 리스크 등록부
+
+| # | 리스크 | 가능성 | 영향도 | 완화 방안 |
+|---|---|---|---|---|
+| R-01 | 사내 ERP 연동 IT 승인 지연 | 높음 | 높음 | 1.2.4 우선 IT 협의; 임시 CSV 추출 병행 |
+| R-02 | BDI 직접 API 유료 — 미승인 | 중간 | 중간 | Perplexity C-02 대체; HITL 확인 |
+| R-03 | 외부 API 데이터 품질 불량 (결측>5%) | 중간 | 중간 | 1.1.8 GE 게이트; 미달 변수 1.4.5 제외 |
+| R-04 | 내부 S&OP 데이터 <24개월 | 낮음 | 높음 | 1.3.3 EDA 조기 탐지; M-004 ETS 폴백 |
+| R-05 | Stream idle timeout (대형 파일 작성) | 높음 | 중간 | 파일 섹션별 분할 작성; 작성 직후 커밋 (MEMORY S-003) |
