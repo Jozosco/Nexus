@@ -1,0 +1,41 @@
+dataset: crop_data
+source_connector: src/pipeline/connectors/wasde_connector.py
+output_path: data/raw/crop_data_YYYYMMDD.parquet
+description: "USDA PSD 대두유 수급 데이터 (WBS 1.1.4)"
+note: "commodity_code=2222000 (Soybean Oil) — API 키 불필요"
+
+columns:
+  - name: price_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "마케팅 연도 시작일 (WASDE 기준 10월 1일)"
+
+  - name: source_name
+    dtype: object
+    nullable: false
+    description: "데이터 출처 (USDA_PSD)"
+
+  - name: indicator_code
+    dtype: object
+    nullable: false
+    description: "지표 코드 (SBO_{attributeId})"
+
+  - name: country
+    dtype: object
+    nullable: true
+    description: "국가명"
+
+  - name: value
+    dtype: float64
+    nullable: false
+    description: "수급량 (1000 MT)"
+
+  - name: unit
+    dtype: object
+    nullable: true
+    description: "1000 MT"
+
+  - name: ingested_at
+    dtype: datetime64[ns]
+    nullable: false
+    description: "수집 시각 (UTC)"

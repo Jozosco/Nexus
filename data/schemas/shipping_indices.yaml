@@ -1,0 +1,41 @@
+dataset: shipping_indices
+source_connector: src/pipeline/connectors/shipping_connector.py
+output_path: data/raw/shipping_indices_YYYYMMDD.parquet
+description: "BDI (Baltic Dry Index) · SCFI (Shanghai Containerized Freight Index) (WBS 1.1.3)"
+note: "직접 API 불가 (B-003 블로커) — Perplexity sonar-pro 프록시 사용"
+
+columns:
+  - name: price_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "수집일 (Perplexity 응답 기준 today)"
+
+  - name: source_name
+    dtype: object
+    nullable: false
+    description: "데이터 출처 (Perplexity/BalticExchange | Perplexity/SSE)"
+
+  - name: indicator_code
+    dtype: object
+    nullable: false
+    description: "지표 코드 (BDI | SCFI)"
+
+  - name: value
+    dtype: float64
+    nullable: false
+    description: "지수 포인트"
+
+  - name: unit
+    dtype: object
+    nullable: true
+    description: "points"
+
+  - name: note
+    dtype: object
+    nullable: true
+    description: "프록시 표시 ([PERPLEXITY-PROXY: B-003 블로커])"
+
+  - name: ingested_at
+    dtype: datetime64[ns]
+    nullable: false
+    description: "수집 시각 (UTC)"

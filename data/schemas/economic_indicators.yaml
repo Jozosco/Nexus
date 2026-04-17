@@ -1,0 +1,35 @@
+dataset: economic_indicators
+source_connector: src/pipeline/connectors/economic_connector.py
+output_path: data/raw/economic_indicators_YYYYMMDD.parquet
+description: "Fed 기준금리 · 글로벌 CPI · KRW/USD 환율 · Brent 유가 (WBS 1.1.2)"
+
+columns:
+  - name: price_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "관측일 (KRW/USD는 T+2 결제일 오프셋 소비 측 적용 — MEMORY M-002)"
+
+  - name: source_name
+    dtype: object
+    nullable: false
+    description: "데이터 출처 (FRED | EIA | BOK_ECOS)"
+
+  - name: indicator_code
+    dtype: object
+    nullable: false
+    description: "지표 코드 (FEDFUNDS | CPIAUCSL | BRENT_USD_BBL | KRW_USD)"
+
+  - name: value
+    dtype: float64
+    nullable: false
+    description: "지표 수치"
+
+  - name: unit
+    dtype: object
+    nullable: true
+    description: "단위 (downstream enrichment에서 채워짐)"
+
+  - name: ingested_at
+    dtype: datetime64[ns]
+    nullable: false
+    description: "수집 시각 (UTC)"
