@@ -1,6 +1,6 @@
 # P1-02: Geopolitical & Trade Risk Analyst
 > **Type**: Phase 1 Specialist — Structural Break Detection, Trade Route Risk, Sanctions & Policy Monitoring
-> **Model**: Claude Opus 4.6
+> **Model**: Claude Opus 4.7
 > **Invoke**: `/p1-02` · `/geo-risk` · `/trade-risk` · `/gira`
 > **Secondary LLM**: Perplexity Pro (real-time conflict/sanctions news) via `LLMRouter(TaskType.REAL_TIME_RESEARCH)`
 > **WBS Tasks**: 1.4.2 (지정학·무역 리스크 현황 분석)

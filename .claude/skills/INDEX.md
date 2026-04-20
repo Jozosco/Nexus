@@ -24,9 +24,9 @@
 
 | # | Agent | File | Primary Model | Secondary LLM | Core Purpose |
 |---|---|---|---|---|---|
-| P1-01 | Commodity Analyst | `phase1/01_commodity_analyst.md` | Claude Opus 4.6 | Perplexity Pro | Price fundamentals, supply/demand balance |
-| P1-02 | Geopolitical & Trade Risk Analyst | `phase1/02_geopolitical_analyst.md` | Claude Opus 4.6 | Perplexity Pro | Trade route risk, sanctions, conflict impact |
-| P1-03 | Agrometeorologist / Climate Specialist | `phase1/03_climate_specialist.md` | Claude Sonnet 4.6 | Perplexity Pro | ENSO, crop yield, weather risk |
+| P1-01 | Commodity Analyst | `phase1/01_commodity_analyst.md` | Claude Opus 4.7 | Perplexity Pro | Price fundamentals, supply/demand balance |
+| P1-02 | Geopolitical & Trade Risk Analyst | `phase1/02_geopolitical_analyst.md` | Claude Opus 4.7 | Perplexity Pro | Trade route risk, sanctions, conflict impact |
+| P1-03 | Agrometeorologist / Climate Specialist | `phase1/03_climate_specialist.md` | Claude Opus 4.7 | Perplexity Pro | ENSO, crop yield, AA protocols, agromet bulletins |
 | P1-04 | Supply Chain & Logistics Analyst | `phase1/04_supply_chain_analyst.md` | Claude Sonnet 4.6 | Perplexity Pro | BDI, lead-time, CFR route analysis |
 | P1-05 | Data Pipeline Architect | `phase1/05_pipeline_architect.md` | Claude Sonnet 4.6 | — | External API ingestion design, Snowflake schema |
 
@@ -34,8 +34,8 @@
 
 | # | Agent | File | Primary Model | Secondary LLM | Core Purpose |
 |---|---|---|---|---|---|
-| P2-01 | Commodity Financial Risk Manager | `phase2/01_risk_manager.md` | Claude Opus 4.6 | — | PaR, VaR, hedging P&L, capital exposure |
-| P2-02 | FID / Pricing & Regime Analyst | `phase2/02_fid_pricing_analyst.md` | Claude Opus 4.6 | — | Real-time Bear/Bull regime, futures pricing |
+| P2-01 | Commodity Financial Risk Manager | `phase2/01_risk_manager.md` | Claude Opus 4.7 | — | PaR, VaR, hedging P&L, capital exposure |
+| P2-02 | FID / Pricing & Regime Analyst | `phase2/02_fid_pricing_analyst.md` | Claude Opus 4.7 | — | Real-time Bear/Bull regime, futures pricing |
 | P2-03 | S&OP Integration Lead | `phase2/03_sop_lead.md` | Claude Sonnet 4.6 | — | MPS ↔ procurement alignment, demand signal |
 | P2-04 | NLP / Sentiment Analyst | `phase2/04_nlp_sentiment.md` | Claude Sonnet 4.6 | — | FinBERT scoring, news corpus, geopolitical index |
 | P2-05 | Statistical Time Series Modeler | `phase2/05_statistical_modeler.md` | Claude Sonnet 4.6 | — | ARIMA, GARCH, SARIMAX, Granger causality |
@@ -44,10 +44,10 @@
 
 | # | Agent | File | Primary Model | Secondary LLM | Core Purpose |
 |---|---|---|---|---|---|
-| P3-01 | DSS Analyst | `phase3/01_dss_analyst.md` | Claude Opus 4.6 | — | Decision synthesis, HITL interface, confidence scoring |
+| P3-01 | DSS Analyst | `phase3/01_dss_analyst.md` | Claude Opus 4.7 | — | Decision synthesis, HITL interface, confidence scoring |
 | P3-02 | 4PL Control Tower Manager | `phase3/02_control_tower.md` | Claude Sonnet 4.6 | — | End-to-end supply chain visibility, alert dispatch |
-| P3-03 | Strategic Procurement Negotiator | `phase3/03_procurement_negotiator.md` | Claude Opus 4.6 | Perplexity Pro | Contract strategy, spot market leverage, BATNA |
-| P3-04 | Scenario Planning Expert | `phase3/04_scenario_planner.md` | Claude Opus 4.6 | — | Monte Carlo, Bear/Bull/Neutral scenarios, stress tests |
+| P3-03 | Strategic Procurement Negotiator | `phase3/03_procurement_negotiator.md` | Claude Opus 4.7 | Perplexity Pro | Contract strategy, spot market leverage, BATNA |
+| P3-04 | Scenario Planning Expert | `phase3/04_scenario_planner.md` | Claude Opus 4.7 | — | Monte Carlo, Bear/Bull/Neutral scenarios, stress tests |
 | P3-05 | Procurement Optimizer | `phase3/05_procurement_optimizer.md` | Claude Sonnet 4.6 | — | LP/MIP, optimal buy quantity, multi-constraint solver |
 | P3-06 | Executive Reporting Agent | `phase3/06_executive_reporter.md` | Claude Sonnet 4.6 | — | C-suite dashboards, KPI reports, Korean stakeholder briefs |
 
@@ -93,10 +93,10 @@
 ```
 Task Type                   → Best LLM
 ─────────────────────────────────────────────────────
-Complex reasoning / strategy   → Claude Opus 4.6
+Complex reasoning / strategy   → Claude Opus 4.7
 Code generation / pipelines    → Claude Sonnet 4.6
 Style check / quick format     → Claude Haiku 4.5
 Real-time market research      → Perplexity Pro
-Large document analysis        → Gemini AI Pro (2M ctx)
+Large document analysis        → Gemini 2.5 Pro (2M ctx)
 Structured table extraction    → ChatGPT Team
 ```

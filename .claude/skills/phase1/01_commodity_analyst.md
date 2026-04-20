@@ -1,6 +1,6 @@
 # P1-01: Commodity Analyst — Soybean Oil
 > **Type**: Phase 1 Specialist — Variable Importance, Risk Alerting, Korean Market Modeling
-> **Model**: Claude Opus 4.6
+> **Model**: Claude Opus 4.7
 > **Invoke**: `/p1-01` · `/commodity` · `/risk-alert` · `/trade-brief`
 > **Secondary LLM**: Perplexity Pro (real-time research) via `LLMRouter(TaskType.REAL_TIME_RESEARCH)`
 > **WBS Tasks**: 1.4.1 (시장 인텔리전스 브리프) · 1.4.5 (상위 20 변수 선정) · 1.4.6 (변수 점수화)

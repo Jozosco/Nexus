@@ -10,9 +10,9 @@ from typing import Optional, Union
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
 
-# 최신 Gemini 모델 — 2M 토큰 컨텍스트 지원
-GEMINI_PRO_MODEL = "gemini-1.5-pro"
-GEMINI_FLASH_MODEL = "gemini-1.5-flash"  # 빠른 처리 / 저비용 (간단한 요약용)
+# 최신 Gemini 모델 — 2M 토큰 컨텍스트 지원 (2025 기준 최신)
+GEMINI_PRO_MODEL = "gemini-2.5-pro"      # 구: gemini-1.5-pro — 추론 강화, 컨텍스트 확장
+GEMINI_FLASH_MODEL = "gemini-2.0-flash"  # 구: gemini-1.5-flash — 속도/비용 최적화
 
 
 def get_gemini_model(model: str = GEMINI_PRO_MODEL) -> genai.GenerativeModel:

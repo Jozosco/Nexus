@@ -62,3 +62,5 @@
 | 2026-04-15 | S-003 | Setup | Stream idle timeout 발생 원인 | Write 도구로 200줄 이상 파일 생성 시 스트림 타임아웃. 해결: 파일을 섹션별로 분할 작성 후 개별 커밋 |
 | 2026-04-15 | S-004 | Setup | GitHub 미반영 반복 원인 | 세션 컨텍스트 소진 시 git commit/push 단계 미도달. 해결: 파일 생성 즉시 소규모 커밋 → 대형 파일 작성 전 먼저 push |
 | 2026-04-15 | PM-002 | PM Session | Session 02-03: FRED/EIA/BOK ECOS API 등록 완료. P1-01/P1-02 스킬 파일, Phase 1 가이드, docs/research_desk/MEMORY.md, src/analytics/importance_matrix.json 생성. 작업 환경: Claude Code+GitHub → VS Code Web(Azure ML) → Snowflake | 다음 세션: WBS 한국어 개정(Plan/Execute 분리, 1.6 보고 체계 추가) → Gantt CSV → P1-03/P1-04/P1-05 스킬 파일 작성 → WBS 1.1.1 착수(C-04+P1-05) |
+| 2026-04-20 | L-008 | Library | LLM 모델 업그레이드 (2025 최신) | Claude Opus 4.6 → Opus 4.7 (전략 분석 역할 전체: P1-01/02/03, P2-01/02, P3-01/03/04); Gemini 1.5-pro → 2.5-pro, 1.5-flash → 2.0-flash. gemini_client.py 상수 및 전체 스킬 파일 INDEX.md 업데이트 완료 |
+| 2026-04-20 | PM-003 | PM Session | Session 04: WBS 1.1.2~1.1.6 커넥터 5종(economic/shipping/wasde/climate/gpr) + GitHub Actions 병렬 워크플로우 + data/schemas/ YAML 5종 + 자동화 절차서 커밋. P1-03 스킬 파일(RISEN 프레임워크, AA 프로토콜 4종) 생성. LLM 모델 전체 업그레이드 완료 | 다음 세션: P1-04(공급망·물류) · P1-05(파이프라인 아키텍트) 스킬 파일 → WBS 1.1.1 Schema Design 착수 |
