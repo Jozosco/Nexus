@@ -28,7 +28,7 @@
 | P1-02 | Geopolitical & Trade Risk Analyst | `phase1/02_geopolitical_analyst.md` | Claude Opus 4.7 | Perplexity Pro | Trade route risk, sanctions, conflict impact |
 | P1-03 | Agrometeorologist / Climate Specialist | `phase1/03_climate_specialist.md` | Claude Opus 4.7 | Perplexity Pro | ENSO, crop yield, AA protocols, agromet bulletins |
 | P1-04 | Supply Chain & Logistics Analyst | `phase1/04_supply_chain_analyst.md` | Claude Opus 4.7 | Perplexity Pro | BDI, CFR optimization, ABCD value chain, 3-month lead-time |
-| P1-05 | Data Pipeline Architect | `phase1/05_pipeline_architect.md` | Claude Sonnet 4.6 | — | External API ingestion design, Snowflake schema |
+| ~~P1-05~~ | ~~Data Pipeline Architect~~ | *(폐기 — C-04에 흡수)* | — | — | WBS 1.1.1 schema design + 1.1.4~1.1.6 connectors → C-04 담당 |
 
 ### Tier 2 — Phase 2: Modeling Agents
 

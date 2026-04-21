@@ -198,22 +198,49 @@ jobs:
   #   # ai_quality_validator.py: Claude Haiku 4.5로 각 parquet의 이상값·결측치 탐지 후
   #   # GitHub PR comment 또는 Issues로 자동 리포트 (MCP GitHub 툴 연동)
 
-  # ── Phase B 준비: Snowflake 업로드 (현재 비활성 — SNOWFLAKE_* 등록 후 활성화) ──
+  # ── Phase B: Snowflake 업로드 (SNOWFLAKE_* Secrets 6종 등록 후 주석 해제) ──────
+  # 활성화 절차: docs/automation/phase_b_activation_guide.md 참조
   # snowflake-upload:
-  #   name: "Snowflake Raw Upload (Phase B)"
+  #   name: "1.2.1 | Snowflake Raw Upload (Phase B)"
   #   needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso, geopolitical-risk]
   #   runs-on: ubuntu-latest
   #   steps:
   #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.11"
+  #     - name: Install dependencies
+  #       run: pip install pandas pyarrow snowflake-connector-python
   #     - uses: actions/download-artifact@v4
   #       with:
   #         path: data/raw/
-  #     - name: Upload to Snowflake raw tables
+  #         merge-multiple: true
+  #     - name: Initialize Snowflake schema (idempotent)
   #       env:
-  #         SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-  #         SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-  #         SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+  #         SNOWFLAKE_ACCOUNT:   ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  #         SNOWFLAKE_USER:      ${{ secrets.SNOWFLAKE_USER }}
+  #         SNOWFLAKE_PASSWORD:  ${{ secrets.SNOWFLAKE_PASSWORD }}
   #         SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-  #         SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-  #         SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+  #         SNOWFLAKE_DATABASE:  ${{ secrets.SNOWFLAKE_DATABASE }}
+  #         SNOWFLAKE_SCHEMA:    ${{ secrets.SNOWFLAKE_SCHEMA }}
+  #       run: |
+  #         python - <<'EOF'
+  #         import snowflake.connector, os
+  #         conn = snowflake.connector.connect(
+  #             account=os.environ['SNOWFLAKE_ACCOUNT'], user=os.environ['SNOWFLAKE_USER'],
+  #             password=os.environ['SNOWFLAKE_PASSWORD'], warehouse=os.environ['SNOWFLAKE_WAREHOUSE'],
+  #             database=os.environ['SNOWFLAKE_DATABASE'],
+  #         )
+  #         conn.cursor().execute(open('src/pipeline/sql/create_raw_tables.sql').read())
+  #         conn.close()
+  #         EOF
+  #     - name: Upload raw parquet to Snowflake (MERGE INTO — idempotent)
+  #       env:
+  #         SNOWFLAKE_ACCOUNT:   ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  #         SNOWFLAKE_USER:      ${{ secrets.SNOWFLAKE_USER }}
+  #         SNOWFLAKE_PASSWORD:  ${{ secrets.SNOWFLAKE_PASSWORD }}
+  #         SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+  #         SNOWFLAKE_DATABASE:  ${{ secrets.SNOWFLAKE_DATABASE }}
+  #         SNOWFLAKE_SCHEMA:    ${{ secrets.SNOWFLAKE_SCHEMA }}
   #       run: python src/pipeline/snowflake_loader.py
+

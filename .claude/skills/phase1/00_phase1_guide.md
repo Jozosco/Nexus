@@ -23,7 +23,7 @@
 | **P1-02** | 지정학·무역 리스크 분석가 | **Opus 4.7** | 1.4.2 | `phase1/02_geopolitical_analyst.md` |
 | **P1-03** | 농기상·기후 전문가 | **Opus 4.7** | 1.4.3 | `phase1/03_climate_specialist.md` |
 | **P1-04** | 공급망·물류 분석가 | **Opus 4.7** | 1.4.4 | `phase1/04_supply_chain_analyst.md` |
-| **P1-05** | 데이터 파이프라인 아키텍트 | Sonnet 4.6 | 1.1.1, 1.1.4~1.1.6 | `phase1/05_pipeline_architect.md` |
+| ~~P1-05~~ | ~~데이터 파이프라인 아키텍트~~ | *(폐기)* | 1.1.1, 1.1.4~1.1.6 → **C-04** | C-04와 역할 중복 — WBS 완료 후 통합 |
 
 ---
 
@@ -63,13 +63,13 @@ Snowflake
 
 | WBS ID | 작업명 | 담당 | 실행 환경 | 상태 |
 |---|---|---|---|---|
-| 1.1.1 | 외부 지표 Snowflake Raw 스키마 설계 | C-04+P1-05 | Claude Code | ⬜ |
-| 1.1.2 | 경제 지표 커넥터 (Fed/CPI/FX/WTI) | C-04 | VS Code Web | ⬜ |
-| 1.1.3 | 해운 지수 커넥터 (BDI/SCFI) | C-04 | VS Code Web | ⬜ |
-| 1.1.4 | WASDE/USDA 작황 커넥터 | P1-05 | VS Code Web | ⬜ |
-| 1.1.5 | ENSO/기상 이상 커넥터 | P1-05 | VS Code Web | ⬜ |
-| 1.1.6 | 지정학 리스크 지수 커넥터 | P1-05 | VS Code Web | ⬜ |
-| 1.1.7 | API 재시도 로직 + Actions 스케줄 | C-04 | Claude Code | ⬜ |
+| 1.1.1 | 외부 지표 Snowflake Raw 스키마 설계 | **C-04** | Claude Code | ✅ (create_raw_tables.sql) |
+| 1.1.2 | 경제 지표 커넥터 (Fed/CPI/FX/WTI) | C-04 | VS Code Web | ✅ |
+| 1.1.3 | 해운 지수 커넥터 (BDI/SCFI) | C-04 | VS Code Web | ✅ |
+| 1.1.4 | WASDE/USDA 작황 커넥터 | **C-04** | VS Code Web | ✅ |
+| 1.1.5 | ENSO/기상 이상 커넥터 | **C-04** | VS Code Web | ✅ |
+| 1.1.6 | 지정학 리스크 지수 커넥터 | **C-04** | VS Code Web | ✅ |
+| 1.1.7 | API 재시도 로직 + Actions 스케줄 | C-04 | Claude Code | ✅ |
 | 1.1.8 | 외부 파이프라인 품질 검증 | C-08 | VS Code Web | ⬜ |
 | 1.1.9 | 외부 스키마 문서화 | C-07 | Claude Code | ⬜ |
 | 1.2.1 | S&OP 스키마 설계 | C-04 | Claude Code | ⬜ |
@@ -132,7 +132,7 @@ EDA 완료 후:
 |---|---|---|---|---|
 | B-002 | 사내 ERP → Snowflake 연동 IT 부서 승인 미확보 (1.2.4) | 🟣 결정 | 인간 (IT/구매) | 높음 |
 | B-003 | BDI 직접 API 유료 — Baltic Exchange 구독 미확보 | 🟣 결정 | 인간 (PM) | 중간 |
-| B-004 | P1-03, P1-04, P1-05 스킬 파일 미작성 | 🟡 의존성 | C-01 → 다음 세션 | 중간 |
+| B-004 | ~~P1-03, P1-04, P1-05 스킬 파일 미작성~~ | ✅ 해소 | P1-03·P1-04 완성; P1-05 C-04 흡수로 폐기 | — |
 
 ---
 

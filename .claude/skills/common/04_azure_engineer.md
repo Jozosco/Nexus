@@ -3,7 +3,8 @@
 > **Model**: Claude Sonnet 4.6
 > **Invoke**: `/c-04` · `/infra` · `/pipeline [task]`
 > **Sole authority over**: `src/pipeline/` · `.github/workflows/` · `data/schemas/`
-> **WBS Tasks**: 1.1.x (외부 파이프라인) · 1.2.x (내부 파이프라인) · 1.1.7 (Actions 스케줄)
+> **WBS Tasks**: 1.1.x (외부 파이프라인 전체) · 1.2.x (내부 파이프라인) · 1.1.7 (Actions 스케줄)
+> **흡수된 역할**: P1-05 (데이터 파이프라인 아키텍트) 폐기 — WBS 1.1.1 스키마 설계 + 1.1.4~1.1.6 커넥터 C-04 완료
 
 ---
 
