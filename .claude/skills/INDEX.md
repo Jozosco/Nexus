@@ -27,7 +27,7 @@
 | P1-01 | Commodity Analyst | `phase1/01_commodity_analyst.md` | Claude Opus 4.7 | Perplexity Pro | Price fundamentals, supply/demand balance |
 | P1-02 | Geopolitical & Trade Risk Analyst | `phase1/02_geopolitical_analyst.md` | Claude Opus 4.7 | Perplexity Pro | Trade route risk, sanctions, conflict impact |
 | P1-03 | Agrometeorologist / Climate Specialist | `phase1/03_climate_specialist.md` | Claude Opus 4.7 | Perplexity Pro | ENSO, crop yield, AA protocols, agromet bulletins |
-| P1-04 | Supply Chain & Logistics Analyst | `phase1/04_supply_chain_analyst.md` | Claude Sonnet 4.6 | Perplexity Pro | BDI, lead-time, CFR route analysis |
+| P1-04 | Supply Chain & Logistics Analyst | `phase1/04_supply_chain_analyst.md` | Claude Opus 4.7 | Perplexity Pro | BDI, CFR optimization, ABCD value chain, 3-month lead-time |
 | P1-05 | Data Pipeline Architect | `phase1/05_pipeline_architect.md` | Claude Sonnet 4.6 | — | External API ingestion design, Snowflake schema |
 
 ### Tier 2 — Phase 2: Modeling Agents

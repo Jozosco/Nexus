@@ -22,7 +22,7 @@
 | **P1-01** | 원자재 분석가 | **Opus 4.7** | 1.4.1, 1.4.5 | `phase1/01_commodity_analyst.md` |
 | **P1-02** | 지정학·무역 리스크 분석가 | **Opus 4.7** | 1.4.2 | `phase1/02_geopolitical_analyst.md` |
 | **P1-03** | 농기상·기후 전문가 | **Opus 4.7** | 1.4.3 | `phase1/03_climate_specialist.md` |
-| **P1-04** | 공급망·물류 분석가 | Sonnet 4.6 | 1.4.4 | `phase1/04_supply_chain_analyst.md` |
+| **P1-04** | 공급망·물류 분석가 | **Opus 4.7** | 1.4.4 | `phase1/04_supply_chain_analyst.md` |
 | **P1-05** | 데이터 파이프라인 아키텍트 | Sonnet 4.6 | 1.1.1, 1.1.4~1.1.6 | `phase1/05_pipeline_architect.md` |
 
 ---

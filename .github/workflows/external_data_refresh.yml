@@ -8,8 +8,12 @@ name: External Data Pipeline — Daily Refresh (WBS 1.1.2~1.1.6)
 
 on:
   schedule:
-    - cron: "0 1 * * 1-5"   # 평일 오전 1시 UTC (KST 오전 10시)
+    # 일~목 20:30 UTC = KST 월~금 05:30 → 07:00 KST 대두유 선물 시장 개장 45분 전 완료 목표
+    # 구: "0 1 * * 1-5" (KST 10시 = 시장 개장 3시간 후 → 시장 반응 전 데이터 취득 불가)
+    - cron: "30 20 * * 0-4"
   workflow_dispatch:
+    # 스케줄 실행: 모든 커넥터 자동 실행 (connector 입력값 무시 — github.event_name == 'schedule' 조건 적용)
+    # 수동 실행: connector 선택 가능 (기본값: all). 특정 커넥터만 재실행할 때 사용.
     inputs:
       connector:
         description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr)"
@@ -133,6 +137,66 @@ jobs:
           name: geopolitical-risk-${{ github.run_id }}
           path: data/raw/geopolitical_indices_*.parquet
           retention-days: 7
+
+  # ── 파이프라인 완료 요약 (GitHub Actions Summary + MCP/AI 통합 준비) ────────
+  pipeline-summary:
+    name: "Pipeline Summary & Data Quality Report"
+    runs-on: ubuntu-latest
+    needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso, geopolitical-risk]
+    if: always()   # 일부 커넥터 실패 시에도 요약 실행
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Generate pipeline summary
+        run: |
+          python - <<'PYEOF'
+          import os, glob, pandas as pd
+          from pathlib import Path
+          files = glob.glob("data/raw/**/*.parquet", recursive=True)
+          summary = []
+          for f in sorted(files):
+              try:
+                  df = pd.read_parquet(f)
+                  summary.append(f"| {Path(f).name} | {len(df)} rows | {df['ingested_at'].max()} |")
+              except Exception as e:
+                  summary.append(f"| {Path(f).name} | ERROR | {e} |")
+          md = [
+              "## External Data Pipeline — Run Summary",
+              f"**Run ID**: {os.environ.get('GITHUB_RUN_ID', 'local')}",
+              "",
+              "| File | Rows | Ingested At (UTC) |",
+              "|---|---|---|",
+          ] + summary
+          print("\n".join(md))
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("\n".join(md))
+          PYEOF
+
+  # ── MCP/GitHub Agents 통합 (Phase B — ANTHROPIC_API_KEY 등록 후 활성화) ───
+  # ai-quality-check:
+  #   name: "AI Data Quality Validator (Claude API)"
+  #   runs-on: ubuntu-latest
+  #   needs: [pipeline-summary]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         path: data/raw/
+  #         merge-multiple: true
+  #     - name: Run Claude quality check
+  #       env:
+  #         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  #       run: python src/pipeline/ai_quality_validator.py
+  #   # ai_quality_validator.py: Claude Haiku 4.5로 각 parquet의 이상값·결측치 탐지 후
+  #   # GitHub PR comment 또는 Issues로 자동 리포트 (MCP GitHub 툴 연동)
 
   # ── Phase B 준비: Snowflake 업로드 (현재 비활성 — SNOWFLAKE_* 등록 후 활성화) ──
   # snowflake-upload:
