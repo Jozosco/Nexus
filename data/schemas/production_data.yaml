@@ -1,0 +1,56 @@
+dataset: production_data
+source_connector: src/pipeline/connectors/production_connector.py
+output_path: data/raw/production_data_YYYYMMDD.parquet
+description: "원산지별 대두·대두유 생산량 + 농업기상 (WBS 1.1.x 신규)"
+data_sources:
+  - USDA NASS QuickStats (미국 주별 대두 생산량, API 키)
+  - USDA FAS PSD (글로벌 대두유 수급, API 키)
+  - FAOSTAT (국가별 대두 생산 시계열, 공개)
+  - Argentina INDEC via datos.gob.ar (아르헨티나 지역별, 공개)
+  - NASA POWER (원산지 농업기상 — 기온·강수, 공개)
+  - Perplexity Pro (작황 등급·생산량 가이던스, 실시간)
+reference_repos:
+  - https://github.com/kdmayer/nasa-power-api
+  - https://github.com/datosgobar
+  - https://github.com/WUR-AI/AgML-CY-Bench
+
+columns:
+  - name: price_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "관측 기준일 (수확연도 시작월 또는 수집일)"
+
+  - name: source_name
+    dtype: object
+    nullable: false
+    description: "데이터 출처 (USDA_NASS | USDA_FAS_PSD | FAOSTAT | INDEC_AR | NASA_POWER | Perplexity/USDA_NASS_proxy)"
+
+  - name: indicator_code
+    dtype: object
+    nullable: false
+    description: "지표 코드 (예: SOYBEAN_PROD_BU, T2M_US_Iowa, CROP_CONDITION_Mato_Grosso)"
+
+  - name: region
+    dtype: object
+    nullable: true
+    description: "지역명 (US_Iowa, BR_Mato_Grosso, AR_Cordoba 등)"
+
+  - name: country
+    dtype: object
+    nullable: true
+    description: "국가 코드 (US, BR, AR, CN 등)"
+
+  - name: value
+    dtype: float64
+    nullable: false
+    description: "수치값 (단위는 unit 컬럼 참조)"
+
+  - name: unit
+    dtype: object
+    nullable: true
+    description: "단위 (Bushels | 1000 MT | Tonnes | °C | mm/day | % Good+Excellent | MMT)"
+
+  - name: ingested_at
+    dtype: datetime64[ns]
+    nullable: false
+    description: "수집 시각 (UTC)"

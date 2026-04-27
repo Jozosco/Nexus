@@ -1,12 +1,13 @@
 """
 WASDE / USDA 작황 데이터 커넥터 — WBS 1.1.4
-수집 대상: WASDE 대두 수급 (USDA PSD API) · 원산지별 작황 (USDA NASS)
-API 키 불필요 — 공개 엔드포인트
+수집 대상: WASDE 대두 수급 (USDA FAS PSD API) · 원산지별 작황
+API: USDA_FAS_PSD_API_KEY 등록 시 인증 모드, 미등록 시 공개 엔드포인트
 실행 환경: VS Code Web (Azure ML Studio) 또는 GitHub Actions
 """
 
 from __future__ import annotations
 
+import os
 import time
 from datetime import date
 
@@ -14,8 +15,6 @@ import httpx
 import pandas as pd
 
 OUTPUT_DIR = "data/raw"
-# USDA PSD API: 대두유 (commodity_code=2222000), 전 세계 국가
-PSD_BASE = "https://apps.fas.usda.gov/psdonline/app/index.html#/app/downloads"
 PSD_API  = "https://apps.fas.usda.gov/psdonline/api/psd/exporting"
 
 
@@ -34,13 +33,15 @@ def _fetch(url: str, params: dict, max_retries: int = 4) -> list | dict:
 
 
 def fetch_wasde_soybean_oil(marketing_year: int | None = None) -> pd.DataFrame:
-    """USDA PSD API에서 대두유(Soybean Oil) 수급 데이터 수집."""
+    """USDA FAS PSD API에서 대두유(Soybean Oil) 수급 데이터 수집.
+    USDA_FAS_PSD_API_KEY 등록 시 인증 요청 (더 많은 데이터·쿼터 제공).
+    """
     year = marketing_year or date.today().year
-    # commodity_code 2222000 = Soybean Oil
-    data = _fetch(PSD_API, {
-        "commodityCode": "2222000",
-        "marketingYear": year,
-    })
+    params: dict = {"commodityCode": "2222000", "marketingYear": year}
+    api_key = os.environ.get("USDA_FAS_PSD_API_KEY", "")
+    if api_key:
+        params["apiKey"] = api_key
+    data = _fetch(PSD_API, params)
     if not data:
         print(f"[경고] USDA PSD: {year}년 데이터 없음")
         return pd.DataFrame()
