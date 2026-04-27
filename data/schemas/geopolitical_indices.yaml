@@ -1,0 +1,41 @@
+dataset: geopolitical_indices
+source_connector: src/pipeline/connectors/gpr_connector.py
+output_path: data/raw/geopolitical_indices_YYYYMMDD.parquet
+description: "Caldara & Iacoviello GPR Index · Perplexity 실시간 지정학 동향 (WBS 1.1.6)"
+note: "GPR baseline ≈ 100; 임계값 ≥ 200 → P1-02 경보 (MEMORY P-002)"
+
+columns:
+  - name: price_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "관측 기준일 (GPR: 월 첫날, Perplexity: 수집일)"
+
+  - name: source_name
+    dtype: object
+    nullable: false
+    description: "데이터 출처 (Caldara_Iacoviello | Perplexity/GPR)"
+
+  - name: indicator_code
+    dtype: object
+    nullable: false
+    description: "지표 코드 (GPR | GPR_REALTIME | GPR_QUALITATIVE)"
+
+  - name: value
+    dtype: float64
+    nullable: false
+    description: "GPR 지수 (baseline ≈ 100)"
+
+  - name: unit
+    dtype: object
+    nullable: true
+    description: "index (baseline≈100)"
+
+  - name: note
+    dtype: object
+    nullable: true
+    description: "프록시/정성 표시 ([PERPLEXITY-PROXY] | [QUALITATIVE:HIGH/MEDIUM/LOW])"
+
+  - name: ingested_at
+    dtype: datetime64[ns]
+    nullable: false
+    description: "수집 시각 (UTC)"

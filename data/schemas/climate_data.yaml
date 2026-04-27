@@ -1,0 +1,45 @@
+dataset: climate_data
+source_connector: src/pipeline/connectors/climate_connector.py
+output_path: data/raw/climate_data_YYYYMMDD.parquet
+description: "ENSO 페이즈 (NOAA ONI) · 원산지 기상이상 (OpenWeatherMap) (WBS 1.1.5)"
+
+columns:
+  - name: price_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "관측 기준일 (NOAA: 연도별 1월 1일, OWM: 수집일)"
+
+  - name: source_name
+    dtype: object
+    nullable: false
+    description: "데이터 출처 (NOAA_CPC | OpenWeatherMap)"
+
+  - name: indicator_code
+    dtype: object
+    nullable: false
+    description: "지표 코드 (ONI | TEMP_{location})"
+
+  - name: season
+    dtype: object
+    nullable: true
+    description: "ENSO 계절 코드 (DJF, JFM, ... — NOAA ONI 전용)"
+
+  - name: value
+    dtype: float64
+    nullable: false
+    description: "ONI: °C anomaly / OWM: °C"
+
+  - name: unit
+    dtype: object
+    nullable: true
+    description: "°C anomaly (ONI) | °C (OWM)"
+
+  - name: enso_phase
+    dtype: object
+    nullable: true
+    description: "La_Nina (≤-0.5) | Neutral | El_Nino (≥+0.5) — NOAA ONI 전용"
+
+  - name: ingested_at
+    dtype: datetime64[ns]
+    nullable: false
+    description: "수집 시각 (UTC)"

@@ -1,0 +1,274 @@
+name: External Data Pipeline — Daily Refresh (WBS 1.1.2~1.1.6)
+
+# 실행 환경 주의:
+#   Phase A (현재): GitHub Actions runner에서 API 호출 → Azure Blob 저장
+#   Phase B (Snowflake 등록 후): Azure ML 파이프라인 트리거로 전환
+#
+# 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음
+
+on:
+  schedule:
+    # 일~목 20:30 UTC = KST 월~금 05:30 → 07:00 KST 대두유 선물 시장 개장 45분 전 완료 목표
+    # 구: "0 1 * * 1-5" (KST 10시 = 시장 개장 3시간 후 → 시장 반응 전 데이터 취득 불가)
+    - cron: "30 20 * * 0-4"
+  workflow_dispatch:
+    # 스케줄 실행: 모든 커넥터 자동 실행 (connector 입력값 무시 — github.event_name == 'schedule' 조건 적용)
+    # 수동 실행: connector 선택 가능 (기본값: all). 특정 커넥터만 재실행할 때 사용.
+    inputs:
+      connector:
+        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production)"
+        required: false
+        default: "all"
+
+jobs:
+  # ── WBS 1.1.2: 경제 지표 (Fed / CPI / KRW-USD / WTI) ──────────────────────
+  economic-indicators:
+    name: "1.1.2 | Economic Indicators (FRED · BOK ECOS · EIA)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'economic' || github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow
+      - name: Run economic connector
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          BOK_ECOS_API_KEY: ${{ secrets.BOK_ECOS_API_KEY }}
+        run: python src/pipeline/connectors/economic_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: economic-indicators-${{ github.run_id }}
+          path: data/raw/economic_indicators_*.parquet
+          retention-days: 7
+
+  # ── WBS 1.1.3: 해운 지수 (BDI / SCFI) ─────────────────────────────────────
+  shipping-indices:
+    name: "1.1.3 | Shipping Indices (BDI · SCFI via Perplexity)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'shipping' || github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install openai pandas pyarrow
+      - name: Run shipping connector
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        run: python src/pipeline/connectors/shipping_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: shipping-indices-${{ github.run_id }}
+          path: data/raw/shipping_indices_*.parquet
+          retention-days: 7
+
+  # ── WBS 1.1.4: WASDE / USDA 작황 데이터 ───────────────────────────────────
+  wasde-crop-data:
+    name: "1.1.4 | WASDE / USDA Crop Data (USDA_FAS_PSD_API_KEY)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'wasde' || github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow
+      - name: Run WASDE connector
+        env:
+          USDA_FAS_PSD_API_KEY: ${{ secrets.USDA_FAS_PSD_API_KEY }}
+        run: python src/pipeline/connectors/wasde_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasde-crop-${{ github.run_id }}
+          path: data/raw/crop_data_*.parquet
+          retention-days: 7
+
+  # ── WBS 1.1.5: ENSO / 기상이상 ────────────────────────────────────────────
+  climate-enso:
+    name: "1.1.5 | Climate & ENSO (NOAA CPC · OpenWeatherMap)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'climate' || github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow
+      - name: Run climate connector
+        env:
+          ECMWF_API_KEY: ${{ secrets.ECMWF_API_KEY }}
+          # OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
+          # ⚠️ 미등록: openweathermap.org 무료 키 등록 후 위 줄 주석 해제
+          OPENWEATHERMAP_API_KEY: ""
+        run: python src/pipeline/connectors/climate_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: climate-enso-${{ github.run_id }}
+          path: data/raw/climate_data_*.parquet
+          retention-days: 7
+
+  # ── WBS 1.1.6: 지정학 리스크 지수 ─────────────────────────────────────────
+  geopolitical-risk:
+    name: "1.1.6 | Geopolitical Risk Index (GPR public + Perplexity)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'gpr' || github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx openai pandas pyarrow
+      - name: Run GPR connector
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        run: python src/pipeline/connectors/gpr_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: geopolitical-risk-${{ github.run_id }}
+          path: data/raw/geopolitical_indices_*.parquet
+          retention-days: 7
+
+  # ── WBS 1.1.x: 원산지 생산량·농업기상 (신규) ─────────────────────────────────
+  production-data:
+    name: "1.1.x | Production & Agromet (USDA NASS · FAS · FAOSTAT · NASA POWER · Perplexity)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'production' || github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx openai pandas pyarrow
+      - name: Run production connector
+        env:
+          USDA_NASS_QUICKSTATS_API_KEY: ${{ secrets.USDA_NASS_QUICKSTATS_API_KEY }}
+          USDA_FAS_PSD_API_KEY:         ${{ secrets.USDA_FAS_PSD_API_KEY }}
+          PERPLEXITY_API_KEY:           ${{ secrets.PERPLEXITY_API_KEY }}
+        run: python src/pipeline/connectors/production_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-data-${{ github.run_id }}
+          path: data/raw/production_data_*.parquet
+          retention-days: 7
+
+  # ── 파이프라인 완료 요약 (GitHub Actions Summary + MCP/AI 통합 준비) ────────
+  pipeline-summary:
+    name: "Pipeline Summary & Data Quality Report"
+    runs-on: ubuntu-latest
+    needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso, geopolitical-risk, production-data]
+    if: always()   # 일부 커넥터 실패 시에도 요약 실행
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Generate pipeline summary
+        run: |
+          python - <<'PYEOF'
+          import os, glob, pandas as pd
+          from pathlib import Path
+          files = glob.glob("data/raw/**/*.parquet", recursive=True)
+          summary = []
+          for f in sorted(files):
+              try:
+                  df = pd.read_parquet(f)
+                  summary.append(f"| {Path(f).name} | {len(df)} rows | {df['ingested_at'].max()} |")
+              except Exception as e:
+                  summary.append(f"| {Path(f).name} | ERROR | {e} |")
+          md = [
+              "## External Data Pipeline — Run Summary",
+              f"**Run ID**: {os.environ.get('GITHUB_RUN_ID', 'local')}",
+              "",
+              "| File | Rows | Ingested At (UTC) |",
+              "|---|---|---|",
+          ] + summary
+          print("\n".join(md))
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("\n".join(md))
+          PYEOF
+
+  # ── MCP/GitHub Agents 통합 (Phase B — ANTHROPIC_API_KEY 등록 후 활성화) ───
+  # ai-quality-check:
+  #   name: "AI Data Quality Validator (Claude API)"
+  #   runs-on: ubuntu-latest
+  #   needs: [pipeline-summary]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         path: data/raw/
+  #         merge-multiple: true
+  #     - name: Run Claude quality check
+  #       env:
+  #         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  #       run: python src/pipeline/ai_quality_validator.py
+  #   # ai_quality_validator.py: Claude Haiku 4.5로 각 parquet의 이상값·결측치 탐지 후
+  #   # GitHub PR comment 또는 Issues로 자동 리포트 (MCP GitHub 툴 연동)
+
+  # ── Phase B: Snowflake 업로드 (SNOWFLAKE_* Secrets 6종 등록 후 주석 해제) ──────
+  # 활성화 절차: docs/automation/phase_b_activation_guide.md 참조
+  # snowflake-upload:
+  #   name: "1.2.1 | Snowflake Raw Upload (Phase B)"
+  #   needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso, geopolitical-risk]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.11"
+  #     - name: Install dependencies
+  #       run: pip install pandas pyarrow snowflake-connector-python
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         path: data/raw/
+  #         merge-multiple: true
+  #     - name: Initialize Snowflake schema (idempotent)
+  #       env:
+  #         SNOWFLAKE_ACCOUNT:   ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  #         SNOWFLAKE_USER:      ${{ secrets.SNOWFLAKE_USER }}
+  #         SNOWFLAKE_PASSWORD:  ${{ secrets.SNOWFLAKE_PASSWORD }}
+  #         SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+  #         SNOWFLAKE_DATABASE:  ${{ secrets.SNOWFLAKE_DATABASE }}
+  #         SNOWFLAKE_SCHEMA:    ${{ secrets.SNOWFLAKE_SCHEMA }}
+  #       run: |
+  #         python - <<'EOF'
+  #         import snowflake.connector, os
+  #         conn = snowflake.connector.connect(
+  #             account=os.environ['SNOWFLAKE_ACCOUNT'], user=os.environ['SNOWFLAKE_USER'],
+  #             password=os.environ['SNOWFLAKE_PASSWORD'], warehouse=os.environ['SNOWFLAKE_WAREHOUSE'],
+  #             database=os.environ['SNOWFLAKE_DATABASE'],
+  #         )
+  #         conn.cursor().execute(open('src/pipeline/sql/create_raw_tables.sql').read())
+  #         conn.close()
+  #         EOF
+  #     - name: Upload raw parquet to Snowflake (MERGE INTO — idempotent)
+  #       env:
+  #         SNOWFLAKE_ACCOUNT:   ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  #         SNOWFLAKE_USER:      ${{ secrets.SNOWFLAKE_USER }}
+  #         SNOWFLAKE_PASSWORD:  ${{ secrets.SNOWFLAKE_PASSWORD }}
+  #         SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+  #         SNOWFLAKE_DATABASE:  ${{ secrets.SNOWFLAKE_DATABASE }}
+  #         SNOWFLAKE_SCHEMA:    ${{ secrets.SNOWFLAKE_SCHEMA }}
+  #       run: python src/pipeline/snowflake_loader.py
+

@@ -1,0 +1,40 @@
+{
+  "_meta": {
+    "description": "SHAP-derived feature importance matrix for soybean oil price modeling (G1).",
+    "status": "STUB — not yet populated. Populated after Phase 2 XGBoost + SHAP model run.",
+    "schema_version": "1.0",
+    "last_updated": null,
+    "model_run_id": null,
+    "training_period": null,
+    "notes": [
+      "This file is read by P1-01 (Commodity Analyst) at session start.",
+      "If this file is empty/stub, P1-01 must tag all variable rankings as [PROVISIONAL].",
+      "Populated by C-03 (Data Scientist) after Phase 2 WBS 2.x SHAP model execution.",
+      "Do not manually edit feature values — update only via mlflow-tracked model run."
+    ]
+  },
+  "features": [
+    {
+      "rank": null,
+      "feature_name": null,
+      "category": null,
+      "shap_abs_mean": null,
+      "shap_direction": null,
+      "data_source": null,
+      "lag_weeks": null,
+      "note": "STUB — replace with actual SHAP output after Phase 2 model run"
+    }
+  ],
+  "model_metadata": {
+    "algorithm": "XGBoost",
+    "library": "xgboost >= 2.0",
+    "shap_library": "shap >= 0.44",
+    "target_variable": "soybean_oil_cif_price_usd_mt",
+    "feature_count": null,
+    "training_rows": null,
+    "cv_method": "TimeSeriesSplit (n_splits=5, gap=30)",
+    "mape": null,
+    "rmse": null,
+    "directional_accuracy": null
+  }
+}

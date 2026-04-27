@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.so
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data — raw 파일은 PII·독점 데이터 포함 가능 (CLAUDE.md §data)
+data/raw/
+!data/raw/.gitkeep
+
+# Secrets
+.env
+*.env.local
+
+# Azure ML / MLflow
+mlruns/
+mlartifacts/
+.azureml/
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/settings.json
+.idea/
