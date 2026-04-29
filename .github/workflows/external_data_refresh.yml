@@ -141,9 +141,9 @@ jobs:
           path: data/raw/geopolitical_indices_*.parquet
           retention-days: 7
 
-  # ── WBS 1.1.x: 원산지 생산량·농업기상 (신규) ─────────────────────────────────
+  # ── WBS 1.1.7: 원산지 생산량·농업기상 ────────────────────────────────────────
   production-data:
-    name: "1.1.x | Production & Agromet (USDA NASS · FAS · FAOSTAT · NASA POWER · Perplexity)"
+    name: "1.1.7 | Production & Agromet (USDA NASS · FAOSTAT · NASA POWER · Perplexity)"
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'production' || github.event_name == 'schedule' }}
     steps:
@@ -156,7 +156,6 @@ jobs:
       - name: Run production connector
         env:
           USDA_NASS_QUICKSTATS_API_KEY: ${{ secrets.USDA_NASS_QUICKSTATS_API_KEY }}
-          USDA_FAS_PSD_API_KEY:         ${{ secrets.USDA_FAS_PSD_API_KEY }}
           PERPLEXITY_API_KEY:           ${{ secrets.PERPLEXITY_API_KEY }}
         run: python src/pipeline/connectors/production_connector.py
       - name: Upload raw output

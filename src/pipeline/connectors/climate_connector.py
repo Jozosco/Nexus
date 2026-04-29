@@ -1,8 +1,10 @@
 """
 기후·기상이상 커넥터 — WBS 1.1.5
 수집 대상:
-  ENSO 페이즈 (NOAA CPC) · 원산지 기상이상 (OpenWeatherMap)
-  ECMWF ERA5 기온·강수 이상 (ECMWF_API_KEY) · NASA POWER 농업기상 (공개)
+  ENSO 페이즈 (NOAA CPC ONI) · 원산지 기상이상 (OpenWeatherMap)
+  ECMWF ERA5 기온·강수 이상 (ECMWF_API_KEY)
+범위 제외: NASA POWER 농업기상 → production_connector.py 담당
+  (6개 원산지 지역 × 3 파라미터 확장 수집 — 중복 방지)
 실행 환경: VS Code Web (Azure ML Studio) 또는 GitHub Actions
 """
 
@@ -10,15 +12,13 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import date, timedelta
+from datetime import date
 
 import httpx
 import pandas as pd
 
 OUTPUT_DIR = "data/raw"
 NOAA_ENSO_URL = "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt"
-ECMWF_CDS_URL = "https://cds.climate.copernicus.eu/api/v2"
-NASA_POWER_URL = "https://power.larc.nasa.gov/api/temporal/monthly/point"
 
 # 대두유 주요 원산지 (MEMORY: soybean oil origin countries)
 ORIGIN_COORDS = {
@@ -141,45 +141,6 @@ def fetch_ecmwf_era5() -> pd.DataFrame:
     return df
 
 
-def fetch_nasa_power_climate() -> pd.DataFrame:
-    """NASA POWER — 원산지별 월별 농업기상 보조 데이터 (공개, 키 불필요).
-    참고: github.com/kdmayer/nasa-power-api | community=AG
-    """
-    end   = date.today()
-    start = end.replace(day=1) - timedelta(days=60)
-    rows = []
-    for location, coord in ORIGIN_COORDS.items():
-        try:
-            r = httpx.get(NASA_POWER_URL, params={
-                "start":      start.strftime("%Y%m"),
-                "end":        end.strftime("%Y%m"),
-                "latitude":   coord["lat"],
-                "longitude":  coord["lon"],
-                "community":  "AG",
-                "parameters": "T2M,PRECTOTCORR",
-                "format":     "JSON",
-                "user":       "nexus_climate",
-            }, timeout=60)
-            r.raise_for_status()
-            props = r.json().get("properties", {}).get("parameter", {})
-            for ym, val in props.get("T2M", {}).items():
-                rows.append({
-                    "price_date":     f"{ym[:4]}-{ym[4:]}-01",
-                    "source_name":    "NASA_POWER",
-                    "indicator_code": f"T2M_{location}",
-                    "value":          float(val),
-                    "unit":           "°C",
-                })
-        except Exception as e:
-            print(f"[경고] NASA POWER {location} 수집 실패: {e}")
-    if not rows:
-        return pd.DataFrame()
-    df = pd.DataFrame(rows)
-    df["price_date"] = pd.to_datetime(df["price_date"])
-    df["ingested_at"] = pd.Timestamp.utcnow()
-    return df
-
-
 def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
@@ -187,7 +148,6 @@ def run() -> None:
         fetch_enso_index(),
         fetch_weather_anomalies(),
         fetch_ecmwf_era5(),
-        fetch_nasa_power_climate(),
     ]
     frames = [f for f in frames if not f.empty]
     if not frames:

@@ -16,7 +16,7 @@ from enum import Enum
 from typing import Optional
 
 from src.utils.perplexity_client import query_perplexity, PERPLEXITY_LARGE_MODEL
-from src.utils.gemini_client import query_gemini, count_tokens, GEMINI_PRO_MODEL
+from src.utils.gemini_client import query_gemini, count_tokens, GEMINI_PRO_MODEL, GEMINI_FLASH_MODEL
 from src.utils.openai_client import query_openai, GPT4O_MODEL, GPT4O_MINI_MODEL
 
 # 문서를 Gemini로 보내는 최소 토큰 기준 (~50 페이지 분량)
@@ -109,9 +109,9 @@ class LLMRouter:
             if document_text and not use_powerful_model:
                 token_count = count_tokens(document_text)
                 if token_count < LARGE_DOCUMENT_TOKEN_THRESHOLD:
-                    # 소형 문서는 Flash 모델로 비용 절감
+                    # 소형 문서는 Flash 모델로 비용 절감 (MEMORY L-008: gemini-2.0-flash)
                     return query_gemini(prompt, document_text=document_text,
-                                       model="gemini-1.5-flash")
+                                       model=GEMINI_FLASH_MODEL)
             return query_gemini(prompt, document_text=document_text,
                                 model=GEMINI_PRO_MODEL)
 
