@@ -42,16 +42,24 @@ def _fetch(url: str, params: dict | None = None, max_retries: int = 4) -> httpx.
             delay *= 2
 
 
-def fetch_enso_index() -> pd.DataFrame:
-    """NOAA CPC ONI (Oceanic Niño Index) 수집 — API 키 불필요."""
+def fetch_enso_index(start_year: int = 2020) -> pd.DataFrame:
+    """NOAA CPC ONI (Oceanic Niño Index) 수집 — API 키 불필요.
+    파일 형식: SEAS YR ANOM (예: DJF 1950 -1.28)
+    """
     r = _fetch(NOAA_ENSO_URL)
-    lines = [l for l in r.text.strip().splitlines() if not l.startswith("YR")]
+    # 헤더 행(SEAS 또는 YR로 시작) 제거
+    lines = [l for l in r.text.strip().splitlines()
+             if not l.startswith("SEAS") and not l.startswith("YR")]
     rows = []
     for line in lines:
         parts = line.split()
         if len(parts) >= 3:
             try:
-                year, season, oni = int(parts[0]), parts[1], float(parts[2])
+                season = parts[0]        # e.g. "DJF"
+                year   = int(parts[1])   # e.g. 1950
+                oni    = float(parts[2]) # e.g. -1.28
+                if year < start_year:
+                    continue
                 rows.append({
                     "price_date": f"{year}-01-01",
                     "source_name": "NOAA_CPC",
@@ -63,6 +71,9 @@ def fetch_enso_index() -> pd.DataFrame:
                 })
             except (ValueError, IndexError):
                 continue
+    if not rows:
+        print(f"[경고] NOAA ONI: {start_year}년 이후 데이터 파싱 실패. NOAA 파일 형식 확인 필요.")
+        return pd.DataFrame()
     df = pd.DataFrame(rows)
     df["price_date"] = pd.to_datetime(df["price_date"])
     df["ingested_at"] = pd.Timestamp.utcnow()
@@ -141,11 +152,11 @@ def fetch_ecmwf_era5() -> pd.DataFrame:
     return df
 
 
-def run() -> None:
+def run(start_year: int = 2020) -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
     frames = [
-        fetch_enso_index(),
+        fetch_enso_index(start_year=start_year),
         fetch_weather_anomalies(),
         fetch_ecmwf_era5(),
     ]

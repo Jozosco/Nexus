@@ -2,11 +2,18 @@
 LLM 라우터 — 작업 유형에 따라 최적 LLM으로 자동 라우팅.
 에이전트는 직접 특정 LLM을 호출하는 대신 이 모듈을 통해 쿼리를 전달한다.
 
-라우팅 기준 (INDEX.md §LLM Routing Logic 기반):
-  REAL_TIME_RESEARCH   → Perplexity  (실시간 웹, 최신 시장 데이터)
-  LARGE_DOCUMENT       → Gemini      (문서 > 50 페이지, 멀티모달)
-  STRUCTURED_EXTRACT   → OpenAI      (JSON/표 추출, 산술 검증)
-  CLAUDE_NATIVE        → passthrough (코드 생성, 복잡한 추론 — Claude가 직접 처리)
+구독 기준 (2025-04 기준):
+  Google AI Pro   → Gemini 2.5 Pro (GEMINI_PRO_MODEL) / 2.0 Flash (GEMINI_FLASH_MODEL)
+  OpenAI Business → GPT-4o (GPT4O_MODEL) / GPT-4o-mini (GPT4O_MINI_MODEL)
+  Perplexity Pro  → sonar-pro (PERPLEXITY_ONLINE_MODEL) / sonar-deep-research (PERPLEXITY_LARGE_MODEL)
+  Claude Pro      → Claude Code 세션 직접 처리 (CLAUDE_NATIVE passthrough)
+
+라우팅 기준:
+  REAL_TIME_RESEARCH   → Perplexity sonar-pro  (실시간 웹, 최신 시장 데이터)
+  DEEP_RESEARCH        → Perplexity sonar-deep-research  (심층 조사, 고비용)
+  LARGE_DOCUMENT       → Gemini 2.5 Pro  (문서 > 50 페이지, 멀티모달)
+  STRUCTURED_EXTRACT   → OpenAI GPT-4o-mini/4o  (JSON/표 추출, 산술 검증)
+  CLAUDE_NATIVE        → passthrough  (코드 생성, 복잡한 추론 — Claude가 직접 처리)
 """
 
 from __future__ import annotations
@@ -15,7 +22,12 @@ import os
 from enum import Enum
 from typing import Optional
 
-from src.utils.perplexity_client import query_perplexity, PERPLEXITY_LARGE_MODEL
+from src.utils.perplexity_client import (
+    query_perplexity,
+    PERPLEXITY_PING_MODEL,
+    PERPLEXITY_ONLINE_MODEL,
+    PERPLEXITY_LARGE_MODEL,
+)
 from src.utils.gemini_client import query_gemini, count_tokens, GEMINI_PRO_MODEL, GEMINI_FLASH_MODEL
 from src.utils.openai_client import query_openai, GPT4O_MODEL, GPT4O_MINI_MODEL
 
@@ -25,9 +37,10 @@ LARGE_DOCUMENT_TOKEN_THRESHOLD = 30_000
 
 class TaskType(Enum):
     """에이전트가 쿼리 시 지정하는 작업 유형."""
-    REAL_TIME_RESEARCH = "real_time_research"   # Perplexity: 최신 시세, 지정학, 기후
-    LARGE_DOCUMENT = "large_document"           # Gemini: WASDE, EPA RFS 원문, 보고서
-    STRUCTURED_EXTRACT = "structured_extract"   # OpenAI: JSON/표 출력, 산술 검증
+    REAL_TIME_RESEARCH = "real_time_research"   # Perplexity sonar-pro: 최신 시세, 지정학, 기후
+    DEEP_RESEARCH = "deep_research"             # Perplexity sonar-deep-research: 심층 조사 (고비용)
+    LARGE_DOCUMENT = "large_document"           # Gemini 2.5 Pro: WASDE, EPA RFS 원문, 보고서
+    STRUCTURED_EXTRACT = "structured_extract"   # OpenAI GPT-4o: JSON/표 출력, 산술 검증
     CLAUDE_NATIVE = "claude_native"             # Claude passthrough: 코드, 심층 추론
 
 
@@ -96,10 +109,17 @@ class LLMRouter:
             LLM 응답 텍스트
         """
         if task_type == TaskType.REAL_TIME_RESEARCH:
-            model = PERPLEXITY_LARGE_MODEL if use_powerful_model else None
+            # sonar-pro: 실시간 웹 검색 — 기본 연구 작업
             kwargs = {}
-            if model:
-                kwargs["model"] = model
+            if use_powerful_model:
+                kwargs["model"] = PERPLEXITY_LARGE_MODEL
+            if system_prompt:
+                kwargs["system_prompt"] = system_prompt
+            return query_perplexity(prompt, **kwargs)
+
+        elif task_type == TaskType.DEEP_RESEARCH:
+            # sonar-deep-research: 심층 조사 — 고비용, 명시적 선택 시만 사용
+            kwargs = {"model": PERPLEXITY_LARGE_MODEL}
             if system_prompt:
                 kwargs["system_prompt"] = system_prompt
             return query_perplexity(prompt, **kwargs)
