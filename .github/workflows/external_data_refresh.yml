@@ -7,10 +7,9 @@ name: External Data Pipeline — Daily Refresh (WBS 1.1.2~1.1.6)
 # 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음
 
 on:
-  # ⏸️ 스케줄 일시 중단 — 커넥터 오류 해소 완료 후 아래 schedule 블록 주석 해제
-  # 재활성화: "30 20 * * 0-4" (일~목 20:30 UTC = KST 월~금 05:30, 시장 개장 45분 전)
-  # schedule:
-  #   - cron: "30 20 * * 0-4"
+  # 스케줄: 일~목 20:30 UTC = KST 월~금 05:30, 시장 개장 45분 전
+  schedule:
+    - cron: "30 20 * * 0-4"
   workflow_dispatch:
     # 스케줄 실행: 모든 커넥터 자동 실행 (connector 입력값 무시 — github.event_name == 'schedule' 조건 적용)
     # 수동 실행: connector 선택 가능 (기본값: all). 특정 커넥터만 재실행할 때 사용.
