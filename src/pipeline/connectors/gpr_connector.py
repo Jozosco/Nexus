@@ -115,11 +115,84 @@ def _fetch_gpr_realtime() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def _fetch_hormuz_realtime() -> pd.DataFrame:
+    """Perplexity 실시간 호르무즈 해협 모니터링.
+
+    Inspired by Globot early-warning methodology (github.com/Vector897/Globot):
+    AIS 선박 이상 · AWRP 보험료 급등 · 이란-미국 긴장 신호
+    SBO 관련성: 호르무즈 봉쇄 → 유가 급등 → 벙커유 비용 → CFR 운임 프리미엄 + 3~8%
+    """
+    api_key = os.environ.get("PERPLEXITY_API_KEY")
+    if not api_key:
+        print("[경고] PERPLEXITY_API_KEY 미등록 — 호르무즈 모니터링 건너뜀.")
+        return pd.DataFrame()
+
+    client = OpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
+    prompt = (
+        "Provide the latest risk assessment for the Strait of Hormuz for tanker shipping. "
+        "Include: "
+        "(1) Current threat level for tanker traffic: HIGH / MEDIUM / LOW, "
+        "(2) Any IRGC or Houthi vessel incidents in the past 7 days (Yes/No + brief), "
+        "(3) War risk premium surcharge multiplier vs baseline (e.g. 2x, 3x, 5x), "
+        "(4) Any tanker re-routing to Cape of Good Hope reported this week (count or None). "
+        "Format each item as: METRIC: [name] | VALUE: [value] | SOURCE: [source] | DATE: [date]"
+    )
+    today = date.today().isoformat()
+    try:
+        r = client.chat.completions.create(
+            model=PERPLEXITY_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = r.choices[0].message.content
+        rows = []
+
+        # Threat level → numeric encoding
+        threat_match = re.search(r"METRIC:[^|]*(?:threat|level)[^|]*\|[^|]*VALUE:\s*(HIGH|MEDIUM|LOW)", text, re.IGNORECASE)
+        if threat_match:
+            level_map = {"HIGH": 3.0, "MEDIUM": 2.0, "LOW": 1.0}
+            level = threat_match.group(1).upper()
+            rows.append({
+                "price_date":     today,
+                "source_name":    "Perplexity/Hormuz",
+                "indicator_code": "HORMUZ_THREAT_LEVEL",
+                "value":          level_map[level],
+                "unit":           "1=Low/2=Med/3=High",
+                "note":           f"[QUALITATIVE:{level}]",
+            })
+
+        # AWRP multiplier
+        awrp_match = re.search(
+            r"METRIC:[^|]*(?:premium|AWRP|war risk)[^|]*\|[^|]*VALUE:\s*([0-9]+\.?[0-9]*)\s*[xX×]?",
+            text, re.IGNORECASE
+        )
+        if awrp_match:
+            rows.append({
+                "price_date":     today,
+                "source_name":    "Perplexity/Hormuz",
+                "indicator_code": "HORMUZ_AWRP_MULTIPLIER",
+                "value":          float(awrp_match.group(1)),
+                "unit":           "× baseline AWRP",
+                "note":           "[PERPLEXITY-PROXY]",
+            })
+
+        if not rows:
+            print(f"[경고] Hormuz 파싱 실패. 원문: {text[:200]}")
+            return pd.DataFrame()
+
+        df = pd.DataFrame(rows)
+        df["price_date"] = pd.to_datetime(df["price_date"])
+        df["ingested_at"] = pd.Timestamp.utcnow()
+        return df
+    except Exception as e:
+        print(f"[경고] Hormuz 실시간 수집 실패: {e}")
+        return pd.DataFrame()
+
+
 def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
 
-    frames = [_fetch_gpr_index(), _fetch_gpr_realtime()]
+    frames = [_fetch_gpr_index(), _fetch_gpr_realtime(), _fetch_hormuz_realtime()]
     frames = [f for f in frames if not f.empty]
     if not frames:
         print("[경고] GPR 데이터: 수집된 항목 없음")

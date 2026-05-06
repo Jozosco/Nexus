@@ -51,8 +51,10 @@ jobs:
           python - <<'EOF'
           import os
           import google.generativeai as genai
+          # MEMORY L-008: 최신 모델 — gemini-2.0-flash (구: gemini-1.5-flash 폐기)
+          PING_MODEL = "gemini-2.0-flash"
           genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-          model = genai.GenerativeModel("gemini-1.5-flash")
+          model = genai.GenerativeModel(PING_MODEL)
           r = model.generate_content("Ping: respond with OK only")
           assert "ok" in r.text.lower(), f"Gemini 응답 이상: {r.text}"
           print("✅ Gemini API 정상")

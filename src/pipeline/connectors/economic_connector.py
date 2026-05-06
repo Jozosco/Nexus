@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
 import httpx
@@ -49,7 +49,15 @@ def fetch_fred_series(series_id: str, start: str, end: str) -> pd.DataFrame:
         "observation_end": end,
     })
     obs = data.get("observations", [])
-    df = pd.DataFrame(obs)[["date", "value"]]
+    if not obs:
+        print(f"[경고] FRED {series_id}: 기간 {start}~{end} 데이터 없음")
+        return pd.DataFrame()
+    df = pd.DataFrame(obs)
+    missing = [c for c in ["date", "value"] if c not in df.columns]
+    if missing:
+        print(f"[경고] FRED {series_id} 컬럼 누락: {missing}")
+        return pd.DataFrame()
+    df = df[["date", "value"]].copy()
     df.columns = ["price_date", "value"]
     df["price_date"] = pd.to_datetime(df["price_date"])
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
@@ -75,7 +83,15 @@ def fetch_eia_brent(start: str, end: str) -> pd.DataFrame:
         "length": 5000,
     })
     rows = data.get("response", {}).get("data", [])
-    df = pd.DataFrame(rows)[["period", "value"]]
+    if not rows:
+        print(f"[경고] EIA Brent: 기간 {start}~{end} 데이터 없음")
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    missing = [c for c in ["period", "value"] if c not in df.columns]
+    if missing:
+        print(f"[경고] EIA Brent 컬럼 누락: {missing}. 실제 컬럼: {list(df.columns)}")
+        return pd.DataFrame()
+    df = df[["period", "value"]].copy()
     df.columns = ["price_date", "value"]
     df["price_date"] = pd.to_datetime(df["price_date"])
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
@@ -94,7 +110,15 @@ def fetch_bok_krw_usd(start: str, end: str) -> pd.DataFrame:
     url = f"{BOK_BASE}/{api_key}/json/kr/1/5000/731Y001/DD/{start_fmt}/{end_fmt}/0000001"
     data = _fetch(url, {})
     rows = data.get("StatisticSearch", {}).get("row", [])
-    df = pd.DataFrame(rows)[["TIME", "DATA_VALUE"]]
+    if not rows:
+        print(f"[경고] BOK ECOS: 기간 {start}~{end} 데이터 없음. API 키 또는 날짜 범위 확인.")
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    missing = [c for c in ["TIME", "DATA_VALUE"] if c not in df.columns]
+    if missing:
+        print(f"[경고] BOK ECOS 컬럼 누락: {missing}. 실제 컬럼: {list(df.columns)}")
+        return pd.DataFrame()
+    df = df[["TIME", "DATA_VALUE"]].copy()
     df.columns = ["price_date", "value"]
     df["price_date"] = pd.to_datetime(df["price_date"], format="%Y%m%d")
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
@@ -103,17 +127,32 @@ def fetch_bok_krw_usd(start: str, end: str) -> pd.DataFrame:
     return df.dropna(subset=["value"])
 
 
-def run(lookback_days: int = 30) -> None:
-    end   = date.today().isoformat()
-    start = (date.today() - timedelta(days=lookback_days)).isoformat()
+def run(start_date: str = "2020-01-01", end_date: str | None = None) -> None:
+    end   = end_date or date.today().isoformat()
+    start = start_date
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
 
     frames = []
-    frames.append(fetch_fred_series("FEDFUNDS",   start, end))
-    frames.append(fetch_fred_series("CPIAUCSL",   start, end))
-    frames.append(fetch_eia_brent(start, end))
-    frames.append(fetch_bok_krw_usd(start, end))
+    # ── 금리·물가 ──────────────────────────────────────────────────────────────
+    frames.append(fetch_fred_series("FEDFUNDS",  start, end))  # Fed 기준금리
+    frames.append(fetch_fred_series("CPIAUCSL",  start, end))  # 미국 CPI
+    # ── 유가 ────────────────────────────────────────────────────────────────────
+    frames.append(fetch_eia_brent(start, end))                  # Brent 원유
+    # ── 환율 (대두유 원산지·결제통화) ─────────────────────────────────────────
+    frames.append(fetch_bok_krw_usd(start, end))                # KRW/USD (수입국)
+    frames.append(fetch_fred_series("DEXBZUS",  start, end))   # BRL/USD (브라질)
+    frames.append(fetch_fred_series("DEXARUE",  start, end))   # ARS/USD (아르헨티나)
+    frames.append(fetch_fred_series("DEXCHUS",  start, end))   # CNY/USD (중국)
+    frames.append(fetch_fred_series("DEXMAUS",  start, end))   # MYR/USD (말레이시아)
+    # ── 시장 리스크 ──────────────────────────────────────────────────────────────
+    frames.append(fetch_fred_series("VIXCLS",   start, end))   # VIX 변동성 지수
+
+    # 빈 DataFrame 제거 후 concat (일부 API 응답 없을 때 crash 방지)
+    frames = [f for f in frames if not f.empty]
+    if not frames:
+        print("[경고] 경제 지표: 모든 소스 응답 없음 — API 키 및 네트워크 확인 필요")
+        return
 
     combined = pd.concat(frames, ignore_index=True)
     combined["ingested_at"] = pd.Timestamp.utcnow()

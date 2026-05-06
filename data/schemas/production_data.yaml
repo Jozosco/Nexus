@@ -1,13 +1,13 @@
 dataset: production_data
 source_connector: src/pipeline/connectors/production_connector.py
 output_path: data/raw/production_data_YYYYMMDD.parquet
-description: "원산지별 대두·대두유 생산량 + 농업기상 (WBS 1.1.x 신규)"
+description: "원산지별 대두 생산량 + 농업기상 6개 지역 (WBS 1.1.7)"
+scope_exclusion: "USDA FAS PSD 글로벌 수급 → crop_data 스키마(wasde_connector.py)로 이관 — 중복 방지"
 data_sources:
   - USDA NASS QuickStats (미국 주별 대두 생산량, API 키)
-  - USDA FAS PSD (글로벌 대두유 수급, API 키)
-  - FAOSTAT (국가별 대두 생산 시계열, 공개)
+  - FAOSTAT (국가별 대두 생산 시계열, 공개) — AgML-CY-Bench 벤치마크 데이터소스
   - Argentina INDEC via datos.gob.ar (아르헨티나 지역별, 공개)
-  - NASA POWER (원산지 농업기상 — 기온·강수, 공개)
+  - NASA POWER (원산지 6개 지역 기온·강수·습도, 공개, 키 불필요)
   - Perplexity Pro (작황 등급·생산량 가이던스, 실시간)
 reference_repos:
   - https://github.com/kdmayer/nasa-power-api
@@ -23,7 +23,7 @@ columns:
   - name: source_name
     dtype: object
     nullable: false
-    description: "데이터 출처 (USDA_NASS | USDA_FAS_PSD | FAOSTAT | INDEC_AR | NASA_POWER | Perplexity/USDA_NASS_proxy)"
+    description: "데이터 출처 (USDA_NASS | FAOSTAT | INDEC_AR | NASA_POWER | Perplexity/USDA_NASS_proxy)"
 
   - name: indicator_code
     dtype: object
@@ -48,7 +48,7 @@ columns:
   - name: unit
     dtype: object
     nullable: true
-    description: "단위 (Bushels | 1000 MT | Tonnes | °C | mm/day | % Good+Excellent | MMT)"
+    description: "단위 (Bushels | Tonnes | Hectares | °C | mm/day | % | MMT)"
 
   - name: ingested_at
     dtype: datetime64[ns]

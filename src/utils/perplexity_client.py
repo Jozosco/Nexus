@@ -12,8 +12,10 @@ from openai import OpenAI, APIStatusError, APIConnectionError
 # 실시간 검색이 가능한 온라인 모델 — 오프라인 모델보다 비용이 높지만 최신 데이터 필수
 # MEMORY L-006 / L-007: Perplexity 모델명은 자주 변경됨 — 아래 상수만 수정하면 전체 반영
 # 2025년 이후 명칭 변경: llama-3.1-sonar-* → sonar / sonar-pro / sonar-deep-research
-PERPLEXITY_ONLINE_MODEL = "sonar-pro"          # 구: llama-3.1-sonar-large-128k-online
-PERPLEXITY_LARGE_MODEL  = "sonar-deep-research" # 구: llama-3.1-sonar-huge-128k-online (고비용)
+# Perplexity Pro 구독 사용 가능 모델:
+PERPLEXITY_PING_MODEL   = "sonar"              # 헬스 체크·저비용 단순 쿼리
+PERPLEXITY_ONLINE_MODEL = "sonar-pro"          # 구: llama-3.1-sonar-large-128k-online — 실시간 연구 기본
+PERPLEXITY_LARGE_MODEL  = "sonar-deep-research" # 구: llama-3.1-sonar-huge-128k-online — 심층 조사 (고비용)
 
 
 def get_perplexity_client() -> OpenAI:

@@ -7,10 +7,10 @@ name: External Data Pipeline — Daily Refresh (WBS 1.1.2~1.1.6)
 # 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음
 
 on:
-  schedule:
-    # 일~목 20:30 UTC = KST 월~금 05:30 → 07:00 KST 대두유 선물 시장 개장 45분 전 완료 목표
-    # 구: "0 1 * * 1-5" (KST 10시 = 시장 개장 3시간 후 → 시장 반응 전 데이터 취득 불가)
-    - cron: "30 20 * * 0-4"
+  # ⏸️ 스케줄 일시 중단 — 커넥터 오류 해소 완료 후 아래 schedule 블록 주석 해제
+  # 재활성화: "30 20 * * 0-4" (일~목 20:30 UTC = KST 월~금 05:30, 시장 개장 45분 전)
+  # schedule:
+  #   - cron: "30 20 * * 0-4"
   workflow_dispatch:
     # 스케줄 실행: 모든 커넥터 자동 실행 (connector 입력값 무시 — github.event_name == 'schedule' 조건 적용)
     # 수동 실행: connector 선택 가능 (기본값: all). 특정 커넥터만 재실행할 때 사용.
@@ -71,7 +71,7 @@ jobs:
 
   # ── WBS 1.1.4: WASDE / USDA 작황 데이터 ───────────────────────────────────
   wasde-crop-data:
-    name: "1.1.4 | WASDE / USDA Crop Data (USDA_FAS_PSD_API_KEY)"
+    name: "1.1.4 | WASDE / USDA Crop Data (FAS OpenData · ARMS)"
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'wasde' || github.event_name == 'schedule' }}
     steps:
@@ -83,7 +83,12 @@ jobs:
         run: pip install httpx pandas pyarrow
       - name: Run WASDE connector
         env:
+          # FAS OpenData API — header 인증 (구: psdonline → 신: OpenData/api/psd)
+          USDA_FAS_API_KEY:     ${{ secrets.USDA_FAS_API_KEY }}
+          # 구 키 이름 하위 호환 (점진적 전환)
           USDA_FAS_PSD_API_KEY: ${{ secrets.USDA_FAS_PSD_API_KEY }}
+          # USDA ARMS 생산비용 데이터
+          USDA_ARM_API_KEY:     ${{ secrets.USDA_ARM_API_KEY }}
         run: python src/pipeline/connectors/wasde_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -141,9 +146,9 @@ jobs:
           path: data/raw/geopolitical_indices_*.parquet
           retention-days: 7
 
-  # ── WBS 1.1.x: 원산지 생산량·농업기상 (신규) ─────────────────────────────────
+  # ── WBS 1.1.7: 원산지 생산량·농업기상 ────────────────────────────────────────
   production-data:
-    name: "1.1.x | Production & Agromet (USDA NASS · FAS · FAOSTAT · NASA POWER · Perplexity)"
+    name: "1.1.7 | Production & Agromet (USDA NASS · FAOSTAT · NASA POWER · Perplexity)"
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'production' || github.event_name == 'schedule' }}
     steps:
@@ -155,8 +160,9 @@ jobs:
         run: pip install httpx openai pandas pyarrow
       - name: Run production connector
         env:
+          # NASS QuickStats — 구 키 이름 유지, USDA_API_KEY로 통합 예정
           USDA_NASS_QUICKSTATS_API_KEY: ${{ secrets.USDA_NASS_QUICKSTATS_API_KEY }}
-          USDA_FAS_PSD_API_KEY:         ${{ secrets.USDA_FAS_PSD_API_KEY }}
+          USDA_API_KEY:                 ${{ secrets.USDA_API_KEY }}
           PERPLEXITY_API_KEY:           ${{ secrets.PERPLEXITY_API_KEY }}
         run: python src/pipeline/connectors/production_connector.py
       - name: Upload raw output

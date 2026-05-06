@@ -1,11 +1,12 @@
 """
-대두유 원산지별 생산량·농업기상 커넥터 — WBS 1.1.x (신규)
+대두유 원산지별 생산량·농업기상 커넥터 — WBS 1.1.7
 수집 대상:
   - 미국 주별 대두 생산량: USDA NASS QuickStats (API 키)
-  - 글로벌 대두유 수급: USDA FAS PSD (API 키) + FAOSTAT (공개)
+  - 국가별 대두 생산 시계열: FAOSTAT (공개) — AgML-CY-Bench 데이터소스
   - 아르헨티나 지역 농업통계: datos.gob.ar / INDEC (공개)
-  - 원산지 농업기상: NASA POWER API (공개, 키 불필요)
-  - 원산지·지역 생산 컨텍스트: Perplexity Pro (실시간)
+  - 원산지 농업기상 (6개 지역): NASA POWER API (공개, 키 불필요) — 기온·강수·습도
+  - 원산지·지역 생산 컨텍스트: Perplexity Pro (실시간 작황 등급·생산량 가이던스)
+범위 제외: USDA FAS PSD 글로벌 수급 → wasde_connector.py 담당 (중복 방지)
 실행 환경: VS Code Web (Azure ML Studio) 또는 GitHub Actions
 참고: github.com/kdmayer/nasa-power-api, github.com/datosgobar, github.com/WUR-AI/AgML-CY-Bench
 """
@@ -35,7 +36,6 @@ ORIGIN_COORDS = {
 }
 
 NASS_BASE    = "https://quickstats.nass.usda.gov/api/api_GET/"
-FAS_PSD_API  = "https://apps.fas.usda.gov/psdonline/api/psd/exporting"
 FAOSTAT_BASE = "https://fenixservices.fao.org/faostat/api/v1/en/data/QCL"
 INDEC_API    = "https://apis.datos.gob.ar/series/api/series/"
 NASA_POWER   = "https://power.larc.nasa.gov/api/temporal/monthly/point"
@@ -56,10 +56,15 @@ def _get(url: str, params: dict | None = None, max_retries: int = 4) -> httpx.Re
 
 
 def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
-    """USDA NASS QuickStats — 미국 주별 대두 생산량 (USDA_NASS_QUICKSTATS_API_KEY 필요)."""
-    api_key = os.environ.get("USDA_NASS_QUICKSTATS_API_KEY", "")
+    """USDA NASS QuickStats — 미국 주별 대두 생산량.
+    키 이름: USDA_NASS_QUICKSTATS_API_KEY 또는 USDA_API_KEY (하위 호환 fallback).
+    """
+    api_key = (
+        os.environ.get("USDA_NASS_QUICKSTATS_API_KEY", "")
+        or os.environ.get("USDA_API_KEY", "")
+    )
     if not api_key:
-        print("[경고] USDA_NASS_QUICKSTATS_API_KEY 미등록 — NASS 수집 건너뜀")
+        print("[경고] USDA_NASS_QUICKSTATS_API_KEY / USDA_API_KEY 미등록 — NASS 수집 건너뜀")
         return pd.DataFrame()
     yr = year or date.today().year
     try:
@@ -95,44 +100,6 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
         return df
     except Exception as e:
         print(f"[경고] USDA NASS 수집 실패: {e}")
-        return pd.DataFrame()
-
-
-def fetch_usda_fas_global(year: int | None = None) -> pd.DataFrame:
-    """USDA FAS PSD — 국가별 대두유 수급 (USDA_FAS_PSD_API_KEY 사용)."""
-    api_key = os.environ.get("USDA_FAS_PSD_API_KEY", "")
-    yr = year or date.today().year
-    params: dict = {"commodityCode": "2222000", "marketingYear": yr}
-    if api_key:
-        params["apiKey"] = api_key
-    try:
-        r = _get(FAS_PSD_API, params)
-        data = r.json()
-        if not data:
-            print(f"[경고] USDA FAS PSD: {yr}년 데이터 없음")
-            return pd.DataFrame()
-        rows = []
-        for it in data:
-            try:
-                rows.append({
-                    "price_date": f"{yr}-10-01",
-                    "source_name": "USDA_FAS_PSD",
-                    "indicator_code": f"SBO_{it.get('attributeId', 'UNKNOWN')}",
-                    "country": it.get("countryName", ""),
-                    "value": float(it.get("value") or 0),
-                    "unit": it.get("unitDesc", "1000 MT"),
-                })
-            except (ValueError, KeyError):
-                continue
-        if not rows:
-            return pd.DataFrame()
-        df = pd.DataFrame(rows)
-        df["price_date"] = pd.to_datetime(df["price_date"])
-        df["value"] = pd.to_numeric(df["value"], errors="coerce")
-        df["ingested_at"] = pd.Timestamp.utcnow()
-        return df.dropna(subset=["value"])
-    except Exception as e:
-        print(f"[경고] USDA FAS PSD 수집 실패: {e}")
         return pd.DataFrame()
 
 
@@ -334,7 +301,6 @@ def run() -> None:
     today = date.today().strftime("%Y%m%d")
     frames = [
         fetch_usda_nass_soybeans(),
-        fetch_usda_fas_global(),
         fetch_faostat_soybeans(),
         fetch_argentina_indec(),
         fetch_nasa_power_agromet(),

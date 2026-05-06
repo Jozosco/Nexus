@@ -22,18 +22,20 @@
 ## Phase 1 — Foundation (~520h)
 *목표: 모든 분석의 토대가 되는 데이터 파이프라인 구축 및 G1 변수 풀 확정*
 
-### 1.1 External Data Pipeline (~152h)
+### 1.1 External Data Pipeline (~160h)
 | WBS ID | 작업명 | 담당 | 공수 | 상태 |
 |---|---|---|---|---|
-| 1.1.1 | Design Snowflake Raw Schema for External Indicators | C-04 + P1-05 | 16h | ⬜ |
-| 1.1.2 | Implement Economic Indicators API Connector (Fed, CPI, FX, WTI) | C-04 | 24h | ⬜ |
-| 1.1.3 | Implement Shipping Index Connector (BDI, SCFI) | C-04 | 16h | ⬜ |
-| 1.1.4 | Implement WASDE/USDA Crop Data Connector | P1-05 | 24h | ⬜ |
-| 1.1.5 | Implement ENSO/Weather Anomaly API Connector | P1-05 | 16h | ⬜ |
-| 1.1.6 | Implement Geopolitical Index Scraper/Connector | P1-05 | 24h | ⬜ |
-| 1.1.7 | Configure API Retry Logic and GitHub Actions Schedule | C-04 | 16h | ⬜ |
+| 1.1.1 | Design Snowflake Raw Schema for External Indicators (SQL DDL) | C-04 | 16h | ✅ |
+| 1.1.2 | Implement Economic Indicators API Connector (Fed, CPI, FX, WTI) | C-04 | 24h | ✅ |
+| 1.1.3 | Implement Shipping Index Connector (BDI, SCFI via Perplexity) | C-04 | 16h | ✅ |
+| 1.1.4 | Implement WASDE/USDA Crop Data Connector (FAS PSD) | C-04 | 24h | ✅ |
+| 1.1.5 | Implement ENSO/Weather Anomaly Connector (NOAA CPC · ECMWF ERA5) | C-04 | 16h | ✅ |
+| 1.1.6 | Implement Geopolitical Index Connector (GPR Index · Hormuz Monitor) | C-04 | 24h | ✅ |
+| 1.1.7 | Implement Production & Agromet Connector (NASS · FAOSTAT · NASA POWER · Perplexity) | C-04 | 24h | ✅ |
 | 1.1.8 | Validate External Pipeline Data Quality (great_expectations) | C-08 | 8h | ⬜ |
-| 1.1.9 | Document External Data Schemas in data/schemas/ | C-07 | 8h | ⬜ |
+| 1.1.9 | Document External Data Schemas in data/schemas/ | C-07 | 8h | ✅ |
+
+> **P1-05 폐기**: 원래 1.1.4/1.1.5/1.1.6 담당 → C-04 흡수. Old 1.1.7 (API retry + Actions schedule) embedded into 1.1.2–1.1.7 implementation.
 
 ### 1.2 Internal Data Pipeline (~104h)
 | WBS ID | 작업명 | 담당 | 공수 | 상태 |

@@ -148,12 +148,39 @@ Monitor the following variables against defined alert thresholds.
 #### Maritime Insurance Premium Surcharge (Chokepoints)
 | Chokepoint | Normal Premium | Alert Threshold | Current Status |
 |---|---|---|---|
-| Strait of Hormuz | Baseline AWRP | > 3× baseline | [pull from Perplexity] |
+| Strait of Hormuz | Baseline AWRP | > 3× baseline | [pull from Perplexity / gpr_connector] |
 | Black Sea | Baseline AWRP | > 5× baseline (war risk) | [pull from Perplexity] |
 | Panama Canal | Baseline AWRP | > 2× baseline (drought/congestion) | [pull from Perplexity] |
 | Malacca Strait | Baseline AWRP | > 2× baseline (piracy/conflict) | [pull from Perplexity] |
 
 > AWRP = Additional War Risk Premium — standard Lloyd's Market Association rate
+
+#### Hormuz Strait Early Warning Protocol
+> Inspired by Globot agentic monitoring methodology (ref: github.com/Vector897/Globot).
+> `gpr_connector.py → _fetch_hormuz_realtime()` collects `HORMUZ_THREAT_LEVEL` and `HORMUZ_AWRP_MULTIPLIER` daily.
+
+| Signal | What to Monitor | Alert Threshold | Perplexity Query |
+|---|---|---|---|
+| AIS Vessel Anomaly | Tanker count through Hormuz vs 30-day avg | < 60% normal traffic | `"Strait of Hormuz vessel AIS traffic tanker count latest"` |
+| IRGC / Houthi Incidents | Attack or seizure reports past 7 days | Any confirmed incident | `"Hormuz Strait IRGC tanker attack seizure latest week"` |
+| AWRP Premium | Additional War Risk Premium multiplier | > 3× baseline | `"Hormuz war risk premium insurance surcharge Lloyd's latest"` |
+| Tanker Diversion | Cape of Good Hope re-routing reports | > 5 diversions/week | `"tanker Cape of Good Hope rerouting Hormuz avoidance latest"` |
+| Iran–US Diplomatic | Sanctions escalation / nuclear deal collapse | Formal breakdown signal | `"US Iran sanctions escalation Hormuz strait nuclear deal latest"` |
+| Ras Tanura Export | Saudi Aramco terminal operational status | Any disruption report | `"Saudi Aramca Ras Tanura export terminal Hormuz strait disruption"` |
+
+**Multi-Signal Alert Logic**:
+- `HORMUZ_ALERT: RED` — ≥ 2 signals breach threshold simultaneously → Issue immediate GIRA; escalate to C-01; cross-trigger P1-04 for CFR impact assessment
+- `HORMUZ_ALERT: WATCH` — 1 signal breaches → Include in Risk Alert Dashboard; monitor daily for 5 business days
+- `HORMUZ_ALERT: NORMAL` — 0 signals → Note current status in Executive Summary
+
+**SBO Impact Chain** (Korean buyer context):
+```
+Hormuz Disruption
+  → Global oil price spike (Brent +15–30%)
+  → Bunker fuel surcharge on SBO tankers (+$20–50/MT freight)
+  → CFR Korea premium + 3–8%
+  → Procurement signal: accelerate purchases 4–6 weeks ahead of expected closure
+```
 
 #### Policy Pivot Monitoring
 | Policy | Trigger Condition | SBO Impact |
