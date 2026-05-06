@@ -134,10 +134,25 @@ def run(start_date: str = "2020-01-01", end_date: str | None = None) -> None:
     today = date.today().strftime("%Y%m%d")
 
     frames = []
-    frames.append(fetch_fred_series("FEDFUNDS",   start, end))
-    frames.append(fetch_fred_series("CPIAUCSL",   start, end))
-    frames.append(fetch_eia_brent(start, end))
-    frames.append(fetch_bok_krw_usd(start, end))
+    # ── 금리·물가 ──────────────────────────────────────────────────────────────
+    frames.append(fetch_fred_series("FEDFUNDS",  start, end))  # Fed 기준금리
+    frames.append(fetch_fred_series("CPIAUCSL",  start, end))  # 미국 CPI
+    # ── 유가 ────────────────────────────────────────────────────────────────────
+    frames.append(fetch_eia_brent(start, end))                  # Brent 원유
+    # ── 환율 (대두유 원산지·결제통화) ─────────────────────────────────────────
+    frames.append(fetch_bok_krw_usd(start, end))                # KRW/USD (수입국)
+    frames.append(fetch_fred_series("DEXBZUS",  start, end))   # BRL/USD (브라질)
+    frames.append(fetch_fred_series("DEXARUE",  start, end))   # ARS/USD (아르헨티나)
+    frames.append(fetch_fred_series("DEXCHUS",  start, end))   # CNY/USD (중국)
+    frames.append(fetch_fred_series("DEXMAUS",  start, end))   # MYR/USD (말레이시아)
+    # ── 시장 리스크 ──────────────────────────────────────────────────────────────
+    frames.append(fetch_fred_series("VIXCLS",   start, end))   # VIX 변동성 지수
+
+    # 빈 DataFrame 제거 후 concat (일부 API 응답 없을 때 crash 방지)
+    frames = [f for f in frames if not f.empty]
+    if not frames:
+        print("[경고] 경제 지표: 모든 소스 응답 없음 — API 키 및 네트워크 확인 필요")
+        return
 
     combined = pd.concat(frames, ignore_index=True)
     combined["ingested_at"] = pd.Timestamp.utcnow()

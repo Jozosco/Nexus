@@ -71,7 +71,7 @@ jobs:
 
   # ── WBS 1.1.4: WASDE / USDA 작황 데이터 ───────────────────────────────────
   wasde-crop-data:
-    name: "1.1.4 | WASDE / USDA Crop Data (USDA_FAS_PSD_API_KEY)"
+    name: "1.1.4 | WASDE / USDA Crop Data (FAS OpenData · ARMS)"
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'wasde' || github.event_name == 'schedule' }}
     steps:
@@ -83,7 +83,12 @@ jobs:
         run: pip install httpx pandas pyarrow
       - name: Run WASDE connector
         env:
+          # FAS OpenData API — header 인증 (구: psdonline → 신: OpenData/api/psd)
+          USDA_FAS_API_KEY:     ${{ secrets.USDA_FAS_API_KEY }}
+          # 구 키 이름 하위 호환 (점진적 전환)
           USDA_FAS_PSD_API_KEY: ${{ secrets.USDA_FAS_PSD_API_KEY }}
+          # USDA ARMS 생산비용 데이터
+          USDA_ARM_API_KEY:     ${{ secrets.USDA_ARM_API_KEY }}
         run: python src/pipeline/connectors/wasde_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -155,7 +160,9 @@ jobs:
         run: pip install httpx openai pandas pyarrow
       - name: Run production connector
         env:
+          # NASS QuickStats — 구 키 이름 유지, USDA_API_KEY로 통합 예정
           USDA_NASS_QUICKSTATS_API_KEY: ${{ secrets.USDA_NASS_QUICKSTATS_API_KEY }}
+          USDA_API_KEY:                 ${{ secrets.USDA_API_KEY }}
           PERPLEXITY_API_KEY:           ${{ secrets.PERPLEXITY_API_KEY }}
         run: python src/pipeline/connectors/production_connector.py
       - name: Upload raw output

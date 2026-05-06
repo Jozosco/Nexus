@@ -56,10 +56,15 @@ def _get(url: str, params: dict | None = None, max_retries: int = 4) -> httpx.Re
 
 
 def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
-    """USDA NASS QuickStats — 미국 주별 대두 생산량 (USDA_NASS_QUICKSTATS_API_KEY 필요)."""
-    api_key = os.environ.get("USDA_NASS_QUICKSTATS_API_KEY", "")
+    """USDA NASS QuickStats — 미국 주별 대두 생산량.
+    키 이름: USDA_NASS_QUICKSTATS_API_KEY 또는 USDA_API_KEY (하위 호환 fallback).
+    """
+    api_key = (
+        os.environ.get("USDA_NASS_QUICKSTATS_API_KEY", "")
+        or os.environ.get("USDA_API_KEY", "")
+    )
     if not api_key:
-        print("[경고] USDA_NASS_QUICKSTATS_API_KEY 미등록 — NASS 수집 건너뜀")
+        print("[경고] USDA_NASS_QUICKSTATS_API_KEY / USDA_API_KEY 미등록 — NASS 수집 건너뜀")
         return pd.DataFrame()
     yr = year or date.today().year
     try:
