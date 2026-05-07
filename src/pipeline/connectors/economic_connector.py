@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import time
 from datetime import date
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 import pandas as pd
@@ -22,11 +22,17 @@ OUTPUT_DIR = "data/raw"
 
 
 def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
-    """외부 API 호출 — 지수 백오프 재시도 (MEMORY A-003)."""
+    """외부 API 호출 — 지수 백오프 재시도 (MEMORY A-003).
+    400: 시리즈 미존재 또는 파라미터 오류 → 재시도 없이 빈 dict 반환.
+    """
     delay = 2
     for attempt in range(max_retries):
         try:
             r = httpx.get(url, params=params, timeout=30)
+            if r.status_code == 400:
+                base = url.split("?")[0]
+                print(f"[경고] API 400 응답 ({base}): 시리즈 미존재 또는 파라미터 오류. 건너뜀.")
+                return {}
             r.raise_for_status()
             return r.json()
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
@@ -34,6 +40,7 @@ def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
                 raise RuntimeError(f"[오류] API 호출 실패 ({url}): {e}") from e
             time.sleep(delay)
             delay *= 2
+    return {}
 
 
 def fetch_fred_series(series_id: str, start: str, end: str) -> pd.DataFrame:
@@ -109,6 +116,18 @@ def fetch_bok_krw_usd(start: str, end: str) -> pd.DataFrame:
     end_fmt   = end.replace("-", "")
     url = f"{BOK_BASE}/{api_key}/json/kr/1/5000/731Y001/DD/{start_fmt}/{end_fmt}/0000001"
     data = _fetch(url, {})
+
+    # BOK ECOS 오류 응답: 정상이면 "StatisticSearch" 키, 오류이면 "RESULT" 키
+    if not data or "RESULT" in data:
+        result_info = data.get("RESULT", {}) if data else {}
+        code = result_info.get("CODE", "EMPTY")
+        msg  = result_info.get("MESSAGE", "응답 없음")
+        print(
+            f"[경고] BOK ECOS API 오류 — 코드: {code}, 메시지: {msg}. "
+            f"BOK_ECOS_API_KEY 또는 시리즈 코드(731Y001/0000001) 확인 필요."
+        )
+        return pd.DataFrame()
+
     rows = data.get("StatisticSearch", {}).get("row", [])
     if not rows:
         print(f"[경고] BOK ECOS: 기간 {start}~{end} 데이터 없음. API 키 또는 날짜 범위 확인.")
@@ -133,22 +152,31 @@ def run(start_date: str = "2020-01-01", end_date: str | None = None) -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
 
-    frames = []
-    # ── 금리·물가 ──────────────────────────────────────────────────────────────
-    frames.append(fetch_fred_series("FEDFUNDS",  start, end))  # Fed 기준금리
-    frames.append(fetch_fred_series("CPIAUCSL",  start, end))  # 미국 CPI
-    # ── 유가 ────────────────────────────────────────────────────────────────────
-    frames.append(fetch_eia_brent(start, end))                  # Brent 원유
-    # ── 환율 (대두유 원산지·결제통화) ─────────────────────────────────────────
-    frames.append(fetch_bok_krw_usd(start, end))                # KRW/USD (수입국)
-    frames.append(fetch_fred_series("DEXBZUS",  start, end))   # BRL/USD (브라질)
-    frames.append(fetch_fred_series("DEXARUE",  start, end))   # ARS/USD (아르헨티나)
-    frames.append(fetch_fred_series("DEXCHUS",  start, end))   # CNY/USD (중국)
-    frames.append(fetch_fred_series("DEXMAUS",  start, end))   # MYR/USD (말레이시아)
-    # ── 시장 리스크 ──────────────────────────────────────────────────────────────
-    frames.append(fetch_fred_series("VIXCLS",   start, end))   # VIX 변동성 지수
+    def _safe(fn: Callable, *args: Any, label: str = "", **kwargs: Any) -> pd.DataFrame:
+        """개별 커넥터 실패를 격리 — 단일 실패가 전체 파이프라인을 중단시키지 않음."""
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            print(f"[경고] {label or fn.__name__} 수집 실패: {e}")
+            return pd.DataFrame()
 
-    # 빈 DataFrame 제거 후 concat (일부 API 응답 없을 때 crash 방지)
+    frames = [
+        # ── 금리·물가 ──────────────────────────────────────────────────────────
+        _safe(fetch_fred_series, "FEDFUNDS", start, end, label="FRED FEDFUNDS"),
+        _safe(fetch_fred_series, "CPIAUCSL", start, end, label="FRED CPIAUCSL"),
+        # ── 유가 ───────────────────────────────────────────────────────────────
+        _safe(fetch_eia_brent,   start, end, label="EIA Brent"),
+        # ── 환율 (원산지·결제통화) ─────────────────────────────────────────────
+        _safe(fetch_bok_krw_usd, start, end, label="BOK ECOS KRW/USD"),
+        _safe(fetch_fred_series, "DEXBZUS", start, end, label="FRED DEXBZUS (BRL/USD)"),
+        # DEXARUE(아르헨티나 페소): FRED 미제공 — 다중 환율제도로 공식 시리즈 없음
+        # 추후 BCRA(아르헨티나 중앙은행) API 또는 IMF IFS API로 대체 예정 (MEMORY D-002)
+        _safe(fetch_fred_series, "DEXCHUS", start, end, label="FRED DEXCHUS (CNY/USD)"),
+        _safe(fetch_fred_series, "DEXMAUS", start, end, label="FRED DEXMAUS (MYR/USD)"),
+        # ── 시장 리스크 ────────────────────────────────────────────────────────
+        _safe(fetch_fred_series, "VIXCLS",  start, end, label="FRED VIXCLS"),
+    ]
+
     frames = [f for f in frames if not f.empty]
     if not frames:
         print("[경고] 경제 지표: 모든 소스 응답 없음 — API 키 및 네트워크 확인 필요")
@@ -156,7 +184,7 @@ def run(start_date: str = "2020-01-01", end_date: str | None = None) -> None:
 
     combined = pd.concat(frames, ignore_index=True)
     combined["ingested_at"] = pd.Timestamp.utcnow()
-    combined["unit"] = ""   # downstream enrichment adds units
+    combined["unit"] = ""
 
     out = f"{OUTPUT_DIR}/economic_indicators_{today}.parquet"
     combined.to_parquet(out, index=False)
