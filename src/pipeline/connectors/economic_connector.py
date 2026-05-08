@@ -146,6 +146,41 @@ def fetch_bok_krw_usd(start: str, end: str) -> pd.DataFrame:
     return df.dropna(subset=["value"])
 
 
+def fetch_kosis_kr_import_stats() -> pd.DataFrame:
+    """
+    한국 대두유 수입 통계 수집 (KOSIS API 키 사용).
+    중요 주의: KOSIS 자체에는 HS 코드별 수입 데이터 없음 — 관세청 데이터.
+    현재 구현: KOSIS API 연결 확인만 수행. 실제 수입 통계는 data.go.kr 또는
+    KITA(stat.kita.net) 등록 후 Korea Customs API로 대체 필요 (A-010 참조).
+    """
+    api_key = os.environ.get("KOSIS_API_KEY", "")
+    if not api_key:
+        print("[경고] KOSIS_API_KEY 미등록 — 한국 수입 통계 건너뜀")
+        return pd.DataFrame()
+
+    # KOSIS API 연결 테스트 (통계 목록 조회 — 서비스 ID 확인용)
+    try:
+        r = _fetch("https://kosis.kr/openapi/Param/statisticsParamData.do", {
+            "method":   "getList",
+            "apiKey":   api_key,
+            "format":   "json",
+            "jsonVD":   "Y",
+            "vwCd":     "MT_ZTITLE",
+            "parentListId": "MT_OTITLE",
+        })
+        if not r:
+            print("[경고] KOSIS API: 응답 없음 또는 연결 실패")
+            return pd.DataFrame()
+        print(
+            "[정보] KOSIS API 연결 확인 완료. "
+            "대두유 수입 상세 통계는 data.go.kr 또는 KITA(stat.kita.net) 전환 필요 (A-010)."
+        )
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"[경고] KOSIS API 호출 실패: {e}")
+        return pd.DataFrame()
+
+
 def run(start_date: str = "2020-01-01", end_date: str | None = None) -> None:
     end   = end_date or date.today().isoformat()
     start = start_date
@@ -175,6 +210,8 @@ def run(start_date: str = "2020-01-01", end_date: str | None = None) -> None:
         _safe(fetch_fred_series, "DEXMAUS", start, end, label="FRED DEXMAUS (MYR/USD)"),
         # ── 시장 리스크 ────────────────────────────────────────────────────────
         _safe(fetch_fred_series, "VIXCLS",  start, end, label="FRED VIXCLS"),
+        # ── 한국 수입 통계 (KOSIS — 연결 확인만; 실 데이터는 data.go.kr 전환 예정) ──
+        _safe(fetch_kosis_kr_import_stats, label="KOSIS KR 수입통계"),
     ]
 
     frames = [f for f in frames if not f.empty]

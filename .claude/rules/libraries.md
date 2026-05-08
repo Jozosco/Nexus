@@ -43,7 +43,7 @@ scipy >= 1.12           # scipy.optimize as fallback
 
 # Multi-LLM Integration (src/utils/)
 openai >= 1.30              # OpenAI API + Perplexity (OpenAI-compatible endpoint)
-google-generativeai >= 0.7  # Gemini API (⚠ not the same as google-cloud-aiplatform)
+google-genai >= 2.0         # Gemini API (⚠ google-generativeai 지원 종료 — MEMORY L-010 참조)
 
 # Cloud Connectors
 snowflake-connector-python >= 3.5   # Snowflake access
