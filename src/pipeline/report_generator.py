@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 
 OUTPUT_DIR = "data/raw"
-REPORT_DIR = "reports"
+REPORT_DIR = "reports/pipeline"  # WBS 1.6.1 경로 규약
 
 
 def _collect_stats() -> list[dict]:

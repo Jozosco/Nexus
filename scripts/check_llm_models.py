@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""
+LLM 제공사별 최신 모델 목록을 라이브 API에서 조회하여 config/llm_models.json 핀 목록과 비교.
+신규 모델 감지 시 GitHub Actions가 Issue를 자동 생성함 (2-2 LLM Model Monitor).
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Any
+
+CONFIG_PATH = Path("config/llm_models.json")
+DIFF_PATH   = Path("model_diff.md")
+GH_OUTPUT   = os.environ.get("GITHUB_OUTPUT", "")
+
+
+def _set_output(key: str, value: str) -> None:
+    if GH_OUTPUT:
+        with open(GH_OUTPUT, "a") as fh:
+            fh.write(f"{key}={value}\n")
+
+
+def _load_pinned() -> dict[str, list[str]]:
+    data = json.loads(CONFIG_PATH.read_text())
+    # _comment / role_assignments 키 제외
+    return {k: v for k, v in data.items() if not k.startswith("_") and k != "role_assignments"}
+
+
+def _fetch_openai() -> list[str]:
+    import openai
+    client = openai.Client(api_key=os.environ["OPENAI_API_KEY"])
+    return sorted(m.id for m in client.models.list())
+
+
+def _fetch_gemini() -> list[str]:
+    from google import genai
+    from google.genai import errors as genai_errors
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    try:
+        return sorted(m.name for m in client.models.list())
+    except genai_errors.APIError as e:
+        print(f"[오류] Gemini 모델 목록 조회 실패: {getattr(e, 'code', '?')} {e}", file=sys.stderr)
+        return []
+
+
+def _fetch_anthropic() -> list[str]:
+    import anthropic
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    return sorted(m.id for m in client.models.list())
+
+
+def _fetch_perplexity() -> list[str]:
+    """Perplexity: OpenAI 호환 엔드포인트 — /models 미구현 시 빈 목록 반환."""
+    import openai
+    try:
+        client = openai.Client(
+            api_key=os.environ["PERPLEXITY_API_KEY"],
+            base_url="https://api.perplexity.ai",
+        )
+        return sorted(m.id for m in client.models.list())
+    except Exception as e:
+        print(f"[경고] Perplexity /models 엔드포인트 미구현 — 수동 확인 필요: {e}", file=sys.stderr)
+        return []
+
+
+FETCHERS: dict[str, Any] = {
+    "openai":      _fetch_openai,
+    "gemini":      _fetch_gemini,
+    "anthropic":   _fetch_anthropic,
+    "perplexity":  _fetch_perplexity,
+}
+
+
+def _build_diff_report(
+    pinned: dict[str, list[str]],
+    live:   dict[str, list[str]],
+    run_date: str,
+) -> tuple[bool, str]:
+    lines: list[str] = [
+        "# LLM 모델 업데이트 감지 보고서",
+        f"",
+        f"**실행 날짜**: {run_date}  ",
+        f"**비교 기준 파일**: `config/llm_models.json`",
+        "",
+    ]
+    any_new = False
+
+    for provider in pinned:
+        live_models  = live.get(provider, [])
+        pinned_set   = set(pinned[provider])
+        live_set     = set(live_models)
+        new_models   = sorted(live_set - pinned_set)
+        dropped      = sorted(pinned_set - live_set)
+
+        lines.append(f"## {provider.title()}")
+
+        if not live_models:
+            lines.append("_모델 목록 조회 실패 — 수동 확인 필요_")
+            lines.append("")
+            continue
+
+        if new_models:
+            any_new = True
+            lines.append("### 신규 모델 (config/llm_models.json 추가 + 역할 배정 검토 필요)")
+            for m in new_models:
+                lines.append(f"- `{m}`")
+        if dropped:
+            lines.append("### 제거된 모델 (폐기 확인 후 config에서 삭제 필요)")
+            for m in dropped:
+                lines.append(f"- ~~`{m}`~~")
+        if not new_models and not dropped:
+            lines.append("_변경 없음_")
+        lines.append("")
+
+    lines += [
+        "---",
+        "## 역할 배정 가이드",
+        "",
+        "신규 모델 발견 시 아래 기준으로 `config/llm_models.json` 의 `role_assignments` 업데이트:",
+        "",
+        "| 역할 | 선택 기준 |",
+        "|---|---|",
+        "| `REAL_TIME_RESEARCH` | 최신 웹 검색 포함 모델 (Perplexity sonar 계열) |",
+        "| `LARGE_DOCUMENT` | 컨텍스트 윈도우 최대 모델 (Gemini 2M ctx 계열) |",
+        "| `STRUCTURED_EXTRACT` | JSON 출력 신뢰도 최고 모델 (GPT-4o 계열) |",
+        "| `CLAUDE_NATIVE` | 코드·추론 최강 모델 (Claude Opus/Sonnet 최신) |",
+        "",
+        "> **HITL 게이트**: 역할 배정 변경은 인간 검토 후 PR로 반영 (CLAUDE.md §6)",
+    ]
+
+    return any_new, "\n".join(lines)
+
+
+def main() -> None:
+    from datetime import date
+    pinned   = _load_pinned()
+    live     = {p: fn() for p, fn in FETCHERS.items()}
+    any_new, report = _build_diff_report(pinned, live, date.today().isoformat())
+
+    print(report)
+    DIFF_PATH.write_text(report, encoding="utf-8")
+    _set_output("new_models_found", "true" if any_new else "false")
+
+    if any_new:
+        print("\n[알림] 신규 모델 감지 — GitHub Issue 생성 예정")
+    else:
+        print("\n[정보] 모든 제공사 모델 목록 변경 없음")
+
+
+if __name__ == "__main__":
+    main()

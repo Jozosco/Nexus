@@ -2,28 +2,33 @@
 Google Gemini API 클라이언트 — 대용량 문서 분석 및 멀티모달 처리 전용.
 2M 토큰 컨텍스트 윈도우 활용: WASDE 보고서, EPA 정책 문서, 대용량 데이터셋.
 사용 에이전트: C-02 Market Research (문서 > 50페이지), C-06 EDA (데이터 > 1M 행)
+
+SDK: google-genai (구 google-generativeai 패키지 지원 종료 — MEMORY L-010)
 """
+
+from __future__ import annotations
 
 import os
 import time
-from typing import Optional, Union
-import google.generativeai as genai
-from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable
+from typing import Optional
+
+from google import genai
+from google.genai import types
+from google.genai.errors import ClientError, ServerError
 
 # 최신 Gemini 모델 — 2M 토큰 컨텍스트 지원 (2025 기준 최신)
-GEMINI_PRO_MODEL = "gemini-2.5-pro"      # 구: gemini-1.5-pro — 추론 강화, 컨텍스트 확장
+GEMINI_PRO_MODEL   = "gemini-2.5-pro"    # 구: gemini-1.5-pro — 추론 강화, 컨텍스트 확장
 GEMINI_FLASH_MODEL = "gemini-2.0-flash"  # 구: gemini-1.5-flash — 속도/비용 최적화
 
 
-def get_gemini_model(model: str = GEMINI_PRO_MODEL) -> genai.GenerativeModel:
+def _get_client() -> genai.Client:
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise EnvironmentError(
             "[오류] GEMINI_API_KEY 환경변수가 설정되지 않았습니다. "
             "Google AI Studio(aistudio.google.com)에서 키를 발급받으세요."
         )
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel(model)
+    return genai.Client(api_key=api_key)
 
 
 def query_gemini(
@@ -44,7 +49,7 @@ def query_gemini(
     Returns:
         분석 결과 텍스트
     """
-    gemini_model = get_gemini_model(model)
+    client = _get_client()
 
     full_prompt = prompt
     if document_text:
@@ -55,27 +60,31 @@ def query_gemini(
             f"문서 내용:\n{document_text}"
         )
 
-    generation_config = genai.GenerationConfig(
-        temperature=0.1,  # 분석 작업은 낮은 온도로 일관성 유지
+    config = types.GenerateContentConfig(
+        temperature=0.1,       # 분석 작업은 낮은 온도로 일관성 유지
         max_output_tokens=8192,
     )
 
     delay = 2
     for attempt in range(max_retries):
         try:
-            response = gemini_model.generate_content(
-                full_prompt,
-                generation_config=generation_config,
+            response = client.models.generate_content(
+                model=model,
+                contents=full_prompt,
+                config=config,
             )
             return response.text
-        except ResourceExhausted as e:  # 429 equivalent
-            if attempt == max_retries - 1:
-                raise RuntimeError(
-                    f"[오류] Gemini API 할당량 초과 ({max_retries}회 재시도 후 실패): {e}"
-                ) from e
-            time.sleep(delay)
-            delay *= 2
-        except ServiceUnavailable as e:
+        except ClientError as e:
+            if getattr(e, "code", None) == 429:
+                if attempt == max_retries - 1:
+                    raise RuntimeError(
+                        f"[오류] Gemini API 할당량 초과 ({max_retries}회 재시도 후 실패): {e}"
+                    ) from e
+                time.sleep(delay)
+                delay *= 2
+            else:
+                raise RuntimeError(f"[오류] Gemini API 클라이언트 오류: {e}") from e
+        except ServerError as e:
             if attempt == max_retries - 1:
                 raise RuntimeError(
                     f"[오류] Gemini API 서비스 불가 ({max_retries}회 재시도 후 실패): {e}"
@@ -87,6 +96,6 @@ def query_gemini(
 
 def count_tokens(text: str, model: str = GEMINI_PRO_MODEL) -> int:
     """문서를 Gemini에 전달하기 전 토큰 수를 사전 확인."""
-    gemini_model = get_gemini_model(model)
-    result = gemini_model.count_tokens(text)
-    return result.total_tokens
+    client = _get_client()
+    response = client.models.count_tokens(model=model, contents=text)
+    return response.total_tokens

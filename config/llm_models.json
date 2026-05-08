@@ -1,0 +1,35 @@
+{
+  "_comment": "핀된 LLM 모델 목록 — check_llm_models.py가 라이브 API와 비교. 업그레이드 시 수동 검토 후 갱신.",
+  "_last_reviewed": "2026-05-08",
+  "openai": [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-turbo",
+    "o1",
+    "o3-mini"
+  ],
+  "gemini": [
+    "models/gemini-2.5-pro",
+    "models/gemini-2.5-flash",
+    "models/gemini-2.0-flash"
+  ],
+  "anthropic": [
+    "claude-opus-4-7-20251101",
+    "claude-sonnet-4-6-20251022",
+    "claude-haiku-4-5-20251001"
+  ],
+  "perplexity": [
+    "sonar-pro",
+    "sonar",
+    "sonar-deep-research",
+    "sonar-reasoning-pro"
+  ],
+  "role_assignments": {
+    "_comment": "에이전트별 역할 최적 모델 매핑 (llm_router.py 기준)",
+    "REAL_TIME_RESEARCH": "sonar-pro",
+    "DEEP_RESEARCH": "sonar-deep-research",
+    "LARGE_DOCUMENT": "models/gemini-2.5-pro",
+    "STRUCTURED_EXTRACT": "gpt-4o-mini",
+    "CLAUDE_NATIVE": "claude-sonnet-4-6-20251022"
+  }
+}

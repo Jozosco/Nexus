@@ -296,6 +296,51 @@ def fetch_perplexity_production_regions() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def fetch_fas_esr_soybean_oil(weeks_back: int = 8) -> pd.DataFrame:
+    """
+    USDA FAS Export Sales Reporting (ESR) — 대두유 주간 수출 판매량.
+    인증 불필요 | 매주 목요일 08:30 ET 갱신 | 상품 코드: 902 (Soybean Oil)
+    주의: USDA FGIS_API_KEY 는 이 용도와 무관 — FGIS는 가공유 미취급 (A-009 참조)
+    """
+    FAS_ESR_BASE = "https://apps.fas.usda.gov/OpenData/api/esr"
+    SOYBEAN_OIL_CODE = "902"
+    end_dt   = date.today()
+    start_dt = end_dt - timedelta(days=weeks_back * 7)
+
+    try:
+        r = _get(f"{FAS_ESR_BASE}/exports", params={
+            "commodityCode": SOYBEAN_OIL_CODE,
+            "weeklyExportSalesFromDate": start_dt.isoformat(),
+            "weeklyExportSalesToDate":   end_dt.isoformat(),
+        })
+        data = r.json()
+        if not data:
+            print("[경고] FAS ESR 대두유: 데이터 없음")
+            return pd.DataFrame()
+        rows = []
+        for entry in data:
+            try:
+                rows.append({
+                    "price_date":     str(entry.get("weeklyExportSalesDate", ""))[:10],
+                    "source_name":    "USDA_FAS_ESR",
+                    "indicator_code": f"SBOIL_EXPORT_{entry.get('countryCode', 'WORLD')}",
+                    "country":        str(entry.get("countryCode", "")),
+                    "value":          float(entry.get("weekSales", 0) or 0),
+                    "unit":           "MT",
+                })
+            except (ValueError, TypeError):
+                continue
+        if not rows:
+            return pd.DataFrame()
+        df = pd.DataFrame(rows)
+        df["price_date"] = pd.to_datetime(df["price_date"])
+        df["ingested_at"] = pd.Timestamp.utcnow()
+        return df.dropna(subset=["value"])
+    except Exception as e:
+        print(f"[경고] FAS ESR 대두유 수출 수집 실패: {e}")
+        return pd.DataFrame()
+
+
 def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
@@ -305,6 +350,7 @@ def run() -> None:
         fetch_argentina_indec(),
         fetch_nasa_power_agromet(),
         fetch_perplexity_production_regions(),
+        fetch_fas_esr_soybean_oil(),
     ]
     frames = [f for f in frames if not f.empty]
     if not frames:
