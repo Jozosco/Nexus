@@ -89,10 +89,67 @@ def fetch_bcaa() -> pd.DataFrame:
     return df
 
 
+def fetch_bdi_te() -> pd.DataFrame:
+    """Trading Economics에서 BDI 수집 — C-03 구조적 단절 모니터링(90일 z-score > 2σ).
+
+    TRADING_ECONOMICS_API_KEY 미등록 시 빈 DataFrame 반환 (BCAA는 TE 미제공).
+    """
+    try:
+        from src.pipeline.connectors.te_connector import fetch_bdi  # type: ignore
+        return fetch_bdi()
+    except ImportError:
+        pass
+    # TE 직접 호출 (te_connector 없을 때)
+    te_key = os.environ.get("TRADING_ECONOMICS_API_KEY", "").strip()
+    if not te_key:
+        print("[정보] TRADING_ECONOMICS_API_KEY 미등록 — BDI TE 수집 건너뜀")
+        return pd.DataFrame()
+    try:
+        import tradingeconomics as te  # type: ignore
+        te.login(te_key)
+        for symbol in ("bdi", "baltic"):
+            try:
+                result = te.getMarketsBySymbol(symbols=symbol, output_type="df")
+                if result is not None and len(result) > 0:
+                    date_col  = next((c for c in ["DateTime", "Date", "date"] if c in result.columns), None)
+                    value_col = next((c for c in ["Last", "Close", "Value"] if c in result.columns), None)
+                    if date_col and value_col:
+                        return pd.DataFrame({
+                            "price_date":     pd.to_datetime(result[date_col], errors="coerce"),
+                            "value":          pd.to_numeric(result[value_col], errors="coerce"),
+                            "source_name":    "TradingEconomics/BalticExchange",
+                            "indicator_code": "BDI",
+                            "unit":           "points",
+                            "note":           "[TE-OFFICIAL: C-03 z-score 모니터링]",
+                            "ingested_at":    pd.Timestamp.utcnow(),
+                        }).dropna(subset=["price_date", "value"])
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"[경고] TE BDI 수집 실패: {e}")
+    return pd.DataFrame()
+
+
 def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
-    df = fetch_bcaa()
+    frames = []
+
+    # BCAA: 식물성유지 탱커 운임 (Perplexity 프록시 — TE 미제공)
+    bcaa = fetch_bcaa()
+    if not bcaa.empty:
+        frames.append(bcaa)
+
+    # BDI: C-03 구조적 단절 모니터링 변수 (Trading Economics 공식 API)
+    bdi = fetch_bdi_te()
+    if not bdi.empty:
+        frames.append(bdi)
+
+    if not frames:
+        print("[경고] 해운 지수 수집 실패 — PERPLEXITY_API_KEY 및 TRADING_ECONOMICS_API_KEY 확인.")
+        return
+
+    df = pd.concat(frames, ignore_index=True)
     out = f"{OUTPUT_DIR}/shipping_indices_{today}.parquet"
     df.to_parquet(out, index=False)
     print(f"[완료] 해운 지수 {len(df)}건 저장 → {out}")

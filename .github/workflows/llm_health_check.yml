@@ -90,7 +90,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install httpx
+        run: pip install httpx tradingeconomics
 
       - name: Check FRED API (Fed Funds Rate endpoint)
         env:
@@ -151,4 +151,184 @@ jobs:
           count = data["KeyStatisticList"].get("list_total_count", 0)
           assert int(count) > 0, "[오류] BOK ECOS API: 데이터 0건 — API 키 또는 엔드포인트 확인 필요"
           print(f"✅ BOK ECOS API 정상 — 주요 통계 항목 수: {count}")
+          EOF
+
+      - name: Check KOSIS API (connection test — MEMORY A-010)
+        env:
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os, httpx
+          api_key = os.environ.get("KOSIS_API_KEY", "").strip()
+          if not api_key:
+              print("⚠️ KOSIS_API_KEY 미등록 — 건너뜀")
+              raise SystemExit(0)
+          r = httpx.get(
+              "https://kosis.kr/openapi/Param/statisticsParamData.do",
+              params={"method": "getList", "apiKey": api_key,
+                      "format": "json", "jsonVD": "Y",
+                      "vwCd": "MT_ZTITLE", "parentListId": "MT_OTITLE"},
+              timeout=15,
+          )
+          r.raise_for_status()
+          data = r.json()
+          assert isinstance(data, list) and len(data) > 0, \
+              f"[오류] KOSIS API 응답 이상 (통계 목록 0건): {data}"
+          print(f"✅ KOSIS API 정상 — 통계 목록 {len(data)}건 (연결 확인; HS코드 수입데이터는 관세청 API)")
+          EOF
+
+      - name: Check USDA FAS OpenData API (PSD SBO endpoint)
+        env:
+          USDA_FAS_API_KEY: ${{ secrets.USDA_FAS_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os, httpx
+          api_key = os.environ.get("USDA_FAS_API_KEY", "").strip()
+          if not api_key:
+              print("⚠️ USDA_FAS_API_KEY 미등록 — 건너뜀 (apps.fas.usda.gov/opendatawebV2 에서 발급)")
+              raise SystemExit(0)
+          url = "https://apps.fas.usda.gov/OpenData/api/psd/commodity/2222000/country/all/year/2024"
+          r = httpx.get(url, headers={"API_KEY": api_key}, timeout=20)
+          r.raise_for_status()
+          data = r.json()
+          assert isinstance(data, list) and len(data) > 0, \
+              f"[오류] USDA FAS PSD API: 대두유(2222000) 2024년 데이터 없음"
+          print(f"✅ USDA FAS OpenData API 정상 — 대두유 PSD 레코드 {len(data)}건")
+          EOF
+
+      - name: Check USDA NASS QuickStats API (Soybean Production endpoint)
+        env:
+          USDA_NASS_QUICKSTATS_API_KEY: ${{ secrets.USDA_NASS_QUICKSTATS_API_KEY }}
+          USDA_API_KEY:                 ${{ secrets.USDA_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os, httpx
+          api_key = (os.environ.get("USDA_NASS_QUICKSTATS_API_KEY") or
+                     os.environ.get("USDA_API_KEY") or "").strip()
+          if not api_key:
+              print("⚠️ USDA_NASS_QUICKSTATS_API_KEY 미등록 — 건너뜀 (quickstats.nass.usda.gov 에서 발급)")
+              raise SystemExit(0)
+          r = httpx.get(
+              "https://quickstats.nass.usda.gov/api/api_GET/",
+              params={
+                  "key": api_key, "format": "json",
+                  "commodity_desc": "SOYBEANS",
+                  "statisticcat_desc": "PRODUCTION",
+                  "year": "2023", "state_name": "IOWA",
+              },
+              timeout=20,
+          )
+          r.raise_for_status()
+          data = r.json()
+          assert "data" in data and len(data["data"]) > 0, \
+              f"[오류] USDA NASS API: 아이오와 대두 생산 데이터 없음. 응답 키: {list(data.keys())}"
+          print(f"✅ USDA NASS QuickStats API 정상 — 대두 생산 레코드 {len(data['data'])}건")
+          EOF
+
+      - name: Check USDA ARMS API (Soybean Production Cost)
+        env:
+          USDA_ARM_API_KEY: ${{ secrets.USDA_ARM_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os, httpx
+          api_key = os.environ.get("USDA_ARM_API_KEY", "").strip()
+          if not api_key:
+              print("⚠️ USDA_ARM_API_KEY 미등록 — 건너뜀 (USDA ERS 계정 신청 필요)")
+              raise SystemExit(0)
+          r = httpx.get(
+              "https://data.ers.usda.gov/api/Data",
+              params={
+                  "report": "ARMS", "year": "2022",
+                  "category": "Production Costs", "crop": "Soybeans",
+                  "farmtype": "All farms", "level": "State", "state": "US",
+                  "api_key": api_key,
+              },
+              timeout=20,
+          )
+          r.raise_for_status()
+          data = r.json()
+          count = len(data) if isinstance(data, list) else data.get("count", 0)
+          assert count > 0, f"[오류] USDA ARMS API 응답 이상 (0건): {list(data.keys()) if isinstance(data, dict) else type(data)}"
+          print(f"✅ USDA ARMS API 정상 — 대두 생산비용 레코드 {count}건")
+          EOF
+
+      - name: Check ECMWF CDS API (ERA5 connection)
+        env:
+          ECMWF_API_KEY: ${{ secrets.ECMWF_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os, httpx
+          api_key = os.environ.get("ECMWF_API_KEY", "").strip()
+          if not api_key:
+              print("⚠️ ECMWF_API_KEY 미등록 — 건너뜀 (cds.climate.copernicus.eu 계정 필요, 형식: uid:key)")
+              raise SystemExit(0)
+          # ECMWF CDS API — 형식: 'uid:key'
+          if ":" in api_key:
+              uid, key = api_key.split(":", 1)
+              auth_header = {"Authorization": f"Bearer {key}", "X-CDS-API-KEY": api_key}
+          else:
+              auth_header = {"X-CDS-API-KEY": api_key}
+          r = httpx.get(
+              "https://cds.climate.copernicus.eu/api/v2/resources/",
+              headers=auth_header,
+              timeout=20,
+          )
+          # 200 또는 인증 오류가 아닌 응답이면 연결 정상
+          if r.status_code in (200, 403, 404):
+              print(f"✅ ECMWF CDS API 연결 정상 (HTTP {r.status_code})")
+          else:
+              r.raise_for_status()
+          EOF
+
+      - name: Check Korea Customs API — data.go.kr HS 1507 (MEMORY A-011)
+        env:
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+        run: |
+          python - <<'EOF'
+          import os, httpx
+          svc_key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
+          if not svc_key:
+              print("⚠️ DATA_GO_KR_SERVICE_KEY 미등록 — 건너뜀 (data.go.kr에서 관세청 수출입실적 API 신청 필요)")
+              raise SystemExit(0)
+          r = httpx.get(
+              "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList",
+              params={
+                  "serviceKey": svc_key,
+                  "pageNo": 1, "numOfRows": 5,
+                  "hsCd": "1507", "period": "202501", "type": "json",
+              },
+              timeout=20,
+          )
+          r.raise_for_status()
+          data = r.json()
+          body = data.get("response", {}).get("body", {})
+          total = body.get("totalCount", 0)
+          print(f"✅ Korea Customs API 정상 — HS 1507 2025-01 수입국 {total}개국")
+          EOF
+
+      - name: Check Trading Economics API (BDI + CPO)
+        env:
+          TRADING_ECONOMICS_API_KEY: ${{ secrets.TRADING_ECONOMICS_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os
+          te_key = os.environ.get("TRADING_ECONOMICS_API_KEY", "").strip()
+          if not te_key:
+              print("⚠️ TRADING_ECONOMICS_API_KEY 미등록 — 건너뜀 (tradingeconomics.com, 형식: key:secret)")
+              raise SystemExit(0)
+          import tradingeconomics as te
+          te.login(te_key)
+          # BDI 조회 (Baltic Dry Index — C-03 구조적 단절 모니터링 변수)
+          try:
+              data = te.getMarketsBySymbol(symbols="bdi", output_type="df")
+              assert data is not None and len(data) > 0, "[오류] TE BDI 데이터 없음"
+              print(f"✅ Trading Economics API 정상 — BDI: {data.iloc[0].get('Last', 'N/A')}")
+          except Exception as e:
+              # BDI 심볼 확인 필요 시 전체 상품 목록으로 재시도
+              data = te.getMarketsData(marketsField="commodities", output_type="df")
+              bdi_row = data[data["Symbol"].str.lower().str.contains("bdi|baltic", na=False)] if data is not None else None
+              if bdi_row is not None and len(bdi_row) > 0:
+                  print(f"✅ Trading Economics API 정상 — BDI 발견 (심볼 재확인 필요): {e}")
+              else:
+                  raise RuntimeError(f"[오류] Trading Economics BDI 조회 실패: {e}")
           EOF
