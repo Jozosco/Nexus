@@ -28,37 +28,74 @@ def _load_pinned() -> dict[str, list[str]]:
     return {k: v for k, v in data.items() if not k.startswith("_") and k != "role_assignments"}
 
 
+def _key(name: str) -> str:
+    """환경변수 값 반환; 미등록이거나 공백이면 빈 문자열."""
+    return os.environ.get(name, "").strip()
+
+
 def _fetch_openai() -> list[str]:
     import openai
-    client = openai.Client(api_key=os.environ["OPENAI_API_KEY"])
-    return sorted(m.id for m in client.models.list())
+    key = _key("OPENAI_API_KEY")
+    if not key:
+        print("[경고] OPENAI_API_KEY 미등록 — OpenAI 모델 목록 수동 확인 필요", file=sys.stderr)
+        return []
+    try:
+        client = openai.Client(api_key=key)
+        return sorted(m.id for m in client.models.list())
+    except Exception as e:
+        print(f"[오류] OpenAI 모델 목록 조회 실패: {e}", file=sys.stderr)
+        return []
 
 
 def _fetch_gemini() -> list[str]:
     from google import genai
     from google.genai import errors as genai_errors
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    key = _key("GEMINI_API_KEY")
+    if not key:
+        print("[경고] GEMINI_API_KEY 미등록 — Gemini 모델 목록 수동 확인 필요", file=sys.stderr)
+        return []
+    client = genai.Client(api_key=key)
     try:
         return sorted(m.name for m in client.models.list())
     except genai_errors.APIError as e:
         print(f"[오류] Gemini 모델 목록 조회 실패: {getattr(e, 'code', '?')} {e}", file=sys.stderr)
         return []
+    except Exception as e:
+        print(f"[오류] Gemini 모델 목록 조회 실패: {e}", file=sys.stderr)
+        return []
 
 
 def _fetch_anthropic() -> list[str]:
-    import anthropic
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    return sorted(m.id for m in client.models.list())
+    """
+    Anthropic SDK — api_key가 비어있으면 TypeError 발생 (1-3 수정).
+    ANTHROPIC_API_KEY 미등록 시 경고 후 빈 목록 반환.
+    """
+    key = _key("ANTHROPIC_API_KEY")
+    if not key:
+        print(
+            "[경고] ANTHROPIC_API_KEY 미등록/공백 — Anthropic 모델 목록 수동 확인 필요\n"
+            "       등록 경로: GitHub Settings → Secrets → ANTHROPIC_API_KEY",
+            file=sys.stderr,
+        )
+        return []
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=key)
+        return sorted(m.id for m in client.models.list())
+    except Exception as e:
+        print(f"[오류] Anthropic 모델 목록 조회 실패: {e}", file=sys.stderr)
+        return []
 
 
 def _fetch_perplexity() -> list[str]:
     """Perplexity: OpenAI 호환 엔드포인트 — /models 미구현 시 빈 목록 반환."""
     import openai
+    key = _key("PERPLEXITY_API_KEY")
+    if not key:
+        print("[경고] PERPLEXITY_API_KEY 미등록 — Perplexity 모델 목록 수동 확인 필요", file=sys.stderr)
+        return []
     try:
-        client = openai.Client(
-            api_key=os.environ["PERPLEXITY_API_KEY"],
-            base_url="https://api.perplexity.ai",
-        )
+        client = openai.Client(api_key=key, base_url="https://api.perplexity.ai")
         return sorted(m.id for m in client.models.list())
     except Exception as e:
         print(f"[경고] Perplexity /models 엔드포인트 미구현 — 수동 확인 필요: {e}", file=sys.stderr)
@@ -66,10 +103,10 @@ def _fetch_perplexity() -> list[str]:
 
 
 FETCHERS: dict[str, Any] = {
-    "openai":      _fetch_openai,
-    "gemini":      _fetch_gemini,
-    "anthropic":   _fetch_anthropic,
-    "perplexity":  _fetch_perplexity,
+    "openai":     _fetch_openai,
+    "gemini":     _fetch_gemini,
+    "anthropic":  _fetch_anthropic,
+    "perplexity": _fetch_perplexity,
 }
 
 
@@ -80,7 +117,7 @@ def _build_diff_report(
 ) -> tuple[bool, str]:
     lines: list[str] = [
         "# LLM 모델 업데이트 감지 보고서",
-        f"",
+        "",
         f"**실행 날짜**: {run_date}  ",
         f"**비교 기준 파일**: `config/llm_models.json`",
         "",
@@ -88,16 +125,16 @@ def _build_diff_report(
     any_new = False
 
     for provider in pinned:
-        live_models  = live.get(provider, [])
-        pinned_set   = set(pinned[provider])
-        live_set     = set(live_models)
-        new_models   = sorted(live_set - pinned_set)
-        dropped      = sorted(pinned_set - live_set)
+        live_models = live.get(provider, [])
+        pinned_set  = set(pinned[provider])
+        live_set    = set(live_models)
+        new_models  = sorted(live_set - pinned_set)
+        dropped     = sorted(pinned_set - live_set)
 
         lines.append(f"## {provider.title()}")
 
         if not live_models:
-            lines.append("_모델 목록 조회 실패 — 수동 확인 필요_")
+            lines.append("_모델 목록 조회 실패 — 수동 확인 필요 (API 키 미등록 또는 엔드포인트 오류)_")
             lines.append("")
             continue
 

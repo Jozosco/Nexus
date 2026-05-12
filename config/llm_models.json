@@ -10,8 +10,7 @@
   ],
   "gemini": [
     "models/gemini-2.5-pro",
-    "models/gemini-2.5-flash",
-    "models/gemini-2.0-flash"
+    "models/gemini-2.5-flash"
   ],
   "anthropic": [
     "claude-opus-4-7-20251101",
