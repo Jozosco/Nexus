@@ -52,8 +52,8 @@ jobs:
           import os
           from google import genai
           # MEMORY L-010: google-generativeai 지원 종료 → google-genai SDK로 전환
-          # 최신 모델: gemini-2.0-flash (구: gemini-1.5-flash 폐기)
-          PING_MODEL = "gemini-2.0-flash"
+          # MEMORY L-011: gemini-2.0-flash 신규 사용자 제한 → gemini-2.5-flash 교체 (2026-06-01 완전 폐기)
+          PING_MODEL = "gemini-2.5-flash"
           client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
           r = client.models.generate_content(model=PING_MODEL, contents="Ping: respond with OK only")
           assert "ok" in r.text.lower(), f"Gemini 응답 이상: {r.text}"
