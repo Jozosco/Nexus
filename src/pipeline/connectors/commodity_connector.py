@@ -226,6 +226,45 @@ def fetch_us_drought_stats(states: list[str] = SOY_STATES_US,
     return df
 
 
+def fetch_cpo_te() -> pd.DataFrame:
+    """Trading Economics CPO 현물 가격 — FRED 월별 프록시보다 갱신 빈도 높음.
+
+    TRADING_ECONOMICS_API_KEY 등록 시 FRED 프록시 대신 사용.
+    """
+    te_key = os.environ.get("TRADING_ECONOMICS_API_KEY", "").strip()
+    if not te_key:
+        return pd.DataFrame()
+    try:
+        from src.pipeline.connectors.te_connector import fetch_cpo  # type: ignore
+        return fetch_cpo()
+    except ImportError:
+        pass
+    try:
+        import tradingeconomics as te  # type: ignore
+        te.login(te_key)
+        for symbol in ("cpo", "palm-oil"):
+            try:
+                result = te.getMarketsBySymbol(symbols=symbol, output_type="df")
+                if result is not None and len(result) > 0:
+                    date_col  = next((c for c in ["DateTime", "Date", "date"] if c in result.columns), None)
+                    value_col = next((c for c in ["Last", "Close", "Value"] if c in result.columns), None)
+                    if date_col and value_col:
+                        df = pd.DataFrame({
+                            "price_date":     pd.to_datetime(result[date_col], errors="coerce"),
+                            "value":          pd.to_numeric(result[value_col], errors="coerce"),
+                            "source_name":    "TradingEconomics/BursaMalaysia",
+                            "indicator_code": "CPO_USD_MT",
+                            "unit":           "USD/MT",
+                            "ingested_at":    pd.Timestamp.utcnow(),
+                        })
+                        return df.dropna(subset=["price_date", "value"])
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"[경고] Trading Economics CPO 수집 실패: {e}")
+    return pd.DataFrame()
+
+
 def run() -> None:
     import os as _os
     _os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -234,8 +273,13 @@ def run() -> None:
     frames = []
     # 1. CBOT 대두유 선물
     frames.append(fetch_cbot_soybean_oil(days_back=10))
-    # 2. CPO 글로벌 프록시 (FRED 월별)
-    frames.append(fetch_cpo_proxy_fred())
+    # 2. CPO — Trading Economics 우선, FRED 프록시 폴백
+    cpo_te = fetch_cpo_te()
+    if not cpo_te.empty:
+        frames.append(cpo_te)
+        print("[정보] CPO: Trading Economics 수집 성공 — FRED 프록시 건너뜀")
+    else:
+        frames.append(fetch_cpo_proxy_fred())
     # 3. ARS/USD 공식 환율
     frames.append(fetch_ars_usd_bcra(days_back=10))
     # 4. 미국 가뭄 지수
