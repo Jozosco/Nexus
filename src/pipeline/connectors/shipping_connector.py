@@ -57,7 +57,11 @@ def fetch_bcaa() -> pd.DataFrame:
     rows = []
     today = date.today().isoformat()
 
-    bcaa_match = re.search(r"BCAA[:\s]+([0-9,\.]+)", text, re.IGNORECASE)
+    # BCAA: 다양한 응답 형식 대응 ("BCAA: 1234", "BCAA index is 1,234", "BCAA stood at 1234.5")
+    bcaa_match = re.search(
+        r"BCAA[^0-9\n]{0,40}?(\d[\d,\.]*)",
+        text, re.IGNORECASE
+    )
     if bcaa_match:
         rows.append({
             "price_date":     today,
@@ -68,7 +72,11 @@ def fetch_bcaa() -> pd.DataFrame:
             "note":           "[PERPLEXITY-PROXY: BCAA — 식물성유지 탱커 지수 (2025-02 출시)]",
         })
 
-    bcti_match = re.search(r"BCTI[:\s]+([0-9,\.]+)", text, re.IGNORECASE)
+    # BCTI: 다양한 응답 형식 대응
+    bcti_match = re.search(
+        r"BCTI[^0-9\n]{0,40}?(\d[\d,\.]*)",
+        text, re.IGNORECASE
+    )
     if bcti_match:
         rows.append({
             "price_date":     today,
@@ -79,8 +87,24 @@ def fetch_bcaa() -> pd.DataFrame:
             "note":           "[PERPLEXITY-PROXY: BCTI — BCAA 직접 조회 불가 시 대리 지수]",
         })
 
+    # 마지막 폴백: "Baltic" + 숫자가 포함된 경우 BCTI 추정값으로 사용
     if not rows:
-        print(f"[경고] BCAA/BCTI 파싱 실패. 원문: {text[:200]}")
+        baltic_match = re.search(
+            r"(?:Baltic[^\n]{0,60}?)(\d{3,5}(?:\.\d+)?)",
+            text, re.IGNORECASE
+        )
+        if baltic_match:
+            rows.append({
+                "price_date":     today,
+                "source_name":    "Perplexity/BalticExchange",
+                "indicator_code": "BCTI_PROXY",
+                "value":          float(baltic_match.group(1).replace(",", "")),
+                "unit":           "points",
+                "note":           "[PERPLEXITY-PROXY: Baltic 키워드 근처 추출값 — 해석 주의]",
+            })
+
+    if not rows:
+        print(f"[경고] BCAA/BCTI 파싱 실패. 원문: {text[:300]}")
 
     df = pd.DataFrame(rows)
     if not df.empty:

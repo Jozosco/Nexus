@@ -73,7 +73,7 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
             "commodity_desc": "SOYBEANS",
             "statisticcat_desc": "PRODUCTION",
             "agg_level_desc": "STATE",
-            "year__GE": yr - 3,
+            "year__GE": 2020,   # 수집 범위 표준화: 2020년 이후
             "unit_desc": "BU",
             "format": "JSON",
         })
@@ -103,7 +103,7 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def fetch_faostat_soybeans(year_start: int = 2018) -> pd.DataFrame:
+def fetch_faostat_soybeans(year_start: int = 2020) -> pd.DataFrame:
     """FAOSTAT — 국가별 대두 생산량 시계열 (공개, 키 불필요). AgML-CY-Bench 벤치마크 데이터소스."""
     try:
         r = _get(FAOSTAT_BASE, {
@@ -182,12 +182,13 @@ def fetch_argentina_indec() -> pd.DataFrame:
     return df
 
 
-def fetch_nasa_power_agromet(days_back: int = 30) -> pd.DataFrame:
+def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
     """NASA POWER API — 원산지별 월별 농업기상 (기온·강수·습도).
     참고: github.com/kdmayer/nasa-power-api | 키 불필요 | community=AG
+    수집 범위: start_date(기본 2020-01-01)부터 현재까지 (다른 커넥터와 통일).
     """
     end   = date.today()
-    start = end.replace(day=1) - timedelta(days=30 * 3)  # 최근 3개월
+    start = start_date if start_date else date(2020, 1, 1)  # 수집 범위 표준화
     rows = []
     for location, coord in ORIGIN_COORDS.items():
         try:
@@ -345,10 +346,10 @@ def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
     frames = [
-        fetch_usda_nass_soybeans(),
-        fetch_faostat_soybeans(),
+        fetch_usda_nass_soybeans(),                    # year__GE=2020
+        fetch_faostat_soybeans(),                      # year_start=2020
         fetch_argentina_indec(),
-        fetch_nasa_power_agromet(),
+        fetch_nasa_power_agromet(),                    # start_date=2020-01-01
         fetch_perplexity_production_regions(),
         fetch_fas_esr_soybean_oil(),
     ]
