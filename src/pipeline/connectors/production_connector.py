@@ -297,49 +297,80 @@ def fetch_perplexity_production_regions() -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def fetch_fas_esr_soybean_oil(weeks_back: int = 8) -> pd.DataFrame:
-    """
-    USDA FAS Export Sales Reporting (ESR) — 대두유 주간 수출 판매량.
-    인증 불필요 | 매주 목요일 08:30 ET 갱신 | 상품 코드: 902 (Soybean Oil)
-    주의: USDA FGIS_API_KEY 는 이 용도와 무관 — FGIS는 가공유 미취급 (A-009 참조)
-    """
-    FAS_ESR_BASE = "https://apps.fas.usda.gov/OpenData/api/esr"
-    SOYBEAN_OIL_CODE = "902"
-    end_dt   = date.today()
-    start_dt = end_dt - timedelta(days=weeks_back * 7)
+def fetch_fas_esr_soybean_oil(start_year: int = 2020) -> pd.DataFrame:
+    """USDA FAS Export Sales Reporting (ESR) — 대두유 수출 판매량 (국가별·마케팅연도별).
 
-    try:
-        r = _get(f"{FAS_ESR_BASE}/exports", params={
-            "commodityCode": SOYBEAN_OIL_CODE,
-            "weeklyExportSalesFromDate": start_dt.isoformat(),
-            "weeklyExportSalesToDate":   end_dt.isoformat(),
-        })
-        data = r.json()
-        if not data:
-            print("[경고] FAS ESR 대두유: 데이터 없음")
-            return pd.DataFrame()
-        rows = []
-        for entry in data:
+    검증된 엔드포인트 (2026-05-13 사용자 확인):
+      GET https://api.fas.usda.gov/api/esr/exports/commodityCode/{code}/countryCode/{cc}/marketYear/{yr}
+      Header: X-Api-Key: {USDA_FAS_API_KEY}
+
+    수집 대상:
+      상품: 902(대두유), 801(대두) — 한국 수입 관련 주요 국가
+      국가: 미국(5800=Korea 수출국 관점이 아닌 수입국으로 한국 조회 방식과 상이)
+            → 대두유 주요 수출국: 아르헨티나(3570), 브라질(3510), 미국(5700=미국→한국X)
+
+    주의: FAS ESR의 countryCode는 수입국 기준 (수출 목적지).
+          한국으로의 수출: countryCode=5800 (Kor, Rep).
+    """
+    # 올바른 v2 API (api.fas.usda.gov — 사용자 확인)
+    FAS_ESR_V2_BASE = "https://api.fas.usda.gov/api/esr/exports"
+    api_key = (
+        os.environ.get("USDA_FAS_API_KEY", "")
+        or os.environ.get("USDA_FAS_PSD_API_KEY", "")
+    )
+
+    # 한국(5800)으로 수출하는 주요 대두유 관련 상품
+    COMMODITY_CODES = {
+        "902":  "SBO_EXPORT",      # Soybean Oil
+        "801":  "SOYBEAN_EXPORT",  # Soybeans (원료 수급 맥락)
+    }
+    # 한국으로의 대두유 주요 수출국 → FAS ESR countryCode=5800(한국)으로 조회
+    # 또는 대두유 주요 원산지 국가 코드로 수출 현황 파악
+    DEST_KOREA = "5800"
+
+    rows: list[dict] = []
+    headers = {"accept": "application/json"}
+    if api_key:
+        headers["X-Api-Key"] = api_key
+
+    for yr in range(start_year, date.today().year + 1):
+        for cmd_code, indicator_prefix in COMMODITY_CODES.items():
+            url = f"{FAS_ESR_V2_BASE}/commodityCode/{cmd_code}/countryCode/{DEST_KOREA}/marketYear/{yr}"
             try:
-                rows.append({
-                    "price_date":     str(entry.get("weeklyExportSalesDate", ""))[:10],
-                    "source_name":    "USDA_FAS_ESR",
-                    "indicator_code": f"SBOIL_EXPORT_{entry.get('countryCode', 'WORLD')}",
-                    "country":        str(entry.get("countryCode", "")),
-                    "value":          float(entry.get("weekSales", 0) or 0),
-                    "unit":           "MT",
-                })
-            except (ValueError, TypeError):
-                continue
-        if not rows:
-            return pd.DataFrame()
-        df = pd.DataFrame(rows)
-        df["price_date"] = pd.to_datetime(df["price_date"])
-        df["ingested_at"] = pd.Timestamp.utcnow()
-        return df.dropna(subset=["value"])
-    except Exception as e:
-        print(f"[경고] FAS ESR 대두유 수출 수집 실패: {e}")
+                r = httpx.get(url, headers=headers, timeout=30)
+                if r.status_code == 404:
+                    continue
+                r.raise_for_status()
+                data = r.json()
+                if not data:
+                    continue
+                entries = data if isinstance(data, list) else data.get("data", [])
+                for entry in entries:
+                    try:
+                        wk_date = str(entry.get("weeklyExportSalesDate", ""))[:10]
+                        rows.append({
+                            "price_date":     wk_date,
+                            "source_name":    "USDA_FAS_ESR",
+                            "indicator_code": f"{indicator_prefix}_TO_KR_{yr}",
+                            "country":        "KOR",
+                            "value":          float(entry.get("weekSales", 0) or 0),
+                            "unit":           "MT",
+                            "market_year":    yr,
+                        })
+                    except (ValueError, TypeError):
+                        continue
+                print(f"[정보] FAS ESR {cmd_code} → 한국 {yr}: {len(entries)}건")
+            except Exception as e:
+                print(f"[경고] FAS ESR {cmd_code}/{yr}: {e}")
+            time.sleep(0.3)  # API 레이트 리밋 준수
+
+    if not rows:
+        print("[경고] FAS ESR: 수집된 데이터 없음 — USDA_FAS_API_KEY 등록 또는 엔드포인트 확인")
         return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    df["price_date"] = pd.to_datetime(df["price_date"], errors="coerce")
+    df["ingested_at"] = pd.Timestamp.utcnow()
+    return df.dropna(subset=["value"])
 
 
 def run() -> None:
