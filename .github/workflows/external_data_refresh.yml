@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install openai pandas pyarrow
+        run: pip install openai pandas pyarrow tradingeconomics
       - name: Run shipping connector
         env:
           PERPLEXITY_API_KEY:          ${{ secrets.PERPLEXITY_API_KEY }}
@@ -192,11 +192,11 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install httpx pandas pyarrow
+        run: pip install httpx pandas pyarrow comtradeapicall
       - name: Run customs connector
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
-          COMTRADE_API_KEY:        ${{ secrets.COMTRADE_API_KEY }}
+          UN_COMTRADE_API_KEY:    ${{ secrets.UN_COMTRADE_API_KEY }}
         run: python src/pipeline/connectors/customs_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
