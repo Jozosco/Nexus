@@ -40,6 +40,8 @@ from datetime import date, timedelta
 from typing import Any
 from urllib.parse import unquote
 
+import json as _json
+
 import httpx
 import pandas as pd
 
@@ -64,10 +66,17 @@ def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
         try:
             r = httpx.get(url, params=params, timeout=30)
             if r.status_code in (400, 403, 404):
-                print(f"[경고] API {r.status_code} ({url.split('?')[0]})")
+                snippet = r.text[:300].replace("\n", " ")
+                print(f"[경고] API {r.status_code} ({url.split('?')[0]}): {snippet}")
                 return {}
             r.raise_for_status()
-            return r.json()
+            try:
+                return r.json()
+            except (_json.JSONDecodeError, ValueError):
+                # 관세청 API는 파라미터 오류 시 XML 또는 빈 응답 반환 — JSON 파싱 불가
+                snippet = r.text[:300].replace("\n", " ")
+                print(f"[경고] JSON 파싱 실패 (응답 미리보기): {snippet}")
+                return {}
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
             if attempt == max_retries - 1:
                 raise RuntimeError(f"[오류] API 호출 실패 ({url}): {e}") from e

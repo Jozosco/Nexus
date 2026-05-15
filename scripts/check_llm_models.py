@@ -66,10 +66,10 @@ def _fetch_gemini() -> list[str]:
 
 
 def _fetch_anthropic() -> list[str]:
+    """Anthropic /v1/models — SDK의 models.list() 대신 직접 httpx 호출로 안정성 확보.
+    SDK 버전에 따라 models.list() 미지원 케이스 대응 (MEMORY A-021).
     """
-    Anthropic SDK — api_key가 비어있으면 TypeError 발생 (1-3 수정).
-    ANTHROPIC_API_KEY 미등록 시 경고 후 빈 목록 반환.
-    """
+    import httpx as _httpx
     key = _key("ANTHROPIC_API_KEY")
     if not key:
         print(
@@ -79,26 +79,47 @@ def _fetch_anthropic() -> list[str]:
         )
         return []
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=key)
-        return sorted(m.id for m in client.models.list())
+        r = _httpx.get(
+            "https://api.anthropic.com/v1/models",
+            headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
+            timeout=20,
+        )
+        r.raise_for_status()
+        data = r.json()
+        return sorted(m["id"] for m in data.get("data", []))
     except Exception as e:
         print(f"[오류] Anthropic 모델 목록 조회 실패: {e}", file=sys.stderr)
         return []
 
 
 def _fetch_perplexity() -> list[str]:
-    """Perplexity: OpenAI 호환 엔드포인트 — /models 미구현 시 빈 목록 반환."""
-    import openai
+    """Perplexity: /models 엔드포인트 미구현 (공식 문서 확인, 2025-05).
+    API 키 유효성을 최소 ping으로 검증 후 공식 문서 기준 모델 목록 반환.
+    """
+    import httpx as _httpx
     key = _key("PERPLEXITY_API_KEY")
     if not key:
         print("[경고] PERPLEXITY_API_KEY 미등록 — Perplexity 모델 목록 수동 확인 필요", file=sys.stderr)
         return []
+    # Perplexity는 /v1/models 엔드포인트가 없음. ping으로 키 유효성만 확인 후 문서 목록 반환.
+    DOCUMENTED_MODELS = [
+        "sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro",
+        "sonar-deep-research", "r1-1776",
+    ]
     try:
-        client = openai.Client(api_key=key, base_url="https://api.perplexity.ai")
-        return sorted(m.id for m in client.models.list())
+        r = _httpx.post(
+            "https://api.perplexity.ai/chat/completions",
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            json={"model": "sonar", "messages": [{"role": "user", "content": "1"}], "max_tokens": 1},
+            timeout=20,
+        )
+        if r.status_code in (200, 400, 422):
+            # 200: 정상 응답, 400/422: 키는 유효하나 요청 파라미터 문제 — 키 확인 완료
+            return sorted(DOCUMENTED_MODELS)
+        r.raise_for_status()
+        return sorted(DOCUMENTED_MODELS)
     except Exception as e:
-        print(f"[경고] Perplexity /models 엔드포인트 미구현 — 수동 확인 필요: {e}", file=sys.stderr)
+        print(f"[경고] Perplexity API 키 검증 실패 — 수동 확인 필요: {e}", file=sys.stderr)
         return []
 
 

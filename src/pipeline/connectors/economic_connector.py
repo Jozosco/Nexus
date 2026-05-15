@@ -158,15 +158,25 @@ def fetch_kosis_kr_import_stats() -> pd.DataFrame:
         print("[경고] KOSIS_API_KEY 미등록 — 한국 수입 통계 건너뜀")
         return pd.DataFrame()
 
-    # KOSIS API 연결 테스트 (통계 목록 조회 — 서비스 ID 확인용)
+    # KOSIS API 연결 테스트 (소비자물가지수 파라미터 목록 — CPI_KOREA 변수 소스 확인)
+    # orgId=101: 통계청, tblId=DT_1J22003: 소비자물가지수 전국 (2020 기준)
+    # parentListId=MT_OTITLE 사용 금지 — vwCd 값이며 parentListId 오입력 시 404 (MEMORY A-020)
     try:
         r = _fetch("https://kosis.kr/openapi/Param/statisticsParamData.do", {
             "method":   "getList",
             "apiKey":   api_key,
+            "itmId":    "",
+            "objL1":    "",
+            "objL2":    "",
+            "objL3":    "",
             "format":   "json",
             "jsonVD":   "Y",
             "vwCd":     "MT_ZTITLE",
-            "parentListId": "MT_OTITLE",
+            "parentListId": "101",   # 통계청 기관 코드
+            "startPrdDe": "",
+            "endPrdDe":   "",
+            "orgId":    "101",
+            "tblId":    "DT_1J22003",  # 소비자물가지수 전국 (Nexus CPI_KOREA)
         })
         if not r:
             print("[경고] KOSIS API: 응답 없음 또는 연결 실패")

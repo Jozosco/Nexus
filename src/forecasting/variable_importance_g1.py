@@ -540,6 +540,161 @@ def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
     return alerts
 
 
+def _build_category_summary(importance_df: pd.DataFrame, frames: dict) -> dict:
+    """카테고리별 변수 중요도 요약 생성.
+
+    VARIABLE_CATALOG 기준으로 변수를 P-카테고리로 그룹화하고,
+    |Pearson r| > 0.3 유의 변수 수와 평균 |r|을 카테고리별로 집계.
+
+    Returns:
+        {"P1-01 거시경제": {"count": N, "sig_count": N, "mean_abs_r": 0.XX, "top_var": "DEXBZUS"}, ...}
+    """
+    code_to_category: dict[str, str] = {v["code"]: v["category"] for v in VARIABLE_CATALOG}
+
+    summary: dict[str, dict] = {}
+
+    if importance_df.empty:
+        return summary
+
+    for _, row in importance_df.iterrows():
+        var_code = str(row["변수"])
+        cat = code_to_category.get(var_code, "기타")
+        abs_r = abs(float(row["피어슨_r"])) if pd.notna(row["피어슨_r"]) else 0.0
+
+        if cat not in summary:
+            summary[cat] = {"count": 0, "sig_count": 0, "_abs_r_sum": 0.0, "_top_r": 0.0, "top_var": var_code}
+
+        summary[cat]["count"] += 1
+        summary[cat]["_abs_r_sum"] += abs_r
+        if abs_r > 0.3:
+            summary[cat]["sig_count"] += 1
+        if abs_r > summary[cat]["_top_r"]:
+            summary[cat]["_top_r"] = abs_r
+            summary[cat]["top_var"] = var_code
+
+    for cat, data in summary.items():
+        n = data["count"]
+        data["mean_abs_r"] = round(data["_abs_r_sum"] / n, 3) if n > 0 else 0.0
+        del data["_abs_r_sum"]
+        del data["_top_r"]
+
+    return summary
+
+
+def _render_executive_summary(
+    alerts: list[dict],
+    category_summary: dict,
+    run_ts: str,
+    lang: Literal["ko", "en"] = "ko",
+) -> str:
+    """C-레벨 임원 요약 HTML 대시보드 렌더링.
+
+    Signal banner 색상:
+      GREEN  — 임계값 위반 없음
+      AMBER  — 1~2개 위반
+      RED    — 3개 이상 위반
+    """
+    breach_count = sum(1 for a in alerts if "🚨" in a.get("상태", ""))
+    total_vars = sum(d["count"] for d in category_summary.values()) if category_summary else 0
+    total_alerts = len(alerts)
+
+    # 최고 상관 변수
+    top_var_name = "N/A"
+    top_var_r = 0.0
+    for data in category_summary.values():
+        if data.get("mean_abs_r", 0.0) > top_var_r:
+            top_var_r = data["mean_abs_r"]
+            top_var_name = data.get("top_var", "N/A")
+
+    # 시그널 배너
+    if breach_count == 0:
+        signal_class = "signal-green"
+        signal_text = "✅ 정상 — 현재 구조적 임계값 위반 없음" if lang == "ko" else "✅ NORMAL — No structural threshold breaches"
+    elif breach_count <= 2:
+        signal_class = "signal-amber"
+        signal_text = f"⚠️ 주의 — {breach_count}개 임계값 위반 감지. 모니터링 강화 필요." if lang == "ko" else f"⚠️ CAUTION — {breach_count} threshold breach(es) detected. Increase monitoring."
+    else:
+        signal_class = "signal-red"
+        signal_text = f"🚨 긴급 — {breach_count}개 임계값 위반. C-03 진행 전 인간 검토 필요." if lang == "ko" else f"🚨 URGENT — {breach_count} threshold breaches. Human review required before C-03 proceeds."
+
+    # KPI 카드
+    lbl_vars   = "수집 변수"       if lang == "ko" else "Variables Collected"
+    lbl_alerts = "임계값 경보"     if lang == "ko" else "Threshold Alerts"
+    lbl_top    = "최고 상관 변수"  if lang == "ko" else "Top Correlated Variable"
+
+    kpi_html = f"""<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-num">{total_vars}</div>
+    <div class="kpi-lbl">{lbl_vars}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-num">{breach_count}/{total_alerts}</div>
+    <div class="kpi-lbl">{lbl_alerts}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-num" style="font-size:18px">{top_var_name}</div>
+    <div class="kpi-lbl">{lbl_top} (|r|={top_var_r:.2f})</div>
+  </div>
+</div>"""
+
+    # 카테고리 요약 테이블
+    cat_title = "카테고리별 중요도 요약" if lang == "ko" else "Category-Level Importance Summary"
+    if category_summary:
+        cat_rows = ""
+        for cat, data in sorted(category_summary.items()):
+            cat_rows += (
+                f"<tr><td>{cat}</td>"
+                f"<td style='text-align:center'>{data['count']}</td>"
+                f"<td style='text-align:center'>{data['sig_count']}</td>"
+                f"<td style='text-align:center'>{data['mean_abs_r']:.3f}</td>"
+                f"<td><code>{data['top_var']}</code></td></tr>"
+            )
+        cat_table = f"""<h3 style="color:#3949ab;margin-top:18px">{cat_title}</h3>
+<table class="tbl">
+<thead><tr>
+  <th>{'카테고리' if lang == 'ko' else 'Category'}</th>
+  <th>{'변수수' if lang == 'ko' else 'Variables'}</th>
+  <th>{'유의변수(|r|>0.3)' if lang == 'ko' else 'Significant (|r|>0.3)'}</th>
+  <th>{'평균 |r|' if lang == 'ko' else 'Mean |r|'}</th>
+  <th>{'대표 변수' if lang == 'ko' else 'Top Variable'}</th>
+</tr></thead>
+<tbody>{cat_rows}</tbody>
+</table>"""
+    else:
+        no_data = "데이터 부족 — 카테고리 요약 생성 불가" if lang == "ko" else "Insufficient data — category summary unavailable"
+        cat_table = f"<p>{no_data}</p>"
+
+    # C-레벨 핵심 메시지
+    if category_summary:
+        top_cat = max(category_summary, key=lambda c: category_summary[c]["mean_abs_r"])
+        top_r_val = category_summary[top_cat]["mean_abs_r"]
+        if lang == "ko":
+            clevel_msg = (
+                f"현재 {top_cat}이 대두유 가격 변동성에 가장 높은 영향을 미치고 있습니다 "
+                f"(평균 |r|={top_r_val:.2f}). "
+                f"{breach_count}개 구조적 임계값이 활성화됨."
+            )
+        else:
+            clevel_msg = (
+                f"{top_cat} currently exerts the highest influence on soybean oil price volatility "
+                f"(mean |r|={top_r_val:.2f}). "
+                f"{breach_count} structural threshold(s) active."
+            )
+    else:
+        clevel_msg = (
+            "데이터 수집 진행 중 — 30일 이상 시계열 누적 후 카테고리별 영향도 분석이 가능합니다."
+            if lang == "ko" else
+            "Data collection in progress — category-level analysis available after 30+ days of accumulation."
+        )
+
+    note_label = "C-level 핵심 메시지" if lang == "ko" else "C-Level Key Message"
+
+    return f"""<div class="{signal_class}">{signal_text}</div>
+{kpi_html}
+{cat_table}
+<div class="note"><strong>{note_label}:</strong> {clevel_msg}</div>"""
+
+
 def _render_variable_catalog(lang: str = "ko") -> str:
     """변수 카탈로그를 카테고리별 HTML 테이블로 렌더링."""
     by_cat: dict[str, list[dict]] = {}
@@ -599,6 +754,10 @@ def _render_html(
     )
     title  = "G1 변수 중요도 분석 리포트" if lang == "ko" else "G1 Variable Importance Report"
     sub    = f"C-03 Lead Data Scientist · 최근 {days}일 데이터 기준" if lang == "ko" else f"C-03 Lead Data Scientist · Based on last {days} days"
+
+    # executive summary
+    category_summary = _build_category_summary(importance_df, {})
+    exec_html = _render_executive_summary(alerts, category_summary, run_ts, lang)
 
     # status table
     status_html = status_df.to_html(index=False, border=0, classes="tbl")
@@ -682,6 +841,13 @@ def _render_html(
   .tbl th {{ background: #1a237e; color: #fff; padding: 8px 12px; text-align: left; }}
   .tbl td {{ padding: 6px 12px; border-bottom: 1px solid #e0e0e0; }}
   .footer {{ margin-top: 40px; font-size: 11px; color: #9e9e9e; border-top: 1px solid #e0e0e0; padding-top: 12px; }}
+  .kpi-row {{ display: flex; gap: 16px; margin: 16px 0; }}
+  .kpi-card {{ flex: 1; background: #e3f2fd; border-radius: 10px; padding: 14px 18px; text-align: center; }}
+  .kpi-num {{ font-size: 28px; font-weight: bold; color: #1565c0; }}
+  .kpi-lbl {{ font-size: 11px; color: #546e7a; margin-top: 4px; }}
+  .signal-green {{ background: #e8f5e9; border-left: 6px solid #2e7d32; padding: 12px 18px; border-radius: 6px; margin: 16px 0; font-size: 14px; font-weight: bold; }}
+  .signal-amber {{ background: #fff8e1; border-left: 6px solid #f57f17; padding: 12px 18px; border-radius: 6px; margin: 16px 0; font-size: 14px; font-weight: bold; }}
+  .signal-red {{ background: #ffebee; border-left: 6px solid #c62828; padding: 12px 18px; border-radius: 6px; margin: 16px 0; font-size: 14px; font-weight: bold; }}
 </style>
 </head>
 <body>
@@ -698,6 +864,8 @@ def _render_html(
   현재는 수집된 데이터의 기술통계·LASSO 상관 분석만 수행합니다.
   XGBoost+SHAP, Granger 인과검정, TCN-XGBoost 하이브리드는 30일+ 시계열 누적 후 Phase B(Snowflake)에서 적용 예정.
 </div>
+
+{exec_html}
 
 <h2>{'데이터 수집 현황' if lang == 'ko' else 'Data Collection Status'}</h2>
 {status_html}
