@@ -153,7 +153,7 @@ jobs:
           print(f"✅ BOK ECOS API 정상 — 주요 통계 항목 수: {count}")
           EOF
 
-      - name: Check KOSIS API (connection test — MEMORY A-010)
+      - name: Check KOSIS API — CPI_KOREA 파라미터 조회 (MEMORY A-010, A-020)
         env:
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
         run: |
@@ -161,20 +161,27 @@ jobs:
           import os, httpx
           api_key = os.environ.get("KOSIS_API_KEY", "").strip()
           if not api_key:
-              print("⚠️ KOSIS_API_KEY 미등록 — 건너뜀")
+              print("⚠️ KOSIS_API_KEY 미등록 — 건너뜀 (kosis.kr 계정 필요)")
               raise SystemExit(0)
+          # orgId=101: 통계청 | tblId=DT_1J22003: 소비자물가지수(Nexus CPI_KOREA 소스)
+          # parentListId=MT_OTITLE 금지 — vwCd 값이며 parentListId로 사용 시 404 (MEMORY A-020)
           r = httpx.get(
               "https://kosis.kr/openapi/Param/statisticsParamData.do",
-              params={"method": "getList", "apiKey": api_key,
-                      "format": "json", "jsonVD": "Y",
-                      "vwCd": "MT_ZTITLE", "parentListId": "MT_OTITLE"},
+              params={
+                  "method": "getList", "apiKey": api_key,
+                  "itmId": "", "objL1": "", "objL2": "", "objL3": "",
+                  "format": "json", "jsonVD": "Y",
+                  "vwCd": "MT_ZTITLE", "parentListId": "101",
+                  "startPrdDe": "", "endPrdDe": "",
+                  "orgId": "101", "tblId": "DT_1J22003",
+              },
               timeout=15,
           )
           r.raise_for_status()
           data = r.json()
           assert isinstance(data, list) and len(data) > 0, \
-              f"[오류] KOSIS API 응답 이상 (통계 목록 0건): {data}"
-          print(f"✅ KOSIS API 정상 — 통계 목록 {len(data)}건 (연결 확인; HS코드 수입데이터는 관세청 API)")
+              f"[오류] KOSIS CPI 파라미터 조회 이상 (0건): {data}"
+          print(f"✅ KOSIS API 정상 — CPI(DT_1J22003) 파라미터 {len(data)}건 (orgId=101, Nexus CPI_KOREA 소스 확인)")
           EOF
 
       - name: Check USDA FAS OpenData API (PSD SBO endpoint)
@@ -280,30 +287,40 @@ jobs:
               r.raise_for_status()
           EOF
 
-      - name: Check Korea Customs API — data.go.kr HS 1507 (MEMORY A-011)
+      - name: Check Korea Customs API — data.go.kr HS 1507 (MEMORY A-011, A-018)
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
         run: |
           python - <<'EOF'
-          import os, httpx
+          import os, json, httpx
+          from urllib.parse import unquote
           svc_key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
           if not svc_key:
               print("⚠️ DATA_GO_KR_SERVICE_KEY 미등록 — 건너뜀 (data.go.kr에서 관세청 수출입실적 API 신청 필요)")
               raise SystemExit(0)
+          # MEMORY A-018: 올바른 파라미터 — strtYymm/endYymm/hsSgn(10단위). 구 파라미터(hsCd/period/pageNo) 사용 금지
+          # MEMORY A-015: 이중 인코딩 방지 — unquote() 후 params 전달
+          decoded_key = unquote(svc_key)
           r = httpx.get(
               "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList",
               params={
-                  "serviceKey": svc_key,
-                  "pageNo": 1, "numOfRows": 5,
-                  "hsCd": "1507", "period": "202501", "type": "json",
+                  "serviceKey": decoded_key,
+                  "strtYymm": "202501",
+                  "endYymm":  "202501",
+                  "hsSgn":    "1507901010",  # 정제 식용 대두유 (10단위 필수)
               },
               timeout=20,
           )
           r.raise_for_status()
-          data = r.json()
+          try:
+              data = r.json()
+          except (json.JSONDecodeError, ValueError):
+              snippet = r.text[:200].replace("\n", " ")
+              raise AssertionError(f"[오류] 관세청 API JSON 파싱 실패 — 파라미터 오류 의심: {snippet}")
           body = data.get("response", {}).get("body", {})
-          total = body.get("totalCount", 0)
-          print(f"✅ Korea Customs API 정상 — HS 1507 2025-01 수입국 {total}개국")
+          items = body.get("items", [])
+          count = len(items) if isinstance(items, list) else (1 if isinstance(items, dict) else 0)
+          print(f"✅ Korea Customs API 정상 — HS 1507901010 2025-01 수입 레코드 {count}건")
           EOF
 
       - name: Check Trading Economics API (BDI + CPO)

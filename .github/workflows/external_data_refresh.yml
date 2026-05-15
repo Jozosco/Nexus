@@ -294,15 +294,119 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
+  # ── WBS 1.1.8: C-06 EDA 검증 (C-03 분석 전 데이터 품질 게이트) ────────────────
+  # C-06 EDA Expert: 수집된 parquet의 구조적 무결성·이상치·결측치 자동 검증
+  # 출력: reports/pipeline/c06_eda_report_{DATE}.json (C-03에 전달)
+  # C-03은 이 단계 통과 후에만 G1 분석 실행
+  c06-eda-validation:
+    name: "C-06 | EDA Validation — Data Integrity Gate"
+    runs-on: ubuntu-latest
+    needs: [pipeline-summary]
+    if: always()
+    outputs:
+      eda_status: ${{ steps.eda.outputs.eda_status }}
+      stale_connectors: ${{ steps.eda.outputs.stale_connectors }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow numpy scipy
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run C-06 EDA validation
+        id: eda
+        run: |
+          python - <<'PYEOF'
+          import os, glob, json
+          from pathlib import Path
+          from datetime import date, timedelta
+          import numpy as np
+          import pandas as pd
+
+          OUTPUT_DIR = "reports/pipeline"
+          os.makedirs(OUTPUT_DIR, exist_ok=True)
+          today = date.today()
+          stale_threshold = 5  # 영업일
+
+          results = {}
+          stale = []
+          for f in sorted(glob.glob("data/raw/**/*.parquet", recursive=True)
+                          + glob.glob("data/raw/*.parquet")):
+              name = Path(f).stem
+              try:
+                  df = pd.read_parquet(f)
+              except Exception as e:
+                  results[name] = {"status": "READ_ERROR", "error": str(e)}
+                  continue
+              # 결측치 프로파일
+              null_pct = float(df.isnull().mean().mean() * 100)
+              # 신선도
+              freshness = "OK"
+              if "ingested_at" in df.columns:
+                  max_ts = pd.to_datetime(df["ingested_at"], utc=True, errors="coerce").max()
+                  if pd.notna(max_ts):
+                      biz_days = np.busday_count(max_ts.date(), today)
+                      if biz_days > stale_threshold:
+                          freshness = f"STALE_{biz_days}d"
+                          stale.append(name)
+              # 이상치 Z-score (수치 컬럼)
+              num_cols = df.select_dtypes(include="number").columns.tolist()
+              outlier_flags = {}
+              for col in num_cols[:10]:
+                  vals = pd.to_numeric(df[col], errors="coerce").dropna()
+                  if len(vals) > 5:
+                      z = (vals - vals.mean()) / vals.std()
+                      outlier_count = int((z.abs() > 3).sum())
+                      if outlier_count:
+                          outlier_flags[col] = outlier_count
+              results[name] = {
+                  "status": "STALE" if "STALE" in freshness else ("WARN" if null_pct > 5 else "OK"),
+                  "rows": len(df), "null_pct": round(null_pct, 1),
+                  "freshness": freshness,
+                  "outlier_cols": outlier_flags,
+              }
+              if null_pct > 5:
+                  print(f"[C-06 경고] {name}: 결측치 {null_pct:.1f}% — 5% 초과")
+              if outlier_flags:
+                  print(f"[C-06 경고] {name}: Z>3 이상치 컬럼: {outlier_flags}")
+              if "STALE" in freshness:
+                  print(f"[C-06 경고] {name}: {freshness}")
+
+          report = {"run_date": today.isoformat(), "connectors": results,
+                    "stale": stale, "overall": "PASS" if not stale else "WARN"}
+          out = f"{OUTPUT_DIR}/c06_eda_report_{today.strftime('%Y%m%d')}.json"
+          with open(out, "w") as fh:
+              json.dump(report, fh, ensure_ascii=False, indent=2)
+          print(f"[C-06 완료] EDA 검증 보고서 → {out}")
+          print(f"[C-06] STALE 커넥터: {stale or '없음'}")
+
+          gh_output = os.environ.get("GITHUB_OUTPUT", "")
+          if gh_output:
+              with open(gh_output, "a") as fh:
+                  fh.write(f"eda_status={'WARN' if stale else 'PASS'}\n")
+                  fh.write(f"stale_connectors={','.join(stale) or 'none'}\n")
+          PYEOF
+      - name: Upload C-06 EDA report
+        uses: actions/upload-artifact@v4
+        with:
+          name: c06-eda-report-${{ github.run_id }}
+          path: reports/pipeline/c06_eda_report_*.json
+          retention-days: 30
+          if-no-files-found: warn
+
   # ── WBS 1.1.8+: C-03 G1 변수 중요도 분석 ───────────────────────────────────
   # C-03 Lead Data Scientist (Claude Opus 4.7 Thinking Mode) — Phase A 기초 분석
-  # 입력: pipeline-summary가 수집한 data/raw/*.parquet (최근 7일)
+  # 입력: c06-eda-validation 통과 후 data/raw/*.parquet (최근 7일)
   # 출력: reports/pipeline/g1_variable_importance_{DATE}_{ko|en}.html
   # Phase B: XGBoost+SHAP + Granger 인과검정 + TCN-XGBoost 추가 예정 (30일+ 누적 후)
   g1-analysis:
     name: "C-03 | G1 Variable Importance Analysis (P1-01~04 통합)"
     runs-on: ubuntu-latest
-    needs: [pipeline-summary]
+    needs: [c06-eda-validation]
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -337,6 +441,78 @@ jobs:
           path: reports/pipeline/g1_variable_importance_*.html
           retention-days: 30
           if-no-files-found: warn
+
+  # ── Ralph Loop: 파이프라인 실패 자동 Issue 생성 (수집-실패-이슈-수정-재수집 루프) ──
+  # 수집 실패 커넥터 감지 → GitHub Issue 자동 생성 → 담당자 알림 → 수정 PR → 재수집
+  # 참조: snarktank/ralph (자가 개선 루프) + nousresearch/hermes-agent (구조적 핸드오프)
+  pipeline-failure-loop:
+    name: "Ralph Loop | Auto-Issue for Failed Connectors"
+    runs-on: ubuntu-latest
+    needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso,
+            geopolitical-risk, production-data, customs-import-stats, commodity-prices,
+            c06-eda-validation]
+    if: |
+      always() &&
+      (needs.economic-indicators.result == 'failure' ||
+       needs.shipping-indices.result == 'failure' ||
+       needs.wasde-crop-data.result == 'failure' ||
+       needs.climate-enso.result == 'failure' ||
+       needs.geopolitical-risk.result == 'failure' ||
+       needs.production-data.result == 'failure' ||
+       needs.customs-import-stats.result == 'failure' ||
+       needs.commodity-prices.result == 'failure')
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create auto-issue for failed connectors
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = {
+              'economic-indicators':   '${{ needs.economic-indicators.result }}',
+              'shipping-indices':      '${{ needs.shipping-indices.result }}',
+              'wasde-crop-data':       '${{ needs.wasde-crop-data.result }}',
+              'climate-enso':          '${{ needs.climate-enso.result }}',
+              'geopolitical-risk':     '${{ needs.geopolitical-risk.result }}',
+              'production-data':       '${{ needs.production-data.result }}',
+              'customs-import-stats':  '${{ needs.customs-import-stats.result }}',
+              'commodity-prices':      '${{ needs.commodity-prices.result }}',
+            };
+            const failed = Object.entries(results)
+              .filter(([, v]) => v === 'failure')
+              .map(([k]) => `- ❌ \`${k}\``).join('\n');
+            const runUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            const date = new Date().toISOString().split('T')[0];
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Pipeline] 커넥터 수집 실패 — ${date}`,
+              body: [
+                '## 파이프라인 수집 실패 (Ralph Loop 자동 감지)',
+                '',
+                '### 실패 커넥터',
+                failed,
+                '',
+                `**워크플로우 로그**: ${runUrl}`,
+                '',
+                '### 진단 체크리스트',
+                '- [ ] API 키 GitHub Secrets 등록 여부 확인',
+                '- [ ] 엔드포인트 URL 변경 여부 확인 (커넥터 코드 vs MEMORY.md)',
+                '- [ ] 응답 형식 변경 여부 확인 (JSON → XML 등)',
+                '- [ ] 레이트 리밋 초과 여부 확인 (429 에러)',
+                '',
+                '### 수정 절차 (Hermes Handoff)',
+                '1. 로그 확인 → 오류 원인 분석 (MEMORY.md 참조)',
+                '2. 커넥터 코드 수정 → PR 생성',
+                '3. `workflow_dispatch` 로 해당 커넥터만 수동 재실행 검증',
+                '4. MEMORY.md에 오류 원인·해결책 기록',
+                '',
+                '**담당**: C-04 파이프라인 엔지니어  **검토**: C-01 PM',
+                '**참조**: CLAUDE.md §6 HITL, MEMORY.md',
+              ].join('\n'),
+              labels: ['pipeline-failure', 'data-collection'],
+            });
 
   # ── MCP/GitHub Agents 통합 (Phase B — ANTHROPIC_API_KEY 등록 후 활성화) ───
   # ai-quality-check:
