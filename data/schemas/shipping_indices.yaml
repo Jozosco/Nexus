@@ -1,8 +1,8 @@
 dataset: shipping_indices
 source_connector: src/pipeline/connectors/shipping_connector.py
 output_path: data/raw/shipping_indices_YYYYMMDD.parquet
-description: "BDI (Baltic Dry Index) · SCFI (Shanghai Containerized Freight Index) (WBS 1.1.3)"
-note: "직접 API 불가 (B-003 블로커) — Perplexity sonar-pro 프록시 사용"
+description: "BCAA (Baltic Chemical & Agricultural Oil Assessments) · BDI (Baltic Dry Index) (WBS 1.1.3)"
+note: "BCAA: Perplexity 프록시 (Phase B에서 Baltic Exchange/ICE 직접 구독 예정). BDI: Trading Economics 공식 수집. SCFI/FBX/WCI/HRCI 제외 (컨테이너 운임 — 대두유 액체 벌크와 무관, MEMORY A-013)"
 
 columns:
   - name: price_date

@@ -1,0 +1,55 @@
+dataset: commodity_data
+source_connector: src/pipeline/connectors/commodity_connector.py
+output_path: data/raw/commodity_data_YYYYMMDD.parquet
+description: "상품가격 데이터 — CBOT 대두유 선물 · 팜유(CPO) · ARS/USD · 미국 가뭄지수 (WBS 1.1.10)"
+
+columns:
+  - name: price_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "가격 기준일"
+
+  - name: indicator_code
+    dtype: object
+    nullable: false
+    valid_values:
+      - CBOT_BO_CLOSE       # CBOT 대두유 선물 종가 (yfinance BO=F, USc/lb)
+      - CBOT_BO_OPEN        # 시가
+      - CBOT_BO_HIGH        # 고가
+      - CBOT_BO_LOW         # 저가
+      - CBOT_BO_VOLUME      # 거래량
+      - CPO_USD_MT          # 팜유 현물 (Trading Economics, USD/MT)
+      - CPO_GLOBAL_USD_MT_PROXY  # FRED PPOILUSDM 팜유 프록시 (USD/MT, 월별)
+      - ARS_USD_OFICIAL     # 아르헨티나 페소 공식 환율 (BCRA API)
+      - DROUGHT_D0          # 미국 비정상 건조 (% 면적)
+      - DROUGHT_D1          # 중간 가뭄
+      - DROUGHT_D2          # 심한 가뭄
+      - DROUGHT_D3          # 극심한 가뭄
+      - DROUGHT_D4          # 예외적 가뭄
+    description: "지표 코드"
+
+  - name: value
+    dtype: float64
+    nullable: true
+    description: "지표 수치"
+
+  - name: unit
+    dtype: object
+    nullable: true
+    description: "단위 (USc/lb / USD/MT / ARS/USD / % area)"
+
+  - name: source_name
+    dtype: object
+    nullable: true
+    description: "데이터 출처"
+
+  - name: ingested_at
+    dtype: datetime64[ns, UTC]
+    nullable: false
+    description: "수집 UTC 타임스탬프"
+
+notes:
+  - "CBOT BO=F: yfinance 무료 (IP 차단 위험 존재 — Phase B에서 Databento 전환 검토, MEMORY B-003)"
+  - "CPO: Trading Economics SDK 우선, FRED PPOILUSDM 폴백"
+  - "ARS/USD: BCRA (아르헨티나 중앙은행) 공식 API (인증 불필요)"
+  - "가뭄 D0-D4: US Drought Monitor (drought.gov, 주별 갱신)"
