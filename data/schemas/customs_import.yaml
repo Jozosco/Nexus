@@ -1,0 +1,57 @@
+dataset: customs_import
+source_connector: src/pipeline/connectors/customs_connector.py
+output_path: data/raw/customs_import_YYYYMMDD.parquet
+description: "한국 대두유 수입 통계 — 관세청 HS 1507 (WBS 1.1.11)"
+
+columns:
+  - name: price_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "수입 기준년월 (YYYY-MM-01 형식)"
+
+  - name: hs_code
+    dtype: object
+    nullable: false
+    valid_values:
+      - "1507100000"    # 대두유 조유 (조제하지 아니한 것)
+      - "1507901010"    # 대두유 정제유 (분획하지 아니한 것, 식용)
+      - "1507901020"    # 대두유 정제유 (분획하지 아니한 것, 비식용)
+      - "1507909000"    # 기타 대두유
+    description: "10단위 HS 코드"
+
+  - name: country_code
+    dtype: object
+    nullable: true
+    description: "원산지 국가 코드 (ISO 2자리 또는 관세청 코드)"
+
+  - name: import_weight_kg
+    dtype: float64
+    nullable: true
+    min_value: 0.0
+    description: "수입 중량 (kg)"
+
+  - name: import_cif_usd
+    dtype: float64
+    nullable: true
+    min_value: 0.0
+    description: "수입 CIF 금액 (USD)"
+
+  - name: source_name
+    dtype: object
+    nullable: true
+    valid_values:
+      - "관세청/data.go.kr"
+      - "UN_Comtrade"
+    description: "데이터 출처"
+
+  - name: ingested_at
+    dtype: datetime64[ns, UTC]
+    nullable: false
+    description: "수집 UTC 타임스탬프"
+
+notes:
+  - "기본 소스: 공공데이터포털 관세청 API (DATA_GO_KR_SERVICE_KEY)"
+  - "폴백: UN Comtrade Plus (UN_COMTRADE_API_KEY, 무료 500건/일)"
+  - "401 Unauthorized → data.go.kr 마이페이지에서 키 갱신 필요 (MEMORY A-025)"
+  - "파라미터: strtYymm/endYymm (YYYYMM), hsSgn (10단위 HS 코드)"
+  - "T+2 결제일 오프셋은 소비 측(G1/G2/G3 분석)에서 적용 (MEMORY M-002)"

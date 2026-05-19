@@ -475,6 +475,34 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
+  # ── WBS 1.1.19: pytest 데이터 품질 테스트 (C-08 검증 후 실행) ────────────────────
+  pipeline-tests:
+    name: "C-08 | pytest Pipeline Quality Tests (WBS 1.1.19)"
+    runs-on: ubuntu-latest
+    needs: [c08-dq-validation]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pytest pandas pyarrow numpy statsmodels
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run pipeline quality tests
+        run: pytest tests/test_pipeline_quality.py -v --tb=short
+        continue-on-error: true   # 테스트 실패 시 경고만 — 파이프라인 차단 없음
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-${{ github.run_id }}
+          path: .pytest_cache/
+          retention-days: 14
+          if-no-files-found: ignore
+
   # ── Ralph Loop: 파이프라인 실패 자동 Issue 생성 (수집-실패-이슈-수정-재수집 루프) ──
   # 수집 실패 커넥터 감지 → GitHub Issue 자동 생성 → 담당자 알림 → 수정 PR → 재수집
   # 참조: snarktank/ralph (자가 개선 루프) + nousresearch/hermes-agent (구조적 핸드오프)
@@ -483,7 +511,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso,
             geopolitical-risk, production-data, customs-import-stats, commodity-prices,
-            c08-dq-validation, c06-eda-validation]
+            c08-dq-validation, c06-eda-validation, pipeline-tests]
     if: |
       always() &&
       (needs.economic-indicators.result == 'failure' ||

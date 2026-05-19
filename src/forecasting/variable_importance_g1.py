@@ -29,6 +29,12 @@ import pandas as pd
 OUTPUT_DIR  = "data/raw"
 REPORT_DIR  = "reports/pipeline"
 
+# ── Granger 인과검정 설정 ──────────────────────────────────────────────────────
+GRANGER_MIN_OBS = 30                                    # 검정 최소 관측치
+GRANGER_MAX_LAG = 4                                     # 최대 시차 (분기 기준)
+GRANGER_ALPHA   = 0.05                                  # 유의수준
+GRANGER_YEARS   = list(range(2020, date.today().year))  # 2020 ~ 작년
+
 # ── G1 변수 설명 사전 (C-01/C-03 공동 관리) ──────────────────────────────────
 VARIABLE_CATALOG: list[dict] = [
     # ── P1-01 상품가격 ──
@@ -487,6 +493,205 @@ def _lasso_importance(wide: pd.DataFrame, target_col: str | None = None) -> pd.D
     return df_imp.sort_values("abs_coef", ascending=False).drop(columns="abs_coef")
 
 
+def _check_granger_conditions(
+    wide: pd.DataFrame, target_col: str,
+) -> pd.DataFrame:
+    """각 변수의 Granger 인과검정 선결 조건을 변수별로 분류한다.
+
+    조건 1 — 관측치: 비결측 관측치 ≥ GRANGER_MIN_OBS (30개)
+    조건 2 — 결측률: < 20%
+    조건 3 — 정상성: ADF p < 0.05 (원 시리즈 또는 1차 차분 후)
+
+    Returns:
+        DataFrame: [변수|전체관측치|결측률(%)|ADF_p(원)|ADF_p(차분)|정상성|상태|비고]
+        내부 컬럼: _ready (bool), _needs_diff (bool)
+    """
+    try:
+        from statsmodels.tsa.stattools import adfuller
+    except ImportError:
+        print("[경고] statsmodels 미설치 — Granger 조건 점검 건너뜀")
+        return pd.DataFrame()
+
+    rows: list[dict] = []
+    for col in wide.columns:
+        if col == target_col:
+            continue
+
+        s_full  = wide[col]
+        s_clean = s_full.dropna()
+        total_obs = len(s_clean)
+        null_pct  = round(s_full.isnull().mean() * 100, 1)
+
+        obs_ok  = total_obs >= GRANGER_MIN_OBS
+        null_ok = null_pct < 20.0
+
+        adf_p: float | None = None
+        adf_p_diff: float | None = None
+        stationary = False
+        stat_after_diff = False
+
+        if obs_ok and null_ok:
+            try:
+                adf_r = adfuller(s_clean, autolag="AIC", maxlag=min(12, len(s_clean) // 4))
+                adf_p = round(float(adf_r[1]), 4)
+                stationary = adf_p < 0.05
+            except Exception:
+                pass
+            if not stationary and len(s_clean) >= GRANGER_MIN_OBS + 1:
+                try:
+                    diff = s_clean.diff().dropna()
+                    adf_d = adfuller(diff, autolag="AIC", maxlag=min(12, len(diff) // 4))
+                    adf_p_diff = round(float(adf_d[1]), 4)
+                    stat_after_diff = adf_p_diff < 0.05
+                except Exception:
+                    pass
+
+        ready      = obs_ok and null_ok and (stationary or stat_after_diff)
+        needs_diff = ready and not stationary
+
+        if not obs_ok:
+            status = "⚠️ 관측치 부족"
+            note   = f"비결측 관측치 {total_obs}개 (최소 {GRANGER_MIN_OBS}개 필요)"
+        elif not null_ok:
+            status = "⚠️ 결측 과다"
+            note   = f"결측률 {null_pct}% (허용 상한 20%)"
+        elif not (stationary or stat_after_diff):
+            status = "⚠️ 비정상 시계열"
+            note   = f"ADF p={adf_p}(원), p={adf_p_diff}(차분) — 단위근 제거 불가"
+        else:
+            diff_note = "1차 차분 후 정상" if needs_diff else "정상 시계열"
+            status = "✅ 조건 충족"
+            note   = f"ADF p={adf_p_diff if needs_diff else adf_p} ({diff_note})"
+
+        rows.append({
+            "변수":        col,
+            "전체관측치":  total_obs,
+            "결측률(%)":   null_pct,
+            "ADF_p(원)":   adf_p,
+            "ADF_p(차분)": adf_p_diff,
+            "정상성":      "✅" if stationary else ("✅(1차차분)" if stat_after_diff else "❌"),
+            "상태":        status,
+            "비고":        note,
+            "_ready":      ready,
+            "_needs_diff": needs_diff,
+        })
+
+    return pd.DataFrame(rows) if rows else pd.DataFrame()
+
+
+def _granger_causality_by_year(
+    wide: pd.DataFrame,
+    target_col: str,
+    conditions_df: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """2020~작년 연도별 + 전체 기간 Granger 인과검정을 실행한다.
+
+    분석 대상: conditions_df에서 _ready=True 인 변수만 실행.
+    반환 컬럼: [변수|연도|관측치수|F통계량|p값|최적시차|인과성]
+    인과성 해석: X → Y 방향 (X가 Y의 과거값보다 Y 예측에 추가 정보 제공).
+    """
+    try:
+        from statsmodels.tsa.stattools import grangercausalitytests, adfuller
+    except ImportError:
+        print("[경고] statsmodels 미설치 — Granger 인과검정 건너뜀")
+        return pd.DataFrame()
+
+    if wide.empty or target_col not in wide.columns:
+        return pd.DataFrame()
+
+    if conditions_df is not None and not conditions_df.empty and "_ready" in conditions_df.columns:
+        ready_vars = conditions_df[conditions_df["_ready"]]["변수"].tolist()
+        needs_diff = set(conditions_df[conditions_df["_needs_diff"]]["변수"].tolist())
+    else:
+        ready_vars = [c for c in wide.columns if c != target_col]
+        needs_diff = set()
+
+    if not ready_vars:
+        return pd.DataFrame()
+
+    # 타깃 정상성 확인
+    t_series = wide[target_col].dropna()
+    target_needs_diff = False
+    if len(t_series) >= GRANGER_MIN_OBS:
+        try:
+            adf_t = adfuller(t_series, autolag="AIC", maxlag=min(12, len(t_series) // 4))
+            target_needs_diff = adf_t[1] >= 0.05
+        except Exception:
+            pass
+
+    # 분석 기간 정의: 연도별 + 전체
+    last_year = date.today().year - 1
+    periods: list[tuple[str, str, str | int]] = [
+        (f"{yr}-01-01", f"{yr}-12-31", yr) for yr in GRANGER_YEARS if yr <= last_year
+    ]
+    periods.append(("2020-01-01", f"{last_year}-12-31", f"전체(2020~{last_year})"))
+
+    rows: list[dict] = []
+    for p_start, p_end, period_label in periods:
+        wide_p   = wide.loc[p_start:p_end].copy()
+        target_p = wide_p[target_col].dropna()
+
+        if len(target_p) < GRANGER_MIN_OBS:
+            for var in ready_vars:
+                rows.append({"변수": var, "연도": period_label,
+                             "관측치수": len(target_p), "F통계량": None,
+                             "p값": None, "최적시차": None,
+                             "인과성": f"⚠️ 타깃 관측치 부족 ({len(target_p)}개)"})
+            continue
+
+        for var in ready_vars:
+            if var not in wide_p.columns:
+                rows.append({"변수": var, "연도": period_label, "관측치수": 0,
+                             "F통계량": None, "p값": None, "최적시차": None,
+                             "인과성": "❌ 해당 기간 변수 없음"})
+                continue
+
+            x_p = wide_p[var].dropna()
+            common = target_p.index.intersection(x_p.index)
+            if len(common) < GRANGER_MIN_OBS:
+                rows.append({"변수": var, "연도": period_label,
+                             "관측치수": len(common), "F통계량": None,
+                             "p값": None, "최적시차": None,
+                             "인과성": f"⚠️ 공통 관측치 부족 ({len(common)}개)"})
+                continue
+
+            y_s = target_p.loc[common]
+            x_s = x_p.loc[common]
+            if target_needs_diff:
+                y_s = y_s.diff().dropna()
+                x_s = x_s.loc[y_s.index]
+            if var in needs_diff:
+                x_s = x_s.diff().dropna()
+                y_s = y_s.loc[x_s.index]
+
+            data = pd.concat([y_s.rename(target_col), x_s.rename(var)], axis=1).dropna()
+            if len(data) < GRANGER_MIN_OBS:
+                rows.append({"변수": var, "연도": period_label,
+                             "관측치수": len(data), "F통계량": None,
+                             "p값": None, "최적시차": None,
+                             "인과성": f"⚠️ 차분 후 관측치 부족 ({len(data)}개)"})
+                continue
+
+            try:
+                max_lag = max(1, min(GRANGER_MAX_LAG, len(data) // 5))
+                result  = grangercausalitytests(
+                    data[[target_col, var]], maxlag=max_lag, verbose=False,
+                )
+                best_lag = min(result, key=lambda lg: result[lg][0]["ssr_ftest"][1])
+                f_stat   = round(float(result[best_lag][0]["ssr_ftest"][0]), 4)
+                p_val    = round(float(result[best_lag][0]["ssr_ftest"][1]), 4)
+                causal   = "✅ 인과관계 있음" if p_val < GRANGER_ALPHA else "— 기각불가"
+                rows.append({"변수": var, "연도": period_label,
+                             "관측치수": len(data), "F통계량": f_stat,
+                             "p값": p_val, "최적시차": best_lag, "인과성": causal})
+            except Exception as e:
+                rows.append({"변수": var, "연도": period_label, "관측치수": len(data),
+                             "F통계량": None, "p값": None, "최적시차": None,
+                             "인과성": f"⚠️ 오류: {e}"})
+
+    return pd.DataFrame(rows) if rows else pd.DataFrame()
+
+
 def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
     """C-03 구조적 단절 임계값 현황 점검.
 
@@ -813,6 +1018,8 @@ def _render_html(
     run_ts: str,
     days: int,
     lang: Literal["ko", "en"] = "ko",
+    granger_conditions: pd.DataFrame | None = None,
+    granger_results: pd.DataFrame | None = None,
 ) -> str:
     """G1 분석 보고서 HTML 렌더링 (한국어 + 영어 이중언어)."""
     font_import = (
@@ -896,6 +1103,51 @@ def _render_html(
 <thead><tr><th>{col_c}</th><th>{col_d}</th><th>{col_s}</th></tr></thead>
 <tbody>{lasso_diag_rows}</tbody></table>"""
 
+    # Granger 인과검정 조건 섹션
+    gc_title = "Granger 인과검정 선결 조건 분류 (변수별)" if lang == "ko" else "Granger Causality — Pre-Condition Check (per Variable)"
+    gc_note  = (
+        "조건 미충족 변수는 Granger 검정에서 제외됩니다. "
+        "⚠️ 관측치 부족: 커넥터 수집 후 재실행 필요. "
+        "⚠️ 비정상: 추가 차분 또는 공적분 검정 필요."
+        if lang == "ko" else
+        "Variables failing conditions are excluded from Granger tests. "
+        "⚠️ Insufficient obs: re-run after data accumulation. "
+        "⚠️ Non-stationary: requires higher-order differencing or cointegration test."
+    )
+    if granger_conditions is not None and not granger_conditions.empty:
+        gc_display = granger_conditions.drop(columns=[c for c in ["_ready", "_needs_diff"] if c in granger_conditions.columns])
+        gc_html    = gc_display.to_html(index=False, border=0, classes="tbl")
+    else:
+        gc_html = (
+            "<p>Granger 조건 점검 미실행 — 수집된 parquet 데이터 없음. 커넥터 재실행 후 확인하세요.</p>"
+            if lang == "ko" else
+            "<p>Granger condition check not run — no parquet data available. Re-run connectors first.</p>"
+        )
+    granger_conditions_section = f"""<h2>{gc_title}</h2>
+<div class="note" style="margin-bottom:8px">{gc_note}</div>
+{gc_html}"""
+
+    # Granger 인과검정 결과 섹션
+    gr_title = f"Granger 인과검정 결과 — 연도별 (α={GRANGER_ALPHA})" if lang == "ko" else f"Granger Causality Results — By Year (α={GRANGER_ALPHA})"
+    gr_note  = (
+        f"귀무가설: X는 Y(대두유 가격)의 Granger 원인이 아니다. p < {GRANGER_ALPHA} → 귀무가설 기각 = 인과관계 있음. "
+        "방향: X → Y (X의 과거값이 Y 예측에 추가 정보를 제공). 최적시차: 최소 p-값을 가진 시차."
+        if lang == "ko" else
+        f"H0: X does not Granger-cause Y (soybean oil price). p < {GRANGER_ALPHA} → reject H0 = causal. "
+        "Direction: X → Y (past values of X improve Y forecast). Best lag: lag with minimum p-value."
+    )
+    if granger_results is not None and not granger_results.empty:
+        gr_html = granger_results.to_html(index=False, border=0, classes="tbl")
+    else:
+        gr_html = (
+            "<p>Granger 검정 미실행 — 선결 조건 충족 변수 없음. 수집 기간 2020~작년 데이터 누적 후 재실행하세요.</p>"
+            if lang == "ko" else
+            "<p>Granger test not run — no variables met pre-conditions. Accumulate data from 2020 to last year and re-run.</p>"
+        )
+    granger_results_section = f"""<h2>{gr_title}</h2>
+<div class="note" style="margin-bottom:8px">{gr_note}</div>
+{gr_html}"""
+
     return f"""<!DOCTYPE html>
 <html lang="{'ko' if lang == 'ko' else 'en'}">
 <head>
@@ -932,9 +1184,9 @@ def _render_html(
 </div>
 
 <div class="note">
-  ⚠️ <strong>Phase A 분석 한계:</strong>
-  현재는 수집된 데이터의 기술통계·LASSO 상관 분석만 수행합니다.
-  XGBoost+SHAP, Granger 인과검정, TCN-XGBoost 하이브리드는 30일+ 시계열 누적 후 Phase B(Snowflake)에서 적용 예정.
+  <strong>Phase A 분석 구성:</strong>
+  기술통계·LASSO 상관분석·Granger 인과검정(2020~작년 연도별) 수행.
+  XGBoost+SHAP, TCN-XGBoost 하이브리드는 Phase B(Snowflake 연동 후) 적용 예정.
 </div>
 
 {exec_html}
@@ -961,6 +1213,10 @@ def _render_html(
 <h2>{catalog_title}</h2>
 <div class="note" style="margin-bottom:8px">{catalog_note}</div>
 {catalog_html}
+
+{granger_conditions_section}
+
+{granger_results_section}
 
 <div class="footer">
   Project Nexus · G1 Variable Importance · C-03 Lead Data Scientist (claude-opus-4-7, Thinking Mode) ·
@@ -989,18 +1245,44 @@ def run(days: int = 7) -> None:
 
     print(f"[C-03] {len(frames)}개 커넥터 데이터 로드 완료: {list(frames.keys())}")
 
-    status_df    = _build_data_status(frames)
-    wide         = _pivot_for_correlation(frames)
+    status_df     = _build_data_status(frames)
+    wide          = _pivot_for_correlation(frames)
     importance_df = _lasso_importance(wide)
-    alerts       = _check_structural_breaks(frames)
+    alerts        = _check_structural_breaks(frames)
 
     print(f"[C-03] 상관 분석 변수 수: {wide.shape[1] if not wide.empty else 0}")
     print(f"[C-03] 구조적 단절 임계값 초과: {sum(1 for a in alerts if '🚨' in a.get('상태', ''))}/{len(alerts)}")
 
+    # ── Granger 인과검정: 전체 히스토리 parquet 사용 (2020~작년) ──────────────────
+    print("[C-03] Granger 인과검정 선결 조건 점검 중 (2020~작년 연도별)...")
+    hist_frames = _load_all_parquets(days=2000)   # 보관된 전체 parquet 로드
+    hist_wide   = _pivot_for_correlation(hist_frames)
+    granger_target = next(
+        (c for c in ["CBOT_BO_CLOSE", "BRENT_USD_BBL", "CPO_USD_MT"]
+         if not hist_wide.empty and c in hist_wide.columns),
+        None,
+    )
+    if granger_target and not hist_wide.empty:
+        print(f"[C-03] Granger 타깃: {granger_target}")
+        granger_conditions = _check_granger_conditions(hist_wide, granger_target)
+        granger_results    = _granger_causality_by_year(hist_wide, granger_target, granger_conditions)
+        n_ready  = granger_conditions["_ready"].sum() if not granger_conditions.empty else 0
+        n_causal = (granger_results["인과성"] == "✅ 인과관계 있음").sum() if not granger_results.empty else 0
+        print(f"[C-03] Granger 조건 충족: {n_ready}개 변수 / 유의 인과관계: {n_causal}건 (α={GRANGER_ALPHA})")
+    else:
+        granger_conditions = pd.DataFrame()
+        granger_results    = pd.DataFrame()
+        print("[C-03] Granger 건너뜀 — 타깃 변수(CBOT_BO_CLOSE / BRENT_USD_BBL) 없음")
+
     for lang in ("ko", "en"):
         html_path = f"{REPORT_DIR}/g1_variable_importance_{tag}_{lang}.html"
         with open(html_path, "w", encoding="utf-8") as fh:
-            fh.write(_render_html(status_df, importance_df, alerts, run_id, run_ts, days, lang=lang))  # type: ignore[arg-type]
+            fh.write(_render_html(
+                status_df, importance_df, alerts, run_id, run_ts, days,
+                lang=lang,  # type: ignore[arg-type]
+                granger_conditions=granger_conditions,
+                granger_results=granger_results,
+            ))
         print(f"[완료] G1 리포트 ({lang.upper()}) → {html_path}")
 
     # 구조적 단절 경보 요약 출력 (Korean narrative — C-03 계약)

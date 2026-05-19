@@ -33,3 +33,14 @@ mlartifacts/
 # IDEs
 .vscode/settings.json
 .idea/
+
+# Generated reports (pipeline outputs — not committed)
+reports/pipeline/*.html
+reports/pipeline/*.pdf
+reports/pipeline/*.json
+reports/data_quality/*.json
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage

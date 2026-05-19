@@ -1,5 +1,5 @@
 # Project Nexus — Full Project WBS
-> **Version**: 1.0 · **Date**: 2026-04-10 · **Owner**: C-01 Senior PM
+> **Version**: 1.3 · **Date**: 2026-05-19 · **Owner**: C-01 Senior PM
 > **Format**: Phase → Deliverable → Task (Verb + Noun, 8–80h, agent assigned)
 > **Status key**: ⬜ 미시작 · 🔄 진행중 · ✅ 완료 · 🚫 블로커
 > **Note**: Methodology and data sources are `[M]` — subject to change. Task durations are estimates; revise after each phase kickoff.
@@ -32,10 +32,21 @@
 | 1.1.5 | Implement ENSO/Weather Anomaly Connector (NOAA CPC · ECMWF ERA5) | C-04 | 16h | ✅ |
 | 1.1.6 | Implement Geopolitical Index Connector (GPR Index · Hormuz Monitor) | C-04 | 24h | ✅ |
 | 1.1.7 | Implement Production & Agromet Connector (NASS · FAOSTAT · NASA POWER · Perplexity) | C-04 | 24h | ✅ |
-| 1.1.8 | Validate External Pipeline Data Quality (great_expectations) | C-08 | 8h | ⬜ |
+| 1.1.8 | Validate External Pipeline Data Quality (pytest + GE) | C-08 | 8h | 🔄 |
 | 1.1.9 | Document External Data Schemas in data/schemas/ | C-07 | 8h | ✅ |
+| 1.1.10 | Implement Commodity Prices & Drought Connector (CBOT · ARS · CPO · USDM) | C-04 | 16h | ✅ |
+| 1.1.11 | Implement Korea Customs HS 1507 Import Stats Connector (data.go.kr · Comtrade) | C-04 | 16h | ✅ |
+| 1.1.12 | Implement Pipeline Quality PDF/HTML Report Generator | C-04 | 8h | ✅ |
+| 1.1.13 | Implement G1 Variable Importance Analysis — LASSO + Structural Break Thresholds | C-03 | 32h | 🔄 |
+| 1.1.14 | Add C-06 EDA Validation Gate to GitHub Actions Pipeline | C-04 | 8h | ✅ |
+| 1.1.15 | Add C-08 DQSOps Data Quality Gate to GitHub Actions Pipeline | C-08 | 8h | ✅ |
+| 1.1.16 | Implement LLM Model Monitor + Health Check Workflow | C-04 | 8h | ✅ |
+| 1.1.17 | Implement Ralph Loop Auto-Issue Workflow (pipeline-failure-loop) | C-04 | 4h | ✅ |
+| 1.1.18 | Implement Granger Causality Analysis — G1 Extension (2020~last year, by year) | C-03 | 16h | 🔄 |
+| 1.1.19 | Implement Pipeline Quality Tests (tests/test_pipeline_quality.py) | C-08 | 8h | 🔄 |
 
 > **P1-05 폐기**: 원래 1.1.4/1.1.5/1.1.6 담당 → C-04 흡수. Old 1.1.7 (API retry + Actions schedule) embedded into 1.1.2–1.1.7 implementation.
+> **Session 12–18 추가 (1.1.10~1.1.19)**: commodity_connector, customs_connector, report_generator, G1 LASSO, C-06/C-08 게이트, LLM 모니터, Ralph Loop, Granger 분석, GE 테스트.
 
 ### 1.2 Internal Data Pipeline (~104h)
 | WBS ID | 작업명 | 담당 | 공수 | 상태 |
@@ -89,7 +100,7 @@
 | 2.1.2 | Implement XGBoost Variable Importance Model | C-03 | 24h | ⬜ |
 | 2.1.3 | Generate SHAP Explanations and Bar Charts | C-03 | 16h | ⬜ |
 | 2.1.4 | Implement Random Forest MDI as Alternative | C-03 | 16h | ⬜ |
-| 2.1.5 | Validate Results with Granger Causality Tests | C-03 | 24h | ⬜ |
+| 2.1.5 | Validate Results with Granger Causality Tests | C-03 | 24h | 🔄 |
 | 2.1.6 | Review and Merge G1 Model Code | C-05 | 16h | ⬜ |
 
 ### 2.2 G1 Automated Alert System (~80h)
