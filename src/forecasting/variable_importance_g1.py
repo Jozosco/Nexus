@@ -488,54 +488,126 @@ def _lasso_importance(wide: pd.DataFrame, target_col: str | None = None) -> pd.D
 
 
 def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
-    """C-03 구조적 단절 임계값 현황 점검."""
+    """C-03 구조적 단절 임계값 현황 점검.
+
+    주의: 커넥터 수집 실패 시 해당 임계값 항목은 '데이터 미수집' 상태로 표시됨.
+    동일 값이 반복되면 원인 1순위: 커넥터 수집 실패 → 새 parquet 미생성.
+    원인 2순위: 월별 지표(GPR/ENSO)의 갱신 주기 — 한 달에 한 번만 변경 정상.
+    """
     alerts = []
+    today = date.today().isoformat()
+
+    def _is_fresh(df: pd.DataFrame, stale_days: int = 5) -> bool:
+        if "ingested_at" not in df.columns:
+            return False
+        max_ts = pd.to_datetime(df["ingested_at"], utc=True, errors="coerce").max()
+        return pd.notna(max_ts) and np.busday_count(max_ts.date(), date.today()) <= stale_days
 
     # GPR 지수 (normalized)
     if "geopolitical_indices" in frames:
         gpr_df = frames["geopolitical_indices"]
-        gpr = gpr_df[gpr_df.get("indicator_code", pd.Series(dtype=str)) == "GPR_NORMALIZED"]
-        if not gpr.empty and "value" in gpr.columns:
+        if "indicator_code" in gpr_df.columns:
+            gpr = gpr_df[gpr_df["indicator_code"] == "GPR_NORMALIZED"]
+        else:
+            gpr = pd.DataFrame()
+        if not gpr.empty and "value" in gpr.columns and not gpr["value"].dropna().empty:
             latest_gpr = float(gpr["value"].dropna().iloc[-1])
+            fresh = _is_fresh(gpr_df)
             alerts.append({
                 "변수": "GPR_NORMALIZED",
                 "현재값": round(latest_gpr, 4),
                 "임계값": THRESHOLDS["GPR_NORMALIZED"]["alert"],
                 "상태": "🚨 임계초과" if latest_gpr > 0.022 else "✅ 정상",
                 "설명": THRESHOLDS["GPR_NORMALIZED"]["label"],
+                "데이터신선도": "✅ 최신" if fresh else "⚠️ STALE — 커넥터 수집 실패 의심",
             })
+        else:
+            alerts.append({
+                "변수": "GPR_NORMALIZED",
+                "현재값": "N/A",
+                "임계값": THRESHOLDS["GPR_NORMALIZED"]["alert"],
+                "상태": "❓ 데이터 미수집",
+                "설명": THRESHOLDS["GPR_NORMALIZED"]["label"],
+                "데이터신선도": "❌ parquet 없음",
+            })
+    else:
+        alerts.append({
+            "변수": "GPR_NORMALIZED", "현재값": "N/A",
+            "임계값": 0.022, "상태": "❓ 데이터 미수집",
+            "설명": "지정학 리스크 지수 — geopolitical_indices 커넥터 수집 실패",
+            "데이터신선도": "❌ parquet 없음",
+        })
 
     # ENSO ONI
     if "climate_data" in frames:
         oni_df = frames["climate_data"]
-        oni = oni_df[oni_df.get("indicator_code", pd.Series(dtype=str)) == "ONI"] if "indicator_code" in oni_df.columns else pd.DataFrame()
-        if not oni.empty and "value" in oni.columns:
+        oni = oni_df[oni_df["indicator_code"] == "ONI"] if "indicator_code" in oni_df.columns else pd.DataFrame()
+        if not oni.empty and "value" in oni.columns and not oni["value"].dropna().empty:
             latest_oni = float(oni["value"].dropna().iloc[-1])
+            fresh = _is_fresh(oni_df)
             alerts.append({
                 "변수": "ENSO_ONI",
                 "현재값": round(latest_oni, 2),
                 "임계값": "±0.5",
                 "상태": "🚨 임계초과" if abs(latest_oni) >= 0.5 else "✅ 정상",
                 "설명": THRESHOLDS["ENSO_ONI"]["label"],
+                "데이터신선도": "✅ 최신" if fresh else "⚠️ STALE (월별 갱신 정상)",
             })
+        else:
+            alerts.append({
+                "변수": "ENSO_ONI", "현재값": "N/A", "임계값": "±0.5",
+                "상태": "❓ 데이터 미수집",
+                "설명": "ENSO ONI — climate_data 커넥터 수집 실패",
+                "데이터신선도": "❌ parquet 없음",
+            })
+    else:
+        alerts.append({
+            "변수": "ENSO_ONI", "현재값": "N/A", "임계값": "±0.5",
+            "상태": "❓ 데이터 미수집",
+            "설명": "기후 레짐 전환 — climate_data 커넥터 수집 실패",
+            "데이터신선도": "❌ parquet 없음",
+        })
 
     # BDI z-score (90일 rolling)
     if "shipping_indices" in frames:
         bdi_df = frames["shipping_indices"]
-        bdi = bdi_df[bdi_df.get("indicator_code", pd.Series(dtype=str)) == "BDI"] if "indicator_code" in bdi_df.columns else pd.DataFrame()
-        if not bdi.empty and "value" in bdi.columns and len(bdi) > 10:
+        bdi = bdi_df[bdi_df["indicator_code"] == "BDI"] if "indicator_code" in bdi_df.columns else pd.DataFrame()
+        if not bdi.empty and "value" in bdi.columns and len(bdi) > 3:
             vals = pd.to_numeric(bdi["value"], errors="coerce").dropna()
             if len(vals) >= 5:
                 roll_mean = vals.rolling(min(90, len(vals))).mean().iloc[-1]
                 roll_std  = vals.rolling(min(90, len(vals))).std().iloc[-1]
                 z = (vals.iloc[-1] - roll_mean) / roll_std if roll_std > 0 else 0.0
+                fresh = _is_fresh(bdi_df)
                 alerts.append({
                     "변수": "BDI_ZSCORE",
                     "현재값": round(z, 2),
                     "임계값": "2.0σ",
                     "상태": "🚨 임계초과" if z > 2.0 else "✅ 정상",
                     "설명": THRESHOLDS["BDI"]["label"],
+                    "데이터신선도": "✅ 최신" if fresh else "⚠️ STALE — 커넥터 수집 실패 의심",
                 })
+            else:
+                alerts.append({
+                    "변수": "BDI_ZSCORE", "현재값": f"{len(vals)}건(부족)",
+                    "임계값": "2.0σ", "상태": "⚠️ 데이터 부족 (90일 미만)",
+                    "설명": "BDI — z-score 계산 최소 5건 필요",
+                    "데이터신선도": "⚠️ 데이터 부족",
+                })
+        else:
+            alerts.append({
+                "변수": "BDI_ZSCORE", "현재값": "N/A", "임계값": "2.0σ",
+                "상태": "❓ 데이터 미수집",
+                "설명": "해운비용 급등 — shipping_indices 커넥터 수집 실패",
+                "데이터신선도": "❌ parquet 없음",
+            })
+    else:
+        alerts.append({
+            "변수": "BDI_ZSCORE", "현재값": "N/A", "임계값": "2.0σ",
+            "상태": "❓ 데이터 미수집",
+            "설명": "해운비용 급등 — shipping_indices 커넥터 수집 실패",
+            "데이터신선도": "❌ parquet 없음",
+        })
 
     return alerts
 

@@ -294,14 +294,47 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-  # ── WBS 1.1.8: C-06 EDA 검증 (C-03 분석 전 데이터 품질 게이트) ────────────────
+  # ── WBS 1.1.8: C-08 DQSOps 데이터 품질 검증 (C-06 EDA 전 1차 게이트) ──────────
+  # C-08 Data Quality Validator (Haiku 4.5 STRUCTURED_EXTRACT)
+  # DQSOps 5차원: 정확도(0.3)·완전성(0.25)·일관성(0.20)·신선도(0.15)·왜도(0.10)
+  # 🟢 PASS(≥0.70) → C-06 진행 | 🟡 WARNING(0.50~0.69) → 경고 후 진행 | 🔴 REJECTED(<0.50) → 파이프라인 차단
+  c08-dq-validation:
+    name: "C-08 | DQSOps Data Quality Validation Gate"
+    runs-on: ubuntu-latest
+    needs: [pipeline-summary]
+    if: always()
+    outputs:
+      overall_status: ${{ steps.dq.outputs.overall_status }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow numpy
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run C-08 DQSOps validation
+        id: dq
+        run: python src/pipeline/validators/c08_dq_validator.py
+      - name: Upload C-08 DQ report
+        uses: actions/upload-artifact@v4
+        with:
+          name: c08-dq-report-${{ github.run_id }}
+          path: reports/data_quality/dq_report_*.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ── WBS 1.1.8: C-06 EDA 검증 (C-08 DQ 통과 후 2차 게이트) ──────────────────────
   # C-06 EDA Expert: 수집된 parquet의 구조적 무결성·이상치·결측치 자동 검증
   # 출력: reports/pipeline/c06_eda_report_{DATE}.json (C-03에 전달)
   # C-03은 이 단계 통과 후에만 G1 분석 실행
   c06-eda-validation:
     name: "C-06 | EDA Validation — Data Integrity Gate"
     runs-on: ubuntu-latest
-    needs: [pipeline-summary]
+    needs: [c08-dq-validation]
     if: always()
     outputs:
       eda_status: ${{ steps.eda.outputs.eda_status }}
@@ -450,7 +483,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso,
             geopolitical-risk, production-data, customs-import-stats, commodity-prices,
-            c06-eda-validation]
+            c08-dq-validation, c06-eda-validation]
     if: |
       always() &&
       (needs.economic-indicators.result == 'failure' ||

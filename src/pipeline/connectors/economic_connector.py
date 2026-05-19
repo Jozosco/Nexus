@@ -146,49 +146,93 @@ def fetch_bok_krw_usd(start: str, end: str) -> pd.DataFrame:
     return df.dropna(subset=["value"])
 
 
-def fetch_kosis_kr_import_stats() -> pd.DataFrame:
+def _kosis_b64_key(raw_key: str) -> str:
+    """KOSIS API는 Base64 인코딩 키 사용. 미인코딩 키 자동 변환.
+    포털에서 발급된 키가 hex(평문) 또는 Base64 중 어느 형식이든 대응.
     """
-    한국 대두유 수입 통계 수집 (KOSIS API 키 사용).
-    중요 주의: KOSIS 자체에는 HS 코드별 수입 데이터 없음 — 관세청 데이터.
-    현재 구현: KOSIS API 연결 확인만 수행. 실제 수입 통계는 data.go.kr 또는
-    KITA(stat.kita.net) 등록 후 Korea Customs API로 대체 필요 (A-010 참조).
+    import base64 as _b64
+    stripped = raw_key.strip()
+    try:
+        decoded = _b64.b64decode(stripped, validate=True)
+        if decoded:
+            return stripped  # 이미 유효한 Base64
+    except Exception:
+        pass
+    return _b64.b64encode(stripped.encode()).decode()
+
+
+def fetch_kosis_cpi_korea(start_yyyymm: str = "202001") -> pd.DataFrame:
+    """KOSIS API — 한국 소비자물가지수(CPI_KOREA) 실제 데이터 수집.
+
+    엔드포인트: statisticsData.do?method=getList
+    orgId=101: 통계청 | tblId=DT_1J22003: 소비자물가지수 전국 (2020=100)
+    itmId=T10+: 총지수 | objL1=0: 전국
+
+    KOSIS 필요 데이터 목록 (C-01/C-03/P1-01 협의 확정):
+      - CPI_KOREA      (DT_1J22003): 전국 소비자물가 총지수 — Nexus 거시경제 변수
+      - CPI_FOOD       (DT_1J22002): 품목성질별 CPI (식품/비식품) — 식용유 물가 압력
+      - PPI_KOREA      (DT_1G04003): 생산자물가지수 — 원가 압력 선행지표 (Phase B 추가 예정)
     """
-    api_key = os.environ.get("KOSIS_API_KEY", "")
+    api_key = os.environ.get("KOSIS_API_KEY", "").strip()
     if not api_key:
-        print("[경고] KOSIS_API_KEY 미등록 — 한국 수입 통계 건너뜀")
+        print("[경고] KOSIS_API_KEY 미등록 — CPI_KOREA 수집 건너뜀")
         return pd.DataFrame()
 
-    # KOSIS API 연결 테스트 (소비자물가지수 파라미터 목록 — CPI_KOREA 변수 소스 확인)
-    # orgId=101: 통계청, tblId=DT_1J22003: 소비자물가지수 전국 (2020 기준)
-    # parentListId=MT_OTITLE 사용 금지 — vwCd 값이며 parentListId 오입력 시 404 (MEMORY A-020)
-    try:
-        r = _fetch("https://kosis.kr/openapi/Param/statisticsParamData.do", {
-            "method":   "getList",
-            "apiKey":   api_key,
-            "itmId":    "",
-            "objL1":    "",
-            "objL2":    "",
-            "objL3":    "",
-            "format":   "json",
-            "jsonVD":   "Y",
-            "vwCd":     "MT_ZTITLE",
-            "parentListId": "101",   # 통계청 기관 코드
-            "startPrdDe": "",
-            "endPrdDe":   "",
-            "orgId":    "101",
-            "tblId":    "DT_1J22003",  # 소비자물가지수 전국 (Nexus CPI_KOREA)
-        })
-        if not r:
-            print("[경고] KOSIS API: 응답 없음 또는 연결 실패")
-            return pd.DataFrame()
-        print(
-            "[정보] KOSIS API 연결 확인 완료. "
-            "대두유 수입 상세 통계는 data.go.kr 또는 KITA(stat.kita.net) 전환 필요 (A-010)."
-        )
+    b64_key = _kosis_b64_key(api_key)
+    end_yyyymm = date.today().strftime("%Y%m")
+
+    # 수집 대상 테이블 (CPI 총지수 + 품목성질별)
+    KOSIS_TABLES = [
+        {"tblId": "DT_1J22003", "itmId": "T10+", "objL1": "0", "label": "CPI_KOREA_TOTAL"},
+        {"tblId": "DT_1J22002", "itmId": "T10+", "objL1": "0", "label": "CPI_KOREA_FOOD_CLASS"},
+    ]
+
+    all_rows: list[dict] = []
+    for tbl in KOSIS_TABLES:
+        try:
+            raw = _fetch("https://kosis.kr/openapi/Param/statisticsData.do", {
+                "method":     "getList",
+                "apiKey":     b64_key,
+                "itmId":      tbl["itmId"],
+                "objL1":      tbl["objL1"],
+                "objL2":      "",
+                "objL3":      "",
+                "format":     "json",
+                "jsonVD":     "Y",
+                "vwCd":       "MT_ZTITLE",
+                "startPrdDe": start_yyyymm,
+                "endPrdDe":   end_yyyymm,
+                "prdSe":      "M",
+                "orgId":      "101",
+                "tblId":      tbl["tblId"],
+            })
+            if not raw:
+                print(f"[경고] KOSIS {tbl['tblId']}: 응답 없음")
+                continue
+            records = raw if isinstance(raw, list) else raw.get("data", raw.get("row", []))
+            for rec in records:
+                period = rec.get("PRD_DE", rec.get("prd_de", ""))
+                value  = rec.get("DT", rec.get("dt", None))
+                if period and value is not None:
+                    all_rows.append({
+                        "price_date":     pd.to_datetime(period, format="%Y%m", errors="coerce"),
+                        "indicator_code": tbl["label"],
+                        "value":          pd.to_numeric(str(value).replace(",", ""), errors="coerce"),
+                        "source_name":    "KOSIS/통계청",
+                        "tbl_id":         tbl["tblId"],
+                    })
+            print(f"[정보] KOSIS {tbl['tblId']} ({tbl['label']}): {len(records)}건")
+        except Exception as e:
+            print(f"[경고] KOSIS {tbl['tblId']} 수집 실패: {e}")
+
+    if not all_rows:
+        print("[경고] KOSIS CPI 전체 수집 실패 — API 키 및 파라미터 확인 필요")
         return pd.DataFrame()
-    except Exception as e:
-        print(f"[경고] KOSIS API 호출 실패: {e}")
-        return pd.DataFrame()
+
+    df = pd.DataFrame(all_rows)
+    df["ingested_at"] = pd.Timestamp.utcnow()
+    print(f"[완료] KOSIS CPI 총 {len(df)}건 ({start_yyyymm}~{end_yyyymm})")
+    return df
 
 
 def run(start_date: str = "2020-01-01", end_date: str | None = None) -> None:
@@ -221,7 +265,7 @@ def run(start_date: str = "2020-01-01", end_date: str | None = None) -> None:
         # ── 시장 리스크 ────────────────────────────────────────────────────────
         _safe(fetch_fred_series, "VIXCLS",  start, end, label="FRED VIXCLS"),
         # ── 한국 수입 통계 (KOSIS — 연결 확인만; 실 데이터는 data.go.kr 전환 예정) ──
-        _safe(fetch_kosis_kr_import_stats, label="KOSIS KR 수입통계"),
+        _safe(fetch_kosis_cpi_korea, label="KOSIS CPI_KOREA (DT_1J22003)"),
     ]
 
     frames = [f for f in frames if not f.empty]
