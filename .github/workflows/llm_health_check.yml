@@ -153,35 +153,41 @@ jobs:
           print(f"✅ BOK ECOS API 정상 — 주요 통계 항목 수: {count}")
           EOF
 
-      - name: Check KOSIS API — CPI_KOREA 파라미터 조회 (MEMORY A-010, A-020)
+      - name: Check KOSIS API — CPI_KOREA 실데이터 조회 (MEMORY A-010, A-020, A-024)
         env:
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
         run: |
           python - <<'EOF'
-          import os, httpx
+          import os, base64, httpx
           api_key = os.environ.get("KOSIS_API_KEY", "").strip()
           if not api_key:
               print("⚠️ KOSIS_API_KEY 미등록 — 건너뜀 (kosis.kr 계정 필요)")
               raise SystemExit(0)
-          # orgId=101: 통계청 | tblId=DT_1J22003: 소비자물가지수(Nexus CPI_KOREA 소스)
-          # parentListId=MT_OTITLE 금지 — vwCd 값이며 parentListId로 사용 시 404 (MEMORY A-020)
+          # KOSIS API: apiKey는 Base64 인코딩 형식 필요 (MEMORY A-024)
+          try:
+              base64.b64decode(api_key, validate=True)
+              b64_key = api_key
+          except Exception:
+              b64_key = base64.b64encode(api_key.encode()).decode()
+          # statisticsData.do: 실제 CPI 데이터 조회 (statisticsParamData.do는 메타데이터만)
           r = httpx.get(
-              "https://kosis.kr/openapi/Param/statisticsParamData.do",
+              "https://kosis.kr/openapi/Param/statisticsData.do",
               params={
-                  "method": "getList", "apiKey": api_key,
-                  "itmId": "", "objL1": "", "objL2": "", "objL3": "",
+                  "method": "getList", "apiKey": b64_key,
+                  "itmId": "T10+", "objL1": "0",
+                  "objL2": "", "objL3": "",
                   "format": "json", "jsonVD": "Y",
-                  "vwCd": "MT_ZTITLE", "parentListId": "101",
-                  "startPrdDe": "", "endPrdDe": "",
-                  "orgId": "101", "tblId": "DT_1J22003",
+                  "vwCd": "MT_ZTITLE",
+                  "startPrdDe": "202401", "endPrdDe": "202412",
+                  "prdSe": "M", "orgId": "101", "tblId": "DT_1J22003",
               },
               timeout=15,
           )
           r.raise_for_status()
           data = r.json()
-          assert isinstance(data, list) and len(data) > 0, \
-              f"[오류] KOSIS CPI 파라미터 조회 이상 (0건): {data}"
-          print(f"✅ KOSIS API 정상 — CPI(DT_1J22003) 파라미터 {len(data)}건 (orgId=101, Nexus CPI_KOREA 소스 확인)")
+          rows = data if isinstance(data, list) else data.get("data", data.get("row", []))
+          assert len(rows) > 0, f"[오류] KOSIS CPI 데이터 0건: {data}"
+          print(f"✅ KOSIS API 정상 — CPI_KOREA(DT_1J22003) {len(rows)}건 (2024년, Nexus 거시경제 변수)")
           EOF
 
       - name: Check USDA FAS OpenData API (PSD SBO endpoint)

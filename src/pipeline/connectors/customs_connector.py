@@ -65,6 +65,16 @@ def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
     for attempt in range(max_retries):
         try:
             r = httpx.get(url, params=params, timeout=30)
+            if r.status_code == 401:
+                key_hint = params.get("serviceKey", "?")
+                key_hint = (str(key_hint)[:8] + "...") if len(str(key_hint)) > 8 else str(key_hint)
+                print(
+                    f"[오류] 관세청 API 401 인증 실패 — 서비스키 만료·미승인 가능성\n"
+                    f"       사용 키 앞 8자리: {key_hint}\n"
+                    f"       확인: data.go.kr → 마이페이지 → 활용현황 → 관세청_품목별국가별수출입실적(GW)\n"
+                    f"       조치: 재발급 또는 승인 연장 → GitHub Secrets DATA_GO_KR_SERVICE_KEY 갱신"
+                )
+                return {}
             if r.status_code in (400, 403, 404):
                 snippet = r.text[:300].replace("\n", " ")
                 print(f"[경고] API {r.status_code} ({url.split('?')[0]}): {snippet}")
@@ -99,32 +109,39 @@ def _parse_items(data: dict) -> list[dict]:
 
 def _fetch_customs_range(service_key: str, strt_yymm: str, end_yymm: str,
                           hs_sgn: str) -> list[dict]:
-    """관세청 API 기간 조회. 디코딩/인코딩 키 자동 폴백.
+    """관세청 API 기간 조회. 디코딩/인코딩/직삽 키 3단계 폴백.
 
     strt_yymm, end_yymm: YYYYMM 형식 (예: '202001', '202012')
     hs_sgn: 10단위 HS 코드 (예: '1507901010')
+    키 처리 전략:
+      1차: unquote() 디코딩 키 → params (이중 인코딩 방지, 포털 인코딩 키 대상)
+      2차: 원본 키 그대로 → params (일반 서비스키 hex 형식 대상)
+      3차: 원본 인코딩 키 URL 직삽 (httpx 인코딩 완전 우회)
+    401 발생 시: data.go.kr 포털에서 키 유효성 확인 필요 (수동 작업)
     """
-    # 1차: 디코딩 키 → httpx params (이중 인코딩 방지)
-    decoded_key = unquote(service_key)
-    params: dict[str, Any] = {
-        "serviceKey": decoded_key,
-        "strtYymm":   strt_yymm,
-        "endYymm":    end_yymm,
-        "hsSgn":      hs_sgn,
-    }
-    data = _fetch(CUSTOMS_BASE, params)
-    items = _parse_items(data)
-    if items:
-        return items
-
-    # 2차: 원본 인코딩 키를 URL에 직접 삽입 (httpx 인코딩 우회)
-    direct_url = f"{CUSTOMS_BASE}?serviceKey={service_key}"
-    direct_params: dict[str, Any] = {
+    base_params: dict[str, Any] = {
         "strtYymm": strt_yymm,
         "endYymm":  end_yymm,
         "hsSgn":    hs_sgn,
     }
-    fb_data = _fetch(direct_url, direct_params)
+
+    # 1차: 디코딩 키 → httpx params (포털 URL-인코딩 키 이중 인코딩 방지)
+    decoded_key = unquote(service_key)
+    data = _fetch(CUSTOMS_BASE, {"serviceKey": decoded_key, **base_params})
+    items = _parse_items(data)
+    if items:
+        return items
+
+    # 2차: 원본 키 그대로 params (일반 hex 서비스키, unquote 불필요)
+    if decoded_key != service_key:  # 1차와 동일하면 건너뜀
+        data2 = _fetch(CUSTOMS_BASE, {"serviceKey": service_key, **base_params})
+        items2 = _parse_items(data2)
+        if items2:
+            return items2
+
+    # 3차: 원본 인코딩 키를 URL에 직접 삽입 (httpx 인코딩 완전 우회)
+    direct_url = f"{CUSTOMS_BASE}?serviceKey={service_key}"
+    fb_data = _fetch(direct_url, base_params)
     return _parse_items(fb_data)
 
 
