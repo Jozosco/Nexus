@@ -114,8 +114,9 @@ def fetch_bcaa() -> pd.DataFrame:
 
 
 def fetch_bdi_te() -> pd.DataFrame:
-    """Trading Economics에서 BDI 수집 — C-03 구조적 단절 모니터링(90일 z-score > 2σ).
+    """Trading Economics에서 BDI 히스토리 수집 (2020-01-01~현재).
 
+    getMarketsHistorical()로 일별 시계열 수집 — z-score 분석에 충분한 기간 확보.
     TRADING_ECONOMICS_API_KEY 미등록 시 빈 DataFrame 반환 (BCAA는 TE 미제공).
     """
     try:
@@ -123,32 +124,61 @@ def fetch_bdi_te() -> pd.DataFrame:
         return fetch_bdi()
     except ImportError:
         pass
-    # TE 직접 호출 (te_connector 없을 때)
+
     te_key = os.environ.get("TRADING_ECONOMICS_API_KEY", "").strip()
     if not te_key:
         print("[정보] TRADING_ECONOMICS_API_KEY 미등록 — BDI TE 수집 건너뜀")
         return pd.DataFrame()
+
+    start_date = "2020-01-01"
+    end_date   = date.today().isoformat()
+
     try:
         import tradingeconomics as te  # type: ignore
         te.login(te_key)
-        for symbol in ("bdi", "baltic"):
+
+        for symbol in ("bdi", "BDI", "baltic"):
             try:
-                result = te.getMarketsBySymbol(symbols=symbol, output_type="df")
+                # 히스토리 범위 조회 (2020-01-01 ~ 오늘)
+                result = te.getMarketsHistorical(
+                    symbols=symbol, d1=start_date, d2=end_date, output_type="df"
+                )
                 if result is not None and len(result) > 0:
-                    date_col  = next((c for c in ["DateTime", "Date", "date"] if c in result.columns), None)
-                    value_col = next((c for c in ["Last", "Close", "Value"] if c in result.columns), None)
+                    date_col  = next((c for c in ["Date", "DateTime", "date"] if c in result.columns), None)
+                    value_col = next((c for c in ["Close", "Last", "Value"] if c in result.columns), None)
                     if date_col and value_col:
-                        return pd.DataFrame({
+                        df = pd.DataFrame({
                             "price_date":     pd.to_datetime(result[date_col], errors="coerce"),
                             "value":          pd.to_numeric(result[value_col], errors="coerce"),
                             "source_name":    "TradingEconomics/BalticExchange",
                             "indicator_code": "BDI",
                             "unit":           "points",
-                            "note":           "[TE-OFFICIAL: C-03 z-score 모니터링]",
+                            "note":           f"[TE-OFFICIAL: C-03 z-score 모니터링 | 히스토리 {start_date}~{end_date}]",
                             "ingested_at":    pd.Timestamp.utcnow(),
                         }).dropna(subset=["price_date", "value"])
-            except Exception:
-                continue
+                        print(f"[완료] BDI 히스토리 {len(df)}건 수집 ({start_date}~{end_date})")
+                        return df
+            except Exception as inner_e:
+                print(f"[경고] TE getMarketsHistorical({symbol}) 실패: {inner_e} — 최신값 폴백 시도")
+                # 폴백: 최신 단일 데이터
+                try:
+                    result = te.getMarketsBySymbol(symbols=symbol, output_type="df")
+                    if result is not None and len(result) > 0:
+                        date_col  = next((c for c in ["DateTime", "Date", "date"] if c in result.columns), None)
+                        value_col = next((c for c in ["Last", "Close", "Value"] if c in result.columns), None)
+                        if date_col and value_col:
+                            print(f"[경고] BDI 히스토리 조회 실패 — 최신 단일 레코드 반환")
+                            return pd.DataFrame({
+                                "price_date":     pd.to_datetime(result[date_col], errors="coerce"),
+                                "value":          pd.to_numeric(result[value_col], errors="coerce"),
+                                "source_name":    "TradingEconomics/BalticExchange",
+                                "indicator_code": "BDI",
+                                "unit":           "points",
+                                "note":           "[TE-OFFICIAL: 폴백 — 최신 단일 레코드 (히스토리 조회 실패)]",
+                                "ingested_at":    pd.Timestamp.utcnow(),
+                            }).dropna(subset=["price_date", "value"])
+                except Exception:
+                    continue
     except Exception as e:
         print(f"[경고] TE BDI 수집 실패: {e}")
     return pd.DataFrame()

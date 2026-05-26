@@ -1,23 +1,34 @@
 dataset: climate_data
 source_connector: src/pipeline/connectors/climate_connector.py
 output_path: data/raw/climate_data_YYYYMMDD.parquet
-description: "ENSO 페이즈 (NOAA ONI) · 원산지 기상이상 (OpenWeatherMap) (WBS 1.1.5)"
+description: "ENSO 페이즈 (NOAA ONI) · Open-Meteo 12개 생산지역 일별 기후 (ERA5-Land) · OpenWeatherMap 현재 기상 (WBS 1.1.5/1.1.20)"
+note: "Open-Meteo: 중국(3) · 미국(3) · 브라질(3) · 아르헨티나(3) 12개 지역, API 키 불필요. ECMWF ERA5 별도 키 필요. docs/research_desk/soybean_oil_production_climate.md Part 3.2 참조"
 
 columns:
   - name: price_date
     dtype: datetime64[ns]
     nullable: false
-    description: "관측 기준일 (NOAA: 연도별 1월 1일, OWM: 수집일)"
+    description: "관측 기준일 (NOAA: 연도별 1월 1일, Open-Meteo: 일별, OWM: 수집일)"
 
   - name: source_name
     dtype: object
     nullable: false
-    description: "데이터 출처 (NOAA_CPC | OpenWeatherMap)"
+    description: "데이터 출처 (NOAA_CPC | OpenMeteo/ERA5Land | OpenWeatherMap | ECMWF_ERA5)"
+
+  - name: region_code
+    dtype: object
+    nullable: true
+    description: "지역 코드 (CN_Heilongjiang | CN_Shandong | CN_Jiangsu | US_Illinois | US_Iowa | US_Indiana | BR_MatoGrosso | BR_Parana | BR_MatoGrossodoSul | AR_Cordoba | AR_SantaFe | AR_BuenosAires | GLOBAL)"
+
+  - name: country
+    dtype: object
+    nullable: true
+    description: "국가명 (China | USA | Brazil | Argentina | Global)"
 
   - name: indicator_code
     dtype: object
     nullable: false
-    description: "지표 코드 (ONI | TEMP_{location})"
+    description: "지표 코드 (ONI | temperature_2m_max | temperature_2m_min | precipitation_sum | shortwave_radiation_sum | soil_temperature_0_to_7cm | soil_moisture_0_to_7cm | et0_fao_evapotranspiration | sunshine_duration | TEMP_{location})"
 
   - name: season
     dtype: object
@@ -27,12 +38,12 @@ columns:
   - name: value
     dtype: float64
     nullable: false
-    description: "ONI: °C anomaly / OWM: °C"
+    description: "지표 수치값"
 
   - name: unit
     dtype: object
     nullable: true
-    description: "°C anomaly (ONI) | °C (OWM)"
+    description: "단위: °C anomaly (ONI) | °C (기온/토양온도) | mm (강수/ET₀) | MJ/m² (단파복사) | m³/m³ (토양수분) | s (일조시간)"
 
   - name: enso_phase
     dtype: object
