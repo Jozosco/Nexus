@@ -20,6 +20,7 @@ import re
 import time
 from datetime import date
 
+import httpx
 import pandas as pd
 from openai import OpenAI
 
@@ -114,74 +115,64 @@ def fetch_bcaa() -> pd.DataFrame:
     return df
 
 
-def fetch_bdi_te() -> pd.DataFrame:
-    """Trading Economics에서 BDI 히스토리 수집 (2020-01-01~현재).
+def fetch_bdi_te(start_date: str | None = None, end_date: str | None = None) -> pd.DataFrame:
+    """Trading Economics REST API 직접 호출로 BDI 히스토리 수집.
 
-    getMarketsHistorical()로 일별 시계열 수집 — z-score 분석에 충분한 기간 확보.
-    TRADING_ECONOMICS_API_KEY 미등록 시 빈 DataFrame 반환 (BCAA는 TE 미제공).
+    SDK의 getMarketsHistorical()은 설치된 TE 버전에서 미지원 (MEMORY A-034).
+    pandas 2.0과 구형 TE SDK의 deprecate_kwarg() 호환성 오류도 동시 해소.
+    REST: GET https://api.tradingeconomics.com/markets/historical/{symbol}
+    파라미터: c={api_key}&d1={start}&d2={end}&f=json
     """
-    try:
-        from src.pipeline.connectors.te_connector import fetch_bdi  # type: ignore
-        return fetch_bdi()
-    except ImportError:
-        pass
-
     te_key = os.environ.get("TRADING_ECONOMICS_API_KEY", "").strip()
     if not te_key:
-        print("[정보] TRADING_ECONOMICS_API_KEY 미등록 — BDI TE 수집 건너뜀")
+        print("[정보] TRADING_ECONOMICS_API_KEY 미등록 — BDI TE REST 수집 건너뜀")
         return pd.DataFrame()
 
-    start_date = "2020-01-01"
-    end_date   = date.today().isoformat()
+    _start = start_date or "2020-01-01"
+    _end   = end_date or date.today().isoformat()
 
-    try:
-        import tradingeconomics as te  # type: ignore
-        te.login(te_key)
+    for symbol in ("BDI", "BALTDRYIDX", "bdi"):
+        try:
+            url = f"https://api.tradingeconomics.com/markets/historical/{symbol}"
+            params = {"c": te_key, "d1": _start, "d2": _end, "f": "json"}
+            r = httpx.get(url, params=params, timeout=30)
+            if r.status_code == 401:
+                print("[경고] TE API 401 인증 실패 — TRADING_ECONOMICS_API_KEY 값 확인 필요")
+                return pd.DataFrame()
+            if r.status_code == 403:
+                print("[경고] TE API 403 권한 없음 — TE 구독 플랜에서 Markets Historical 포함 확인")
+                return pd.DataFrame()
+            r.raise_for_status()
+            data = r.json()
+            if not data or not isinstance(data, list):
+                print(f"[경고] TE REST BDI({symbol}): 빈 응답 — 다음 심볼 시도")
+                continue
+            df_raw = pd.DataFrame(data)
+            date_col  = next((c for c in ["Date", "DateTime", "date"] if c in df_raw.columns), None)
+            value_col = next((c for c in ["Close", "Last", "close", "Value"] if c in df_raw.columns), None)
+            if not date_col or not value_col:
+                print(f"[경고] TE REST BDI({symbol}): 예상 컬럼 없음 ({list(df_raw.columns)[:5]})")
+                continue
+            df = pd.DataFrame({
+                "price_date":     pd.to_datetime(df_raw[date_col], errors="coerce"),
+                "value":          pd.to_numeric(df_raw[value_col], errors="coerce"),
+                "source_name":    "TradingEconomics/BalticExchange",
+                "indicator_code": "BDI",
+                "unit":           "points",
+                "note":           f"[TE-REST: BDI 히스토리 ({_start}~{_end}) — SDK 미사용 직접 호출]",
+                "ingested_at":    pd.Timestamp.utcnow(),
+            }).dropna(subset=["price_date", "value"])
+            if not df.empty:
+                print(f"[완료] TE REST BDI {len(df)}건 수집 ({symbol}, {_start}~{_end})")
+                return df.sort_values("price_date").reset_index(drop=True)
+        except httpx.HTTPStatusError as e:
+            print(f"[경고] TE REST BDI({symbol}) HTTP {e.response.status_code}: {e}")
+            continue
+        except Exception as e:
+            print(f"[경고] TE REST BDI({symbol}) 실패: {e}")
+            continue
 
-        for symbol in ("bdi", "BDI", "baltic"):
-            try:
-                # 히스토리 범위 조회 (2020-01-01 ~ 오늘)
-                result = te.getMarketsHistorical(
-                    symbols=symbol, d1=start_date, d2=end_date, output_type="df"
-                )
-                if result is not None and len(result) > 0:
-                    date_col  = next((c for c in ["Date", "DateTime", "date"] if c in result.columns), None)
-                    value_col = next((c for c in ["Close", "Last", "Value"] if c in result.columns), None)
-                    if date_col and value_col:
-                        df = pd.DataFrame({
-                            "price_date":     pd.to_datetime(result[date_col], errors="coerce"),
-                            "value":          pd.to_numeric(result[value_col], errors="coerce"),
-                            "source_name":    "TradingEconomics/BalticExchange",
-                            "indicator_code": "BDI",
-                            "unit":           "points",
-                            "note":           f"[TE-OFFICIAL: C-03 z-score 모니터링 | 히스토리 {start_date}~{end_date}]",
-                            "ingested_at":    pd.Timestamp.utcnow(),
-                        }).dropna(subset=["price_date", "value"])
-                        print(f"[완료] BDI 히스토리 {len(df)}건 수집 ({start_date}~{end_date})")
-                        return df
-            except Exception as inner_e:
-                print(f"[경고] TE getMarketsHistorical({symbol}) 실패: {inner_e} — 최신값 폴백 시도")
-                # 폴백: 최신 단일 데이터
-                try:
-                    result = te.getMarketsBySymbol(symbols=symbol, output_type="df")
-                    if result is not None and len(result) > 0:
-                        date_col  = next((c for c in ["DateTime", "Date", "date"] if c in result.columns), None)
-                        value_col = next((c for c in ["Last", "Close", "Value"] if c in result.columns), None)
-                        if date_col and value_col:
-                            print(f"[경고] BDI 히스토리 조회 실패 — 최신 단일 레코드 반환")
-                            return pd.DataFrame({
-                                "price_date":     pd.to_datetime(result[date_col], errors="coerce"),
-                                "value":          pd.to_numeric(result[value_col], errors="coerce"),
-                                "source_name":    "TradingEconomics/BalticExchange",
-                                "indicator_code": "BDI",
-                                "unit":           "points",
-                                "note":           "[TE-OFFICIAL: 폴백 — 최신 단일 레코드 (히스토리 조회 실패)]",
-                                "ingested_at":    pd.Timestamp.utcnow(),
-                            }).dropna(subset=["price_date", "value"])
-                except Exception:
-                    continue
-    except Exception as e:
-        print(f"[경고] TE BDI 수집 실패: {e}")
+    print("[경고] TE REST BDI 전체 심볼 실패 — stooq 폴백으로 전환")
     return pd.DataFrame()
 
 
@@ -194,7 +185,8 @@ def fetch_bdi_stooq(start_date: str = "2020-01-01") -> pd.DataFrame:
     try:
         from pandas_datareader import data as pdr  # type: ignore
         end = date.today().isoformat()
-        for symbol in ("^BDI", "BCOM:IN", "BDI"):
+        # stooq BDI 심볼: ^BDI (stooq 인덱스 형식). BCOM:IN은 Bloomberg 상품 지수 — 잘못된 심볼이었음.
+        for symbol in ("BDI", "^BDI", "BALT:IN"):
             try:
                 df_raw = pdr.get_data_stooq(symbol, start=start_date, end=end)
                 if df_raw is not None and not df_raw.empty:
@@ -239,14 +231,14 @@ def run() -> None:
         except EnvironmentError:
             print("[경고] PERPLEXITY_API_KEY 미등록 — BCAA 수집 건너뜀")
 
-    # BDI: C-03 구조적 단절 모니터링 (Trading Economics 공식 API → stooq 폴백)
-    bdi = fetch_bdi_te()
+    # BDI: C-03 구조적 단절 모니터링 (Trading Economics REST API → stooq 폴백)
+    hist_start = f"{os.environ.get('HISTORICAL_START_YEAR', '2020')}-01-01"
+    bdi = fetch_bdi_te(start_date=hist_start)
     if not bdi.empty:
         frames.append(bdi)
     else:
-        start_date = f"{os.environ.get('HISTORICAL_START_YEAR', '2020')}-01-01"
-        print(f"[정보] TE BDI 미수집 — stooq 폴백 시도 ({start_date}~)")
-        bdi_stooq = fetch_bdi_stooq(start_date=start_date)
+        print(f"[정보] TE BDI 미수집 — stooq 폴백 시도 ({hist_start}~)")
+        bdi_stooq = fetch_bdi_stooq(start_date=hist_start)
         if not bdi_stooq.empty:
             frames.append(bdi_stooq)
 
