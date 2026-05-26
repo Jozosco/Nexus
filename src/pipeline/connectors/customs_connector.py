@@ -6,28 +6,26 @@ API 출처: 공공데이터포털 — 관세청_품목별 국가별 수출입실
   - 포털 페이지: https://www.data.go.kr/data/15100475/openapi.do
   - 엔드포인트: http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList
 
-파라미터 (검증된 형식 — 2026-05-13 사용자 확인):
+파라미터 (검증된 형식 — 2026-05-26 사용자 확인):
   - strtYymm: 시작 년월 (YYYYMM)
   - endYymm:  종료 년월 (YYYYMM)
-  - hsSgn:    HS 코드 10단위 (예: '1507901010' — 식용 정제 대두유)
-  - cntyCd:   국가코드 (선택, 미지정 시 전 국가 반환)
-  → 구 파라미터(hsCd/period/pageNo/numOfRows)는 미작동 확인 — 사용 금지
+  - hsSgn:    HS 코드 10단위 (반드시 10단위 사용)
+  - cntyCd:   국가코드 2자리 ISO (선택, 미지정 시 전 국가 반환)
+  → 연도별 연간 조회 방식 사용 (strtYymm=YYYY01, endYymm=YYYY12)
+
+HS 1507 10단위 코드 (대두유) — 2026-05-26 사용자 확인:
+  1507101000: 식품용 대두유 조유 (Crude soybean oil, for food)
+  1507901010: 식품용 정제 대두유 (Refined, for food)
+  1507901020: 바이오디젤 제조용 정제 대두유 (Refined, for biodiesel)
 
 키 형식: urllib.parse.unquote()로 디코딩 후 params 전달
         (포털 제공 URL-인코딩 키 이중 인코딩 방지)
 폴백: 원본 인코딩 키를 URL에 직접 삽입 (2차 시도)
 
-HS 1507 10단위 코드 (대두유):
-  1507100000: 대두유 (조유, Crude)
-  1507901010: 정제 대두유 식용
-  1507901090: 기타 정제 대두유
-  1507909000: 기타 (탈취유 등)
-
 UN Comtrade Plus 대안:
   - 환경변수: UN_COMTRADE_API_KEY
   - 패키지: comtradeapicall (pip install comtradeapicall)
   - 무료 500건/일, 유료 10,000건/일
-  - 참고: https://github.com/uncomtrade/comtradeapicall
 
 실행 환경: VS Code Web (Azure ML Studio) 또는 GitHub Actions
 """
@@ -49,13 +47,16 @@ OUTPUT_DIR = "data/raw"
 
 CUSTOMS_BASE = "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList"
 
-# HS 1507 (대두유) 10단위 코드 목록 — 조유·정제유·기타 전체 수집
+# HS 1507 10단위 코드 (사용자 확인 2026-05-26)
 HS_CODES_SOYBEAN_OIL: list[str] = [
-    "1507100000",  # 대두유 조유 (Crude soybean oil)
-    "1507901010",  # 정제 식용 대두유 (Refined, for food)
-    "1507901090",  # 기타 정제 대두유
-    "1507909000",  # 기타
+    "1507101000",  # 식품용 대두유 조유 (Crude soybean oil, for food)
+    "1507901010",  # 식품용 정제 대두유 (Refined soybean oil, for food)
+    "1507901020",  # 바이오디젤 제조용 정제 대두유 (Refined, for biodiesel)
 ]
+
+# 한국 대두유 주요 수입 국가 (사용자 확인 2026-05-26)
+COUNTRY_CODES: list[str] = ["US", "CN", "BR", "AR", "MY", "ID"]
+
 COMTRADE_REPORTER_KOREA = "410"
 
 
@@ -83,7 +84,6 @@ def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
             try:
                 return r.json()
             except (_json.JSONDecodeError, ValueError):
-                # 관세청 API는 파라미터 오류 시 XML 또는 빈 응답 반환 — JSON 파싱 불가
                 snippet = r.text[:300].replace("\n", " ")
                 print(f"[경고] JSON 파싱 실패 (응답 미리보기): {snippet}")
                 return {}
@@ -107,23 +107,26 @@ def _parse_items(data: dict) -> list[dict]:
     return []
 
 
-def _fetch_customs_range(service_key: str, strt_yymm: str, end_yymm: str,
-                          hs_sgn: str) -> list[dict]:
-    """관세청 API 기간 조회. 디코딩/인코딩/직삽 키 3단계 폴백.
+def _fetch_customs_range(
+    service_key: str,
+    strt_yymm: str,
+    end_yymm: str,
+    hs_sgn: str,
+    cnty_cd: str | None = None,
+) -> list[dict]:
+    """관세청 API 기간·국가 조회. 디코딩/인코딩/직삽 키 3단계 폴백.
 
     strt_yymm, end_yymm: YYYYMM 형식 (예: '202001', '202012')
     hs_sgn: 10단위 HS 코드 (예: '1507901010')
-    키 처리 전략:
-      1차: unquote() 디코딩 키 → params (이중 인코딩 방지, 포털 인코딩 키 대상)
-      2차: 원본 키 그대로 → params (일반 서비스키 hex 형식 대상)
-      3차: 원본 인코딩 키 URL 직삽 (httpx 인코딩 완전 우회)
-    401 발생 시: data.go.kr 포털에서 키 유효성 확인 필요 (수동 작업)
+    cnty_cd: ISO 2자리 국가코드 (예: 'US', 'BR') — None이면 전 국가 반환
     """
     base_params: dict[str, Any] = {
         "strtYymm": strt_yymm,
         "endYymm":  end_yymm,
         "hsSgn":    hs_sgn,
     }
+    if cnty_cd:
+        base_params["cntyCd"] = cnty_cd
 
     # 1차: 디코딩 키 → httpx params (포털 URL-인코딩 키 이중 인코딩 방지)
     decoded_key = unquote(service_key)
@@ -132,8 +135,8 @@ def _fetch_customs_range(service_key: str, strt_yymm: str, end_yymm: str,
     if items:
         return items
 
-    # 2차: 원본 키 그대로 params (일반 hex 서비스키, unquote 불필요)
-    if decoded_key != service_key:  # 1차와 동일하면 건너뜀
+    # 2차: 원본 키 그대로 params (일반 hex 서비스키)
+    if decoded_key != service_key:
         data2 = _fetch(CUSTOMS_BASE, {"serviceKey": service_key, **base_params})
         items2 = _parse_items(data2)
         if items2:
@@ -146,18 +149,21 @@ def _fetch_customs_range(service_key: str, strt_yymm: str, end_yymm: str,
 
 
 def fetch_customs_sbo_imports(
-    start_period: str = "202001",
-    end_period: str | None = None,
+    start_year: int = 2017,
+    end_year: int | None = None,
+    country_codes: list[str] | None = None,
 ) -> pd.DataFrame:
-    """관세청 API — 대두유(HS 1507) 국가별 수입 통계.
+    """관세청 API — 대두유(HS 1507) 국가별 수입 통계 (연도별·국가별 수집).
 
     Args:
-        start_period: 시작 기간(YYYYMM). 기본값 '202001' (2020년 1월).
-        end_period:   종료 기간(YYYYMM). 기본값 전월.
+        start_year:    수집 시작 연도 (기본 2017 — 사용자 확인된 최초 수집 연도)
+        end_year:      수집 종료 연도 (기본 현재 연도)
+        country_codes: 수집 대상 국가 코드 목록 (기본 COUNTRY_CODES 상수)
 
-    API 파라미터 (data.go.kr nitemtrade 확인된 형식):
-        strtYymm / endYymm: 기간 범위. 연간 조회 가능.
-        hsSgn: 10단위 HS 코드. 4단위 불가 — 반드시 10단위 사용.
+    수집 방식:
+        - 연도별 × HS코드별 × 국가별 순서로 API 호출
+        - 총 호출 횟수: (end_year - start_year + 1) × len(HS_CODES) × len(country_codes)
+        - 각 호출 후 0.3초 대기 (레이트 리밋 준수)
     """
     service_key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
     if not service_key:
@@ -167,52 +173,63 @@ def fetch_customs_sbo_imports(
         )
         return pd.DataFrame()
 
-    if end_period is None:
-        prev = date.today().replace(day=1) - timedelta(days=1)
-        end_period = prev.strftime("%Y%m")
+    if end_year is None:
+        end_year = date.today().year
+    if country_codes is None:
+        country_codes = COUNTRY_CODES
 
+    today_ym = date.today().strftime("%Y%m")
     all_rows: list[dict] = []
-    for hs_sgn in HS_CODES_SOYBEAN_OIL:
-        items = _fetch_customs_range(service_key, start_period, end_period, hs_sgn)
-        if not items:
-            print(f"[정보] 관세청 API: HS {hs_sgn} / {start_period}~{end_period} 데이터 없음")
-            continue
-        for item in items:
-            item.setdefault("hsSgn", hs_sgn)
-        all_rows.extend(items)
-        print(f"[정보] 관세청 HS {hs_sgn}: {len(items)}건 수집")
-        time.sleep(0.5)  # 관세청 API 레이트 리밋 준수
+    total_calls = 0
+    success_calls = 0
+
+    for yr in range(start_year, end_year + 1):
+        strt_ym = f"{yr:04d}01"
+        end_ym  = f"{yr:04d}12" if yr < date.today().year else today_ym
+
+        for hs_sgn in HS_CODES_SOYBEAN_OIL:
+            for cnty_cd in country_codes:
+                total_calls += 1
+                items = _fetch_customs_range(service_key, strt_ym, end_ym, hs_sgn, cnty_cd)
+                if items:
+                    for item in items:
+                        item.setdefault("hsSgn",   hs_sgn)
+                        item.setdefault("cntyCd",  cnty_cd)
+                    all_rows.extend(items)
+                    success_calls += 1
+                time.sleep(0.3)
+
+    print(f"[정보] 관세청 API: 총 {total_calls}건 호출, {success_calls}건 성공")
 
     if not all_rows:
-        print(f"[경고] 관세청 API: HS 1507 전 코드 수집 실패 ({start_period}~{end_period})")
+        print(f"[경고] 관세청 API: HS 1507 전 코드 수집 실패 ({start_year}~{end_year})")
         return pd.DataFrame()
 
     df = pd.DataFrame(all_rows)
     df["ingested_at"] = pd.Timestamp.utcnow()
     df["source_name"] = "KoreaCustoms/data.go.kr"
 
-    # 공통 컬럼 정규화 (API 응답 필드명 변동 대응)
     col_map = {
         "strtYymm":  "period_start",
         "endYymm":   "period_end",
         "cntyCd":    "country_code",
         "cntyNm":    "country_name",
         "imAmt":     "import_cif_usd",
-        "impAmt":    "import_cif_usd",   # 대안 필드명
+        "impAmt":    "import_cif_usd",
         "imWgt":     "import_weight_kg",
-        "wgt":       "import_weight_kg",  # 대안 필드명
+        "wgt":       "import_weight_kg",
         "exAmt":     "export_fob_usd",
-        "expAmt":    "export_fob_usd",    # 대안 필드명
+        "expAmt":    "export_fob_usd",
+        "hsSgn":     "hs_code",
     }
     df.rename(columns={k: v for k, v in col_map.items() if k in df.columns}, inplace=True)
 
-    # price_date: period_start (YYYYMM) → 월 첫째 날
     if "period_start" in df.columns:
         df["price_date"] = pd.to_datetime(df["period_start"], format="%Y%m", errors="coerce")
     elif "strtYymm" in df.columns:
         df["price_date"] = pd.to_datetime(df["strtYymm"], format="%Y%m", errors="coerce")
 
-    print(f"[완료] 관세청 수입통계 총 {len(df)}건 (HS 1507 전체, {start_period}~{end_period})")
+    print(f"[완료] 관세청 수입통계 총 {len(df)}건 (HS 1507, {start_year}~{end_year}, {len(country_codes)}개국)")
     return df
 
 
@@ -296,7 +313,8 @@ def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today_str = date.today().strftime("%Y%m%d")
 
-    df = fetch_customs_sbo_imports(start_period="202001")
+    start_year = int(os.environ.get("HISTORICAL_START_YEAR", "2017"))
+    df = fetch_customs_sbo_imports(start_year=start_year)
     if df.empty:
         print("[정보] 관세청 미수집 — UN Comtrade 폴백 시도")
         df = fetch_comtrade_sbo_imports_fallback(start_year=2020)

@@ -1,0 +1,216 @@
+"""
+리서치 문서 PDF/HTML 변환 스크립트
+입력: docs/research_desk/*.md (또는 인수로 지정한 경로)
+출력: docs/research_desk/*.pdf + *.html
+
+실행: python scripts/generate_research_pdf.py [입력_마크다운_경로]
+예시: python scripts/generate_research_pdf.py docs/research_desk/soybean_oil_historical_crisis_analysis.md
+
+의존성: pip install weasyprint markdown2
+실행 환경: GitHub Actions (weasyprint + fonts-noto-cjk 설치 필요) 또는 Azure ML
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+from datetime import date
+from pathlib import Path
+
+
+CSS_STYLE = """
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+
+* { box-sizing: border-box; }
+body {
+    font-family: 'Noto Sans KR', 'Noto Sans', 'Malgun Gothic', sans-serif;
+    font-size: 10pt;
+    line-height: 1.6;
+    color: #1a1a2e;
+    margin: 0;
+    padding: 0;
+}
+@page {
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+    @top-right { content: "Nexus | Project Confidential"; font-size: 8pt; color: #888; }
+    @bottom-center { content: counter(page) " / " counter(pages); font-size: 8pt; color: #888; }
+}
+h1 { font-size: 18pt; color: #0a3d62; border-bottom: 2px solid #0a3d62; padding-bottom: 4px; margin-top: 20px; }
+h2 { font-size: 14pt; color: #1e3799; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-top: 16px; }
+h3 { font-size: 12pt; color: #2c3e50; margin-top: 12px; }
+h4 { font-size: 10pt; color: #34495e; font-style: italic; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 9pt;
+}
+th {
+    background-color: #0a3d62;
+    color: white;
+    padding: 6px 8px;
+    text-align: left;
+}
+td { padding: 5px 8px; border: 1px solid #ddd; }
+tr:nth-child(even) { background-color: #f7f9fc; }
+code {
+    font-family: 'Courier New', monospace;
+    background: #f0f0f0;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 8.5pt;
+}
+pre {
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-left: 4px solid #0a3d62;
+    padding: 10px;
+    font-size: 8.5pt;
+    overflow-x: auto;
+    page-break-inside: avoid;
+}
+blockquote {
+    border-left: 4px solid #e74c3c;
+    background: #fff5f5;
+    margin: 10px 0;
+    padding: 8px 12px;
+    color: #c0392b;
+}
+.warning { color: #e74c3c; font-weight: bold; }
+.hitl-gate {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin: 8px 0;
+    font-size: 9pt;
+}
+hr { border: none; border-top: 1px solid #ddd; margin: 16px 0; }
+"""
+
+
+def _md_to_html(md_text: str, title: str) -> str:
+    """마크다운 → HTML 변환 (markdown2 패키지 사용)."""
+    try:
+        import markdown2  # type: ignore
+        body = markdown2.markdown(
+            md_text,
+            extras=["tables", "fenced-code-blocks", "header-ids", "strike", "task_list"],
+        )
+    except ImportError:
+        # markdown2 미설치 시 기본 처리 (테이블 없음)
+        try:
+            import markdown  # type: ignore
+            body = markdown.markdown(md_text, extensions=["tables", "fenced_code"])
+        except ImportError:
+            print("[경고] markdown2 또는 markdown 패키지 미설치. pip install markdown2")
+            # 최소 HTML 래핑만 적용
+            body = f"<pre>{md_text}</pre>"
+
+    generated = date.today().isoformat()
+    return f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+  <style>{CSS_STYLE}</style>
+</head>
+<body>
+  <div style="text-align:right; font-size:8pt; color:#888; margin-bottom:16px;">
+    생성일: {generated} | Nexus Project — 내부 기밀 문서
+  </div>
+  {body}
+</body>
+</html>"""
+
+
+def _html_to_pdf(html_content: str, pdf_path: Path) -> bool:
+    """HTML → PDF 변환 (weasyprint)."""
+    try:
+        from weasyprint import HTML  # type: ignore
+        HTML(string=html_content).write_pdf(str(pdf_path))
+        return True
+    except ImportError:
+        print("[경고] weasyprint 미설치. GitHub Actions: sudo apt-get install -y fonts-noto-cjk libpango-1.0-0 && pip install weasyprint")
+        return False
+    except Exception as e:
+        print(f"[경고] PDF 변환 실패: {e}")
+        return False
+
+
+def convert(md_path: str | Path, output_dir: str | Path | None = None) -> tuple[Path, Path | None]:
+    """마크다운 파일을 HTML과 PDF로 변환.
+
+    Returns:
+        (html_path, pdf_path) — pdf_path는 weasyprint 없을 시 None
+    """
+    src = Path(md_path)
+    if not src.exists():
+        raise FileNotFoundError(f"[오류] 파일 없음: {src}")
+
+    out_dir = Path(output_dir) if output_dir else src.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    md_text = src.read_text(encoding="utf-8")
+    title = src.stem.replace("_", " ").title()
+
+    html_content = _md_to_html(md_text, title)
+    html_path = out_dir / src.with_suffix(".html").name
+    html_path.write_text(html_content, encoding="utf-8")
+    print(f"[완료] HTML 저장 → {html_path}")
+
+    pdf_path = out_dir / src.with_suffix(".pdf").name
+    ok = _html_to_pdf(html_content, pdf_path)
+    if ok:
+        print(f"[완료] PDF 저장 → {pdf_path}")
+        return html_path, pdf_path
+    return html_path, None
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Nexus 리서치 마크다운 → HTML/PDF 변환기"
+    )
+    parser.add_argument(
+        "input",
+        nargs="?",
+        default="docs/research_desk",
+        help="변환할 .md 파일 또는 디렉터리 (기본: docs/research_desk)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="출력 디렉터리 (기본: 입력 파일과 동일 위치)",
+    )
+    args = parser.parse_args()
+
+    target = Path(args.input)
+
+    if target.is_file() and target.suffix == ".md":
+        md_files = [target]
+    elif target.is_dir():
+        md_files = sorted(target.glob("*.md"))
+        if not md_files:
+            print(f"[경고] {target}에 .md 파일 없음")
+            sys.exit(0)
+    else:
+        print(f"[오류] 유효하지 않은 경로: {target}")
+        sys.exit(1)
+
+    print(f"[정보] 변환 대상: {len(md_files)}개 파일")
+    success_count = 0
+    for md in md_files:
+        try:
+            html_path, pdf_path = convert(md, output_dir=args.output_dir)
+            success_count += 1
+        except Exception as e:
+            print(f"[오류] {md.name} 변환 실패: {e}")
+
+    print(f"\n[완료] {success_count}/{len(md_files)}개 파일 변환 완료")
+
+
+if __name__ == "__main__":
+    main()
