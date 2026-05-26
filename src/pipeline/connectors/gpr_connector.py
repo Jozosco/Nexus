@@ -291,12 +291,21 @@ def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
 
-    frames = [
-        _fetch_gpr_index(),
-        _fetch_gpr_realtime(),
-        _fetch_hormuz_realtime(),
-        _fetch_policy_news_proxy(),
-    ]
+    # BACKFILL_MODE=true: Perplexity 실시간 함수(오늘 날짜만 반환) 건너뜀
+    # 과거 데이터 수집에는 C&I 공개 xlsx 히스토리만 사용
+    backfill_mode = os.environ.get("BACKFILL_MODE", "").lower() == "true"
+
+    if backfill_mode:
+        print("[정보] BACKFILL_MODE 활성화 — Perplexity 실시간 수집 건너뜀 (역사 데이터만 수집)")
+        frames = [_fetch_gpr_index()]
+    else:
+        frames = [
+            _fetch_gpr_index(),
+            _fetch_gpr_realtime(),
+            _fetch_hormuz_realtime(),
+            _fetch_policy_news_proxy(),
+        ]
+
     frames = [f for f in frames if not f.empty]
     if not frames:
         print("[경고] GPR 데이터: 수집된 항목 없음")

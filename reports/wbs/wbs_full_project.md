@@ -1,5 +1,5 @@
 # Project Nexus — Full Project WBS
-> **Version**: 1.4 · **Date**: 2026-05-26 · **Owner**: C-01 Senior PM
+> **Version**: 1.5 · **Date**: 2026-05-26 · **Owner**: C-01 Senior PM
 > **Format**: Phase → Deliverable → Task (Verb + Noun, 8–80h, agent assigned)
 > **Status key**: ⬜ 미시작 · 🔄 진행중 · ✅ 완료 · 🚫 블로커
 > **Note**: Methodology and data sources are `[M]` — subject to change. Task durations are estimates; revise after each phase kickoff.
@@ -46,10 +46,17 @@
 | 1.1.19 | Implement Pipeline Quality Tests (tests/test_pipeline_quality.py) | C-08 | 8h | 🔄 |
 | 1.1.20 | Extend Climate Connector — Open-Meteo 12 Production Regions (ERA5-Land daily) | C-04 | 16h | 🔄 |
 | 1.1.21 | Fix BDI Historical Range (2020-01-01~) via TE getMarketsHistorical | C-04 | 4h | 🔄 |
+| 1.1.22 | Fix GPR openpyxl Bug + Introduce BACKFILL_MODE Pattern (A-030~A-032) | C-04 | 4h | ✅ |
+| 1.1.23 | Refactor Historical Backfill Workflow — Add C-08→C-06→G1 Pipeline | C-04 | 8h | ✅ |
+| 1.1.24 | AIS Strait Tanker Monitoring Connector — Hormuz·Malacca·Panama (Phase A) | C-04 | 16h | 🔄 |
+| 1.1.25 | Parquet→Excel Export Utility (src/pipeline/export_data.py) | C-04 | 4h | ✅ |
+| 1.1.26 | G1 Analysis Multi-Format Output — PDF + Markdown (all reports) | C-03 | 8h | ✅ |
+| 1.1.27 | Hormuz Monitor Tech Analysis + Nexus Application Design (C-01/C-03/P-02) | C-01 | 4h | ✅ |
 
-> **P1-05 폐기**: 원래 1.1.4/1.1.5/1.1.6 담당 → C-04 흡수. Old 1.1.7 (API retry + Actions schedule) embedded into 1.1.2–1.1.7 implementation.
+> **P1-05 폐기**: 원래 1.1.4/1.1.5/1.1.6 담당 → C-04 흡수.
 > **Session 12–18 추가 (1.1.10~1.1.19)**: commodity_connector, customs_connector, report_generator, G1 LASSO, C-06/C-08 게이트, LLM 모니터, Ralph Loop, Granger 분석, GE 테스트.
 > **Session 19 추가 (1.1.20~1.1.21)**: Open-Meteo 12개 생산지역 기후 커넥터 확장, BDI 히스토리 범위 수정.
+> **Session 20 추가 (1.1.22~1.1.27)**: GPR 버그수정+BACKFILL_MODE, 백필 워크플로우 C-08→G1 파이프라인, AIS 해협 탱커 모니터, Excel 내보내기, G1 PDF+MD, Hormuz Monitor 분석.
 
 ### 1.2 Internal Data Pipeline (~104h)
 | WBS ID | 작업명 | 담당 | 공수 | 상태 |

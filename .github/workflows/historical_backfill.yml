@@ -1,12 +1,14 @@
 name: Historical Data Backfill — 5-Year Seed (WBS 1.1.21)
 
-# 목적: 과거 5년(기본 2020~현재) 데이터를 일괄 수집하여 G1/G2/G3 분석 기반 데이터셋 생성
+# 목적: 과거 5년(기본 2020~현재) 데이터를 일괄 수집 → C-08 DQ → C-06 EDA → G1 분석
+# 실행 순서: 모든 커넥터 병렬 수집 → backfill-summary → c08-dq → c06-eda → g1-analysis
 #
+# BACKFILL_MODE=true: 모든 커넥터에 주입 → Perplexity 실시간(오늘 날짜만) 자동 건너뜀
 # 실행 조건: workflow_dispatch 수동 실행 전용 (스케줄 없음)
-# 예상 소요: ~15분 (커넥터별 병렬 실행, 관세청 API ~49초 포함)
+# 예상 소요: ~25분 (커넥터 병렬 ~15분 + C-08/C-06/G1 직렬 ~10분)
 #
+# HITL 준수: G1 분석은 데이터 이해 목적 — 조달 실행은 별도 CLAUDE.md §6 게이트 통과 필요
 # 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음
-# HITL 준수: G1/G2/G3 출력물은 이 워크플로우에서 생성하지 않음 — 데이터 수집 전용
 
 on:
   workflow_dispatch:
@@ -23,6 +25,10 @@ on:
         description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs)"
         required: false
         default: "all"
+      skip_analysis:
+        description: "수집 후 C-08/C-06/G1 분석 건너뛰기 (true / false)"
+        required: false
+        default: "false"
 
 jobs:
   # ── WBS 1.1.2: 경제 지표 히스토리 ────────────────────────────────────────────
@@ -45,6 +51,7 @@ jobs:
           KOSIS_API_KEY:              ${{ secrets.KOSIS_API_KEY }}
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+          BACKFILL_MODE:              "true"
         run: python src/pipeline/connectors/economic_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -53,9 +60,11 @@ jobs:
           path: data/raw/economic_indicators_*.parquet
           retention-days: 90
 
-  # ── WBS 1.1.3: 해운 지수 히스토리 ────────────────────────────────────────────
+  # ── WBS 1.1.3: 해운 지수 히스토리 ─────────────────────────────────────────────
+  # BACKFILL_MODE=true: BCAA(Perplexity, 오늘만) 건너뜀 → TE BDI 히스토리 / stooq 폴백
+  # stooq 폴백: pandas-datareader stooq — API 키 불필요, ^BDI 심볼 사용
   shipping-backfill:
-    name: "1.1.3 | Shipping Indices Backfill (BDI via Trading Economics)"
+    name: "1.1.3 | Shipping Indices Backfill (BDI via TE → stooq fallback)"
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'shipping' }}
     steps:
@@ -64,13 +73,15 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install openai pandas pyarrow tradingeconomics
+        # pandas-datareader: stooq BDI 폴백 (TE 키 미등록 시)
+        run: pip install openai pandas pyarrow tradingeconomics pandas-datareader
       - name: Run shipping connector (historical)
         env:
           PERPLEXITY_API_KEY:         ${{ secrets.PERPLEXITY_API_KEY }}
           TRADING_ECONOMICS_API_KEY:  ${{ secrets.TRADING_ECONOMICS_API_KEY }}
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+          BACKFILL_MODE:              "true"
         run: python src/pipeline/connectors/shipping_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -98,6 +109,7 @@ jobs:
           USDA_ARM_API_KEY:           ${{ secrets.USDA_ARM_API_KEY }}
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+          BACKFILL_MODE:              "true"
         run: python src/pipeline/connectors/wasde_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -107,8 +119,7 @@ jobs:
           retention-days: 90
 
   # ── WBS 1.1.5: 기후 히스토리 — Open-Meteo ERA5-Land 12개 생산지역 ──────────────
-  # Open-Meteo archive API: archive-api.open-meteo.com/v1/archive
-  # 12개 생산지역 × 8개 변수 — ERA5-Land 재분석 데이터 (1940-현재, API 키 불필요)
+  # API 키 불필요. BACKFILL_MODE: 시작일 = HISTORICAL_START_YEAR-01-01
   climate-backfill:
     name: "1.1.5 | Climate Backfill — Open-Meteo ERA5-Land (12 Production Regions)"
     runs-on: ubuntu-latest
@@ -126,6 +137,7 @@ jobs:
           OPENWEATHERMAP_API_KEY:     ""
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+          BACKFILL_MODE:              "true"
         run: python src/pipeline/connectors/climate_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -134,9 +146,11 @@ jobs:
           path: data/raw/climate_data_*.parquet
           retention-days: 90
 
-  # ── WBS 1.1.6: GPR 지수 히스토리 ─────────────────────────────────────────────
+  # ── WBS 1.1.6: GPR 지수 히스토리 ──────────────────────────────────────────────
+  # BACKFILL_MODE=true: Perplexity 실시간(오늘만) 건너뜀 → C&I 공개 xlsx만 수집
+  # openpyxl 필수: pd.read_excel()로 Caldara & Iacoviello GPR xlsx 파싱 (MEMORY A-030)
   gpr-backfill:
-    name: "1.1.6 | GPR Backfill (Caldara & Iacoviello — 공개 데이터)"
+    name: "1.1.6 | GPR Backfill (Caldara & Iacoviello — 공개 xlsx, 1985-현재)"
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'gpr' }}
     steps:
@@ -146,11 +160,12 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         run: pip install httpx openai pandas pyarrow openpyxl
-      - name: Run GPR connector (historical)
+      - name: Run GPR connector (historical — Perplexity 건너뜀)
         env:
           PERPLEXITY_API_KEY:         ${{ secrets.PERPLEXITY_API_KEY }}
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+          BACKFILL_MODE:              "true"
         run: python src/pipeline/connectors/gpr_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -178,6 +193,7 @@ jobs:
           PERPLEXITY_API_KEY:         ${{ secrets.PERPLEXITY_API_KEY }}
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+          BACKFILL_MODE:              "true"
         run: python src/pipeline/connectors/production_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -205,6 +221,7 @@ jobs:
           TRADING_ECONOMICS_API_KEY:  ${{ secrets.TRADING_ECONOMICS_API_KEY }}
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+          BACKFILL_MODE:              "true"
         run: python src/pipeline/connectors/commodity_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -213,10 +230,7 @@ jobs:
           path: data/raw/commodity_data_*.parquet
           retention-days: 90
 
-  # ── WBS 1.1.2+: 관세청 수입통계 히스토리 ─────────────────────────────────────
-  # 수집 방식: 연도별 × HS코드(3종) × 국가(6종) = 최대 (end-start+1) × 3 × 6 호출
-  # 수집 기간: 2017년부터 (가용 데이터 최초) ~ 현재 — HISTORICAL_START_YEAR 재정의 가능
-  # 소요 시간: 9년 × 18 = 162 API 호출 × 0.3s = 약 49초
+  # ── WBS 1.1.2+: 관세청 수입통계 히스토리 ──────────────────────────────────────
   customs-backfill:
     name: "1.1.2+ | Korea Customs HS 1507 Import Backfill (data.go.kr)"
     runs-on: ubuntu-latest
@@ -232,9 +246,9 @@ jobs:
         env:
           DATA_GO_KR_SERVICE_KEY:     ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
           UN_COMTRADE_API_KEY:        ${{ secrets.UN_COMTRADE_API_KEY }}
-          # 관세청 API 가용 최초: 2017년. start_year < 2017 입력 시 커넥터 내부에서 2017로 처리됨.
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+          BACKFILL_MODE:              "true"
         run: python src/pipeline/connectors/customs_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
@@ -243,9 +257,9 @@ jobs:
           path: data/raw/customs_import_*.parquet
           retention-days: 90
 
-  # ── 백필 완료 요약 ─────────────────────────────────────────────────────────────
+  # ── 백필 완료 요약 + Excel 내보내기 ──────────────────────────────────────────
   backfill-summary:
-    name: "Backfill Summary Report"
+    name: "Backfill Summary Report + Excel Export"
     runs-on: ubuntu-latest
     needs:
       - economic-backfill
@@ -263,7 +277,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pandas pyarrow
+        run: pip install pandas pyarrow openpyxl
       - uses: actions/download-artifact@v4
         with:
           path: data/raw/
@@ -275,8 +289,8 @@ jobs:
           from pathlib import Path
           import pandas as pd
 
-          start_year = os.environ.get("HISTORICAL_START_YEAR_INPUT", "${{ github.event.inputs.start_year }}")
-          end_year   = os.environ.get("HISTORICAL_END_YEAR_INPUT",   "${{ github.event.inputs.end_year }}")
+          start_year = "${{ github.event.inputs.start_year }}"
+          end_year   = "${{ github.event.inputs.end_year }}"
 
           files = glob.glob("data/raw/**/*.parquet", recursive=True) + glob.glob("data/raw/*.parquet")
           summary = []
@@ -298,30 +312,214 @@ jobs:
 
           md = [
               f"## 과거 데이터 백필 완료 — {start_year}~{end_year}",
-              f"**총 수집 레코드**: {total_rows:,}건",
-              f"**Run ID**: {os.environ.get('GITHUB_RUN_ID', 'local')}",
+              f"**총 수집 레코드**: {total_rows:,}건  |  **Run ID**: {os.environ.get('GITHUB_RUN_ID', 'local')}",
               "",
               "| 파일 | 행 수 | 기간 | 상태 |",
               "|---|---|---|---|",
           ] + summary + [
               "",
               "### 다음 단계",
-              "1. C-08 DQSOps 검증: `external_data_refresh.yml` 수동 실행 (c08-dq-validation 단계)",
-              "2. C-06 EDA 검증: 이상치·결측치 프로파일 확인",
-              "3. G1 변수 중요도 분석: `variable_importance_g1.py --lookback 1825` (5년)",
-              "4. Snowflake 업로드 준비 (Phase B — SNOWFLAKE_* Secrets 등록 후)",
+              "1. ✅ C-08 DQSOps 데이터 품질 검증 (아래 job)",
+              "2. ✅ C-06 EDA 검증 — 이상치·결측치 프로파일",
+              "3. ✅ G1 변수 중요도 분석 (5년 데이터 기반)",
           ]
           print("\n".join(md))
-
           gh_summary = os.environ.get("GITHUB_STEP_SUMMARY", "")
           if gh_summary:
               with open(gh_summary, "a") as fh:
                   fh.write("\n".join(md))
           PYEOF
-      - name: Upload merged backfill dataset
+      - name: Export parquet → Excel (다운로드용)
+        run: python src/pipeline/export_data.py
+      - name: Upload merged backfill dataset (Parquet + Excel)
         uses: actions/upload-artifact@v4
         with:
           name: backfill-all-${{ github.run_id }}
-          path: data/raw/*.parquet
+          path: |
+            data/raw/*.parquet
+            data/exports/*.xlsx
+          retention-days: 90
+          if-no-files-found: warn
+
+  # ── C-08 DQSOps 데이터 품질 검증 (backfill-summary 후 1차 게이트) ───────────────
+  c08-dq-validation:
+    name: "C-08 | DQSOps Data Quality Validation Gate"
+    runs-on: ubuntu-latest
+    needs: [backfill-summary]
+    if: always() && github.event.inputs.skip_analysis != 'true'
+    outputs:
+      overall_status: ${{ steps.dq.outputs.overall_status }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow numpy
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run C-08 DQSOps validation
+        id: dq
+        run: python src/pipeline/validators/c08_dq_validator.py
+      - name: Upload C-08 DQ report
+        uses: actions/upload-artifact@v4
+        with:
+          name: c08-dq-report-backfill-${{ github.run_id }}
+          path: reports/data_quality/dq_report_*.json
+          retention-days: 90
+          if-no-files-found: warn
+
+  # ── C-06 EDA 검증 (C-08 DQ 통과 후 2차 게이트) ──────────────────────────────
+  c06-eda-validation:
+    name: "C-06 | EDA Validation — Data Integrity Gate"
+    runs-on: ubuntu-latest
+    needs: [c08-dq-validation]
+    if: always() && github.event.inputs.skip_analysis != 'true'
+    outputs:
+      eda_status: ${{ steps.eda.outputs.eda_status }}
+      stale_connectors: ${{ steps.eda.outputs.stale_connectors }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow numpy scipy
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run C-06 EDA validation
+        id: eda
+        run: |
+          python - <<'PYEOF'
+          import os, glob, json
+          from pathlib import Path
+          from datetime import date, timedelta
+          import numpy as np
+          import pandas as pd
+
+          OUTPUT_DIR = "reports/pipeline"
+          os.makedirs(OUTPUT_DIR, exist_ok=True)
+          today = date.today()
+          # 백필 데이터: 과거 데이터이므로 신선도 기준을 수집 시각(ingested_at) 기준으로 적용
+          stale_threshold = 1  # ingested_at 기준 1일 이내면 신선 (백필 직후)
+
+          results = {}
+          stale = []
+          for f in sorted(glob.glob("data/raw/**/*.parquet", recursive=True)
+                          + glob.glob("data/raw/*.parquet")):
+              name = Path(f).stem
+              try:
+                  df = pd.read_parquet(f)
+              except Exception as e:
+                  results[name] = {"status": "READ_ERROR", "error": str(e)}
+                  continue
+              null_pct = float(df.isnull().mean().mean() * 100)
+              freshness = "OK"
+              if "ingested_at" in df.columns:
+                  max_ts = pd.to_datetime(df["ingested_at"], utc=True, errors="coerce").max()
+                  if pd.notna(max_ts):
+                      hours_since = (pd.Timestamp.utcnow() - max_ts).total_seconds() / 3600
+                      if hours_since > 24:
+                          freshness = f"STALE_{int(hours_since)}h"
+                          stale.append(name)
+              # 날짜 범위 확인 (과거 데이터가 제대로 수집됐는지)
+              price_date_range = {}
+              if "price_date" in df.columns:
+                  dates = pd.to_datetime(df["price_date"], errors="coerce").dropna()
+                  if not dates.empty:
+                      price_date_range = {"min": str(dates.min().date()), "max": str(dates.max().date()), "unique_dates": int(dates.nunique())}
+              num_cols = df.select_dtypes(include="number").columns.tolist()
+              outlier_flags = {}
+              for col in num_cols[:10]:
+                  vals = pd.to_numeric(df[col], errors="coerce").dropna()
+                  if len(vals) > 5:
+                      z = (vals - vals.mean()) / vals.std()
+                      outlier_count = int((z.abs() > 3).sum())
+                      if outlier_count:
+                          outlier_flags[col] = outlier_count
+              results[name] = {
+                  "status": "STALE" if "STALE" in freshness else ("WARN" if null_pct > 5 else "OK"),
+                  "rows": len(df), "null_pct": round(null_pct, 1),
+                  "freshness": freshness,
+                  "price_date_range": price_date_range,
+                  "outlier_cols": outlier_flags,
+              }
+              if null_pct > 5:
+                  print(f"[C-06 경고] {name}: 결측치 {null_pct:.1f}%")
+              if outlier_flags:
+                  print(f"[C-06 경고] {name}: Z>3 이상치: {outlier_flags}")
+              if price_date_range:
+                  dates_cnt = price_date_range.get('unique_dates', 0)
+                  print(f"[C-06 정보] {name}: {price_date_range.get('min')} ~ {price_date_range.get('max')} ({dates_cnt}개 날짜)")
+
+          report = {"run_date": today.isoformat(), "mode": "BACKFILL", "connectors": results,
+                    "stale": stale, "overall": "PASS" if not stale else "WARN"}
+          out = f"{OUTPUT_DIR}/c06_eda_report_{today.strftime('%Y%m%d')}_backfill.json"
+          with open(out, "w") as fh:
+              json.dump(report, fh, ensure_ascii=False, indent=2)
+          print(f"[C-06 완료] EDA 검증 보고서 → {out}")
+          gh_output = os.environ.get("GITHUB_OUTPUT", "")
+          if gh_output:
+              with open(gh_output, "a") as fh:
+                  fh.write(f"eda_status={'WARN' if stale else 'PASS'}\n")
+                  fh.write(f"stale_connectors={','.join(stale) or 'none'}\n")
+          PYEOF
+      - name: Upload C-06 EDA report
+        uses: actions/upload-artifact@v4
+        with:
+          name: c06-eda-report-backfill-${{ github.run_id }}
+          path: reports/pipeline/c06_eda_report_*_backfill.json
+          retention-days: 90
+          if-no-files-found: warn
+
+  # ── G1 변수 중요도 분석 (5년 히스토리 기반 — C-06 게이트 통과 후) ────────────────
+  # 5년 데이터를 사용하므로 days=1825 (5년치 parquet 전체 로드)
+  g1-analysis:
+    name: "C-03 | G1 Variable Importance Analysis (5-Year Backfill Dataset)"
+    runs-on: ubuntu-latest
+    needs: [c06-eda-validation]
+    if: always() && github.event.inputs.skip_analysis != 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y fonts-noto-cjk libpango-1.0-0 libpangocairo-1.0-0 2>/dev/null || true
+          pip install pandas pyarrow scikit-learn statsmodels numpy weasyprint markdown2
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run C-03 G1 variable importance analysis (5-year window)
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: python src/forecasting/variable_importance_g1.py 1825
+      - name: Generate Markdown + PDF reports
+        run: python scripts/generate_research_pdf.py reports/pipeline
+      - name: Append G1 summary to Step Summary
+        run: |
+          python - <<'PYEOF'
+          import os, glob
+          from pathlib import Path
+          reports = sorted(glob.glob("reports/pipeline/g1_variable_importance_*_ko.html"))
+          if reports:
+              latest = Path(reports[-1]).name
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+                  f.write(f"\n\n## C-03 G1 분석 완료 (5년 백필 기반)\n리포트: `{latest}`\n")
+                  f.write("\n**HITL 게이트**: G1 분석은 데이터 이해 목적. 조달 결정은 CLAUDE.md §6 HITL 프로세스 필요.\n")
+          PYEOF
+      - name: Upload G1 analysis reports (HTML + PDF)
+        uses: actions/upload-artifact@v4
+        with:
+          name: g1-backfill-report-${{ github.run_id }}
+          path: |
+            reports/pipeline/g1_variable_importance_*.html
+            reports/pipeline/g1_variable_importance_*.pdf
           retention-days: 90
           if-no-files-found: warn
