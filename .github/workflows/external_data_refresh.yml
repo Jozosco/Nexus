@@ -128,9 +128,11 @@ jobs:
           path: data/raw/climate_data_*.parquet
           retention-days: 7
 
-  # ── WBS 1.1.6: 지정학 리스크 지수 ─────────────────────────────────────────
+  # ── WBS 1.1.6: 지정학 리스크 지수 + AIS 해협 탱커 모니터링 ──────────────────
+  # GPR: Caldara & Iacoviello 공개 xlsx (openpyxl 필수) + Perplexity 실시간
+  # AIS: AISstream.io 탱커 추적 (무료 tier) → Perplexity 폴백
   geopolitical-risk:
-    name: "1.1.6 | Geopolitical Risk Index (GPR public + Perplexity)"
+    name: "1.1.6 | GPR + AIS Strait Tanker Monitor (Hormuz·Malacca·Panama)"
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'gpr' || github.event_name == 'schedule' }}
     steps:
@@ -139,16 +141,24 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install httpx openai pandas pyarrow
+        # openpyxl 필수: pd.read_excel()로 Caldara & Iacoviello GPR xlsx 파싱 (MEMORY A-030)
+        run: pip install httpx openai pandas pyarrow openpyxl
       - name: Run GPR connector
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: python src/pipeline/connectors/gpr_connector.py
+      - name: Run AIS strait tanker connector
+        env:
+          AISSTREAM_API_KEY:  ${{ secrets.AISSTREAM_API_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        run: python src/pipeline/connectors/ais_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
         with:
           name: geopolitical-risk-${{ github.run_id }}
-          path: data/raw/geopolitical_indices_*.parquet
+          path: |
+            data/raw/geopolitical_indices_*.parquet
+            data/raw/ais_strait_risk_*.parquet
           retention-days: 7
 
   # ── WBS 1.1.7: 원산지 생산량·농업기상 + USDA FAS ESR 수출 판매량 ────────────
@@ -284,13 +294,16 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: python src/pipeline/report_generator.py
-      - name: Upload PDF report
+      - name: Export parquet → Excel (다운로드용)
+        run: pip install openpyxl && python src/pipeline/export_data.py
+      - name: Upload reports (PDF + HTML + Excel)
         uses: actions/upload-artifact@v4
         with:
           name: pipeline-quality-report-${{ github.run_id }}
           path: |
             reports/pipeline/pipeline_report_*.pdf
             reports/pipeline/pipeline_report_*.html
+            data/exports/*.xlsx
           retention-days: 30
           if-no-files-found: warn
 
@@ -447,7 +460,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pandas pyarrow scikit-learn statsmodels numpy
+        run: |
+          sudo apt-get install -y fonts-noto-cjk libpango-1.0-0 libpangocairo-1.0-0 2>/dev/null || true
+          pip install pandas pyarrow scikit-learn statsmodels numpy weasyprint markdown2
       - uses: actions/download-artifact@v4
         with:
           path: data/raw/
@@ -467,11 +482,14 @@ jobs:
               with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
                   f.write(f"\n\n## C-03 G1 분석 완료\n리포트: `{latest}`\n")
           PYEOF
-      - name: Upload G1 analysis report
+      - name: Upload G1 analysis reports (HTML + PDF + Markdown)
         uses: actions/upload-artifact@v4
         with:
           name: g1-variable-importance-${{ github.run_id }}
-          path: reports/pipeline/g1_variable_importance_*.html
+          path: |
+            reports/pipeline/g1_variable_importance_*.html
+            reports/pipeline/g1_variable_importance_*.pdf
+            reports/pipeline/g1_variable_importance_*.md
           retention-days: 30
           if-no-files-found: warn
 

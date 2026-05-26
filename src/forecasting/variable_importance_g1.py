@@ -1285,8 +1285,67 @@ def run(days: int = 7) -> None:
             ))
         print(f"[완료] G1 리포트 ({lang.upper()}) → {html_path}")
 
-    # 구조적 단절 경보 요약 출력 (Korean narrative — C-03 계약)
+        # HTML → PDF 변환 (weasyprint 설치 시)
+        pdf_path = f"{REPORT_DIR}/g1_variable_importance_{tag}_{lang}.pdf"
+        try:
+            from weasyprint import HTML as WeasyprintHTML  # type: ignore
+            WeasyprintHTML(filename=html_path).write_pdf(pdf_path)
+            print(f"[완료] G1 PDF ({lang.upper()}) → {pdf_path}")
+        except ImportError:
+            print(f"[정보] weasyprint 미설치 — PDF 건너뜀 ({lang.upper()})")
+        except Exception as e:
+            print(f"[경고] G1 PDF 변환 실패 ({lang.upper()}): {e}")
+
+    # Markdown 요약 (기계 판독용 + generate_research_pdf.py 입력)
     breach = [a for a in alerts if "🚨" in a.get("상태", "")]
+    md_lines = [
+        f"# G1 변수 중요도 분석 — {run_ts[:10]}",
+        f"**Run ID**: {run_id}  |  **분석 기간**: 최근 {days}일  |  **생성**: {run_ts} UTC",
+        "",
+        "## 구조적 단절 임계값 현황",
+    ]
+    if breach:
+        for a in alerts:
+            icon = "🚨" if "🚨" in a.get("상태", "") else "✅"
+            md_lines.append(f"- {icon} **{a['변수']}**: {a['현재값']} (임계값 {a['임계값']}) — {a['설명']}")
+    else:
+        md_lines.append("- ✅ 모든 구조적 단절 임계값 정상 범위 내")
+    md_lines += [
+        "",
+        "## 변수 중요도 TOP 10",
+        "| 변수 | 피어슨 r | LASSO 계수 |",
+        "|---|---|---|",
+    ]
+    if not importance_df.empty:
+        top10 = importance_df.head(10)
+        for _, row in top10.iterrows():
+            r_val = f"{row.get('피어슨_r', 'N/A'):.3f}" if isinstance(row.get('피어슨_r'), float) else "N/A"
+            lasso = f"{row.get('LASSO_계수', 'N/A'):.4f}" if isinstance(row.get('LASSO_계수'), float) else "N/A"
+            md_lines.append(f"| {row.get('변수코드', '?')} | {r_val} | {lasso} |")
+    md_lines += [
+        "",
+        "## 데이터 수집 현황",
+        "| 커넥터 | 행 수 | 기간 | 신선도 |",
+        "|---|---|---|---|",
+    ]
+    if not status_df.empty:
+        for _, row in status_df.iterrows():
+            md_lines.append(
+                f"| {row.get('커넥터', '?')} | {row.get('행수', '?')} | "
+                f"{row.get('시작일', '?')} ~ {row.get('종료일', '?')} | {row.get('신선도', '?')} |"
+            )
+    md_lines += [
+        "",
+        "---",
+        "*Project Nexus · G1 Variable Importance · C-03 Lead Data Scientist*",
+        f"*HITL 게이트: 조달 결정은 CLAUDE.md §6 HITL 프로세스 필요*",
+    ]
+    md_path = f"{REPORT_DIR}/g1_variable_importance_{tag}_ko.md"
+    with open(md_path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(md_lines))
+    print(f"[완료] G1 Markdown 요약 → {md_path}")
+
+    # 구조적 단절 경보 콘솔 출력
     if breach:
         print("\n[C-03 경보] 구조적 단절 임계값 초과 변수:")
         for a in breach:

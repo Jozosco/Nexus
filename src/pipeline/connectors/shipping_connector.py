@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from datetime import date
 
 import pandas as pd
@@ -184,20 +185,70 @@ def fetch_bdi_te() -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def fetch_bdi_stooq(start_date: str = "2020-01-01") -> pd.DataFrame:
+    """pandas-datareader stooq를 통한 BDI 히스토리 폴백 (Trading Economics 키 미등록 시).
+
+    stooq.com 무료 데이터 — API 키 불필요. BDI 심볼: ^BDI 또는 BCOM:IN.
+    TE 히스토리 조회 실패 또는 키 미등록 시에만 호출.
+    """
+    try:
+        from pandas_datareader import data as pdr  # type: ignore
+        end = date.today().isoformat()
+        for symbol in ("^BDI", "BCOM:IN", "BDI"):
+            try:
+                df_raw = pdr.get_data_stooq(symbol, start=start_date, end=end)
+                if df_raw is not None and not df_raw.empty:
+                    close_col = next((c for c in ["Close", "close", "Zamkniecie"] if c in df_raw.columns), None)
+                    if close_col:
+                        df = pd.DataFrame({
+                            "price_date":     pd.to_datetime(df_raw.index),
+                            "value":          pd.to_numeric(df_raw[close_col], errors="coerce"),
+                            "source_name":    "stooq/BalticExchange",
+                            "indicator_code": "BDI",
+                            "unit":           "points",
+                            "note":           f"[STOOQ-FREE: BDI 히스토리 ({start_date}~{end})]",
+                            "ingested_at":    pd.Timestamp.utcnow(),
+                        }).dropna(subset=["price_date", "value"])
+                        if not df.empty:
+                            print(f"[완료] BDI stooq 히스토리 {len(df)}건 ({symbol})")
+                            return df.sort_values("price_date")
+            except Exception as inner_e:
+                print(f"[경고] stooq {symbol} 실패: {inner_e}")
+                continue
+    except ImportError:
+        print("[경고] pandas-datareader 미설치 — pip install pandas-datareader")
+    return pd.DataFrame()
+
+
 def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
     frames = []
 
-    # BCAA: 식물성유지 탱커 운임 (Perplexity 프록시 — TE 미제공)
-    bcaa = fetch_bcaa()
-    if not bcaa.empty:
-        frames.append(bcaa)
+    # BACKFILL_MODE=true: Perplexity BCAA(오늘만 반환) 건너뜀 — 역사 데이터는 TE/stooq BDI만 사용
+    backfill_mode = os.environ.get("BACKFILL_MODE", "").lower() == "true"
 
-    # BDI: C-03 구조적 단절 모니터링 변수 (Trading Economics 공식 API)
+    if backfill_mode:
+        print("[정보] BACKFILL_MODE 활성화 — Perplexity BCAA 수집 건너뜀 (BDI 역사 데이터만 수집)")
+    else:
+        # BCAA: 식물성유지 탱커 운임 (Perplexity 프록시 — TE 미제공)
+        try:
+            bcaa = fetch_bcaa()
+            if not bcaa.empty:
+                frames.append(bcaa)
+        except EnvironmentError:
+            print("[경고] PERPLEXITY_API_KEY 미등록 — BCAA 수집 건너뜀")
+
+    # BDI: C-03 구조적 단절 모니터링 (Trading Economics 공식 API → stooq 폴백)
     bdi = fetch_bdi_te()
     if not bdi.empty:
         frames.append(bdi)
+    else:
+        start_date = f"{os.environ.get('HISTORICAL_START_YEAR', '2020')}-01-01"
+        print(f"[정보] TE BDI 미수집 — stooq 폴백 시도 ({start_date}~)")
+        bdi_stooq = fetch_bdi_stooq(start_date=start_date)
+        if not bdi_stooq.empty:
+            frames.append(bdi_stooq)
 
     if not frames:
         print("[경고] 해운 지수 수집 실패 — PERPLEXITY_API_KEY 및 TRADING_ECONOMICS_API_KEY 확인.")
