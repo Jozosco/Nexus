@@ -1,0 +1,327 @@
+name: Historical Data Backfill — 5-Year Seed (WBS 1.1.21)
+
+# 목적: 과거 5년(기본 2020~현재) 데이터를 일괄 수집하여 G1/G2/G3 분석 기반 데이터셋 생성
+#
+# 실행 조건: workflow_dispatch 수동 실행 전용 (스케줄 없음)
+# 예상 소요: ~15분 (커넥터별 병렬 실행, 관세청 API ~49초 포함)
+#
+# 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음
+# HITL 준수: G1/G2/G3 출력물은 이 워크플로우에서 생성하지 않음 — 데이터 수집 전용
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_year:
+        description: "수집 시작 연도 (기본: 2020)"
+        required: false
+        default: "2020"
+      end_year:
+        description: "수집 종료 연도 (기본: 2025)"
+        required: false
+        default: "2025"
+      connector:
+        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs)"
+        required: false
+        default: "all"
+
+jobs:
+  # ── WBS 1.1.2: 경제 지표 히스토리 ────────────────────────────────────────────
+  economic-backfill:
+    name: "1.1.2 | Economic Indicators Backfill (FRED · BOK ECOS · EIA)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'economic' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow
+      - name: Run economic connector (historical)
+        env:
+          FRED_API_KEY:               ${{ secrets.FRED_API_KEY }}
+          EIA_API_KEY:                ${{ secrets.EIA_API_KEY }}
+          BOK_ECOS_API_KEY:           ${{ secrets.BOK_ECOS_API_KEY }}
+          KOSIS_API_KEY:              ${{ secrets.KOSIS_API_KEY }}
+          HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
+          HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+        run: python src/pipeline/connectors/economic_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-economic-${{ github.run_id }}
+          path: data/raw/economic_indicators_*.parquet
+          retention-days: 90
+
+  # ── WBS 1.1.3: 해운 지수 히스토리 ────────────────────────────────────────────
+  shipping-backfill:
+    name: "1.1.3 | Shipping Indices Backfill (BDI via Trading Economics)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'shipping' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install openai pandas pyarrow tradingeconomics
+      - name: Run shipping connector (historical)
+        env:
+          PERPLEXITY_API_KEY:         ${{ secrets.PERPLEXITY_API_KEY }}
+          TRADING_ECONOMICS_API_KEY:  ${{ secrets.TRADING_ECONOMICS_API_KEY }}
+          HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
+          HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+        run: python src/pipeline/connectors/shipping_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-shipping-${{ github.run_id }}
+          path: data/raw/shipping_indices_*.parquet
+          retention-days: 90
+
+  # ── WBS 1.1.4: WASDE 히스토리 ─────────────────────────────────────────────────
+  wasde-backfill:
+    name: "1.1.4 | WASDE / USDA Crop Data Backfill (FAS OpenData)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'wasde' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow
+      - name: Run WASDE connector (historical)
+        env:
+          USDA_FAS_API_KEY:           ${{ secrets.USDA_FAS_API_KEY }}
+          USDA_FAS_PSD_API_KEY:       ${{ secrets.USDA_FAS_PSD_API_KEY }}
+          USDA_ARM_API_KEY:           ${{ secrets.USDA_ARM_API_KEY }}
+          HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
+          HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+        run: python src/pipeline/connectors/wasde_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-wasde-${{ github.run_id }}
+          path: data/raw/crop_data_*.parquet
+          retention-days: 90
+
+  # ── WBS 1.1.5: 기후 히스토리 — Open-Meteo ERA5-Land 12개 생산지역 ──────────────
+  # Open-Meteo archive API: archive-api.open-meteo.com/v1/archive
+  # 12개 생산지역 × 8개 변수 — ERA5-Land 재분석 데이터 (1940-현재, API 키 불필요)
+  climate-backfill:
+    name: "1.1.5 | Climate Backfill — Open-Meteo ERA5-Land (12 Production Regions)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'climate' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow
+      - name: Run climate connector (historical)
+        env:
+          ECMWF_API_KEY:              ${{ secrets.ECMWF_API_KEY }}
+          OPENWEATHERMAP_API_KEY:     ""
+          HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
+          HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+        run: python src/pipeline/connectors/climate_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-climate-${{ github.run_id }}
+          path: data/raw/climate_data_*.parquet
+          retention-days: 90
+
+  # ── WBS 1.1.6: GPR 지수 히스토리 ─────────────────────────────────────────────
+  gpr-backfill:
+    name: "1.1.6 | GPR Backfill (Caldara & Iacoviello — 공개 데이터)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'gpr' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx openai pandas pyarrow openpyxl
+      - name: Run GPR connector (historical)
+        env:
+          PERPLEXITY_API_KEY:         ${{ secrets.PERPLEXITY_API_KEY }}
+          HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
+          HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+        run: python src/pipeline/connectors/gpr_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-gpr-${{ github.run_id }}
+          path: data/raw/geopolitical_indices_*.parquet
+          retention-days: 90
+
+  # ── WBS 1.1.7: 생산량 히스토리 ───────────────────────────────────────────────
+  production-backfill:
+    name: "1.1.7 | Production & Agromet Backfill (USDA NASS · FAOSTAT · FAS ESR)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx openai pandas pyarrow
+      - name: Run production connector (historical)
+        env:
+          USDA_NASS_QUICKSTATS_API_KEY: ${{ secrets.USDA_NASS_QUICKSTATS_API_KEY }}
+          USDA_API_KEY:               ${{ secrets.USDA_API_KEY }}
+          PERPLEXITY_API_KEY:         ${{ secrets.PERPLEXITY_API_KEY }}
+          HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
+          HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+        run: python src/pipeline/connectors/production_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-production-${{ github.run_id }}
+          path: data/raw/production_data_*.parquet
+          retention-days: 90
+
+  # ── 상품 가격 히스토리 ────────────────────────────────────────────────────────
+  commodity-backfill:
+    name: "Commodity Prices Backfill (CBOT BO=F · ARS/USD · USDM Drought)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'commodity' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx yfinance pandas pyarrow tradingeconomics
+      - name: Run commodity connector (historical)
+        env:
+          FRED_API_KEY:               ${{ secrets.FRED_API_KEY }}
+          NASDAQ_DATALINK_API_KEY:    ${{ secrets.NASDAQ_DATALINK_API_KEY }}
+          TRADING_ECONOMICS_API_KEY:  ${{ secrets.TRADING_ECONOMICS_API_KEY }}
+          HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
+          HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+        run: python src/pipeline/connectors/commodity_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-commodity-${{ github.run_id }}
+          path: data/raw/commodity_data_*.parquet
+          retention-days: 90
+
+  # ── WBS 1.1.2+: 관세청 수입통계 히스토리 ─────────────────────────────────────
+  # 수집 방식: 연도별 × HS코드(3종) × 국가(6종) = 최대 (end-start+1) × 3 × 6 호출
+  # 수집 기간: 2017년부터 (가용 데이터 최초) ~ 현재 — HISTORICAL_START_YEAR 재정의 가능
+  # 소요 시간: 9년 × 18 = 162 API 호출 × 0.3s = 약 49초
+  customs-backfill:
+    name: "1.1.2+ | Korea Customs HS 1507 Import Backfill (data.go.kr)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow comtradeapicall
+      - name: Run customs connector (historical backfill)
+        env:
+          DATA_GO_KR_SERVICE_KEY:     ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+          UN_COMTRADE_API_KEY:        ${{ secrets.UN_COMTRADE_API_KEY }}
+          # 관세청 API 가용 최초: 2017년. start_year < 2017 입력 시 커넥터 내부에서 2017로 처리됨.
+          HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
+          HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
+        run: python src/pipeline/connectors/customs_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-customs-${{ github.run_id }}
+          path: data/raw/customs_import_*.parquet
+          retention-days: 90
+
+  # ── 백필 완료 요약 ─────────────────────────────────────────────────────────────
+  backfill-summary:
+    name: "Backfill Summary Report"
+    runs-on: ubuntu-latest
+    needs:
+      - economic-backfill
+      - shipping-backfill
+      - wasde-backfill
+      - climate-backfill
+      - gpr-backfill
+      - production-backfill
+      - commodity-backfill
+      - customs-backfill
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Generate backfill summary
+        run: |
+          python - <<'PYEOF'
+          import os, glob
+          from pathlib import Path
+          import pandas as pd
+
+          start_year = os.environ.get("HISTORICAL_START_YEAR_INPUT", "${{ github.event.inputs.start_year }}")
+          end_year   = os.environ.get("HISTORICAL_END_YEAR_INPUT",   "${{ github.event.inputs.end_year }}")
+
+          files = glob.glob("data/raw/**/*.parquet", recursive=True) + glob.glob("data/raw/*.parquet")
+          summary = []
+          total_rows = 0
+          for f in sorted(files):
+              try:
+                  df = pd.read_parquet(f)
+                  rows = len(df)
+                  total_rows += rows
+                  date_col = next((c for c in ["price_date", "ingested_at"] if c in df.columns), None)
+                  date_range = ""
+                  if date_col:
+                      mn = pd.to_datetime(df[date_col], errors="coerce").min()
+                      mx = pd.to_datetime(df[date_col], errors="coerce").max()
+                      date_range = f"{mn.date()} ~ {mx.date()}" if pd.notna(mn) else "N/A"
+                  summary.append(f"| {Path(f).name} | {rows:,} | {date_range} | ✅ |")
+              except Exception as e:
+                  summary.append(f"| {Path(f).name} | – | – | ❌ {e} |")
+
+          md = [
+              f"## 과거 데이터 백필 완료 — {start_year}~{end_year}",
+              f"**총 수집 레코드**: {total_rows:,}건",
+              f"**Run ID**: {os.environ.get('GITHUB_RUN_ID', 'local')}",
+              "",
+              "| 파일 | 행 수 | 기간 | 상태 |",
+              "|---|---|---|---|",
+          ] + summary + [
+              "",
+              "### 다음 단계",
+              "1. C-08 DQSOps 검증: `external_data_refresh.yml` 수동 실행 (c08-dq-validation 단계)",
+              "2. C-06 EDA 검증: 이상치·결측치 프로파일 확인",
+              "3. G1 변수 중요도 분석: `variable_importance_g1.py --lookback 1825` (5년)",
+              "4. Snowflake 업로드 준비 (Phase B — SNOWFLAKE_* Secrets 등록 후)",
+          ]
+          print("\n".join(md))
+
+          gh_summary = os.environ.get("GITHUB_STEP_SUMMARY", "")
+          if gh_summary:
+              with open(gh_summary, "a") as fh:
+                  fh.write("\n".join(md))
+          PYEOF
+      - name: Upload merged backfill dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-all-${{ github.run_id }}
+          path: data/raw/*.parquet
+          retention-days: 90
+          if-no-files-found: warn

@@ -191,11 +191,112 @@ def _fetch_hormuz_realtime() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def _fetch_policy_news_proxy() -> pd.DataFrame:
+    """Perplexity 실시간 검색 — 대두유 가격 주요 정책·수급 뉴스 4종.
+
+    ARG_EXPORT_TAX_NEWS:   아르헨티나 대두유 수출세 동향
+    INDIA_DUTY_NEWS:       인도 식용유 수입관세 변동
+    BIODIESEL_MANDATE_NEWS: 인도네시아·말레이시아 바이오디젤 의무혼합 정책
+    WASDE_CONSENSUS_SCORE: USDA WASDE 발표 전 컨센서스 및 시장 서프라이즈 스코어
+    """
+    api_key = os.environ.get("PERPLEXITY_API_KEY")
+    if not api_key:
+        print("[경고] PERPLEXITY_API_KEY 미등록 — 정책 뉴스 프록시 수집 건너뜀.")
+        return pd.DataFrame()
+
+    client = OpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
+    today = date.today().isoformat()
+
+    queries: list[tuple[str, str, str, str]] = [
+        (
+            "ARG_EXPORT_TAX_NEWS",
+            (
+                "What is the current Argentina soybean oil export tax rate (retenciones)? "
+                "Has there been any change or announcement in the past 30 days? "
+                "Format: RATE: [percentage]% | CHANGE: [increase/decrease/unchanged] | "
+                "DATE: [date of latest change or news] | SOURCE: [source name]"
+            ),
+            "% retenciones",
+            "아르헨티나 대두유 수출세",
+        ),
+        (
+            "INDIA_DUTY_NEWS",
+            (
+                "What is the current India import duty rate on refined soybean oil (HS 1507.90)? "
+                "Has there been any change in the past 60 days? Include basic customs duty + AIDC + GST if available. "
+                "Format: DUTY_RATE: [total %] | CHANGE: [increase/decrease/unchanged] | "
+                "DATE: [latest change date] | SOURCE: [source name]"
+            ),
+            "% import duty",
+            "인도 식용유 수입관세",
+        ),
+        (
+            "BIODIESEL_MANDATE_NEWS",
+            (
+                "What are the current biodiesel blending mandates for Indonesia and Malaysia? "
+                "Any policy change or announcement in the past 60 days? "
+                "Format: INDONESIA: B[number]% mandate | MALAYSIA: B[number]% mandate | "
+                "CHANGE: [yes/no + brief description] | DATE: [latest news date] | SOURCE: [source]"
+            ),
+            "B% mandate",
+            "인도네시아·말레이시아 바이오디젤 의무",
+        ),
+        (
+            "WASDE_CONSENSUS_SCORE",
+            (
+                "What is the latest USDA WASDE report release date and the market consensus vs actual "
+                "for global soybean oil ending stocks or production? Was the report bullish or bearish vs consensus? "
+                "Format: REPORT_DATE: [date] | CONSENSUS: [value + unit] | ACTUAL: [value + unit] | "
+                "SURPRISE: [bullish/bearish/neutral] | SOURCE: [source]"
+            ),
+            "surprise score",
+            "USDA WASDE 컨센서스",
+        ),
+    ]
+
+    rows: list[dict] = []
+    for indicator_code, prompt, unit_hint, label_kr in queries:
+        try:
+            r = client.chat.completions.create(
+                model=PERPLEXITY_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = r.choices[0].message.content
+
+            # 숫자 추출 — 응답 첫 번째 숫자를 대표값으로 사용
+            num_match = re.search(r"(\d+\.?\d*)", text)
+            value = float(num_match.group(1)) if num_match else float("nan")
+
+            rows.append({
+                "price_date":     today,
+                "source_name":    "Perplexity/PolicyProxy",
+                "indicator_code": indicator_code,
+                "value":          value,
+                "unit":           unit_hint,
+                "note":           f"[PERPLEXITY-PROXY: {label_kr}] {text[:300]}",
+            })
+        except Exception as e:
+            print(f"[경고] {indicator_code} 수집 실패: {e}")
+
+    if not rows:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(rows)
+    df["price_date"] = pd.to_datetime(df["price_date"])
+    df["ingested_at"] = pd.Timestamp.utcnow()
+    return df
+
+
 def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
 
-    frames = [_fetch_gpr_index(), _fetch_gpr_realtime(), _fetch_hormuz_realtime()]
+    frames = [
+        _fetch_gpr_index(),
+        _fetch_gpr_realtime(),
+        _fetch_hormuz_realtime(),
+        _fetch_policy_news_proxy(),
+    ]
     frames = [f for f in frames if not f.empty]
     if not frames:
         print("[경고] GPR 데이터: 수집된 항목 없음")
