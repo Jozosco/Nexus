@@ -172,9 +172,17 @@ def fetch_usda_arms_soybean_costs(year: int | None = None) -> pd.DataFrame:
     return df.dropna(subset=["value"])
 
 
-def run(start_year: int = 2020) -> None:
+def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
+
+    # HISTORICAL_START_YEAR: 백필 워크플로우가 주입 (미설정 시 기본 2020)
+    start_year = int(os.environ.get("HISTORICAL_START_YEAR", "2020"))
+    backfill_mode = os.environ.get("BACKFILL_MODE", "").lower() == "true"
+    if backfill_mode:
+        print(f"[정보] BACKFILL_MODE 활성화 — WASDE PSD {start_year}년~현재 연도별 일괄 수집")
+    else:
+        print(f"[정보] 일별 갱신 모드 — 현재 마케팅 연도({date.today().year}) 수집")
 
     frames = []
     psd_df = fetch_wasde_multi_year(start_year=start_year)
