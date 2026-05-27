@@ -21,6 +21,7 @@
 | **Commodity** | Soybean oil (대두유) — crude + refined. Scope is fixed; do not extend without explicit instruction. |
 | **Decision output** | Daily Buy / Hold procurement signal. AI recommends; human approves. Never execute autonomously. |
 | **Goals** | G1: variable importance + alerts · G2: price band forecast · G3: Bear/Bull/Hold regime signal |
+| **Data scope (Phase A)** | External pipeline data only (MEMORY D-006). Internal S&OP unavailable. G2 trains in Azure ML Studio. |
 | **Environment** | No CLI inside corporate firewall. Cloud-native only: Azure ML · Snowflake · GitHub Actions. |
 
 ---

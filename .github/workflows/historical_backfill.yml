@@ -22,7 +22,7 @@ on:
         required: false
         default: "2025"
       connector:
-        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs)"
+        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs / geointel)"
         required: false
         default: "all"
       skip_analysis:
@@ -255,6 +255,35 @@ jobs:
         with:
           name: backfill-customs-${{ github.run_id }}
           path: data/raw/customs_import_*.parquet
+          retention-days: 90
+
+  # ── WBS 1.4.1: GPR × SBO 상관관계 분석 (백필 완료 후 실행) ───────────────────
+  gpr-sbo-correlation:
+    name: "1.4.1 | GPR × SBO Correlation Analysis (Post-Backfill)"
+    runs-on: ubuntu-latest
+    needs:
+      - economic-backfill
+      - gpr-backfill
+      - commodity-backfill
+    if: ${{ always() && github.event.inputs.skip_analysis != 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow numpy
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run GPR × SBO correlation analysis
+        run: python src/forecasting/gpr_sbo_correlation.py
+      - name: Upload correlation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-gpr-sbo-correlation-${{ github.run_id }}
+          path: reports/pipeline/gpr_sbo_correlation_*.html
           retention-days: 90
 
   # ── 백필 완료 요약 + Excel 내보내기 ──────────────────────────────────────────
