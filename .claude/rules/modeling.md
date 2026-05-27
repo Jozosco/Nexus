@@ -5,6 +5,13 @@
 
 ---
 
+## Phase A Data Constraint (Applies to G1 and G2)
+> **MEMORY D-006**: Internal S&OP data (daily inventory, shipment volume, unit cost)
+> unavailable in Phase A — only monthly aggregates exist. All G1/G2 modeling uses
+> **external pipeline data exclusively**. Internal monthly data enters as Phase B validation only.
+
+---
+
 ## G1 — Variable Importance & Risk Alert System
 
 **Objective**: Identify which macro/micro factors most drive soybean oil price movements.
@@ -31,6 +38,26 @@
 **Objective**: Produce a probability-bounded daily price range for soybean oil futures.
 **Output contract**: Upper band · Point estimate · Lower band · Confidence level (%)
 
+> **Phase A Data Constraint (MEMORY D-006)**: Internal S&OP data (daily inventory, shipment volume)
+> unavailable — monthly aggregates only. G2 is built **exclusively on external pipeline data**.
+> Internal monthly stock/unit-price data may be used as a post-hoc validation signal in Phase B only.
+
+> **Compute Environment**: G2 is developed and trained in **Azure ML Studio**.
+> All training jobs must use Azure ML `ScriptRunConfig` or `Command` job objects.
+> Experiment tracking via `mlflow` (Azure ML autolog). Never run training locally or in GitHub Actions.
+
+### Data Sources (External Only — Phase A)
+| Category | Source | Connector | Indicator |
+|---|---|---|---|
+| CBOT Futures | yfinance BO=F | `commodity_connector.py` | `CBOT_SBO_FUTURES` |
+| Geopolitical | Caldara GPR + Perplexity | `gpr_connector.py` | `GPR`, `HORMUZ_THREAT_LEVEL` |
+| AIS Strait Risk | AISstream.io | `ais_connector.py` | `SBO_STRAIT_RISK_COMPOSITE` |
+| GeoIntel | USGS/NOAA/GDELT/FIRMS | `geointel_connector.py` | `GEOINTEL_RISK_COMPOSITE` |
+| Shipping | TE BDI REST / stooq | `shipping_connector.py` | `BDI` |
+| FX | FRED DEXBZUS/DEXCHUS | `economic_connector.py` | `FX_BRL_USD`, `FX_CNY_USD` |
+| ENSO/Climate | NOAA CPC ONI | `climate_connector.py` | `ENSO_ONI` |
+| Crop Supply | USDA FAS PSD | `wasde_connector.py` | `WASDE_SBO_PRODUCTION` |
+
 ### Method Stack `[M]`
 | Step | Method | Library | Notes |
 |---|---|---|---|
@@ -41,12 +68,23 @@
 | Prediction interval | CQR | `mapie` | Distribution-free confidence bounds |
 | Sentiment layer | FinBERT | `transformers` | Score news sentiment → exogenous input |
 
+### Azure ML Studio Workflow
+```
+1. data/raw/*.parquet → Azure Blob Storage (pipeline upload step)
+2. Azure ML Data Asset → registered dataset (versioned)
+3. ScriptRunConfig → src/forecasting/price_band_g2.py (training script)
+4. mlflow.autolog() → experiment tracking (no manual log calls needed)
+5. mlflow.log_model() → Azure ML Model Registry (never pickle)
+6. Registered model → batch inference pipeline (daily score job)
+```
+
 ### Validation Protocol
 1. Walk-forward cross-validation (never random split — see MEMORY M-001)
 2. Metrics: MAPE, RMSE, MAE, directional accuracy (% correct Bear/Bull direction)
 3. **Baseline required**: compare every model against seasonal naive (last-year same-week)
 4. Report as markdown table: `model × metric × validation window`
 5. Minimum data requirement: 24 months (see MEMORY M-004); fall back to ETS if insufficient
+6. G2 gate: must have C-08 DQSOps PASS on all 8 external data sources before first training run
 
 ---
 

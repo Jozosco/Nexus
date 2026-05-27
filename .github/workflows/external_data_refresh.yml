@@ -15,7 +15,7 @@ on:
     # 수동 실행: connector 선택 가능 (기본값: all). 특정 커넥터만 재실행할 때 사용.
     inputs:
       connector:
-        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs)"
+        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs / geointel)"
         required: false
         default: "all"
 
@@ -215,6 +215,60 @@ jobs:
           path: data/raw/customs_import_*.parquet
           retention-days: 7
 
+  # ── WBS 1.1.33: 지정학 인텔리전스 (Shadowbroker 패턴, Docker 불필요) ────────────
+  # USGS 지진: earthquake.usgs.gov (SBO 공급망 핵심 6개 지역 반경 내 M2.5+)
+  # NOAA 기상경보: api.weather.gov (미국 중서부 대두 생산 주 Moderate+)
+  # GDELT 이벤트: api.gdeltproject.org (대두유 무역·관세·정책 관련 이벤트)
+  # NASA FIRMS: firms.modaps.eosdis.nasa.gov (NASA_FIRMS_MAP_KEY 선택적)
+  # BACKFILL_MODE=true 시 건너뜀 (실시간 전용)
+  geointel:
+    name: "1.1.33 | GeoIntel — USGS Seismic · NOAA Weather · GDELT · NASA FIRMS"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'geointel' || github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow
+      - name: Run GeoIntel connector
+        env:
+          NASA_FIRMS_MAP_KEY: ${{ secrets.NASA_FIRMS_MAP_KEY }}
+        run: python src/pipeline/connectors/geointel_connector.py
+      - name: Upload raw output
+        uses: actions/upload-artifact@v4
+        with:
+          name: geointel-${{ github.run_id }}
+          path: data/raw/geointel_*.parquet
+          retention-days: 7
+
+  # ── WBS 1.4.1: GPR × SBO 상관관계 분석 (일별 갱신) ────────────────────────────
+  gpr-sbo-correlation:
+    name: "1.4.1 | GPR × SBO Correlation Analysis (Rolling 7d/30d/90d)"
+    runs-on: ubuntu-latest
+    needs: [geopolitical-risk, geointel, commodity-prices]
+    if: ${{ (github.event.inputs.connector == 'all' || github.event_name == 'schedule') && always() }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow numpy
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run GPR × SBO correlation analysis
+        run: python src/forecasting/gpr_sbo_correlation.py
+      - name: Upload correlation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpr-sbo-correlation-${{ github.run_id }}
+          path: reports/pipeline/gpr_sbo_correlation_*.html
+          retention-days: 30
+
   # ── WBS 1.1.2 보완: 상품 가격·가뭄 지수·ARS/USD (D-002 P0 갭 해소) ─────────
   # CBOT BO=F: yfinance(무료, IP차단위험). 유료전환시 Databento/Barchart 권장.
   # ARS/USD: api.bcra.gob.ar 공식 API (인증 불필요).
@@ -249,7 +303,7 @@ jobs:
   pipeline-summary:
     name: "Pipeline Summary & Data Quality Report (PDF)"
     runs-on: ubuntu-latest
-    needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso, geopolitical-risk, production-data, commodity-prices, customs-import-stats]
+    needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso, geopolitical-risk, production-data, commodity-prices, customs-import-stats, geointel]
     if: always()   # 일부 커넥터 실패 시에도 요약 실행
     steps:
       - uses: actions/checkout@v4

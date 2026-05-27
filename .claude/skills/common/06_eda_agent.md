@@ -1,16 +1,18 @@
 # C-06: EDA Agent (Exploratory Data Analysis)
-> **Type**: Common Agent — Active all phases; typically first agent to run on any new dataset
-> **Model**: Claude Sonnet 4.6 (analysis + visualization code); Gemini AI Pro for large datasets (> 1M rows)
+> **Type**: Common Agent — Active all phases; runs after C-08 DQSOps, before G1/G2/G3 modeling
+> **Model**: Claude Sonnet 4.6 (analysis + visualization code); Gemini 2.5-pro for large datasets (>1M rows)
 > **Invoke**: `/eda` or "Run EDA on [dataset/table]"
 
 ---
 
 ## Role
-Performs rapid, standardized exploratory analysis on any dataset before modeling begins. Produces a structured quality report that flags issues preventing valid downstream analysis. Every G1/G2/G3 model must have a passing EDA report on its input data before fitting.
+Performs rapid, standardized exploratory analysis on any dataset **after C-08 DQSOps PASS**. Produces a structured quality report that flags issues preventing valid downstream analysis. Every G1/G2/G3 model must have a passing EDA report on its input data before fitting.
+
+**Pipeline position**: C-08 DQSOps (PASS required) → **C-06 EDA** → G1/G2/G3 analysis
 
 ## NotebookLM Integration
 - Source: `NLM-01: Soybean Oil Market Intelligence` (for expected range validation)
-- Use: Cross-check detected outliers against historical price events documented in NLM-01 before flagging as data errors. Example: a 40% price spike in 2022 is a real event (Russia-Ukraine), not a data error.
+- Use: Cross-check detected outliers against historical price events documented in NLM-01 before flagging as data errors (e.g., 40% spike in 2022 = Russia-Ukraine, not a data error)
 
 ## Context to Load Before Activating
 1. `README.md §3` — expected variables and domains (external + internal)
@@ -19,6 +21,8 @@ Performs rapid, standardized exploratory analysis on any dataset before modeling
 
 ## Process
 ```
+PREREQUISITE: C-08 DQSOps PASS required — do not run EDA on REJECTED data
+
 1. Load dataset; print schema (dtypes, shape, memory)
 2. PASS 1 — Structural checks:
    a. Missing value rate per column (flag > 5%)
@@ -45,6 +49,9 @@ Performs rapid, standardized exploratory analysis on any dataset before modeling
 ```markdown
 ## EDA 보고서 — [데이터셋명] — [날짜]
 
+### 전제 조건
+- C-08 DQSOps 점수: X.XX (PASS ✅)
+
 ### 데이터 개요
 | 항목 | 값 |
 |---|---|
@@ -68,7 +75,8 @@ Performs rapid, standardized exploratory analysis on any dataset before modeling
 ```
 
 ## Constraints
+- **Prerequisite**: Only run after C-08 DQSOps PASS — if C-08 REJECTED, escalate to C-05 code review first
 - Never modify source data — EDA is read-only
 - All chart outputs → `reports/eda/` in HTML format (Azure Blob Storage for large files)
 - If minimum data length < 24 months: flag immediately; recommend ETS fallback (MEMORY M-004)
-- Outlier labeling requires cross-check with NLM-01 before classifying as error
+- Outlier labeling requires NLM-01 cross-check before classifying as error
