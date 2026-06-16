@@ -57,24 +57,43 @@
 | 1.1.30 | PDF 한국어·영어 분리 출력 체제 구축 (generate_research_pdf.py --lang ko/en/both) | C-04 | 8h | ✅ |
 | 1.1.31 | C-05 Automated Code Reviewer (QA/QC) 에이전트 신설 — Claude Haiku 4.5 | C-01 | 8h | ✅ |
 | 1.1.32 | 2020~2025 역사 위기 분석 수정 보고서 (C-02×P-02 패널, Case D 미·중 관세 9/10) | C-02 | 16h | ✅ |
+| 1.1.33 | GeoIntel 커넥터 신규 — USGS 지진·NOAA 기상·GDELT·NASA FIRMS + 복합 지수 0-100 | C-04 | 16h | ✅ |
+| 1.1.34 | C-04 Document Intelligence 에이전트 신설 — PDF/XLSX 문서 수집 파이프라인 설계 | C-01 | 8h | ✅ |
+| 1.1.35 | P1-05 News & Sentiment 에이전트 신설 — FinBERT Phase B 설계, Phase A Perplexity 프록시 | C-01 | 8h | ✅ |
+| 1.1.36 | 전 에이전트 LLM 모델 업데이트 (Opus 4.8 / Sonnet 4.6 / Haiku 4.5-20251001) | C-01 | 2h | ✅ |
 
-> **P1-05 폐기**: 원래 1.1.4/1.1.5/1.1.6 담당 → C-04 흡수.
+> **P1-05 역할 변경**: 폐기(Data Pipeline Architect)에서 신설(News & Sentiment Analyst)로 재지정.
 > **Session 12–18 추가 (1.1.10~1.1.19)**: commodity_connector, customs_connector, report_generator, G1 LASSO, C-06/C-08 게이트, LLM 모니터, Ralph Loop, Granger 분석, GE 테스트.
 > **Session 19 추가 (1.1.20~1.1.21)**: Open-Meteo 12개 생산지역 기후 커넥터 확장, BDI 히스토리 범위 수정.
 > **Session 20 추가 (1.1.22~1.1.27)**: GPR 버그수정+BACKFILL_MODE, 백필 워크플로우 C-08→G1 파이프라인, AIS 해협 탱커 모니터, Excel 내보내기, G1 PDF+MD, Hormuz Monitor 분석.
 > **Session 21 추가 (1.1.28~1.1.32)**: BDI REST API 교체, WASDE HISTORICAL_START_YEAR 수정, PDF KO/EN 분리, C-05 에이전트, 역사 분석 수정 보고서.
+> **Session 23 추가 (1.1.33~1.1.36)**: GeoIntel, C-04/P1-05 에이전트 신설, LLM 모델 전면 업그레이드.
 
-### 1.2 Internal Data Pipeline (~104h)
+### 1.1.4x — 외부 문서 수집 파이프라인 (USDA FAS GAIN/GATS)
 | WBS ID | 작업명 | 담당 | 공수 | 상태 |
 |---|---|---|---|---|
-| 1.2.1 | Design Snowflake Schema for S&OP Data | C-04 | 16h | ⬜ |
-| 1.2.2 | Design Snowflake Schema for Procurement History | C-04 | 16h | ⬜ |
-| 1.2.3 | Design Snowflake Schema for Inventory and Logistics | C-04 | 16h | ⬜ |
-| 1.2.4 | Implement Snowflake ERP Sync Pipeline | C-04 | 40h | 🚫 |
-| 1.2.5 | Validate Internal Pipeline Data Quality | C-08 | 8h | ⬜ |
-| 1.2.6 | Document Internal Data Schemas | C-07 | 8h | ⬜ |
+| 1.1.40 | Design GAIN Report ingestion schema (data/schemas/gain_reports.yaml) | C-04 | 4h | 🔄 |
+| 1.1.41 | Implement GAIN PDF → parquet connector (scripts/ingest_gain_reports.py) | C-04 | 16h | ⬜ |
+| 1.1.42 | Implement GATS Excel → parquet connector (scripts/ingest_gats_data.py) | C-04 | 12h | ⬜ |
+| 1.1.43 | Validate GAIN/GATS data quality via C-08 DQSOps | C-08 | 8h | ⬜ |
+| 1.1.44 | Add GAIN/GATS ingestion to historical_backfill.yml | C-04 | 4h | ⬜ |
 
-> 🚫 **1.2.4 블로커**: 사내 ERP → Snowflake 연동에 사내 IT 부서 승인 필요. HITL 에스컬레이션 대기.
+> 사용자가 USDA FAS GAIN 보고서(.pdf) 및 GATS 무역 통계(.xlsx)를 공유 예정 → 1.1.40 착수 준비 완료
+
+### 1.2 Internal Data Pipeline — 전략적 보류 (Strategic Deferral)
+> **C-01 결정 (2026-06-16)**: 내부 조달 데이터는 G1/G2/G3 모델 입력에서 전략적으로 제외.  
+> 사유: ①선택 편향(과거 행동 복제) ②제약 오염(솔루션 공간 축소) ③월별 집계→일별 보간 허위 정밀도 ④경쟁 비교 불가.  
+> 내부 데이터 역할: Phase B 사후 검증(post-hoc validation)만. 재검토 시점: G2 모델 6개월 운영 후.  
+> 상세 근거: `docs/research_desk/c01_internal_data_exclusion_decision_2026_06_16.md`
+
+| WBS ID | 작업명 | 담당 | 공수 | 상태 |
+|---|---|---|---|---|
+| 1.2.1 | Design Snowflake Schema for S&OP Data | C-04 | 16h | ⏸ 전략적 보류 |
+| 1.2.2 | Design Snowflake Schema for Procurement History | C-04 | 16h | ⏸ 전략적 보류 |
+| 1.2.3 | Design Snowflake Schema for Inventory and Logistics | C-04 | 16h | ⏸ 전략적 보류 |
+| 1.2.4 | Implement Snowflake ERP Sync Pipeline | C-04 | 40h | ⏸ 전략적 보류 |
+| 1.2.5 | Validate Internal Pipeline Data Quality | C-08 | 8h | ⏸ 전략적 보류 |
+| 1.2.6 | Document Internal Data Schemas | C-07 | 8h | ⏸ 전략적 보류 |
 
 ### 1.3 EDA & Data Quality Reports (~72h)
 | WBS ID | 작업명 | 담당 | 공수 | 상태 |

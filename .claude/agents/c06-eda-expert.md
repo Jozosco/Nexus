@@ -1,7 +1,7 @@
 ---
 id: C-06
 name: EDA Expert — Data Integrity & Pre-Analysis Engine
-model: claude-opus-4-7
+model: claude-sonnet-4-6
 llm_route: CLAUDE_NATIVE
 thinking_mode: enabled   # Claude Opus 4.7 extended thinking for statistical reasoning
 pattern: Expert Pool
