@@ -101,7 +101,7 @@ def fetch_cbot_soybean_oil(days_back: int = 10) -> pd.DataFrame:
 
 # ── 2. 팜유 글로벌 벤치마크 (FRED PPOILUSDM — 월별, CPO 대리지표) ────────────
 
-def fetch_cpo_proxy_fred(start: str = "2020-01-01") -> pd.DataFrame:
+def fetch_cpo_proxy_fred(start: str = "2017-01-01") -> pd.DataFrame:
     """
     IMF 팜유 글로벌 벤치마크 (FRED PPOILUSDM) — 한국 CIF CPO 대리 지표.
     주의: 월별 데이터. 실제 한국 CIF 가격은 MPOB/Reuters 수동 수집 필요.

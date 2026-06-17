@@ -33,7 +33,7 @@ REPORT_DIR  = "reports/pipeline"
 GRANGER_MIN_OBS = 30                                    # 검정 최소 관측치
 GRANGER_MAX_LAG = 4                                     # 최대 시차 (분기 기준)
 GRANGER_ALPHA   = 0.05                                  # 유의수준
-GRANGER_YEARS   = list(range(2020, date.today().year))  # 2020 ~ 작년
+GRANGER_YEARS   = list(range(2017, date.today().year))  # 2017 ~ 작년
 
 # ── G1 변수 설명 사전 (C-01/C-03 공동 관리) ──────────────────────────────────
 VARIABLE_CATALOG: list[dict] = [
@@ -625,7 +625,7 @@ def _granger_causality_by_year(
     periods: list[tuple[str, str, str | int]] = [
         (f"{yr}-01-01", f"{yr}-12-31", yr) for yr in GRANGER_YEARS if yr <= last_year
     ]
-    periods.append(("2020-01-01", f"{last_year}-12-31", f"전체(2020~{last_year})"))
+    periods.append(("2017-01-01", f"{last_year}-12-31", f"전체(2017~{last_year})"))
 
     rows: list[dict] = []
     for p_start, p_end, period_label in periods:
@@ -974,12 +974,24 @@ def _render_executive_summary(
 
 
 _CAUSAL_CHAINS: list[dict[str, str]] = [
+    # ── 정책·규제 ─────────────────────────────────────────────────────────────────
     {
         "driver_ko": "Clean Fuel 생산 세액공제 (45Z)",
         "driver_en": "Clean Fuel Production Tax Credit (45Z)",
         "chain_ko": "45Z 세액공제 시행 → 미국 내 SBO 바이오디젤 수요 증가 → 미국 수출 물량 감소·한국 수입 경쟁 심화 → 국제 대두유 가격 상승",
         "chain_en": "45Z tax credit enacted → US domestic SBO biodiesel demand rises → US export volume falls, Korean import competition intensifies → global SBO price increase",
         "direction": "up",
+        "category_ko": "정책·규제",
+        "category_en": "Policy & Regulation",
+    },
+    {
+        "driver_ko": "인도네시아 B35→B40 바이오디젤 의무 확대",
+        "driver_en": "Indonesia B35→B40 Biodiesel Mandate Expansion",
+        "chain_ko": "B40 의무 시행 → CPO 내수 소비 증가 → CPO 수출 감소 → CPO-SBO 스프레드 축소 → SBO 대체 수요 감소 → 가격 하락 압력",
+        "chain_en": "B40 mandate enacted → CPO domestic consumption rises → CPO export falls → CPO-SBO spread narrows → SBO substitution demand falls → downward price pressure",
+        "direction": "down",
+        "category_ko": "정책·규제",
+        "category_en": "Policy & Regulation",
     },
     {
         "driver_ko": "아르헨티나 대두유 수출세 인상",
@@ -987,27 +999,92 @@ _CAUSAL_CHAINS: list[dict[str, str]] = [
         "chain_ko": "아르헨티나 수출세 인상 → 수출 채산성 악화 → 글로벌 공급 감소 → 대두유 가격 상승",
         "chain_en": "Argentina raises export tax → export profitability deteriorates → global supply contracts → SBO price rises",
         "direction": "up",
+        "category_ko": "정책·규제",
+        "category_en": "Policy & Regulation",
     },
+    {
+        "driver_ko": "EU 탈삼림 규정(EUDR) 팜유 규제 강화",
+        "driver_en": "EU Deforestation Regulation (EUDR) Palm Oil Restrictions",
+        "chain_ko": "EUDR 발효 → EU 팜유 시장 접근 차단 → EU 내 SBO 대체 수요 증가 → 글로벌 SBO 가격 상승",
+        "chain_en": "EUDR enacted → palm oil EU market access blocked → EU SBO substitution demand rises → global SBO price rises",
+        "direction": "up",
+        "category_ko": "정책·규제",
+        "category_en": "Policy & Regulation",
+    },
+    {
+        "driver_ko": "인도 식용유 수입관세 인하",
+        "driver_en": "India Edible Oil Import Duty Cut",
+        "chain_ko": "인도 수입관세 인하 → CPO/SBO 수입 증가(세계 최대 식용유 수입국) → 글로벌 SBO 수요 증가 → 가격 상승",
+        "chain_en": "India cuts import duty → CPO/SBO imports surge (world's largest edible oil importer) → global SBO demand rises → price increase",
+        "direction": "up",
+        "category_ko": "정책·규제",
+        "category_en": "Policy & Regulation",
+    },
+    # ── 기후·작황 ─────────────────────────────────────────────────────────────────
     {
         "driver_ko": "ENSO 라니냐 — 남미 가뭄",
         "driver_en": "ENSO La Niña — South America Drought",
         "chain_ko": "ENSO 라니냐 발생 → 브라질·아르헨티나 강우량 감소(가뭄) → 대두 작황 감소 → 대두유 생산량 감소 → 가격 상승",
         "chain_en": "La Niña develops → rainfall deficit in Brazil & Argentina → soybean crop failure → SBO production decline → price rise",
         "direction": "up",
+        "category_ko": "기후·작황",
+        "category_en": "Climate & Crop",
     },
+    {
+        "driver_ko": "브라질 파종기 토양 수분 이상 (9~11월)",
+        "driver_en": "Brazil Planting Season Soil Moisture Anomaly (Sep–Nov)",
+        "chain_ko": "파종기 가뭄(9~11월) → 대두 발아율 저하 → 재배 면적 축소 우려 → 선물 가격 선반영 상승",
+        "chain_en": "Planting season drought (Sep–Nov) → lower soybean germination rate → acreage reduction risk → futures price pre-rally",
+        "direction": "up",
+        "category_ko": "기후·작황",
+        "category_en": "Climate & Crop",
+    },
+    {
+        "driver_ko": "WASDE 대두유 재고사용비율(STU) 하락",
+        "driver_en": "WASDE SBO Stocks-to-Use Ratio (STU) Decline",
+        "chain_ko": "WASDE STU < 10% 발표 → 글로벌 공급 부족 신호 → 투기 세력 순매수 포지션 증가(COT) → 선물 가격 급등",
+        "chain_en": "WASDE STU < 10% released → global supply deficit signal → speculative long position surge (COT) → futures price spike",
+        "direction": "up",
+        "category_ko": "기후·작황",
+        "category_en": "Climate & Crop",
+    },
+    # ── 지정학·무역 ───────────────────────────────────────────────────────────────
     {
         "driver_ko": "호르무즈/말라카 해협 위기",
         "driver_en": "Hormuz / Malacca Strait Crisis",
         "chain_ko": "해협 봉쇄 위기 → 탱커 운임 급등(BDI 연동) → CIF 비용 증가 → 한국 수입 가격 상승",
         "chain_en": "Strait closure risk → tanker freight rates spike (BDI correlated) → CIF cost increase → Korean import price rises",
         "direction": "up",
+        "category_ko": "지정학·무역",
+        "category_en": "Geopolitics & Trade",
     },
+    {
+        "driver_ko": "미·중 무역 관세 에스컬레이션",
+        "driver_en": "US–China Tariff Escalation",
+        "chain_ko": "미·중 관세 부과 → 중국의 미국산 SBO 수입 급감 → 미국 수출 여력 과잉 → 단기 가격 하락 압력 → 이후 글로벌 공급망 재편 중기 혼란",
+        "chain_en": "US-China tariffs → China reduces US SBO imports sharply → US export surplus builds → short-term downward pressure → mid-term supply chain disruption",
+        "direction": "down",
+        "category_ko": "지정학·무역",
+        "category_en": "Geopolitics & Trade",
+    },
+    {
+        "driver_ko": "중국 정부 SBO 비축 발표",
+        "driver_en": "China Government SBO Strategic Reserve Announcement",
+        "chain_ko": "중국 비축 발표 → 대규모 수입 기대감 형성 → 글로벌 재고 감소 우려 → 선물 가격 단기 급등",
+        "chain_en": "China announces strategic reserve build → large import expectation forms → global inventory draw concern → short-term futures price spike",
+        "direction": "up",
+        "category_ko": "지정학·무역",
+        "category_en": "Geopolitics & Trade",
+    },
+    # ── 시장 구조 ─────────────────────────────────────────────────────────────────
     {
         "driver_ko": "CPO-SBO 스프레드 확대 (>$175/MT)",
         "driver_en": "CPO-SBO Spread Widening (>$175/MT)",
         "chain_ko": "CPO-SBO 스프레드 > $175/MT → 식품업계 팜유로 대체 → SBO 수요 감소 → 가격 하락 압력",
         "chain_en": "CPO-SBO spread exceeds $175/MT → food manufacturers switch to palm oil → SBO demand falls → downward price pressure",
         "direction": "down",
+        "category_ko": "시장 구조",
+        "category_en": "Market Structure",
     },
     {
         "driver_ko": "발틱운임지수(BDI) 급등",
@@ -1015,33 +1092,87 @@ _CAUSAL_CHAINS: list[dict[str, str]] = [
         "chain_ko": "BDI 급등 → 해운비 상승 → 남미발 대두유 수출 채산성 악화 → 수출 감소 → 국제가 상승",
         "chain_en": "BDI surges → shipping costs rise → South American SBO export margins compress → exports fall → global price rises",
         "direction": "up",
+        "category_ko": "시장 구조",
+        "category_en": "Market Structure",
+    },
+    {
+        "driver_ko": "CFTC COT 투기 세력 순매수 증가",
+        "driver_en": "CFTC COT Speculative Net Long Position Surge",
+        "chain_ko": "헤지펀드·CTA 순매수 포지션 급증 → 선물 가격 모멘텀 강화 → 현물·선도 가격 상승 견인",
+        "chain_en": "Hedge fund / CTA net long position surges → futures price momentum builds → spot and forward prices pulled higher",
+        "direction": "up",
+        "category_ko": "시장 구조",
+        "category_en": "Market Structure",
+    },
+    {
+        "driver_ko": "대두 압착 마진(Crush Margin) 축소",
+        "driver_en": "Soybean Crush Margin Compression",
+        "chain_ko": "SBO가 + SBM가 < 대두가 (압착 마진 마이너스) → 압착 가동률 감소 → SBO 생산 감소 → 공급 축소 → 가격 상승",
+        "chain_en": "SBO + SBM < soybean price (negative crush margin) → crushing capacity utilization falls → SBO output declines → supply contracts → price rises",
+        "direction": "up",
+        "category_ko": "시장 구조",
+        "category_en": "Market Structure",
     },
 ]
 
 
-def _render_causal_chains(lang: str = "ko") -> str:
-    """대두유 가격에 영향을 주는 인과관계 체인을 HTML로 렌더링."""
+def _render_causal_chains(
+    lang: str = "ko",
+    extra_chains: list[dict[str, str]] | None = None,
+) -> str:
+    """대두유 가격에 영향을 주는 인과관계 체인을 HTML로 렌더링.
+
+    extra_chains: 런타임에 추가할 체인 목록 (동일 스키마).
+                  예: [{"driver_ko": "...", "driver_en": "...", "chain_ko": "...",
+                         "chain_en": "...", "direction": "up/down",
+                         "category_ko": "...", "category_en": "..."}]
+    """
+    all_chains = _CAUSAL_CHAINS + (extra_chains or [])
+
+    # 카테고리별 그룹화
+    by_cat: dict[str, list[dict]] = {}
+    for c in all_chains:
+        cat = c.get("category_ko" if lang == "ko" else "category_en", "기타")
+        by_cat.setdefault(cat, []).append(c)
+
     title = "주요 가격 영향 인과관계" if lang == "ko" else "Key Causal Chains Affecting SBO Price"
-    rows = ""
-    for c in _CAUSAL_CHAINS:
-        driver = c["driver_ko"] if lang == "ko" else c["driver_en"]
-        chain  = c["chain_ko"]  if lang == "ko" else c["chain_en"]
-        arrow  = "▲ 상승" if c["direction"] == "up" else "▼ 하락"
-        color  = "#c62828" if c["direction"] == "up" else "#1565c0"
-        rows += (
-            f"<tr>"
-            f"<td style='font-weight:bold;white-space:nowrap'>{driver}</td>"
-            f"<td style='font-size:12px'>{chain}</td>"
-            f"<td style='color:{color};font-weight:bold;white-space:nowrap'>{arrow}</td>"
-            f"</tr>"
-        )
     hdr_driver = "주요 동인" if lang == "ko" else "Driver"
     hdr_chain  = "인과관계 경로" if lang == "ko" else "Causal Chain"
     hdr_dir    = "가격 방향" if lang == "ko" else "Price Direction"
+
+    sections_html = ""
+    for cat, chains in by_cat.items():
+        rows = ""
+        for c in chains:
+            driver = c["driver_ko"] if lang == "ko" else c["driver_en"]
+            chain  = c["chain_ko"]  if lang == "ko" else c["chain_en"]
+            arrow  = "▲ 상승" if c["direction"] == "up" else "▼ 하락"
+            color  = "#c62828" if c["direction"] == "up" else "#1565c0"
+            rows += (
+                f"<tr>"
+                f"<td style='font-weight:bold;white-space:nowrap'>{driver}</td>"
+                f"<td style='font-size:12px'>{chain}</td>"
+                f"<td style='color:{color};font-weight:bold;white-space:nowrap'>{arrow}</td>"
+                f"</tr>"
+            )
+        sections_html += (
+            f"<tr><td colspan='3' style='background:#e8eaf6;font-weight:bold;padding:4px 8px'>"
+            f"{cat}</td></tr>{rows}"
+        )
+
+    note_txt = (
+        "위 목록은 현재까지 식별된 주요 인과관계입니다. "
+        "GPR·기후·무역 환경 변화에 따라 추가 동인이 지속적으로 갱신됩니다."
+        if lang == "ko" else
+        "The above represents identified causal chains to date. "
+        "Additional drivers are continuously identified as GPR, climate, and trade dynamics evolve."
+    )
+
     return f"""<h2>{title}</h2>
 <table class="tbl"><thead>
 <tr><th>{hdr_driver}</th><th>{hdr_chain}</th><th>{hdr_dir}</th></tr>
-</thead><tbody>{rows}</tbody></table>"""
+</thead><tbody>{sections_html}</tbody></table>
+<div class="note" style="margin-top:6px;font-size:11px">{note_txt}</div>"""
 
 
 def _render_variable_catalog(lang: str = "ko") -> str:
@@ -1215,9 +1346,9 @@ def _render_html(
         gr_html = granger_results.to_html(index=False, border=0, classes="tbl")
     else:
         gr_html = (
-            "<p>Granger 검정 미실행 — 선결 조건 충족 변수 없음. 수집 기간 2020~작년 데이터 누적 후 재실행하세요.</p>"
+            "<p>Granger 검정 미실행 — 선결 조건 충족 변수 없음. 수집 기간 2017~작년 데이터 누적 후 재실행하세요.</p>"
             if lang == "ko" else
-            "<p>Granger test not run — no variables met pre-conditions. Accumulate data from 2020 to last year and re-run.</p>"
+            "<p>Granger test not run — no variables met pre-conditions. Accumulate data from 2017 to last year and re-run.</p>"
         )
     granger_results_section = f"""<h2>{gr_title}</h2>
 <div class="note" style="margin-bottom:8px">{gr_note}</div>
@@ -1260,7 +1391,7 @@ def _render_html(
 
 <div class="note">
   <strong>Phase A 분석 구성:</strong>
-  기술통계·LASSO 상관분석·Granger 인과검정(2020~작년 연도별) 수행.
+  기술통계·LASSO 상관분석·Granger 인과검정(2017~작년 연도별) 수행.
   XGBoost+SHAP, TCN-XGBoost 하이브리드는 Phase B(Snowflake 연동 후) 적용 예정.
 </div>
 
@@ -1330,7 +1461,7 @@ def run(days: int = 7) -> None:
     print(f"[C-03] 구조적 단절 임계값 초과: {sum(1 for a in alerts if '🚨' in a.get('상태', ''))}/{len(alerts)}")
 
     # ── Granger 인과검정: 전체 히스토리 parquet 사용 (2020~작년) ──────────────────
-    print("[C-03] Granger 인과검정 선결 조건 점검 중 (2020~작년 연도별)...")
+    print("[C-03] Granger 인과검정 선결 조건 점검 중 (2017~작년 연도별)...")
     hist_frames = _load_all_parquets(days=2000)   # 보관된 전체 parquet 로드
     hist_wide   = _pivot_for_correlation(hist_frames)
     granger_target = next(

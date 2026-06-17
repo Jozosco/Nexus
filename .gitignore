@@ -14,9 +14,14 @@ env/
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
-# Data — raw 파일은 PII·독점 데이터 포함 가능 (CLAUDE.md §data)
-data/raw/
-!data/raw/.gitkeep
+# Data — API 수집 parquet 파일은 PII·독점 데이터 포함 가능 (CLAUDE.md §data)
+data/raw/*.parquet
+data/raw/**/*.parquet
+# 수동 업로드 참조 데이터(Excel·PDF)는 커밋 허용
+!data/raw/USDA/**/*.xlsx
+!data/raw/FAO/**/*.pdf
+!data/raw/**/.gitkeep
+!data/raw/**/*.md
 
 # Secrets
 .env

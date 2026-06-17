@@ -1,6 +1,6 @@
-name: Historical Data Backfill — 5-Year Seed (WBS 1.1.21)
+name: Historical Data Backfill — 2017~현재 전체 수집 (WBS 1.1.21)
 
-# 목적: 과거 5년(기본 2020~현재) 데이터를 일괄 수집 → C-08 DQ → C-06 EDA → G1 분석
+# 목적: 2017년부터 현재까지 데이터를 일괄 수집 → C-08 DQ → C-06 EDA → G1 분석
 # 실행 순서: 모든 커넥터 병렬 수집 → backfill-summary → c08-dq → c06-eda → g1-analysis
 #
 # BACKFILL_MODE=true: 모든 커넥터에 주입 → Perplexity 실시간(오늘 날짜만) 자동 건너뜀
@@ -14,9 +14,9 @@ on:
   workflow_dispatch:
     inputs:
       start_year:
-        description: "수집 시작 연도 (기본: 2020)"
+        description: "수집 시작 연도 (기본: 2017)"
         required: false
-        default: "2020"
+        default: "2017"
       end_year:
         description: "수집 종료 연도 (기본: 2025)"
         required: false
