@@ -257,6 +257,39 @@ jobs:
           path: data/raw/customs_import_*.parquet
           retention-days: 90
 
+  # ── WBS 1.1.41b: FAO AMIS Market Monitor PDF 수동 수집 ─────────────────────────
+  # PDF가 data/raw/FAO/AMIS/에 커밋된 경우에만 실행 (API 키 불필요)
+  fao-amis-ingest:
+    name: "1.1.41b | FAO AMIS PDF Ingest (수동 업로드 배치)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'fao-amis' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pdfplumber pandas pyarrow
+      - name: Check for FAO AMIS PDFs
+        id: check_pdf
+        run: |
+          COUNT=$(find data/raw/FAO/AMIS -name "*.pdf" 2>/dev/null | wc -l)
+          echo "pdf_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "FAO AMIS PDF 파일 수: $COUNT"
+      - name: Run FAO AMIS PDF ingest
+        if: steps.check_pdf.outputs.pdf_count != '0'
+        run: python scripts/ingest_fao_amis_pdf.py
+      - name: Upload FAO AMIS output
+        if: steps.check_pdf.outputs.pdf_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-fao-amis-${{ github.run_id }}
+          path: data/raw/fao_amis_historical.parquet
+          retention-days: 90
+          if-no-files-found: warn
+
   # ── WBS 1.4.1: GPR × SBO 상관관계 분석 (백필 완료 후 실행) ───────────────────
   gpr-sbo-correlation:
     name: "1.4.1 | GPR × SBO Correlation Analysis (Post-Backfill)"
@@ -299,6 +332,7 @@ jobs:
       - production-backfill
       - commodity-backfill
       - customs-backfill
+      - fao-amis-ingest
     if: always()
     steps:
       - uses: actions/checkout@v4
