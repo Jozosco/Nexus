@@ -37,134 +37,134 @@ GRANGER_YEARS   = list(range(2020, date.today().year))  # 2020 ~ 작년
 
 # ── G1 변수 설명 사전 (C-01/C-03 공동 관리) ──────────────────────────────────
 VARIABLE_CATALOG: list[dict] = [
-    # ── P1-01 상품가격 ──
-    {"code": "CBOT_BO_CLOSE", "category": "P1-01 상품가격", "name_ko": "CBOT 대두유 선물 종가",
+    # ── 상품가격 ──
+    {"code": "CBOT_BO_CLOSE", "category": "상품가격", "name_ko": "CBOT 대두유 선물 종가",
      "name_en": "CBOT Soybean Oil Futures Close",
      "desc_ko": "시카고상품거래소(CME/CBOT) 대두유 선물 종가. 국제 대두유 가격의 기준점. 국내 CIF 가격에 가장 직접적인 영향.",
      "desc_en": "CBOT soybean oil futures closing price. Primary international benchmark for soybean oil pricing.",
      "source": "yfinance / CME (BO=F)", "freq": "일간", "unit": "USc/lb"},
-    {"code": "CBOT_BO_VOLUME", "category": "P1-01 상품가격", "name_ko": "CBOT 대두유 선물 거래량",
+    {"code": "CBOT_BO_VOLUME", "category": "상품가격", "name_ko": "CBOT 대두유 선물 거래량",
      "name_en": "CBOT Soybean Oil Futures Volume",
      "desc_ko": "선물 거래량 급증은 가격 변동성 확대 선행지표. 시장 유동성·투기 포지션 반영.",
      "desc_en": "Futures volume spike signals price volatility. Reflects market liquidity and speculative positioning.",
      "source": "yfinance / CME (BO=F)", "freq": "일간", "unit": "계약수"},
-    {"code": "CPO_USD_MT", "category": "P1-01 상품가격", "name_ko": "팜유(CPO) 현물가",
+    {"code": "CPO_USD_MT", "category": "상품가격", "name_ko": "팜유(CPO) 현물가",
      "name_en": "Crude Palm Oil Spot Price",
      "desc_ko": "말레이시아 부르사(FCPO) 팜유 현물. 대두유와 직접 대체 관계(CPO-SBO 스프레드 >$175 → 대체 수요 이전 임계).",
      "desc_en": "Bursa Malaysia CPO spot. Direct substitute for soybean oil; CPO-SBO spread >$175/MT triggers demand substitution.",
      "source": "Trading Economics / Bursa Malaysia", "freq": "일간", "unit": "USD/MT"},
-    {"code": "CPO_GLOBAL_USD_MT_PROXY", "category": "P1-01 상품가격", "name_ko": "IMF 팜유 글로벌 벤치마크 (FRED)",
+    {"code": "CPO_GLOBAL_USD_MT_PROXY", "category": "상품가격", "name_ko": "IMF 팜유 글로벌 벤치마크 (FRED)",
      "name_en": "IMF Palm Oil Global Benchmark (FRED)",
      "desc_ko": "FRED PPOILUSDM — IMF 국제 팜유 가격 월별 지수. CPO 현물 미수집 시 대리 지표.",
      "desc_en": "FRED PPOILUSDM monthly proxy for international palm oil price.",
      "source": "FRED / IMF", "freq": "월간", "unit": "USD/MT"},
-    {"code": "ARS_USD_OFICIAL", "category": "P1-01 상품가격", "name_ko": "아르헨티나 공식 환율 (ARS/USD)",
+    {"code": "ARS_USD_OFICIAL", "category": "상품가격", "name_ko": "아르헨티나 공식 환율 (ARS/USD)",
      "name_en": "Argentina Official FX Rate (ARS/USD)",
      "desc_ko": "BCRA 공식 환율. 아르헨티나 대두유 수출 채산성 직결. 급격한 평가절하 → 수출 증가 → 국제가 하락 압력.",
      "desc_en": "BCRA official rate. Sharp ARS devaluation raises Argentine export competitiveness, suppressing global prices.",
      "source": "BCRA / api.bcra.gob.ar", "freq": "일간", "unit": "ARS/USD"},
-    # ── P1-01 거시경제 ──
-    {"code": "USDKRW", "category": "P1-01 거시경제", "name_ko": "원/달러 환율",
+    # ── 거시경제 ──
+    {"code": "USDKRW", "category": "거시경제", "name_ko": "원/달러 환율",
      "name_en": "KRW/USD Exchange Rate",
      "desc_ko": "한국 대두유 수입 원화 비용 결정. USD 강세(원화 약세) → 수입 CIF 원화 비용 증가.",
      "desc_en": "Determines KRW import cost. USD strengthening directly raises CIF cost in KRW.",
      "source": "FRED / BOK ECOS", "freq": "일간", "unit": "KRW/USD"},
-    {"code": "USDBRL", "category": "P1-01 거시경제", "name_ko": "헤알/달러 환율",
+    {"code": "USDBRL", "category": "거시경제", "name_ko": "헤알/달러 환율",
      "name_en": "BRL/USD Exchange Rate",
      "desc_ko": "브라질 수출 채산성 반영. BRL 약세 → 브라질 대두유 수출 증가 → 국제가 하락 압력.",
      "desc_en": "BRL weakness boosts Brazilian soybean oil exports, pressuring international prices downward.",
      "source": "FRED", "freq": "일간", "unit": "BRL/USD"},
-    {"code": "BRENT_USD_BBL", "category": "P1-01 거시경제", "name_ko": "브렌트 원유 가격",
+    {"code": "BRENT_USD_BBL", "category": "거시경제", "name_ko": "브렌트 원유 가격",
      "name_en": "Brent Crude Oil Price",
      "desc_ko": "식물성유 생산비(에너지·비료 투입비) + 바이오디젤 수요 연동. 유가 상승 → 대두유 바이오디젤 수요 증가 → 가격 상승.",
      "desc_en": "Affects input costs and biodiesel demand. Rising oil price → higher biodiesel demand → soybean oil price rise.",
      "source": "EIA / FRED", "freq": "일간", "unit": "USD/bbl"},
-    {"code": "CPI_KOREA", "category": "P1-01 거시경제", "name_ko": "한국 소비자물가지수",
+    {"code": "CPI_KOREA", "category": "거시경제", "name_ko": "한국 소비자물가지수",
      "name_en": "Korea CPI",
      "desc_ko": "국내 식품 가격 압력 지표. 수입 대두유 가격 상승이 CPI에 반영되는 시차 측정.",
      "desc_en": "Tracks domestic food price pressure. Monitors lag between import price rise and CPI pass-through.",
      "source": "KOSIS / BOK ECOS", "freq": "월간", "unit": "index"},
-    {"code": "DEXBZUS", "category": "P1-01 거시경제", "name_ko": "브라질 헤알/달러 환율 (FRED)",
+    {"code": "DEXBZUS", "category": "거시경제", "name_ko": "브라질 헤알/달러 환율 (FRED)",
      "name_en": "Brazilian Real / USD Exchange Rate (FRED DEXBZUS)",
      "desc_ko": "FRED 시리즈 DEXBZUS. BRL 약세(헤알 절하) → 브라질 대두유 달러 표시 가격 하락 → 수출 증가 → 국제가 하락 압력. 브라질은 세계 최대 대두 생산국(2위 수출국).",
      "desc_en": "FRED DEXBZUS. BRL depreciation lowers dollar-denominated export prices → Brazilian soybean oil export surge → global price suppression. Brazil is the world's top soybean producer.",
      "source": "FRED (Federal Reserve H.10)", "freq": "일간", "unit": "BRL/USD"},
-    {"code": "DEXCHUS", "category": "P1-01 거시경제", "name_ko": "중국 위안/달러 환율 (FRED)",
+    {"code": "DEXCHUS", "category": "거시경제", "name_ko": "중국 위안/달러 환율 (FRED)",
      "name_en": "Chinese Yuan / USD Exchange Rate (FRED DEXCHUS)",
      "desc_ko": "FRED 시리즈 DEXCHUS. 중국은 세계 최대 대두유 수입국. CNY 강세 → 수입 구매력 향상 → 수입 수요 증가 → 가격 상승 지지. CNY 약세는 반대 효과.",
      "desc_en": "FRED DEXCHUS. China is the world's largest soybean oil importer. CNY appreciation boosts import purchasing power, supporting prices; CNY weakness has the opposite effect.",
      "source": "FRED (Federal Reserve H.10)", "freq": "일간", "unit": "CNY/USD"},
-    {"code": "DEXMAUS", "category": "P1-01 거시경제", "name_ko": "말레이시아 링깃/달러 환율 (FRED)",
+    {"code": "DEXMAUS", "category": "거시경제", "name_ko": "말레이시아 링깃/달러 환율 (FRED)",
      "name_en": "Malaysian Ringgit / USD Exchange Rate (FRED DEXMAUS)",
      "desc_ko": "FRED 시리즈 DEXMAUS. 말레이시아는 세계 2위 팜유 생산국. MYR 약세 → 팜유 달러 가격 하락 → CPO-SBO 스프레드 확대 → 대두유 대체 수요 압박.",
      "desc_en": "FRED DEXMAUS. Malaysia is the world's 2nd largest palm oil producer. MYR depreciation lowers CPO dollar prices → CPO-SBO spread widens → substitution pressure on soybean oil.",
      "source": "FRED (Federal Reserve H.10)", "freq": "일간", "unit": "MYR/USD"},
-    {"code": "VIXCLS", "category": "P1-01 거시경제", "name_ko": "CBOE 변동성지수 (VIX)",
+    {"code": "VIXCLS", "category": "거시경제", "name_ko": "CBOE 변동성지수 (VIX)",
      "name_en": "CBOE Volatility Index (VIX, FRED VIXCLS)",
      "desc_ko": "FRED 시리즈 VIXCLS. '공포지수'. VIX >30 → 위험회피 심화 → 원자재 선물 투기포지션 청산 → 대두유 가격 급락 위험. 반대로 VIX 하락기에는 상품 가격 상승 경향. 단기 가격 변동성 선행지표.",
      "desc_en": "FRED VIXCLS. 'Fear gauge'. VIX >30 → risk-off → commodity futures liquidation → soybean oil price drop risk. VIX decline periods tend to support commodity price rises. Leading indicator of short-term price volatility.",
      "source": "FRED / CBOE", "freq": "일간", "unit": "index"},
-    # ── P1-02 지정학 ──
-    {"code": "GPR", "category": "P1-02 지정학", "name_ko": "지정학 리스크 지수 (GPR)",
+    # ── 지정학 ──
+    {"code": "GPR", "category": "지정학", "name_ko": "지정학 리스크 지수 (GPR)",
      "name_en": "Geopolitical Risk Index (GPR)",
      "desc_ko": "Caldara & Iacoviello GPR 지수. 전쟁·테러·정치 위기 뉴스 기반. 정규화 값 >0.022 → C-03 구조적 단절 경보.",
      "desc_en": "Caldara & Iacoviello GPR. Based on war/terror/political crisis news. Normalized >0.022 triggers C-03 alert.",
      "source": "policyuncertainty.com", "freq": "월간", "unit": "index (≈100 baseline)"},
-    {"code": "HORMUZ_THREAT_LEVEL", "category": "P1-02 지정학", "name_ko": "호르무즈 해협 위협 수준",
+    {"code": "HORMUZ_THREAT_LEVEL", "category": "지정학", "name_ko": "호르무즈 해협 위협 수준",
      "name_en": "Strait of Hormuz Threat Level",
      "desc_ko": "이란-미국 긴장·후티 공격 모니터링. 봉쇄 위협 → 유가 급등 → 벙커유 비용 → CFR 운임 프리미엄 +3~8%.",
      "desc_en": "Iran-US tension / Houthi attack monitoring. Closure threat → oil spike → bunker cost → CFR freight +3-8%.",
      "source": "Perplexity Pro (실시간)", "freq": "일간", "unit": "1=Low/2=Med/3=High"},
-    # ── P1-03 기후 ──
-    {"code": "ENSO_ONI", "category": "P1-03 기후", "name_ko": "ENSO 오세아닉 니뇨 지수 (ONI)",
+    # ── 기후 ──
+    {"code": "ENSO_ONI", "category": "기후", "name_ko": "ENSO 오세아닉 니뇨 지수 (ONI)",
      "name_en": "ENSO Oceanic Niño Index (ONI)",
      "desc_ko": "엘니뇨(+0.5↑)/라니냐(-0.5↓) 판단 지수. 브라질·아르헨티나 강수 패턴 → 대두 생산량 직결. |ONI|≥0.5 → C-03 기후 경보.",
      "desc_en": "El Niño/La Niña threshold: ±0.5. Controls Brazil/Argentina rainfall → soybean production. |ONI|≥0.5 = C-03 alert.",
      "source": "NOAA CPC", "freq": "월간", "unit": "°C anomaly"},
-    {"code": "DROUGHT_D2", "category": "P1-03 기후", "name_ko": "미국 심각 가뭄 비율 (D2)",
+    {"code": "DROUGHT_D2", "category": "기후", "name_ko": "미국 심각 가뭄 비율 (D2)",
      "name_en": "US Severe Drought Coverage (D2)",
      "desc_ko": "USDM 가뭄 지수 D2(심각) 면적 비율. 미국 대두 Top-5 생산주(IA/IL/IN/MN/NE) 기준. 작황 스트레스 선행지표.",
      "desc_en": "USDM D2 severe drought coverage for top-5 US soybean states. Leading indicator for crop stress.",
      "source": "drought.gov / USDM", "freq": "주간", "unit": "% of area"},
-    {"code": "T2M_BR_Mato_Grosso", "category": "P1-03 기후", "name_ko": "브라질 마토그로소 기온 (NASA POWER)",
+    {"code": "T2M_BR_Mato_Grosso", "category": "기후", "name_ko": "브라질 마토그로소 기온 (NASA POWER)",
      "name_en": "Brazil Mato Grosso Temperature (NASA POWER)",
      "desc_ko": "브라질 최대 대두 생산지 기온. 고온 스트레스(>35°C) → 대두 착협기 생산량 감소.",
      "desc_en": "Temperature in Brazil's largest soybean region. Heat stress (>35°C) during pod fill reduces yield.",
      "source": "NASA POWER API", "freq": "월간", "unit": "°C"},
-    # ── P1-03/P1-04 작황 ──
-    {"code": "SBO_PRODUCTION", "category": "P1-03/P1-04 작황", "name_ko": "대두유 글로벌 생산량 (USDA PSD)",
+    # ── 작황 ──
+    {"code": "SBO_PRODUCTION", "category": "작황", "name_ko": "대두유 글로벌 생산량 (USDA PSD)",
      "name_en": "Global Soybean Oil Production (USDA PSD)",
      "desc_ko": "USDA FAS PSD 마케팅연도별 글로벌 생산량. WASDE 발표 시 가격 변동의 핵심 드라이버.",
      "desc_en": "USDA FAS PSD global production by marketing year. Key price driver on WASDE release.",
      "source": "USDA FAS OpenData API", "freq": "마케팅연도", "unit": "1000 MT"},
-    {"code": "SBO_ENDING_STOCKS", "category": "P1-03/P1-04 작황", "name_ko": "대두유 기말 재고 (USDA PSD)",
+    {"code": "SBO_ENDING_STOCKS", "category": "작황", "name_ko": "대두유 기말 재고 (USDA PSD)",
      "name_en": "Global Soybean Oil Ending Stocks (USDA PSD)",
      "desc_ko": "재고/소비 비율(STU) <10% → C-03 공급 스트레스 경보. 역대 최저 재고는 가격 급등의 선행지표.",
      "desc_en": "Stocks-to-use <10% triggers C-03 supply stress alert. Record-low stocks precede price spikes.",
      "source": "USDA FAS OpenData API", "freq": "마케팅연도", "unit": "1000 MT"},
-    {"code": "SOYBEAN_PROD_BU", "category": "P1-03/P1-04 작황", "name_ko": "미국 주별 대두 생산량 (NASS)",
+    {"code": "SOYBEAN_PROD_BU", "category": "작황", "name_ko": "미국 주별 대두 생산량 (NASS)",
      "name_en": "US State Soybean Production (NASS)",
      "desc_ko": "USDA NASS 주별 대두 생산량. IA/IL/IN/MN/NE 합산 → 미국 전체 대두유 원료 공급 예측.",
      "desc_en": "USDA NASS state-level soybean production. Sum of top-5 states forecasts US soybean oil feedstock supply.",
      "source": "USDA NASS QuickStats", "freq": "연간", "unit": "Bushels"},
-    {"code": "SOYBEAN_PROD_TONNE_AR", "category": "P1-03/P1-04 작황", "name_ko": "아르헨티나 대두 생산량 (INDEC)",
+    {"code": "SOYBEAN_PROD_TONNE_AR", "category": "작황", "name_ko": "아르헨티나 대두 생산량 (INDEC)",
      "name_en": "Argentina Soybean Production (INDEC)",
      "desc_ko": "INDEC 공식 통계. 아르헨티나는 세계 1위 대두유 수출국. 가뭄·라니냐 시 생산 급감 → 국제가 급등.",
      "desc_en": "INDEC official stats. Argentina is the world's largest soybean oil exporter. Drought/La Niña → supply shock.",
      "source": "datos.gob.ar / INDEC", "freq": "연간", "unit": "Tonnes"},
-    # ── P1-04 해운 ──
-    {"code": "BCAA", "category": "P1-04 해운", "name_ko": "BCAA (식물성유지 탱커 운임)",
+    # ── 해운 ──
+    {"code": "BCAA", "category": "해운", "name_ko": "BCAA (식물성유지 탱커 운임)",
      "name_en": "Baltic Chemical & Agricultural Oil Assessments",
      "desc_ko": "Baltic Exchange 2025-02 출시. 대두유·팜유·팜올레인 탱커 운임 전용. 한국 CIF 도착 원가에 직결.",
      "desc_en": "Launched Feb 2025 by Baltic Exchange. Vegetable oil tanker freight: CPO/SBO/palm olein routes. Direct CIF cost driver.",
      "source": "Perplexity Pro (직접 API: Baltic Exchange/ICE 기업 구독)", "freq": "일간", "unit": "USD/MT"},
-    {"code": "BDI", "category": "P1-04 해운", "name_ko": "발틱 건화물 지수 (BDI)",
+    {"code": "BDI", "category": "해운", "name_ko": "발틱 건화물 지수 (BDI)",
      "name_en": "Baltic Dry Index (BDI)",
      "desc_ko": "건화물 운임 지수. 대두유 직접 관련성은 낮으나 글로벌 무역 경기·원자재 수요 대리 지표. C-03 z>2σ(90일) → 구조적 단절 경보.",
      "desc_en": "Dry bulk freight. Indirect indicator of global trade activity. C-03 alert: z-score >2σ (90-day rolling).",
      "source": "Trading Economics / Baltic Exchange", "freq": "일간", "unit": "points"},
-    # ── P1-04 수입 통계 ──
-    {"code": "import_cif_usd", "category": "P1-04 수입통계", "name_ko": "한국 대두유 수입 CIF 금액 (HS 1507)",
+    # ── 수입통계 ──
+    {"code": "import_cif_usd", "category": "수입통계", "name_ko": "한국 대두유 수입 CIF 금액 (HS 1507)",
      "name_en": "Korea Soybean Oil Import CIF Value (HS 1507)",
      "desc_ko": "관세청 공식 통관 데이터. 국가별 수입 CIF 단가 산출 가능. 실제 조달 비용 역산의 기준점.",
      "desc_en": "Korea Customs official trade data. Allows per-country CIF unit price calculation. Ground truth for procurement cost.",
@@ -325,14 +325,15 @@ LASSO_ZERO_DIAGNOSIS: list[dict] = [
 
 # ── 수집 파일별 지표 코드 매핑 ────────────────────────────────────────────────
 FILE_PATTERNS: dict[str, str] = {
-    "economic_indicators": "P1-01 거시(Fed/CPI/FX/Brent)",
-    "shipping_indices":    "P1-04 해운(BCAA/BDI)",
-    "crop_data":           "P1-01/P1-03 작황(WASDE/PSD)",
-    "climate_data":        "P1-03 기후(ONI/기상이상)",
-    "geopolitical_indices":"P1-02 지정학(GPR/호르무즈)",
-    "production_data":     "P1-04 생산량(NASS/FAOSTAT/NASA)",
-    "commodity_data":      "P1-01 상품가(CBOT/CPO/ARS/가뭄)",
-    "customs_import":      "P1-04 수입통계(관세청 HS1507)",
+    "economic_indicators": "거시경제(Fed/CPI/FX/Brent)",
+    "shipping_indices":    "해운지수(BCAA/BDI)",
+    "crop_data":           "작황(WASDE/PSD)",
+    "climate_data":        "기후(ONI/기상이상)",
+    "geopolitical_indices":"지정학(GPR/호르무즈)",
+    "production_data":     "생산량(NASS/FAOSTAT/NASA)",
+    "commodity_data":      "상품가격(CBOT/CPO/ARS/가뭄)",
+    "customs_import":      "수입통계(관세청 HS1507)",
+    "geointel":            "지정학 인텔리전스(USGS/NOAA/GDELT/FIRMS)",
 }
 
 
@@ -824,7 +825,7 @@ def _build_category_summary(importance_df: pd.DataFrame, frames: dict) -> dict:
     |Pearson r| > 0.3 유의 변수 수와 평균 |r|을 카테고리별로 집계.
 
     Returns:
-        {"P1-01 거시경제": {"count": N, "sig_count": N, "mean_abs_r": 0.XX, "top_var": "DEXBZUS"}, ...}
+        {"거시경제": {"count": N, "sig_count": N, "mean_abs_r": 0.XX, "top_var": "DEXBZUS"}, ...}
     """
     code_to_category: dict[str, str] = {v["code"]: v["category"] for v in VARIABLE_CATALOG}
 
@@ -964,12 +965,83 @@ def _render_executive_summary(
             "Data collection in progress — category-level analysis available after 30+ days of accumulation."
         )
 
-    note_label = "C-level 핵심 메시지" if lang == "ko" else "C-Level Key Message"
+    note_label = "핵심 내용"
 
     return f"""<div class="{signal_class}">{signal_text}</div>
 {kpi_html}
 {cat_table}
 <div class="note"><strong>{note_label}:</strong> {clevel_msg}</div>"""
+
+
+_CAUSAL_CHAINS: list[dict[str, str]] = [
+    {
+        "driver_ko": "Clean Fuel 생산 세액공제 (45Z)",
+        "driver_en": "Clean Fuel Production Tax Credit (45Z)",
+        "chain_ko": "45Z 세액공제 시행 → 미국 내 SBO 바이오디젤 수요 증가 → 미국 수출 물량 감소·한국 수입 경쟁 심화 → 국제 대두유 가격 상승",
+        "chain_en": "45Z tax credit enacted → US domestic SBO biodiesel demand rises → US export volume falls, Korean import competition intensifies → global SBO price increase",
+        "direction": "up",
+    },
+    {
+        "driver_ko": "아르헨티나 대두유 수출세 인상",
+        "driver_en": "Argentina SBO Export Tax Hike",
+        "chain_ko": "아르헨티나 수출세 인상 → 수출 채산성 악화 → 글로벌 공급 감소 → 대두유 가격 상승",
+        "chain_en": "Argentina raises export tax → export profitability deteriorates → global supply contracts → SBO price rises",
+        "direction": "up",
+    },
+    {
+        "driver_ko": "ENSO 라니냐 — 남미 가뭄",
+        "driver_en": "ENSO La Niña — South America Drought",
+        "chain_ko": "ENSO 라니냐 발생 → 브라질·아르헨티나 강우량 감소(가뭄) → 대두 작황 감소 → 대두유 생산량 감소 → 가격 상승",
+        "chain_en": "La Niña develops → rainfall deficit in Brazil & Argentina → soybean crop failure → SBO production decline → price rise",
+        "direction": "up",
+    },
+    {
+        "driver_ko": "호르무즈/말라카 해협 위기",
+        "driver_en": "Hormuz / Malacca Strait Crisis",
+        "chain_ko": "해협 봉쇄 위기 → 탱커 운임 급등(BDI 연동) → CIF 비용 증가 → 한국 수입 가격 상승",
+        "chain_en": "Strait closure risk → tanker freight rates spike (BDI correlated) → CIF cost increase → Korean import price rises",
+        "direction": "up",
+    },
+    {
+        "driver_ko": "CPO-SBO 스프레드 확대 (>$175/MT)",
+        "driver_en": "CPO-SBO Spread Widening (>$175/MT)",
+        "chain_ko": "CPO-SBO 스프레드 > $175/MT → 식품업계 팜유로 대체 → SBO 수요 감소 → 가격 하락 압력",
+        "chain_en": "CPO-SBO spread exceeds $175/MT → food manufacturers switch to palm oil → SBO demand falls → downward price pressure",
+        "direction": "down",
+    },
+    {
+        "driver_ko": "발틱운임지수(BDI) 급등",
+        "driver_en": "Baltic Dry Index (BDI) Surge",
+        "chain_ko": "BDI 급등 → 해운비 상승 → 남미발 대두유 수출 채산성 악화 → 수출 감소 → 국제가 상승",
+        "chain_en": "BDI surges → shipping costs rise → South American SBO export margins compress → exports fall → global price rises",
+        "direction": "up",
+    },
+]
+
+
+def _render_causal_chains(lang: str = "ko") -> str:
+    """대두유 가격에 영향을 주는 인과관계 체인을 HTML로 렌더링."""
+    title = "주요 가격 영향 인과관계" if lang == "ko" else "Key Causal Chains Affecting SBO Price"
+    rows = ""
+    for c in _CAUSAL_CHAINS:
+        driver = c["driver_ko"] if lang == "ko" else c["driver_en"]
+        chain  = c["chain_ko"]  if lang == "ko" else c["chain_en"]
+        arrow  = "▲ 상승" if c["direction"] == "up" else "▼ 하락"
+        color  = "#c62828" if c["direction"] == "up" else "#1565c0"
+        rows += (
+            f"<tr>"
+            f"<td style='font-weight:bold;white-space:nowrap'>{driver}</td>"
+            f"<td style='font-size:12px'>{chain}</td>"
+            f"<td style='color:{color};font-weight:bold;white-space:nowrap'>{arrow}</td>"
+            f"</tr>"
+        )
+    hdr_driver = "주요 동인" if lang == "ko" else "Driver"
+    hdr_chain  = "인과관계 경로" if lang == "ko" else "Causal Chain"
+    hdr_dir    = "가격 방향" if lang == "ko" else "Price Direction"
+    return f"""<h2>{title}</h2>
+<table class="tbl"><thead>
+<tr><th>{hdr_driver}</th><th>{hdr_chain}</th><th>{hdr_dir}</th></tr>
+</thead><tbody>{rows}</tbody></table>"""
 
 
 def _render_variable_catalog(lang: str = "ko") -> str:
@@ -1031,8 +1103,8 @@ def _render_html(
         if lang == "ko" else
         "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
     )
-    title  = "G1 변수 중요도 분석 리포트" if lang == "ko" else "G1 Variable Importance Report"
-    sub    = f"C-03 Lead Data Scientist · 최근 {days}일 데이터 기준" if lang == "ko" else f"C-03 Lead Data Scientist · Based on last {days} days"
+    title  = "핵심 변수 분석 보고서" if lang == "ko" else "Key Variable Analysis Report"
+    sub    = f"최근 {days}일 데이터 기준" if lang == "ko" else f"Based on last {days} days"
 
     # executive summary
     category_summary = _build_category_summary(importance_df, {})
@@ -1054,6 +1126,9 @@ def _render_html(
     else:
         alerts_html = "<p>✅ 현재 임계값 초과 변수 없음</p>" if lang == "ko" else "<p>✅ No structural break thresholds breached.</p>"
 
+    # causal chains
+    causal_chains_html = _render_causal_chains(lang=lang)
+
     # variable catalog
     catalog_html = _render_variable_catalog(lang=lang)
     catalog_title = "분석 변수 카탈로그" if lang == "ko" else "Variable Catalog"
@@ -1066,7 +1141,7 @@ def _render_html(
     )
 
     # threshold rationale table
-    thr_title = "C-03 구조적 단절 임계값 산출 근거" if lang == "ko" else "C-03 Structural Break Threshold Rationale"
+    thr_title = "구조적 단절 임계값 산출 근거" if lang == "ko" else "Structural Break Threshold Rationale"
     thr_rows = ""
     for t in THRESHOLD_RATIONALE:
         rationale = t["rationale_ko"] if lang == "ko" else t["rationale_en"]
@@ -1200,7 +1275,7 @@ def _render_html(
 <h2>{lasso_title}</h2>
 {lasso_html}
 
-<h2>{'구조적 단절 임계값 현황 (C-03)' if lang == 'ko' else 'Structural Break Status (C-03)'}</h2>
+<h2>{'구조적 단절 임계값 현황' if lang == 'ko' else 'Structural Break Status'}</h2>
 {alerts_html}
 
 <div class="note">
@@ -1218,9 +1293,10 @@ def _render_html(
 
 {granger_results_section}
 
+{causal_chains_html}
+
 <div class="footer">
-  Project Nexus · G1 Variable Importance · C-03 Lead Data Scientist (claude-opus-4-7, Thinking Mode) ·
-  Branch: claude/setup-nexus-llm-tools-RX4aS · {run_ts} UTC
+  Project Nexus · 핵심 변수 분석 보고서 · Branch: claude/setup-nexus-llm-tools-RX4aS · {run_ts} UTC
 </div>
 </body>
 </html>"""
@@ -1299,7 +1375,7 @@ def run(days: int = 7) -> None:
     # Markdown 요약 (기계 판독용 + generate_research_pdf.py 입력)
     breach = [a for a in alerts if "🚨" in a.get("상태", "")]
     md_lines = [
-        f"# G1 변수 중요도 분석 — {run_ts[:10]}",
+        f"# 핵심 변수 분석 보고서 — {run_ts[:10]}",
         f"**Run ID**: {run_id}  |  **분석 기간**: 최근 {days}일  |  **생성**: {run_ts} UTC",
         "",
         "## 구조적 단절 임계값 현황",
@@ -1337,7 +1413,7 @@ def run(days: int = 7) -> None:
     md_lines += [
         "",
         "---",
-        "*Project Nexus · G1 Variable Importance · C-03 Lead Data Scientist*",
+        "*Project Nexus · 핵심 변수 분석 보고서*",
         f"*HITL 게이트: 조달 결정은 CLAUDE.md §6 HITL 프로세스 필요*",
     ]
     md_path = f"{REPORT_DIR}/g1_variable_importance_{tag}_ko.md"
