@@ -1,0 +1,50 @@
+name: Auto-Move Misplaced GATS Files
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-move:
+    runs-on: ubuntu-latest
+    # Skip if this commit is itself from the bot (prevents infinite loop)
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Check if misplaced GATS files exist
+        id: check
+        run: |
+          EXPORT_FILE="data/2026년 01~04월 미국 對국가별 수출량.xlsx"
+          REEXPORT_FILE="data/2026년 01~04월 미국 對국가별 재수출량.xlsx"
+          MOVED=false
+          if [ -f "$EXPORT_FILE" ]; then
+            echo "Found: $EXPORT_FILE"
+            MOVED=true
+          fi
+          if [ -f "$REEXPORT_FILE" ]; then
+            echo "Found: $REEXPORT_FILE"
+            MOVED=true
+          fi
+          echo "needs_move=$MOVED" >> "$GITHUB_OUTPUT"
+
+      - name: Move GATS files to correct location
+        if: steps.check.outputs.needs_move == 'true'
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          EXPORT_FILE="data/2026년 01~04월 미국 對국가별 수출량.xlsx"
+          REEXPORT_FILE="data/2026년 01~04월 미국 對국가별 재수출량.xlsx"
+          DEST="data/raw/USDA/FAS/GATS/"
+          mkdir -p "$DEST"
+          [ -f "$EXPORT_FILE" ]   && git mv "$EXPORT_FILE"   "$DEST"
+          [ -f "$REEXPORT_FILE" ] && git mv "$REEXPORT_FILE" "$DEST"
+          git commit -m "data: 2026 GATS 01~04월 파일 이동 (data/ → data/raw/USDA/FAS/GATS/) [skip ci]"
+          git push origin main
