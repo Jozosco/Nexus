@@ -84,7 +84,7 @@ def _fetch(url: str, params: dict | None = None, max_retries: int = 4) -> httpx.
             delay *= 2
 
 
-def fetch_enso_index(start_year: int = 2020) -> pd.DataFrame:
+def fetch_enso_index(start_year: int = 2017) -> pd.DataFrame:
     """NOAA CPC ONI (Oceanic Niño Index) 수집 — API 키 불필요.
     파일 형식: SEAS YR ANOM (예: DJF 1950 -1.28)
     """
@@ -124,7 +124,7 @@ def fetch_enso_index(start_year: int = 2020) -> pd.DataFrame:
 
 
 def fetch_openmeteo_regional_climate(
-    start_date: str = "2020-01-01",
+    start_date: str = "2017-01-01",
     end_date: str | None = None,
 ) -> pd.DataFrame:
     """Open-Meteo 아카이브 API — 12개 주요 대두유 생산지역 일별 기후 수집.
@@ -262,7 +262,7 @@ def fetch_ecmwf_era5() -> pd.DataFrame:
     return df
 
 
-def run(start_year: int = 2020) -> None:
+def run(start_year: int = 2017) -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
     frames = []

@@ -73,7 +73,7 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
             "commodity_desc": "SOYBEANS",
             "statisticcat_desc": "PRODUCTION",
             "agg_level_desc": "STATE",
-            "year__GE": 2020,   # 수집 범위 표준화: 2020년 이후
+            "year__GE": 2017,   # 수집 범위 표준화: 2017년 이후
             "unit_desc": "BU",
             "format": "JSON",
         })
@@ -103,7 +103,7 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def fetch_faostat_soybeans(year_start: int = 2020) -> pd.DataFrame:
+def fetch_faostat_soybeans(year_start: int = 2017) -> pd.DataFrame:
     """FAOSTAT — 국가별 대두 생산량 시계열 (공개, 키 불필요). AgML-CY-Bench 벤치마크 데이터소스."""
     try:
         r = _get(FAOSTAT_BASE, {
@@ -188,7 +188,7 @@ def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
     수집 범위: start_date(기본 2020-01-01)부터 현재까지 (다른 커넥터와 통일).
     """
     end   = date.today()
-    start = start_date if start_date else date(2020, 1, 1)  # 수집 범위 표준화
+    start = start_date if start_date else date(2017, 1, 1)  # 수집 범위 표준화
     rows = []
     for location, coord in ORIGIN_COORDS.items():
         try:
@@ -297,7 +297,7 @@ def fetch_perplexity_production_regions() -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def fetch_fas_esr_soybean_oil(start_year: int = 2020) -> pd.DataFrame:
+def fetch_fas_esr_soybean_oil(start_year: int = 2017) -> pd.DataFrame:
     """USDA FAS Export Sales Reporting (ESR) — 대두유 수출 판매량 (국가별·마케팅연도별).
 
     검증된 엔드포인트 (2026-05-13 사용자 확인):

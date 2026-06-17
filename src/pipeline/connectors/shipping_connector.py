@@ -128,7 +128,7 @@ def fetch_bdi_te(start_date: str | None = None, end_date: str | None = None) -> 
         print("[정보] TRADING_ECONOMICS_API_KEY 미등록 — BDI TE REST 수집 건너뜀")
         return pd.DataFrame()
 
-    _start = start_date or "2020-01-01"
+    _start = start_date or "2017-01-01"
     _end   = end_date or date.today().isoformat()
 
     for symbol in ("BDI", "BALTDRYIDX", "bdi"):
@@ -176,7 +176,7 @@ def fetch_bdi_te(start_date: str | None = None, end_date: str | None = None) -> 
     return pd.DataFrame()
 
 
-def fetch_bdi_stooq(start_date: str = "2020-01-01") -> pd.DataFrame:
+def fetch_bdi_stooq(start_date: str = "2017-01-01") -> pd.DataFrame:
     """pandas-datareader stooq를 통한 BDI 히스토리 폴백 (Trading Economics 키 미등록 시).
 
     stooq.com 무료 데이터 — API 키 불필요. BDI 심볼: ^BDI 또는 BCOM:IN.
@@ -232,7 +232,7 @@ def run() -> None:
             print("[경고] PERPLEXITY_API_KEY 미등록 — BCAA 수집 건너뜀")
 
     # BDI: C-03 구조적 단절 모니터링 (Trading Economics REST API → stooq 폴백)
-    hist_start = f"{os.environ.get('HISTORICAL_START_YEAR', '2020')}-01-01"
+    hist_start = f"{os.environ.get('HISTORICAL_START_YEAR', '2017')}-01-01"
     bdi = fetch_bdi_te(start_date=hist_start)
     if not bdi.empty:
         frames.append(bdi)

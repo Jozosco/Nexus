@@ -1,0 +1,121 @@
+name: 데이터 파일 폴더 재편 (data/ → data/raw/USDA·FAO)
+
+# 목적: data/ 루트에 있는 Excel·PDF 파일을 구조화된 서브디렉토리로 이동
+# 실행 조건: workflow_dispatch 수동 실행 전용 (1회성 마이그레이션)
+# 대상 브랜치: main
+#
+# 이동 규칙:
+#   *년_곡물 및 유지류 취합본.xlsx  → data/raw/USDA/WASDE/
+#   {Oil/Oilseed/Meal} Soybean*.xlsx → data/raw/USDA/FAS/PSD/
+#   *년 미국 對국가별 수출*.xlsx     → data/raw/USDA/FAS/GATS/
+#   *년 *월_Market Monitor Issue.pdf → data/raw/FAO/AMIS/
+#
+# 보안: GitHub Secrets 불필요. GITHUB_TOKEN 자동 사용.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "드라이런 모드 (true=이동 미실행, 계획만 출력)"
+        required: false
+        default: "true"
+
+permissions:
+  contents: write
+
+jobs:
+  reorganize:
+    name: 파일 재편 (data/ → data/raw/)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃 (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: git 설정
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      - name: 이동 대상 파일 목록 확인
+        run: |
+          echo "=== WASDE Excel (→ data/raw/USDA/WASDE/) ==="
+          ls data/*년_곡물\ 및\ 유지류\ 취합본.xlsx 2>/dev/null || echo "(없음)"
+          ls data/*년\ 1~5월_곡물\ 및\ 유지류\ 취합본.xlsx 2>/dev/null || echo "(없음)"
+
+          echo ""
+          echo "=== PS&D Excel (→ data/raw/USDA/FAS/PSD/) ==="
+          ls data/Oil*Soybean*.xlsx data/Oilseed*Soybean*.xlsx data/Meal*Soybean*.xlsx 2>/dev/null || echo "(없음)"
+
+          echo ""
+          echo "=== GATS Excel (→ data/raw/USDA/FAS/GATS/) ==="
+          ls data/*년\ 미국\ 對국가별\ *.xlsx 2>/dev/null || echo "(없음)"
+
+          echo ""
+          echo "=== FAO AMIS PDF (→ data/raw/FAO/AMIS/) ==="
+          ls data/*년\ *월_Market\ Monitor\ Issue.pdf 2>/dev/null | head -10 || echo "(없음)"
+          echo "(총 $(ls data/*년\ *월_Market\ Monitor\ Issue.pdf 2>/dev/null | wc -l)개)"
+
+      - name: 파일 이동 실행
+        if: ${{ inputs.dry_run == 'false' }}
+        run: |
+          set -e
+
+          # ── WASDE Excel ────────────────────────────────────────────────────────
+          mkdir -p data/raw/USDA/WASDE
+          for f in data/*년_곡물\ 및\ 유지류\ 취합본.xlsx \
+                   data/*년\ 1~5월_곡물\ 및\ 유지류\ 취합본.xlsx; do
+            [ -f "$f" ] && git mv "$f" data/raw/USDA/WASDE/ && echo "이동: $f"
+          done
+
+          # ── PS&D Excel ─────────────────────────────────────────────────────────
+          mkdir -p data/raw/USDA/FAS/PSD
+          for f in "data/Oil, Soybean.xlsx" \
+                   "data/Oil, Soybean (Local).xlsx" \
+                   "data/Oilseed, Soybean.xlsx" \
+                   "data/Meal, Soybean.xlsx"; do
+            [ -f "$f" ] && git mv "$f" data/raw/USDA/FAS/PSD/ && echo "이동: $f"
+          done
+
+          # ── GATS Excel ─────────────────────────────────────────────────────────
+          mkdir -p data/raw/USDA/FAS/GATS
+          for f in data/*년\ 미국\ 對국가별\ 수출량.xlsx \
+                   data/*년\ 미국\ 對국가별\ 재수출량.xlsx; do
+            [ -f "$f" ] && git mv "$f" data/raw/USDA/FAS/GATS/ && echo "이동: $f"
+          done
+
+          # ── FAO AMIS PDF ───────────────────────────────────────────────────────
+          mkdir -p data/raw/FAO/AMIS
+          for f in data/*년\ *월_Market\ Monitor\ Issue.pdf; do
+            [ -f "$f" ] && git mv "$f" data/raw/FAO/AMIS/ && echo "이동: $f"
+          done
+
+          echo ""
+          echo "=== 이동 후 상태 ==="
+          git status --short
+
+      - name: 변경사항 커밋 및 푸시
+        if: ${{ inputs.dry_run == 'false' }}
+        run: |
+          MOVED=$(git status --short | grep "^R" | wc -l)
+          if [ "$MOVED" -gt 0 ]; then
+            git commit -m "data: raw 파일 폴더 재편 — ${MOVED}개 파일 이동
+
+          - data/*년_곡물 및 유지류 취합본.xlsx → data/raw/USDA/WASDE/
+          - data/{Oil,Oilseed,Meal} Soybean*.xlsx → data/raw/USDA/FAS/PSD/
+          - data/*년 미국 對국가별 *.xlsx → data/raw/USDA/FAS/GATS/
+          - data/*년 *월_Market Monitor Issue.pdf → data/raw/FAO/AMIS/"
+            git push origin main
+            echo "[완료] ${MOVED}개 파일 이동 및 커밋 완료"
+          else
+            echo "[정보] 이동할 파일 없음 — 이미 정리되었거나 파일 미존재"
+          fi
+
+      - name: 드라이런 요약
+        if: ${{ inputs.dry_run != 'false' }}
+        run: |
+          echo "=== 드라이런 모드 — 실제 이동 미실행 ==="
+          echo "실제 이동하려면 dry_run=false로 재실행하세요."

@@ -233,7 +233,7 @@ def fetch_customs_sbo_imports(
     return df
 
 
-def fetch_comtrade_sbo_imports_fallback(start_year: int = 2020) -> pd.DataFrame:
+def fetch_comtrade_sbo_imports_fallback(start_year: int = 2017) -> pd.DataFrame:
     """UN Comtrade Plus — 대두유(HS 1507) 한국 수입 통계 (comtradeapicall 패키지).
 
     무료: previewFinalData (500건/일)
@@ -317,7 +317,7 @@ def run() -> None:
     df = fetch_customs_sbo_imports(start_year=start_year)
     if df.empty:
         print("[정보] 관세청 미수집 — UN Comtrade 폴백 시도")
-        df = fetch_comtrade_sbo_imports_fallback(start_year=2020)
+        df = fetch_comtrade_sbo_imports_fallback(start_year=2017)
 
     if df.empty:
         print("[경고] 관세청·UN Comtrade 모두 실패 — API 키 확인 필요")

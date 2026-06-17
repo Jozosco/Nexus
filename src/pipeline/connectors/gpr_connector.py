@@ -51,7 +51,7 @@ def _fetch_gpr_index() -> pd.DataFrame:
         df["ingested_at"]     = pd.Timestamp.utcnow()
         df = df.dropna(subset=["value"])
         # 수집 범위 표준화: 2020-01-01 이후 (다른 커넥터와 통일)
-        df = df[df["price_date"] >= pd.Timestamp("2020-01-01")]
+        df = df[df["price_date"] >= pd.Timestamp("2017-01-01")]
         return df
     except Exception as e:
         print(f"[경고] GPR 인덱스 다운로드 실패: {e}")

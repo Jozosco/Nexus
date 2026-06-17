@@ -109,7 +109,7 @@ def fetch_wasde_soybean_oil(marketing_year: int | None = None) -> pd.DataFrame:
     return df.dropna(subset=["value"])
 
 
-def fetch_wasde_multi_year(start_year: int = 2020) -> pd.DataFrame:
+def fetch_wasde_multi_year(start_year: int = 2017) -> pd.DataFrame:
     """2020년부터 현재까지 연도별 WASDE PSD 수급 데이터를 일괄 수집."""
     current_year = date.today().year
     frames = []
@@ -177,7 +177,7 @@ def run() -> None:
     today = date.today().strftime("%Y%m%d")
 
     # HISTORICAL_START_YEAR: 백필 워크플로우가 주입 (미설정 시 기본 2020)
-    start_year = int(os.environ.get("HISTORICAL_START_YEAR", "2020"))
+    start_year = int(os.environ.get("HISTORICAL_START_YEAR", "2017"))
     backfill_mode = os.environ.get("BACKFILL_MODE", "").lower() == "true"
     if backfill_mode:
         print(f"[정보] BACKFILL_MODE 활성화 — WASDE PSD {start_year}년~현재 연도별 일괄 수집")
