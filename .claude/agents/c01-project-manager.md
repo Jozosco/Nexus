@@ -1,7 +1,7 @@
 ---
 id: C-01
 name: Senior Project Manager
-model: claude-opus-4-7
+model: claude-opus-4-8
 llm_route: CLAUDE_NATIVE
 pattern: Supervisor
 skill_file: .claude/skills/common/01_senior_pm.md

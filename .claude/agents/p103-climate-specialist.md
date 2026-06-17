@@ -1,7 +1,7 @@
 ---
 id: P1-03
 name: Senior Agrometeorologist & Climate Specialist
-model: claude-opus-4-7
+model: claude-sonnet-4-6
 llm_route: REAL_TIME_RESEARCH
 pattern: Expert Pool
 skill_file: .claude/skills/phase1/03_climate_specialist.md

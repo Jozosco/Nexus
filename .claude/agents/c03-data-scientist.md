@@ -1,7 +1,7 @@
 ---
 id: C-03
 name: Lead Data Scientist — Structural Break & Variable Importance Engine
-model: claude-opus-4-7
+model: claude-opus-4-8
 llm_route: CLAUDE_NATIVE
 thinking_mode: enabled   # Claude Opus 4.7 extended thinking for statistical reasoning
 pattern: Expert Pool

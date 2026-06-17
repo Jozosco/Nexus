@@ -1,7 +1,7 @@
 ---
 id: C-08
 name: Data Quality Validator — DQSOps Automated Gatekeeper
-model: claude-haiku-4-5
+model: claude-haiku-4-5-20251001
 llm_route: STRUCTURED_EXTRACT
 thinking_mode: disabled
 pattern: Expert Pool

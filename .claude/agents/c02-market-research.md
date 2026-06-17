@@ -1,7 +1,7 @@
 ---
 id: C-02
 name: Market Research & Intelligence Specialist
-model: claude-opus-4-7
+model: claude-opus-4-8
 llm_route: REAL_TIME_RESEARCH (Perplexity sonar-pro)
 pattern: Expert Pool
 skill_file: .claude/skills/common/02_market_research.md

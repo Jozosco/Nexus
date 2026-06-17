@@ -11,24 +11,24 @@
 
 | # | Agent | File | Primary Model | Secondary LLM | Core Purpose |
 |---|---|---|---|---|---|
-| C-01 | Senior PM | `common/01_senior_pm.md` | Claude Sonnet 4.6 | — | Orchestration, WSJF prioritization, Korean status reports |
-| C-02 | Market Research Specialist | `common/02_market_research.md` | Perplexity Pro | Gemini AI Pro | Real-time intelligence, NotebookLM hub |
-| C-03 | Data Scientist | `common/03_data_scientist.md` | Claude Sonnet 4.6 | ChatGPT Team | G1/G2/G3 model execution, statistical analysis |
-| C-04 | Data & ML Infrastructure Engineer | `common/04_azure_engineer.md` | Claude Sonnet 4.6 | — | Snowflake pipelines, Azure ML, GitHub Actions |
-| C-05 | Code Reviewer (QA/QC) | `common/05_code_reviewer.md` | Claude Haiku 4.5 → Sonnet 4.6 | — | Style/security/correctness gating |
-| C-06 | EDA Agent | `common/06_eda_agent.md` | Claude Sonnet 4.6 | Gemini AI Pro | Statistical profiling, anomaly flagging |
+| C-01 | Senior PM | `common/01_senior_pm.md` | Claude Opus 4.8 | — | Orchestration, WSJF prioritization, Korean status reports |
+| C-02 | Market Research Specialist | `common/02_market_research.md` | Claude Opus 4.8 | Perplexity Pro | Real-time intelligence, NotebookLM hub |
+| C-03 | Data Scientist | `common/03_data_scientist.md` | Claude Opus 4.8 (thinking) | — | G1/G2/G3 model execution, statistical analysis |
+| C-04 | Document Intelligence & Infrastructure | `common/04_azure_engineer.md` | Claude Sonnet 4.6 | — | PDF/Excel ingestion, Snowflake pipelines, Azure ML, GitHub Actions |
+| C-05 | Code Reviewer (QA/QC) | `common/05_code_reviewer.md` | Claude Haiku 4.5 | — | Style/security/correctness gating (fast, deterministic) |
+| C-06 | EDA Agent | `common/06_eda_agent.md` | Claude Sonnet 4.6 | Gemini 2.5 Pro | Statistical profiling, anomaly flagging |
 | C-07 | Documentation & Knowledge Manager | `common/07_documentation_agent.md` | Claude Haiku 4.5 | — | MEMORY.md, reports, stakeholder docs |
-| C-08 | Data Quality Validator | `common/08_data_validator.md` | Claude Haiku 4.5 | — | Schema enforcement, great_expectations, pipeline integrity |
+| C-08 | Data Quality Validator | `common/08_data_validator.md` | Claude Haiku 4.5 | — | DQSOps 5-dimension scoring, schema enforcement |
 
 ### Tier 1 — Phase 1: Foundation Agents
 
 | # | Agent | File | Primary Model | Secondary LLM | Core Purpose |
 |---|---|---|---|---|---|
-| P1-01 | Commodity Analyst | `phase1/01_commodity_analyst.md` | Claude Opus 4.7 | Perplexity Pro | Price fundamentals, supply/demand balance |
-| P1-02 | Geopolitical & Trade Risk Analyst | `phase1/02_geopolitical_analyst.md` | Claude Opus 4.7 | Perplexity Pro | Trade route risk, sanctions, conflict impact |
-| P1-03 | Agrometeorologist / Climate Specialist | `phase1/03_climate_specialist.md` | Claude Opus 4.7 | Perplexity Pro | ENSO, crop yield, AA protocols, agromet bulletins |
-| P1-04 | Supply Chain & Logistics Analyst | `phase1/04_supply_chain_analyst.md` | Claude Opus 4.7 | Perplexity Pro | BDI, CFR optimization, ABCD value chain, 3-month lead-time |
-| ~~P1-05~~ | ~~Data Pipeline Architect~~ | *(폐기 — C-04에 흡수)* | — | — | WBS 1.1.1 schema design + 1.1.4~1.1.6 connectors → C-04 담당 |
+| P1-01 | Commodity Analyst | `phase1/01_commodity_analyst.md` | Claude Opus 4.8 | Perplexity Pro | Price fundamentals, supply/demand balance |
+| P1-02 | Geopolitical & Trade Risk Analyst | `phase1/02_geopolitical_analyst.md` | Claude Opus 4.8 | Perplexity Pro | Trade route risk, sanctions, conflict impact |
+| P1-03 | Agrometeorologist / Climate Specialist | `phase1/03_climate_specialist.md` | Claude Sonnet 4.6 | Perplexity Pro | ENSO, crop yield, AA protocols, agromet bulletins |
+| P1-04 | Supply Chain & Logistics Analyst | `phase1/04_supply_chain_analyst.md` | Claude Sonnet 4.6 | Perplexity Pro | BDI, CFR optimization, ABCD value chain, 3-month lead-time |
+| P1-05 | News & Sentiment Analyst | `phase1/05_news_sentiment.md` | Claude Sonnet 4.6 | — | FinBERT sentiment scoring, GDELT, GAIN report analysis |
 
 ### Tier 2 — Phase 2: Modeling Agents
 
@@ -91,12 +91,14 @@
 ## LLM Routing Logic
 
 ```
-Task Type                   → Best LLM
-─────────────────────────────────────────────────────
-Complex reasoning / strategy   → Claude Opus 4.7
-Code generation / pipelines    → Claude Sonnet 4.6
-Style check / quick format     → Claude Haiku 4.5
-Real-time market research      → Perplexity Pro
-Large document analysis        → Gemini 2.5 Pro (2M ctx)
-Structured table extraction    → ChatGPT Team
+Task Type                        → Best LLM
+──────────────────────────────────────────────────────────
+Strategic reasoning / orchestration → Claude Opus 4.8
+Statistical modeling (thinking mode) → Claude Opus 4.8 (thinking)
+Analysis (EDA, supply chain, climate) → Claude Sonnet 4.6
+Code generation / pipelines         → Claude Sonnet 4.6
+Style check / deterministic gate    → Claude Haiku 4.5-20251001
+Real-time market research           → Perplexity Pro (sonar-pro)
+Large document analysis (2M ctx)    → Gemini 2.5 Pro
+PDF/Excel extraction                → C-04 (claude-sonnet-4-6)
 ```

@@ -1,7 +1,7 @@
 ---
 id: P1-02
 name: Geopolitical & Trade Risk Analyst
-model: claude-opus-4-7
+model: claude-opus-4-8
 llm_route: REAL_TIME_RESEARCH
 pattern: Expert Pool
 skill_file: .claude/skills/phase1/02_geopolitical_analyst.md
