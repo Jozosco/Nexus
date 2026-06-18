@@ -1373,6 +1373,7 @@ def _render_html(
     run_id: str,
     run_ts: str,
     days: int,
+    data_period: str = "",
     lang: Literal["ko", "en"] = "ko",
     granger_conditions: pd.DataFrame | None = None,
     granger_results: pd.DataFrame | None = None,
@@ -1387,8 +1388,8 @@ def _render_html(
         if lang == "ko" else
         "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
     )
-    title  = "핵심 변수 분석 보고서" if lang == "ko" else "Key Variable Analysis Report"
-    sub    = f"최근 {days}일 데이터 기준" if lang == "ko" else f"Based on last {days} days"
+    title  = "대두유 가격 핵심 영향 인자 분석 보고서" if lang == "ko" else "Key Variable Analysis Report"
+    sub    = f"{data_period} 데이터 기준" if (lang == "ko" and data_period) else (f"Based on {data_period} data" if data_period else (f"최근 {days}일 데이터 기준" if lang == "ko" else f"Based on last {days} days"))
 
     # executive summary
     category_summary = _build_category_summary(importance_df, {})
@@ -1541,7 +1542,7 @@ def _render_html(
 
 <div class="meta">
   <strong>{'생성 시각 (UTC)' if lang == 'ko' else 'Generated (UTC)'}:</strong> {run_ts} &nbsp;│&nbsp;
-  <strong>{'분석 기간' if lang == 'ko' else 'Period'}:</strong> {'최근' if lang == 'ko' else 'Last'} {days}{'일' if lang == 'ko' else ' days'}
+  <strong>{'활용 데이터 양' if lang == 'ko' else 'Data Range'}:</strong> {data_period if data_period else (f"{'최근' if lang == 'ko' else 'Last'} {days}{'일' if lang == 'ko' else ' days'}") }
 </div>
 
 <div class="note">
@@ -1552,7 +1553,7 @@ def _render_html(
 
 {exec_html}
 
-<h2>{'데이터 수집 현황' if lang == 'ko' else 'Data Collection Status'}</h2>
+<h2>{'활용 데이터' if lang == 'ko' else 'Data Collection Status'}</h2>
 {status_html}
 
 <h2>{'변수 중요도 (LASSO 기반)' if lang == 'ko' else 'Variable Importance (LASSO-based)'}</h2>
@@ -1584,7 +1585,7 @@ def _render_html(
 {causal_chains_html}
 
 <div class="footer">
-  Project Nexus · 핵심 변수 분석 보고서 · Branch: claude/setup-nexus-llm-tools-RX4aS · {run_ts} UTC
+  Project Nexus · 대두유 가격 핵심 영향 인자 분석 보고서 · Branch: claude/setup-nexus-llm-tools-RX4aS · {run_ts} UTC
 </div>
 </body>
 </html>"""
@@ -1610,6 +1611,23 @@ def run(days: int = 7) -> None:
     print(f"[C-03] {len(frames)}개 커넥터 데이터 로드 완료: {list(frames.keys())}")
 
     status_df     = _build_data_status(frames)
+
+    # 실제 수집 데이터 범위 계산
+    _all_dates = []
+    for _df in frames.values():
+        if "price_date" in _df.columns:
+            _dates = pd.to_datetime(_df["price_date"], errors="coerce").dropna()
+            if len(_dates) > 0:
+                _all_dates.extend([_dates.min(), _dates.max()])
+    if _all_dates:
+        _start_yr = min(_all_dates).year
+        _end_yr   = max(_all_dates).year
+        data_period = f"{_start_yr}~{_end_yr}년"
+    else:
+        _sy = os.environ.get("HISTORICAL_START_YEAR", "2017")
+        _ey = os.environ.get("HISTORICAL_END_YEAR", "2025")
+        data_period = f"{_sy}~{_ey}년"
+
     wide          = _pivot_for_correlation(frames)
     importance_df = _lasso_importance(wide)
     alerts        = _check_structural_breaks(frames)
@@ -1643,6 +1661,7 @@ def run(days: int = 7) -> None:
         with open(html_path, "w", encoding="utf-8") as fh:
             fh.write(_render_html(
                 status_df, importance_df, alerts, run_id, run_ts, days,
+                data_period=data_period,
                 lang=lang,  # type: ignore[arg-type]
                 granger_conditions=granger_conditions,
                 granger_results=granger_results,
@@ -1663,8 +1682,8 @@ def run(days: int = 7) -> None:
     # Markdown 요약 (기계 판독용 + generate_research_pdf.py 입력)
     breach = [a for a in alerts if "🚨" in a.get("상태", "")]
     md_lines = [
-        f"# 핵심 변수 분석 보고서 — {run_ts[:10]}",
-        f"**분석 기간**: 최근 {days}일  |  **생성**: {run_ts} UTC",
+        f"# 대두유 가격 핵심 영향 인자 분석 보고서 — {run_ts[:10]}",
+        f"**활용 데이터 양**: {data_period if data_period else f'최근 {days}일'}  |  **생성**: {run_ts} UTC",
         "",
         "## 구조적 단절 임계값 현황",
     ]
@@ -1685,18 +1704,18 @@ def run(days: int = 7) -> None:
         for _, row in top10.iterrows():
             r_val = f"{row.get('피어슨_r', 'N/A'):.3f}" if isinstance(row.get('피어슨_r'), float) else "N/A"
             lasso = f"{row.get('LASSO_계수', 'N/A'):.4f}" if isinstance(row.get('LASSO_계수'), float) else "N/A"
-            md_lines.append(f"| {row.get('변수코드', '?')} | {r_val} | {lasso} |")
+            md_lines.append(f"| {row.get('변수', '?')} | {r_val} | {lasso} |")
     md_lines += [
         "",
-        "## 데이터 수집 현황",
-        "| 커넥터 | 행 수 | 기간 | 신선도 |",
+        "## 활용 데이터",
+        "| 커넥터 | 행수 | 날짜범위 | 신선도 |",
         "|---|---|---|---|",
     ]
     if not status_df.empty:
         for _, row in status_df.iterrows():
             md_lines.append(
                 f"| {row.get('커넥터', '?')} | {row.get('행수', '?')} | "
-                f"{row.get('시작일', '?')} ~ {row.get('종료일', '?')} | {row.get('신선도', '?')} |"
+                f"{row.get('날짜범위', '?')} | {row.get('신선도', '?')} |"
             )
     md_lines += [
         "",
