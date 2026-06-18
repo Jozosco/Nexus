@@ -1,0 +1,150 @@
+# USDA FAS 파일 구조 재정리 — Session 27 (요청 1.1.1 / 1.2)
+# 대상 브랜치(main)에 업로드된 GAIN PDF + GATS Excel을 표준 폴더 구조로 이동.
+#
+# 이동 규칙:
+#   1. 모든 PDF (repo root + data/raw/USDA/FAS root) → data/raw/USDA/FAS/GAIN/Oilseeds/
+#   2. 기존 GATS/*.xlsx (수출량+재수출량, HS 1507.10)        → data/raw/USDA/FAS/GATS/1507.10/
+#   3. FAS root *수출량.xlsx (HS 1507.90)                    → data/raw/USDA/FAS/GATS/1507.90/
+#   4. FAS root 9개년 *수출액*.xlsx (수출액 USD, 3개 품목)   → data/raw/USDA/FAS/GATS/export_value_top10/
+#
+# ※ export_value_top10: 9개년 파일은 대두(HS1201)·대두박(HS2304)·대두유(HS1507) 수출"액"(USD)
+#    데이터로, 1507.10/1507.90 수출"량" 파일의 요약본이 아님. 별도 폴더로 분리 보관.
+#
+# 실행: GitHub Actions 탭 → "Reorganize USDA FAS Files" → Run workflow → 브랜치 main 선택
+name: Reorganize USDA FAS Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "재정리 대상 브랜치"
+        required: true
+        default: "main"
+
+permissions:
+  contents: write
+
+jobs:
+  reorganize:
+    name: "Reorganize FAS GAIN/GATS files"
+    runs-on: ubuntu-latest
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch }}
+          fetch-depth: 0
+
+      - name: Create destination folders
+        run: |
+          mkdir -p "data/raw/USDA/FAS/GAIN/Oilseeds"
+          mkdir -p "data/raw/USDA/FAS/GATS/1507.10"
+          mkdir -p "data/raw/USDA/FAS/GATS/1507.90"
+          mkdir -p "data/raw/USDA/FAS/GATS/export_value_top10"
+
+      - name: Move PDF files to GAIN/Oilseeds
+        run: |
+          set -e
+          DEST="data/raw/USDA/FAS/GAIN/Oilseeds"
+          find . -maxdepth 1 -type f -name "*.pdf" -print0 \
+            | while IFS= read -r -d '' f; do
+                echo "[이동] $f -> $DEST/"
+                git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
+              done
+          find data/raw/USDA/FAS -maxdepth 1 -type f -name "*.pdf" -print0 \
+            | while IFS= read -r -d '' f; do
+                echo "[이동] $f -> $DEST/"
+                git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
+              done
+
+      - name: Move existing GATS xlsx to GATS/1507.10
+        run: |
+          set -e
+          DEST="data/raw/USDA/FAS/GATS/1507.10"
+          find data/raw/USDA/FAS/GATS -maxdepth 1 -type f -name "*.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do
+                echo "[이동] $f -> $DEST/"
+                git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
+              done
+
+      - name: Move FAS-root suchulryang xlsx to GATS/1507.90
+        run: |
+          set -e
+          DEST="data/raw/USDA/FAS/GATS/1507.90"
+          find data/raw/USDA/FAS -maxdepth 1 -type f -name "*수출량.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do
+                echo "[이동] $f -> $DEST/"
+                git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
+              done
+
+      - name: Move FAS-root 9-year suchulaek xlsx to GATS/export_value_top10
+        run: |
+          set -e
+          DEST="data/raw/USDA/FAS/GATS/export_value_top10"
+          find data/raw/USDA/FAS -maxdepth 1 -type f -name "*수출액*.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do
+                echo "[이동] $f -> $DEST/"
+                git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
+              done
+
+      - name: Write GAIN README
+        run: |
+          printf '%s\n' \
+            '# USDA FAS GAIN — Oilseeds Reports' \
+            '' \
+            'USDA Foreign Agricultural Service의 GAIN(Global Agricultural Information' \
+            'Network)에서 발행한 Oilseeds 관련 보고서 PDF 모음.' \
+            '' \
+            '- 파일명 규칙: `YY.MM_Country_Title.pdf` (YY.MM = 발행 연월, Country = 발행 대상국)' \
+            '- 기간: 2017년 ~ (수동 수집분)' \
+            '- 대두유 활용: 작황 전망·정책 변경(수입관세/수출세)·재고전망·무역흐름 서술 추출' \
+            '  → G1 변수 보조 신호(WASDE 서프라이즈 선행, GPR 보조)' \
+            '- 파싱 도구(예정): scripts/ingest_gain_oilseeds_pdf.py (pdfplumber 기반)' \
+            > "data/raw/USDA/FAS/GAIN/Oilseeds/README.md"
+
+      - name: Write GATS README
+        run: |
+          printf '%s\n' \
+            '# USDA FAS GATS — 미국 수출 통계' \
+            '' \
+            'USDA FAS GATS(Global Agricultural Trade System) 기반 미국 농산물 수출 데이터.' \
+            '' \
+            '## 폴더 구조' \
+            '' \
+            '| 폴더 | 내용 | HS 코드 | 단위 |' \
+            '|---|---|---|---|' \
+            '| `1507.10/` | 미국 對국가별 수출량 + 재수출량 (조대두유) | 1507.10 | 물량 |' \
+            '| `1507.90/` | 미국 對국가별 수출량 (정제 대두유) | 1507.90 | 물량 |' \
+            '| `export_value_top10/` | 9개년 미국 수출액 상위 10개국 (대두/대두박/대두유) | 1201·2304·1507 | 수출액(USD) |' \
+            '' \
+            '## 주의 — export_value_top10 분류 근거' \
+            '' \
+            '`9개년 미국 OO 수출액_상위 10개국.xlsx` 파일은 아래 이유로 1507.10/1507.90의' \
+            '요약본이 **아니며** 별도 폴더로 분리 보관함:' \
+            '' \
+            '1. **지표 차이**: 수출"액"(USD) vs 1507.10/1507.90의 수출"량"(물량)' \
+            '2. **품목 범위 차이**: 대두(HS1201)·대두박(HS2304)·대두유(HS1507) 3개 품목 포함' \
+            '   (대두유 단독이 아님)' \
+            '3. **집계 단위 차이**: 9개년(2017~2025) 상위 10개국 누계 (월별 세분화 없음)' \
+            '' \
+            '→ G1/G2 역할: 달러 기준 무역 가치·압착 마진 보조 분석용 (연간 패턴)' \
+            > "data/raw/USDA/FAS/GATS/README.md"
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "[정보] 변경 사항 없음 — 이미 정리된 상태이거나 대상 파일 없음."
+            exit 0
+          fi
+          COUNT=$(git diff --cached --name-only | wc -l)
+          git commit \
+            -m "data: reorganize USDA FAS GAIN(PDF)/GATS(xlsx) into standard folders" \
+            -m "PDF -> GAIN/Oilseeds/ | GATS xlsx -> 1507.10/ | FAS-root 수출량 -> 1507.90/ | 9개년 수출액 -> export_value_top10/. 변경 파일 수: ${COUNT}"
+          git push origin HEAD:${{ github.event.inputs.target_branch }}
+          echo "[완료] ${COUNT}개 항목 재정리 -> ${{ github.event.inputs.target_branch }} 브랜치 push 완료"
