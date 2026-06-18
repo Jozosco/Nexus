@@ -375,7 +375,7 @@ jobs:
 
           md = [
               f"## 과거 데이터 백필 완료 — {start_year}~{end_year}",
-              f"**총 수집 레코드**: {total_rows:,}건  |  **Run ID**: {os.environ.get('GITHUB_RUN_ID', 'local')}",
+              f"**총 수집 레코드**: {total_rows:,}건  |  **기준 기간**: {start_year}~{end_year}",
               "",
               "| 파일 | 행 수 | 기간 | 상태 |",
               "|---|---|---|---|",

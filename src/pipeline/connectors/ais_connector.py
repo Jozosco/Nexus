@@ -121,55 +121,83 @@ def _fetch_strait_via_perplexity(strait_key: str) -> list[dict]:
 
 
 def _fetch_strait_via_aisstream(strait_key: str, api_key: str) -> list[dict]:
-    """AISstream.io REST API로 해협 탱커 통과 수 수집.
+    """AISstream.io WebSocket API로 해협 탱커 통과 수 수집.
 
-    AISstream은 WebSocket 기반이지만, Phase A에서는 최신 위치 데이터를
-    HTTP GET으로 조회하는 방식으로 근사 구현.
-    Phase B에서 WebSocket 실시간 스트리밍으로 전환 예정.
+    ※ AISstream.io는 WebSocket 전용 API입니다 (REST 엔드포인트 없음).
+       WebSocket 주소: wss://stream.aisstream.io/v0/stream
+       인증: 연결 직후 JSON payload에 APIkey 필드 전송
+       참조: github.com/Hue-Jhan/OSINT-War-Room, github.com/JJ/AISstreamer
+
+    Phase A GitHub Actions 환경에서는 websocket-client 패키지로 동기적으로 수집.
+    Phase B에서 asyncio + websockets 비동기 스트리밍으로 전환 예정.
+
+    유의사항:
+      - 무료 tier에서 과도한 연결 시 IP 차단 발생 가능 (24시간 대기 또는 키 재발급)
+      - AISstream.io는 "experimental" 서비스로 엔드포인트 변경 가능성 있음
     """
-    import httpx
-    strait = STRAITS[strait_key]
-    bbox = strait["bbox"]
     today = date.today().isoformat()
+    strait = STRAITS[strait_key]
+    bbox   = strait["bbox"]
 
     try:
-        # AISstream REST endpoint (Phase A 근사 구현 — Phase B에서 WebSocket으로 교체)
-        url = "https://api.aisstream.io/v0/ships"
-        params = {
-            "apiKey":   api_key,
-            "MinLat":   bbox["min_lat"],
-            "MaxLat":   bbox["max_lat"],
-            "MinLon":   bbox["min_lon"],
-            "MaxLon":   bbox["max_lon"],
-        }
-        r = httpx.get(url, params=params, timeout=30)
-        if r.status_code == 401:
-            print(f"[경고] AISstream API 401 — AISSTREAM_API_KEY 만료 또는 미승인")
-            return []
-        if r.status_code == 429:
-            print(f"[경고] AISstream API 429 — 레이트 리밋 초과")
-            return []
-        r.raise_for_status()
-        ships = r.json() if isinstance(r.json(), list) else r.json().get("data", [])
+        import websocket  # pip install websocket-client
+        import json as _json
+
+        ws_url    = "wss://stream.aisstream.io/v0/stream"
+        subscribe = _json.dumps({
+            "APIkey":       api_key,
+            "BoundingBoxes": [[
+                [bbox["min_lat"], bbox["min_lon"]],
+                [bbox["max_lat"], bbox["max_lon"]],
+            ]],
+            "FilterMessageTypes": ["PositionReport", "ShipStaticData"],
+        })
+
+        ships_seen: dict[str, dict] = {}
+        MAX_MESSAGES = 200
+
+        def _on_message(ws_obj, message):
+            try:
+                data = _json.loads(message)
+                mmsi = str(data.get("MetaData", {}).get("MMSI", ""))
+                ship_type = data.get("Message", {}).get("ShipStaticData", {}).get("Type", 0)
+                if mmsi:
+                    ships_seen[mmsi] = {"shipType": ship_type}
+                if len(ships_seen) >= MAX_MESSAGES:
+                    ws_obj.close()
+            except Exception:
+                pass
+
+        def _on_open(ws_obj):
+            ws_obj.send(subscribe)
+
+        ws = websocket.WebSocketApp(ws_url, on_message=_on_message, on_open=_on_open)
+        ws.run_forever(ping_interval=20, ping_timeout=10)
 
         tankers = [
-            s for s in ships
-            if s.get("shipType", 0) in TANKER_TYPE_CODES or
-               "tanker" in str(s.get("shipTypeName", "")).lower()
+            s for s in ships_seen.values()
+            if s.get("shipType", 0) in TANKER_TYPE_CODES
         ]
 
         rows = [{
             "price_date":     today,
-            "source_name":    "AISstream/BalticExchange",
+            "source_name":    "AISstream/WebSocket",
             "indicator_code": f"AIS_{strait_key}_TANKER_COUNT",
             "value":          float(len(tankers)),
             "unit":           "vessels",
-            "note":           f"[AIS-OFFICIAL: {strait['name_ko']} 탱커 수 ({len(ships)}척 중 탱커 {len(tankers)}척)]",
+            "note":           (
+                f"[AIS-OFFICIAL: {strait['name_ko']} 탱커 수 "
+                f"({len(ships_seen)}척 관측 중 탱커 {len(tankers)}척)]"
+            ),
         }]
-        print(f"[완료] AIS {strait_key}: 총 {len(ships)}척, 탱커 {len(tankers)}척")
+        print(f"[완료] AIS {strait_key}: {len(ships_seen)}척 관측, 탱커 {len(tankers)}척")
         return rows
+
+    except ImportError:
+        print(f"[경고] websocket-client 미설치 — AISstream WebSocket 수집 건너뜀. Perplexity 폴백 사용.")
+        return []
     except Exception as e:
-        print(f"[경고] AISstream {strait_key} 수집 실패: {e}")
+        print(f"[경고] AISstream {strait_key} WebSocket 수집 실패: {e}")
         return []
 
 

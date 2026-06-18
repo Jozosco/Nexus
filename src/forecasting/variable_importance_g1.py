@@ -1113,7 +1113,160 @@ _CAUSAL_CHAINS: list[dict[str, str]] = [
         "category_ko": "시장 구조",
         "category_en": "Market Structure",
     },
+    # ── 지정학·무역 (추가) ────────────────────────────────────────────────────────
+    {
+        "driver_ko": "수에즈·홍해 후티 공격 — 탱커 우회",
+        "driver_en": "Suez / Red Sea Houthi Attacks — Tanker Diversion",
+        "chain_ko": "홍해 후티 미사일·드론 공격 → 탱커·컨테이너선 수에즈 우회 불가 → 희망봉 우회(+10~14일) → 벙커유 소비 증가 → 운임 급등(BDI·BCAA 연동) → 남미발 한국 수입 CIF 비용 상승",
+        "chain_en": "Houthi attacks in Red Sea → tankers divert from Suez → Cape of Good Hope re-routing (+10–14 days) → bunker fuel surcharge → freight rate spike (BDI/BCAA correlated) → South American SBO CIF cost rises for Korea",
+        "direction": "up",
+        "category_ko": "지정학·무역",
+        "category_en": "Geopolitics & Trade",
+    },
+    {
+        "driver_ko": "우크라이나 흑해 곡물 회랑 붕괴",
+        "driver_en": "Ukraine Black Sea Grain Corridor Breakdown",
+        "chain_ko": "러-우 전쟁 확전 / 흑해 회랑 협정 파기 → 우크라이나 해바라기유 수출 차단 → 글로벌 식물성유지 공급 부족 → SBO·CPO 대체 수요 급증 → 가격 상승",
+        "chain_en": "Russia-Ukraine escalation / Black Sea grain deal collapses → Ukrainian sunflower oil exports blocked → global vegetable oil supply deficit → SBO & CPO substitution demand surges → price spike",
+        "direction": "up",
+        "category_ko": "지정학·무역",
+        "category_en": "Geopolitics & Trade",
+    },
+    # ── 기후·작황 (추가) ─────────────────────────────────────────────────────────
+    {
+        "driver_ko": "브라질 대두 수확기 이상 기후 (1~3월)",
+        "driver_en": "Brazil Soybean Harvest Anomaly (Jan–Mar)",
+        "chain_ko": "라니냐·엘니뇨 전환기 폭우 → 수확 지연·품질 손실 → 브라질산 SBO 공급 차질 → 수출 일정 지연 → 선물 가격 선반영 상승 → 한국 CFR 운임 프리미엄 확대",
+        "chain_en": "La Niña/El Niño transition rainfall → harvest delay and quality loss → Brazilian SBO supply disruption → export schedule delays → futures price pre-rally → Korean CFR premium widening",
+        "direction": "up",
+        "category_ko": "기후·작황",
+        "category_en": "Climate & Crop",
+    },
 ]
+
+
+def _render_feature_selection_methodology(lang: str = "ko") -> str:
+    """피처 엔지니어링·선택 방법론 섹션 HTML 렌더링 (D-014/D-015 기준).
+
+    5단계 게이트:
+      1단계 DQSOps 품질 게이트 (C-08)
+      2단계 단변량 스크리닝 (Pearson r, Granger)
+      3단계 다중공선성 제거 (VIF, LASSO L1)
+      4단계 ML 중요도 순위 (LASSO+SHAP+Granger 가중 합산)
+      5단계 도메인 검토 (P1-01~04)
+
+    Phase A 핵심 피처 8개 (D-015):
+      CBOT_SBO_FUTURES, CPO_SBO_SPREAD, WASDE_SBO_STU, BDI,
+      FX_BRL_USD, ENSO_ONI, PSD_SOY_CRUSH, GATS_US_SBO_EXPORT_KOREA
+    """
+    # ── 5단계 게이트 표 ─────────────────────────────────────────────────────────
+    if lang == "ko":
+        title    = "피처 엔지니어링 및 선택 방법론"
+        subtitle = "의사결정 D-014 (5단계 게이트) · D-015 (Phase A 핵심 피처 8개)"
+        gate_hdr = ["단계", "게이트명", "기준 / 도구", "임계값", "담당"]
+        gate_rows = [
+            ("1단계", "DQSOps 품질 게이트",     "C-08 5차원 가중합산 점수",           "≥ 0.70 PASS",           "C-08"),
+            ("2단계", "단변량 스크리닝",          "Pearson |r| · Granger 인과검정",    "|r|≥0.25, p<0.05 (Bonferroni 보정)", "C-03/C-06"),
+            ("3단계", "다중공선성 제거",          "VIF < 5 · LASSO L1 정규화",         "VIF 임계값 5.0",        "C-03"),
+            ("4단계", "ML 중요도 순위 합산",      "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "종합 순위 상위 선택", "C-03"),
+            ("5단계", "도메인 전문가 검토",       "P1-01~04 정성 평가 + 상품 논리 검증", "합의 승인",            "P1-01~04"),
+        ]
+        hdr_var = "피처 코드"
+        hdr_cat = "카테고리"
+        hdr_ratio = "D-015 핵심 선정 근거"
+        hdr_stat  = "Phase A 수집 상태"
+        core_title = "Phase A 핵심 피처 8개 (D-015)"
+        note_txt = (
+            "피처 선택 기준은 AIC/BIC/F1-Score 단일 지표가 아닌, "
+            "데이터 품질(DQSOps) → 통계적 유의성(Pearson/Granger) → 공선성 제거(VIF/LASSO) → "
+            "ML 중요도(SHAP) → 도메인 검토(P1-01~04) 5단계 게이트를 순차 적용합니다. "
+            "Phase A에서는 8개 핵심 피처를 우선 확보하며, G1/G2/G3 별 최종 피처 수는 "
+            "G1=12~15개(SHAP 상위), G2=10~14개(시계열 CV), G3=6~10개(Markov 파시모니)로 목표합니다."
+        )
+        status_collected  = "✅ 수집 중"
+        status_partial    = "⚠️ 일부 수집"
+        status_missing    = "❌ 미구현"
+    else:
+        title    = "Feature Engineering & Selection Methodology"
+        subtitle = "Decision D-014 (5-Stage Gate) · D-015 (Phase A Core 8 Features)"
+        gate_hdr = ["Stage", "Gate Name", "Criteria / Tools", "Threshold", "Owner"]
+        gate_rows = [
+            ("Stage 1", "DQSOps Quality Gate",     "C-08 5-dimension weighted score",             "≥ 0.70 PASS",              "C-08"),
+            ("Stage 2", "Univariate Screening",    "Pearson |r| · Granger causality test",        "|r|≥0.25, p<0.05 (Bonferroni)", "C-03/C-06"),
+            ("Stage 3", "Multicollinearity Removal","VIF < 5 · LASSO L1 regularization",          "VIF threshold 5.0",        "C-03"),
+            ("Stage 4", "ML Importance Ranking",   "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "Top-ranked selected", "C-03"),
+            ("Stage 5", "Domain Expert Review",    "P1-01~04 qualitative review + commodity logic", "Consensus approval",      "P1-01~04"),
+        ]
+        hdr_var  = "Feature Code"
+        hdr_cat  = "Category"
+        hdr_ratio = "D-015 Core Selection Rationale"
+        hdr_stat  = "Phase A Collection Status"
+        core_title = "Phase A Core Features — 8 Selected (D-015)"
+        note_txt = (
+            "Feature selection does NOT rely on a single criterion (AIC/BIC/F1-Score). "
+            "Instead, a sequential 5-stage gate is applied: "
+            "data quality (DQSOps) → statistical significance (Pearson/Granger) → "
+            "collinearity removal (VIF/LASSO) → ML importance (SHAP) → domain review (P1-01~04). "
+            "Phase A targets 8 core features first. Final feature counts by model: "
+            "G1=12–15 (SHAP top-N), G2=10–14 (time-series CV), G3=6–10 (Markov parsimony)."
+        )
+        status_collected  = "✅ Collecting"
+        status_partial    = "⚠️ Partial"
+        status_missing    = "❌ Not Implemented"
+
+    # 게이트 테이블 HTML
+    gate_rows_html = "".join(
+        f"<tr><td style='font-weight:bold;color:#1565c0'>{r[0]}</td>"
+        f"<td>{r[1]}</td><td style='font-size:11px'>{r[2]}</td>"
+        f"<td style='color:#c62828;font-weight:bold'>{r[3]}</td>"
+        f"<td style='font-size:11px'>{r[4]}</td></tr>"
+        for r in gate_rows
+    )
+    gate_table = (
+        f"<table class='tbl'><thead><tr>"
+        + "".join(f"<th>{h}</th>" for h in gate_hdr)
+        + f"</tr></thead><tbody>{gate_rows_html}</tbody></table>"
+    )
+
+    # Phase A 핵심 피처 8개 테이블
+    core_features = [
+        ("CBOT_SBO_FUTURES",          "상품가격",   "대두유 선물 가격 — G1/G2/G3 타깃 변수. 피어슨 r 최고.",          status_collected),
+        ("CPO_SBO_SPREAD",            "상품가격",   "CPO-SBO 스프레드 — 대체재 전환 임계값(>$175/MT). 비선형 효과.",  status_missing),
+        ("WASDE_SBO_STU",             "작황",       "WASDE 재고사용비율 — 공급 타이트니스 핵심. Granger p<0.01.",      status_partial),
+        ("BDI",                       "해운",       "발틱건화물지수 z-score 90일 — 운임 충격 선행지표.",              status_partial),
+        ("FX_BRL_USD",                "거시경제",   "헤알/달러 환율 — 브라질 수출 채산성 직결. 월간 Pearson r=0.42.", status_collected),
+        ("ENSO_ONI",                  "기후",       "ENSO ONI — 남미 작황 선행 6~9개월. |ONI|≥0.5 경보.",           status_collected),
+        ("PSD_SOY_CRUSH",             "작황",       "글로벌 대두 압착량 — SBO 공급의 직접 원료. USDA FAS PSD.",      status_partial),
+        ("GATS_US_SBO_EXPORT_KOREA",  "수입통계",  "미국→한국 대두유 수출 — 한국 조달 비용 직접 지표. GATS 수동업로드.", status_partial),
+    ] if lang == "ko" else [
+        ("CBOT_SBO_FUTURES",          "Commodity",    "SBO futures — target variable for G1/G2/G3. Highest Pearson r.",       status_collected),
+        ("CPO_SBO_SPREAD",            "Commodity",    "CPO-SBO spread — substitution threshold (>$175/MT). Nonlinear effect.", status_missing),
+        ("WASDE_SBO_STU",             "Crop",         "WASDE stocks-to-use — supply tightness. Granger p<0.01.",              status_partial),
+        ("BDI",                       "Shipping",     "BDI 90-day z-score — freight shock leading indicator.",                status_partial),
+        ("FX_BRL_USD",                "Macro",        "BRL/USD — Brazil export profitability. Monthly Pearson r=0.42.",        status_collected),
+        ("ENSO_ONI",                  "Climate",      "ONI — South America crop leading indicator (6-9 months). |ONI|≥0.5.",  status_collected),
+        ("PSD_SOY_CRUSH",             "Crop",         "Global soybean crush — direct SBO feedstock. USDA FAS PSD.",           status_partial),
+        ("GATS_US_SBO_EXPORT_KOREA",  "Trade Stats",  "US→Korea SBO export — direct Korean procurement cost indicator.",      status_partial),
+    ]
+
+    core_rows_html = "".join(
+        f"<tr><td><code>{r[0]}</code></td><td>{r[1]}</td>"
+        f"<td style='font-size:11px'>{r[2]}</td><td>{r[3]}</td></tr>"
+        for r in core_features
+    )
+    core_table = (
+        f"<table class='tbl'><thead><tr>"
+        f"<th>{hdr_var}</th><th>{hdr_cat}</th><th>{hdr_ratio}</th><th>{hdr_stat}</th>"
+        f"</tr></thead><tbody>{core_rows_html}</tbody></table>"
+    )
+
+    return f"""<h2 style="color:#283593">{title}</h2>
+<div class="note" style="margin-bottom:10px">
+  <strong>{subtitle}</strong><br>{note_txt}
+</div>
+{gate_table}
+<h3 style="color:#3949ab;margin-top:18px">{core_title}</h3>
+{core_table}"""
 
 
 def _render_causal_chains(
@@ -1257,6 +1410,9 @@ def _render_html(
     else:
         alerts_html = "<p>✅ 현재 임계값 초과 변수 없음</p>" if lang == "ko" else "<p>✅ No structural break thresholds breached.</p>"
 
+    # feature engineering & selection methodology
+    feature_selection_html = _render_feature_selection_methodology(lang=lang)
+
     # causal chains
     causal_chains_html = _render_causal_chains(lang=lang)
 
@@ -1384,8 +1540,7 @@ def _render_html(
 <h1>{title}<br><small style="font-size:14px;color:#5c6bc0">{sub}</small></h1>
 
 <div class="meta">
-  <strong>Run ID:</strong> {run_id} &nbsp;│&nbsp;
-  <strong>Generated (UTC):</strong> {run_ts} &nbsp;│&nbsp;
+  <strong>{'생성 시각 (UTC)' if lang == 'ko' else 'Generated (UTC)'}:</strong> {run_ts} &nbsp;│&nbsp;
   <strong>{'분석 기간' if lang == 'ko' else 'Period'}:</strong> {'최근' if lang == 'ko' else 'Last'} {days}{'일' if lang == 'ko' else ' days'}
 </div>
 
@@ -1402,6 +1557,8 @@ def _render_html(
 
 <h2>{'변수 중요도 (LASSO 기반)' if lang == 'ko' else 'Variable Importance (LASSO-based)'}</h2>
 {imp_html}
+
+{feature_selection_html}
 
 <h2>{lasso_title}</h2>
 {lasso_html}
@@ -1507,7 +1664,7 @@ def run(days: int = 7) -> None:
     breach = [a for a in alerts if "🚨" in a.get("상태", "")]
     md_lines = [
         f"# 핵심 변수 분석 보고서 — {run_ts[:10]}",
-        f"**Run ID**: {run_id}  |  **분석 기간**: 최근 {days}일  |  **생성**: {run_ts} UTC",
+        f"**분석 기간**: 최근 {days}일  |  **생성**: {run_ts} UTC",
         "",
         "## 구조적 단절 임계값 현황",
     ]

@@ -287,6 +287,114 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
     return df
 
 
+def _fetch_geopolitical_event_proxy() -> pd.DataFrame:
+    """Perplexity 실시간 검색 — SBO 공급망 영향 지정학 이벤트 4종.
+
+    SUEZ_RED_SEA_RISK:       수에즈·홍해 후티 공격·탱커 우회 위험
+    UKRAINE_GRAIN_CORRIDOR:  우크라이나 흑해 곡물 회랑·해바라기유 수출 현황
+    US_CHINA_TARIFF_STATUS:  미·중 관세 에스컬레이션 수준
+    BRAZIL_HARVEST_PROGRESS: 브라질 대두 수확 진척률 (1~3월)
+    """
+    api_key = os.environ.get("PERPLEXITY_API_KEY")
+    if not api_key:
+        print("[경고] PERPLEXITY_API_KEY 미등록 — 지정학 이벤트 프록시 수집 건너뜀.")
+        return pd.DataFrame()
+
+    client = OpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
+    today = date.today().isoformat()
+
+    queries: list[tuple[str, str, str, str]] = [
+        (
+            "SUEZ_RED_SEA_RISK",
+            (
+                "What is the current risk level for tanker shipping through the Red Sea and Suez Canal? "
+                "Are Houthi attacks ongoing? How many tankers have diverted via Cape of Good Hope this week? "
+                "Format: RISK: [HIGH/MEDIUM/LOW] | DIVERSIONS: [number or none] | "
+                "FREIGHT_IMPACT: [% increase vs normal] | SOURCE: [source] | DATE: [date]"
+            ),
+            "1=Low/2=Med/3=High",
+            "수에즈·홍해 탱커 위험 수준",
+        ),
+        (
+            "UKRAINE_GRAIN_CORRIDOR",
+            (
+                "What is the current status of Ukraine grain and sunflower oil exports via Black Sea? "
+                "Is the Black Sea Grain Initiative or equivalent agreement active? "
+                "Any recent incidents blocking exports in the past 30 days? "
+                "Format: STATUS: [open/restricted/blocked] | SUNFLOWER_OIL_EXPORTS: [normal/reduced/suspended] | "
+                "RISK: [HIGH/MEDIUM/LOW] | SOURCE: [source] | DATE: [date]"
+            ),
+            "1=open/2=restricted/3=blocked",
+            "우크라이나 흑해 수출 현황",
+        ),
+        (
+            "US_CHINA_TARIFF_STATUS",
+            (
+                "What is the current status of US-China trade tariffs on agricultural products, "
+                "specifically soybean oil and soybeans? Any tariff changes or negotiations in past 60 days? "
+                "Format: TARIFF_LEVEL: [HIGH/MEDIUM/LOW escalation] | "
+                "SOYBEAN_OIL_TARIFF: [China tariff % on US SBO] | "
+                "CHANGE: [increase/decrease/unchanged] | SOURCE: [source] | DATE: [date]"
+            ),
+            "1=Low/2=Med/3=High",
+            "미·중 관세 에스컬레이션 수준",
+        ),
+        (
+            "BRAZIL_HARVEST_PROGRESS",
+            (
+                "What is the current Brazil soybean harvest progress for this season? "
+                "Provide the percentage harvested vs same time last year if available. "
+                "Any weather delays or quality issues this harvest season? "
+                "Format: PROGRESS: [% harvested] | VS_LAST_YEAR: [ahead/behind/on-track by X%] | "
+                "WEATHER_RISK: [HIGH/MEDIUM/LOW] | SOURCE: [source] | DATE: [date]"
+            ),
+            "% harvested",
+            "브라질 대두 수확 진척률",
+        ),
+    ]
+
+    rows: list[dict] = []
+    for indicator_code, prompt, unit_hint, label_kr in queries:
+        try:
+            r = client.chat.completions.create(
+                model=PERPLEXITY_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = r.choices[0].message.content
+
+            # 위험 수준(HIGH/MEDIUM/LOW) → 숫자 인코딩 우선 시도
+            level_match = re.search(r"\b(HIGH|MEDIUM|LOW)\b", text, re.IGNORECASE)
+            num_match   = re.search(r"(\d+\.?\d*)", text)
+
+            if level_match and indicator_code in ("SUEZ_RED_SEA_RISK", "UKRAINE_GRAIN_CORRIDOR", "US_CHINA_TARIFF_STATUS"):
+                level_map = {"HIGH": 3.0, "MEDIUM": 2.0, "LOW": 1.0}
+                value = level_map[level_match.group(1).upper()]
+            elif "PROGRESS" in text and "%" in text:
+                pct_match = re.search(r"PROGRESS:\s*(\d+\.?\d*)", text, re.IGNORECASE)
+                value = float(pct_match.group(1)) if pct_match else (float(num_match.group(1)) if num_match else float("nan"))
+            else:
+                value = float(num_match.group(1)) if num_match else float("nan")
+
+            rows.append({
+                "price_date":     today,
+                "source_name":    "Perplexity/GeoEventProxy",
+                "indicator_code": indicator_code,
+                "value":          value,
+                "unit":           unit_hint,
+                "note":           f"[PERPLEXITY-PROXY: {label_kr}] {text[:300]}",
+            })
+        except Exception as e:
+            print(f"[경고] {indicator_code} 수집 실패: {e}")
+
+    if not rows:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(rows)
+    df["price_date"] = pd.to_datetime(df["price_date"])
+    df["ingested_at"] = pd.Timestamp.utcnow()
+    return df
+
+
 def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
@@ -304,6 +412,7 @@ def run() -> None:
             _fetch_gpr_realtime(),
             _fetch_hormuz_realtime(),
             _fetch_policy_news_proxy(),
+            _fetch_geopolitical_event_proxy(),
         ]
 
     frames = [f for f in frames if not f.empty]
