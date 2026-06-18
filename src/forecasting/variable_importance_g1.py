@@ -1366,6 +1366,152 @@ def _render_variable_catalog(lang: str = "ko") -> str:
     return "\n".join(sections)
 
 
+_TOP5_SELECTION_CRITERIA: dict[str, dict[str, str]] = {
+    "CBOT_SBO_FUTURES": {
+        "criteria_ko": "피어슨 r 최고 · LASSO 비영 · Granger p<0.01 · D-015 확정",
+        "criteria_en": "Highest Pearson r · LASSO non-zero · Granger p<0.01 · D-015 confirmed",
+        "causal_ko":   "선물 가격 = 시장의 대두유 공급·수요 기대값 집약 → G1/G2/G3 공통 타깃",
+        "causal_en":   "Futures = market's aggregated SBO supply/demand expectation → G1/G2/G3 shared target",
+    },
+    "CPO_SBO_SPREAD": {
+        "criteria_ko": "대체재 임계값 >$175/MT · 비선형 전환 효과 · P1-01~04 도메인 승인",
+        "criteria_en": "Substitute threshold >$175/MT · nonlinear switching effect · P1-01~04 approved",
+        "causal_ko":   "CPO 가격 하락 → 대두유 수요 이탈(바이오디젤·식품업체) → SBO 가격 하락 압력",
+        "causal_en":   "CPO price drop → SBO demand substitution (biodiesel/food) → SBO price downward pressure",
+    },
+    "WASDE_SBO_STU": {
+        "criteria_ko": "Granger p<0.01 · USDA 발표 서프라이즈 효과 검증 · D-015 확정",
+        "criteria_en": "Granger p<0.01 · USDA release surprise effect verified · D-015 confirmed",
+        "causal_ko":   "WASDE STU < 10% → 공급 타이트니스 신호 → 투기 세력 순매수 → 선물 가격 급등",
+        "causal_en":   "WASDE STU <10% → supply tightness signal → speculative long build → futures spike",
+    },
+    "BDI": {
+        "criteria_ko": "90일 z-score 2σ 임계값 · 해운 비용 선행 3~6주 · D-015 확정",
+        "criteria_en": "90-day z-score 2σ threshold · freight cost lead 3–6 weeks · D-015 confirmed",
+        "causal_ko":   "BDI 급등 → 대두유 CFR 운임 상승 → 한국 수입 원가 직결",
+        "causal_en":   "BDI spike → SBO CFR freight premium → Korean import cost direct impact",
+    },
+    "FX_BRL_USD": {
+        "criteria_ko": "월간 피어슨 r=0.42 · 브라질 공급 선행 T+2 · D-015 확정",
+        "criteria_en": "Monthly Pearson r=0.42 · Brazil supply lead T+2 · D-015 confirmed",
+        "causal_ko":   "헤알 약세 → 브라질 수출 채산성 개선 → 미국 경쟁 심화 → 미국 SBO 가격 하락",
+        "causal_en":   "BRL weakens → Brazil export profitability improves → US competition intensifies → US SBO price drops",
+    },
+    "ENSO_ONI": {
+        "criteria_ko": "|ONI| ≥ 0.5 이벤트 선행 6~9개월 · 남미 작황 영향 Granger 유의",
+        "criteria_en": "|ONI| ≥ 0.5 events lead 6–9 months · South America crop Granger significant",
+        "causal_ko":   "라니냐 강화 → 브라질·아르헨티나 강수 편차 → 대두 수확 감소 → SBO 공급 위축",
+        "causal_en":   "La Niña intensifies → Brazil/Argentina rainfall deficit → soy harvest loss → SBO supply contraction",
+    },
+    "PSD_SOY_CRUSH": {
+        "criteria_ko": "SBO 공급 직접 원료 · USDA FAS PSD 연간 · D-015 확정",
+        "criteria_en": "Direct SBO feedstock supply · USDA FAS PSD annual · D-015 confirmed",
+        "causal_ko":   "압착량 감소 → 대두유 생산 감소 → 공급 부족 → SBO 가격 상승",
+        "causal_en":   "Crush volume decline → SBO production decline → supply deficit → SBO price rise",
+    },
+    "GATS_US_SBO_EXPORT_KOREA": {
+        "criteria_ko": "한국 직접 조달 비용 지표 · 미국 수출 물량 선행 1~2개월",
+        "criteria_en": "Direct Korean procurement cost indicator · US export volume lead 1–2 months",
+        "causal_ko":   "미국→한국 수출량 감소 → 조달 대안 탐색 → 한국 CIF 프리미엄 확대",
+        "causal_en":   "US→Korea export volume drop → alternative sourcing needed → Korea CIF premium widens",
+    },
+}
+
+
+def _build_current_values(frames: dict[str, pd.DataFrame]) -> dict[str, str]:
+    """parquet 데이터에서 각 지표의 최신값을 추출. {indicator_code: 표시값} 반환."""
+    result: dict[str, str] = {}
+    for _df in frames.values():
+        if "indicator_code" not in _df.columns or "value" not in _df.columns:
+            continue
+        date_col = "price_date" if "price_date" in _df.columns else None
+        for code, grp in _df.groupby("indicator_code"):
+            if date_col:
+                grp = grp.sort_values(date_col)
+            latest_val = pd.to_numeric(grp["value"].iloc[-1], errors="coerce")
+            if pd.notna(latest_val):
+                unit = grp["unit"].iloc[-1] if "unit" in grp.columns else ""
+                result[str(code)] = f"{latest_val:,.4g} {unit}".strip()
+    return result
+
+
+def _render_top5_variables(
+    importance_df: pd.DataFrame,
+    current_values: dict[str, str],
+    lang: str = "ko",
+) -> str:
+    """상위 5개 핵심 변수 카드 섹션 HTML 렌더링.
+
+    importance_df에 LASSO 결과가 있으면 순위 기준, 없으면 D-015 Phase A 설계 순위 사용.
+    """
+    D015_ORDER = [
+        "CBOT_SBO_FUTURES", "CPO_SBO_SPREAD", "WASDE_SBO_STU",
+        "BDI", "FX_BRL_USD",
+    ]
+
+    if not importance_df.empty and "변수" in importance_df.columns:
+        top_vars = importance_df.head(5)["변수"].tolist()
+    else:
+        top_vars = D015_ORDER
+
+    if lang == "ko":
+        section_title = "상위 5개 핵심 변수"
+        note_text = (
+            "LASSO 분석 결과 기준 상위 5개 변수. "
+            "데이터 미수집 시 D-015 Phase A 설계 순위 표시. "
+            "선택 기준: D-014 5단계 게이트(DQSOps → Pearson/Granger → VIF/LASSO → ML 순위 → 도메인 검토)."
+        )
+        col_rank  = "순위"
+        col_var   = "변수 코드"
+        col_crit  = "선택 기준"
+        col_val   = "최근값"
+        col_chain = "인과 메커니즘"
+        no_data   = "수집 중"
+    else:
+        section_title = "Top 5 Key Variables"
+        note_text = (
+            "Top 5 variables by LASSO ranking. "
+            "Falls back to D-015 Phase A design order if no data collected. "
+            "Selection criteria: D-014 5-stage gate (DQSOps → Pearson/Granger → VIF/LASSO → ML rank → domain review)."
+        )
+        col_rank  = "Rank"
+        col_var   = "Variable Code"
+        col_crit  = "Selection Criteria"
+        col_val   = "Latest Value"
+        col_chain = "Causal Mechanism"
+        no_data   = "Collecting"
+
+    rows_html = ""
+    for i, var_code in enumerate(top_vars, 1):
+        meta   = _TOP5_SELECTION_CRITERIA.get(var_code, {})
+        crit   = meta.get("criteria_ko" if lang == "ko" else "criteria_en", "—")
+        chain  = meta.get("causal_ko"   if lang == "ko" else "causal_en",   "—")
+        val    = current_values.get(var_code, f"⚠ {no_data}")
+        rank_color = "#c62828" if i <= 3 else "#1565c0"
+        rows_html += (
+            f"<tr>"
+            f"<td style='font-weight:bold;color:{rank_color};text-align:center'>{i}</td>"
+            f"<td><code style='font-size:12px'>{var_code}</code></td>"
+            f"<td style='font-size:11px'>{crit}</td>"
+            f"<td style='font-size:12px;font-weight:bold'>{val}</td>"
+            f"<td style='font-size:11px'>{chain}</td>"
+            f"</tr>"
+        )
+
+    return f"""<h2 style="color:#283593">{section_title}</h2>
+<div class="note" style="margin-bottom:10px">{note_text}</div>
+<table class="tbl">
+<thead><tr>
+  <th style="width:40px">{col_rank}</th>
+  <th style="width:200px">{col_var}</th>
+  <th>{col_crit}</th>
+  <th style="width:120px">{col_val}</th>
+  <th>{col_chain}</th>
+</tr></thead>
+<tbody>{rows_html}</tbody>
+</table>"""
+
+
 def _render_html(
     status_df: pd.DataFrame,
     importance_df: pd.DataFrame,
@@ -1377,6 +1523,7 @@ def _render_html(
     lang: Literal["ko", "en"] = "ko",
     granger_conditions: pd.DataFrame | None = None,
     granger_results: pd.DataFrame | None = None,
+    current_values: dict[str, str] | None = None,
 ) -> str:
     """G1 분석 보고서 HTML 렌더링 (한국어 + 영어 이중언어)."""
     font_import = (
@@ -1413,6 +1560,9 @@ def _render_html(
 
     # feature engineering & selection methodology
     feature_selection_html = _render_feature_selection_methodology(lang=lang)
+
+    # top 5 variables
+    top5_html = _render_top5_variables(importance_df, current_values or {}, lang=lang)
 
     # causal chains
     causal_chains_html = _render_causal_chains(lang=lang)
@@ -1561,6 +1711,8 @@ def _render_html(
 
 {feature_selection_html}
 
+{top5_html}
+
 <h2>{lasso_title}</h2>
 {lasso_html}
 
@@ -1656,6 +1808,9 @@ def run(days: int = 7) -> None:
         granger_results    = pd.DataFrame()
         print("[C-03] Granger 건너뜀 — 타깃 변수(CBOT_BO_CLOSE / BRENT_USD_BBL) 없음")
 
+    current_values = _build_current_values(frames)
+    print(f"[C-03] 최신값 추출 완료: {len(current_values)}개 지표")
+
     for lang in ("ko", "en"):
         html_path = f"{REPORT_DIR}/g1_variable_importance_{tag}_{lang}.html"
         with open(html_path, "w", encoding="utf-8") as fh:
@@ -1665,6 +1820,7 @@ def run(days: int = 7) -> None:
                 lang=lang,  # type: ignore[arg-type]
                 granger_conditions=granger_conditions,
                 granger_results=granger_results,
+                current_values=current_values,
             ))
         print(f"[완료] G1 리포트 ({lang.upper()}) → {html_path}")
 

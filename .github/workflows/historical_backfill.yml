@@ -22,7 +22,7 @@ on:
         required: false
         default: "2025"
       connector:
-        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs / geointel)"
+        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs / geointel / fao-amis / usda-xlsx)"
         required: false
         default: "all"
       skip_analysis:
@@ -290,6 +290,85 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  # ── WBS 1.1.42: USDA FAS 수동 업로드 Excel 수집 (WASDE · PSD · GATS) ──────────
+  # main 브랜치에 수동 업로드된 Excel 파일을 Parquet으로 변환.
+  # API 키 불필요. 파일이 없으면 각 단계가 자동 건너뜀.
+  usda-manual-xlsx-ingest:
+    name: "1.1.42 | USDA FAS Manual Excel Ingest (WASDE · PSD · GATS)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'usda-xlsx' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install openpyxl pandas pyarrow
+
+      - name: Check for WASDE Excel files
+        id: check_wasde
+        run: |
+          COUNT=$(find data/raw/USDA/WASDE -name "*.xlsx" 2>/dev/null | wc -l)
+          echo "xlsx_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "WASDE xlsx 파일 수: $COUNT"
+      - name: Run WASDE Excel ingest
+        if: steps.check_wasde.outputs.xlsx_count != '0'
+        run: python scripts/ingest_wasde_xlsx.py
+      - name: Upload WASDE output
+        if: steps.check_wasde.outputs.xlsx_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-wasde-xlsx-${{ github.run_id }}
+          path: data/raw/wasde_historical.parquet
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Check for PSD Excel files
+        id: check_psd
+        run: |
+          COUNT=$(find data/raw/USDA/FAS/PSD -name "*.xlsx" 2>/dev/null | wc -l)
+          echo "xlsx_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "PSD xlsx 파일 수: $COUNT"
+      - name: Run PSD Excel ingest
+        if: steps.check_psd.outputs.xlsx_count != '0'
+        run: python scripts/ingest_psd_data.py
+      - name: Upload PSD output
+        if: steps.check_psd.outputs.xlsx_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-psd-xlsx-${{ github.run_id }}
+          path: data/raw/psd_historical.parquet
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Check for GATS Excel files
+        id: check_gats
+        run: |
+          COUNT=$(find data/raw/USDA/FAS/GATS -name "*.xlsx" 2>/dev/null | wc -l)
+          echo "xlsx_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "GATS xlsx 파일 수: $COUNT"
+      - name: Run GATS Excel ingest
+        if: steps.check_gats.outputs.xlsx_count != '0'
+        run: python scripts/ingest_gats_data.py
+      - name: Upload GATS quantity output
+        if: steps.check_gats.outputs.xlsx_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-gats-quantity-${{ github.run_id }}
+          path: data/raw/gats_quantity_historical.parquet
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Upload GATS value output
+        if: steps.check_gats.outputs.xlsx_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-gats-value-${{ github.run_id }}
+          path: data/raw/gats_value_historical.parquet
+          retention-days: 90
+          if-no-files-found: warn
+
   # ── WBS 1.4.1: GPR × SBO 상관관계 분석 (백필 완료 후 실행) ───────────────────
   gpr-sbo-correlation:
     name: "1.4.1 | GPR × SBO Correlation Analysis (Post-Backfill)"
@@ -333,6 +412,7 @@ jobs:
       - commodity-backfill
       - customs-backfill
       - fao-amis-ingest
+      - usda-manual-xlsx-ingest
     if: always()
     steps:
       - uses: actions/checkout@v4
