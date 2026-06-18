@@ -10,7 +10,11 @@
 # ※ export_value_top10: 9개년 파일은 대두(HS1201)·대두박(HS2304)·대두유(HS1507) 수출"액"(USD)
 #    데이터로, 1507.10/1507.90 수출"량" 파일의 요약본이 아님. 별도 폴더로 분리 보관.
 #
-# 실행: GitHub Actions 탭 → "Reorganize USDA FAS Files" → Run workflow → 브랜치 main 선택
+# 실행 방식:
+#   - workflow_dispatch: 이 워크플로우가 main(기본 브랜치)에 존재할 때 Actions 탭에서 수동 실행
+#   - push: dev 브랜치에서 이 워크플로우 파일이 변경될 때 자동 1회 실행 (A-041 패턴)
+#     → 비기본 브랜치에서는 workflow_dispatch 디스패치가 403이므로 push 트리거 사용.
+#       내부에서 항상 target_branch(기본 main)를 checkout 하여 재정리 후 push.
 name: Reorganize USDA FAS Files
 
 on:
@@ -20,6 +24,11 @@ on:
         description: "재정리 대상 브랜치"
         required: true
         default: "main"
+  push:
+    branches:
+      - "claude/setup-nexus-llm-tools-RX4aS"
+    paths:
+      - ".github/workflows/reorganize_fas_files.yml"
 
 permissions:
   contents: write
@@ -35,7 +44,7 @@ jobs:
       - name: Checkout target branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.target_branch }}
+          ref: ${{ github.event.inputs.target_branch || 'main' }}
           fetch-depth: 0
 
       - name: Create destination folders
@@ -146,5 +155,5 @@ jobs:
           git commit \
             -m "data: reorganize USDA FAS GAIN(PDF)/GATS(xlsx) into standard folders" \
             -m "PDF -> GAIN/Oilseeds/ | GATS xlsx -> 1507.10/ | FAS-root 수출량 -> 1507.90/ | 9개년 수출액 -> export_value_top10/. 변경 파일 수: ${COUNT}"
-          git push origin HEAD:${{ github.event.inputs.target_branch }}
-          echo "[완료] ${COUNT}개 항목 재정리 -> ${{ github.event.inputs.target_branch }} 브랜치 push 완료"
+          git push origin HEAD:${{ github.event.inputs.target_branch || 'main' }}
+          echo "[완료] ${COUNT}개 항목 재정리 -> ${{ github.event.inputs.target_branch || 'main' }} 브랜치 push 완료"
