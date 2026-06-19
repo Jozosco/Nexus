@@ -327,12 +327,17 @@ LASSO_ZERO_DIAGNOSIS: list[dict] = [
 FILE_PATTERNS: dict[str, str] = {
     "economic_indicators": "거시경제(Fed/CPI/FX/Brent)",
     "shipping_indices":    "해운지수(BCAA/BDI)",
-    "crop_data":           "작황(WASDE/PSD)",
+    "crop_data":           "작황(WASDE/PSD API)",
+    "wasde_historical":    "작황(WASDE 수동 업로드)",
+    "psd_historical":      "작황(PS&D 수동 업로드)",
     "climate_data":        "기후(ONI/기상이상)",
     "geopolitical_indices":"지정학(GPR/호르무즈)",
     "production_data":     "생산량(NASS/FAOSTAT/NASA)",
     "commodity_data":      "상품가격(CBOT/CPO/ARS/가뭄)",
     "customs_import":      "수입통계(관세청 HS1507)",
+    "gats_quantity_historical": "무역통계(GATS 미국 수출량)",
+    "gats_value_historical":    "무역통계(GATS 미국 수출액)",
+    "fao_amis_historical": "수급전망(FAO AMIS)",
     "geointel":            "지정학 인텔리전스(USGS/NOAA/GDELT/FIRMS)",
 }
 

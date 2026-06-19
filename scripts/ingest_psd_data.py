@@ -5,29 +5,23 @@ USDA FAS PS&D Excel 수집 스크립트 (WBS 1.1.41 변형)
 입력: data/raw/USDA/FAS/PSD/*.xlsx
 출력: data/raw/psd_historical.parquet
 
+실제 파일 구조 (A-051):
+  컬럼 = [Commodity, Attribute, Country, 2017/2018, ..., 2025/2026, Unit Description]
+  - Commodity·Attribute는 forward-fill 필요 (병합셀 → 첫 행만 값, 이하 NaN)
+  - World/Total 집계 행 없음 → 국가별 값을 마케팅연도별로 합산해 글로벌 산출
+  - 'Crush' attribute 미존재 → Oilseed 'Domestic Consumption'을 압착량 프록시로 사용
+
 포함 파일:
-  ✅ Oil, Soybean.xlsx    — 대두유 공급/수요 밸런스 (국제 무역 포함)
-  ✅ Oilseed, Soybean.xlsx — 대두 원료 공급/수요 (선행 지표)
-  ✅ Meal, Soybean.xlsx   — 대두박 (압착 마진 계산용)
-  ❌ Oil, Soybean (Local).xlsx — 제외 (D-012: 수공업 생산·무역 비포함)
+  ✅ Oil, Soybean.xlsx     — 대두유 S&D
+  ✅ Oilseed, Soybean.xlsx — 대두 원료 S&D (압착 프록시 포함)
+  ✅ Meal, Soybean.xlsx    — 대두박 (압착 마진)
+  ❌ Oil, Soybean (Local).xlsx — 제외 (D-012)
 
-마케팅연도 처리:
-  "2023" → price_date = 2023-10-01 (10월 1일 = 마케팅연도 시작)
-  참조: c01_p101_psd_local_vs_standard_2026_06_17.md
-
-수집 지표:
-  PSD_SBO_PRODUCTION        : 대두유 글로벌 생산량 (1,000 MT)
-  PSD_SBO_EXPORTS           : 대두유 글로벌 수출량 (1,000 MT)
-  PSD_SBO_IMPORTS           : 대두유 글로벌 수입량 (1,000 MT)
-  PSD_SBO_ENDING_STOCKS     : 대두유 기말재고 (1,000 MT)
-  PSD_SBO_TOTAL_USE         : 대두유 총소비 (1,000 MT)
-  PSD_SBO_STU               : 재고사용비율 (%)
-  PSD_SOY_PRODUCTION        : 대두 글로벌 생산량 (100만 MT)
-  PSD_SOY_CRUSH             : 대두 압착량 (100만 MT)
-  PSD_SBM_PRODUCTION        : 대두박 글로벌 생산량 (1,000 MT) [마진 계산용]
+마케팅연도 → price_date: '2023/2024' → 2023-10-01 (10월 1일 = MY 시작)
 """
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 
@@ -36,117 +30,93 @@ import pandas as pd
 PSD_DIR    = Path("data/raw/USDA/FAS/PSD")
 OUTPUT_DIR = Path("data/raw")
 
-PSD_FILES_TO_INGEST: list[str] = [
-    "Oil, Soybean.xlsx",       # 대두유 S&D 밸런스 (국제 무역 포함) ✅
-    "Oilseed, Soybean.xlsx",   # 대두 원료 S&D (선행 지표) ✅
-    "Meal, Soybean.xlsx",      # 대두박 (압착 마진 계산용) ✅
-    # "Oil, Soybean (Local).xlsx"  # D-012 결정: 제외
-]
+PSD_FILES_TO_INGEST = ["Oil, Soybean.xlsx", "Oilseed, Soybean.xlsx", "Meal, Soybean.xlsx"]
 
+# (commodity_key) → {Attribute: indicator_code}
 _INDICATOR_MAP: dict[str, dict[str, str]] = {
     "oil, soybean": {
-        "Production":       "PSD_SBO_PRODUCTION",
-        "MY Exports":       "PSD_SBO_EXPORTS",
-        "MY Imports":       "PSD_SBO_IMPORTS",
-        "Ending Stocks":    "PSD_SBO_ENDING_STOCKS",
-        "Total Dom. Cons.": "PSD_SBO_TOTAL_USE",
+        "Production":           "PSD_SBO_PRODUCTION",
+        "Exports":              "PSD_SBO_EXPORTS",
+        "Imports":              "PSD_SBO_IMPORTS",
+        "Ending Stocks":        "PSD_SBO_ENDING_STOCKS",
+        "Domestic Consumption": "PSD_SBO_TOTAL_USE",
     },
     "oilseed, soybean": {
-        "Production":       "PSD_SOY_PRODUCTION",
-        "Crush":            "PSD_SOY_CRUSH",
-        "MY Exports":       "PSD_SOY_EXPORTS",
-        "Ending Stocks":    "PSD_SOY_ENDING_STOCKS",
+        "Production":           "PSD_SOY_PRODUCTION",
+        "Domestic Consumption": "PSD_SOY_CRUSH",      # 압착량 프록시
+        "Exports":              "PSD_SOY_EXPORTS",
+        "Ending Stocks":        "PSD_SOY_ENDING_STOCKS",
     },
     "meal, soybean": {
-        "Production":       "PSD_SBM_PRODUCTION",
-        "MY Exports":       "PSD_SBM_EXPORTS",
-        "Ending Stocks":    "PSD_SBM_ENDING_STOCKS",
+        "Production":           "PSD_SBM_PRODUCTION",
+        "Exports":              "PSD_SBM_EXPORTS",
+        "Ending Stocks":        "PSD_SBM_ENDING_STOCKS",
     },
 }
 
+_MY_COL_RE = re.compile(r"^(\d{4})/\d{2,4}$")
 
-def _marketing_year_to_date(year_str: str) -> date | None:
-    """마케팅연도 → price_date 변환: '2023' → 2023-10-01."""
-    try:
-        y = int(str(year_str).strip().split("/")[0].split("-")[0])
-        if 2000 <= y <= 2040:
-            return date(y, 10, 1)
-    except (ValueError, IndexError):
-        pass
-    return None
+
+def _my_to_date(col: str) -> date | None:
+    m = _MY_COL_RE.match(str(col).strip())
+    return date(int(m.group(1)), 10, 1) if m else None
 
 
 def parse_psd_file(xlsx_path: Path) -> pd.DataFrame:
-    """PS&D Excel 파일 → 마케팅연도별 정규화 DataFrame."""
     commodity_key = xlsx_path.stem.lower()
     indicator_map = _INDICATOR_MAP.get(commodity_key)
     if indicator_map is None:
         print(f"  [건너뜀] 매핑 없는 파일: {xlsx_path.name}")
         return pd.DataFrame()
 
-    try:
-        df = pd.read_excel(xlsx_path, engine="openpyxl", index_col=0)
-    except Exception as e:
-        raise RuntimeError(f"[오류] PS&D Excel 로드 실패: {xlsx_path}: {e}") from e
+    df = pd.read_excel(xlsx_path, header=0, engine="openpyxl")
+    df.columns = [str(c).strip() for c in df.columns]
+    if "Attribute" not in df.columns or "Country" not in df.columns:
+        print(f"  [경고] {xlsx_path.name}: 예상 컬럼(Attribute/Country) 없음")
+        return pd.DataFrame()
 
-    # PS&D 형식: 행 = 지표명, 열 = 마케팅연도 (또는 전치 가능)
-    # 우선 열이 연도인지 확인
-    year_cols: list[tuple[int, str]] = []
-    for col in df.columns:
-        pd_date = _marketing_year_to_date(str(col))
-        if pd_date is not None:
-            year_cols.append((col, pd_date))
+    # 병합셀 forward-fill
+    df["Attribute"] = df["Attribute"].ffill()
 
-    if not year_cols:
-        # 전치 시도: 행=연도, 열=지표
-        df = df.T
-        for col in df.columns:
-            pd_date = _marketing_year_to_date(str(col))
-            if pd_date is not None:
-                year_cols.append((col, pd_date))
+    my_cols = [c for c in df.columns if _MY_COL_RE.match(str(c).strip())]
+    if not my_cols:
+        print(f"  [경고] {xlsx_path.name}: 마케팅연도 컬럼 없음")
+        return pd.DataFrame()
 
-    records: list[dict] = []
     base = {
         "source_name": "USDA_FAS_PSD_XLSX",
         "unit":        "1000MT",
         "ingested_at": pd.Timestamp.utcnow(),
         "note":        xlsx_path.name,
     }
+    records: list[dict] = []
 
-    for col, price_date in year_cols:
-        for row_key, indicator_code in indicator_map.items():
-            # 행 이름 근사 매칭
-            matched_idx = None
-            for idx in df.index:
-                if row_key.lower() in str(idx).lower():
-                    matched_idx = idx
-                    break
-            if matched_idx is None:
+    for attr, code in indicator_map.items():
+        sub = df[df["Attribute"].astype(str).str.strip() == attr]
+        if sub.empty:
+            continue
+        for col in my_cols:
+            price_date = _my_to_date(col)
+            if price_date is None:
                 continue
-            v = pd.to_numeric(df.loc[matched_idx, col], errors="coerce")
-            if pd.notna(v):
+            world = pd.to_numeric(sub[col], errors="coerce").dropna().sum()  # 국가 합산
+            if world > 0:
                 records.append({**base, "price_date": price_date,
-                                 "indicator_code": indicator_code, "value": float(v)})
+                                "indicator_code": code, "value": float(world)})
 
-    # STU 파생 계산 (대두유 파일)
+    # 대두유 STU 파생
     if commodity_key == "oil, soybean":
-        prod_map: dict[date, float] = {}
-        use_map:  dict[date, float] = {}
-        stk_map:  dict[date, float] = {}
-        for rec in records:
-            if rec["indicator_code"] == "PSD_SBO_PRODUCTION":
-                prod_map[rec["price_date"]] = rec["value"]
-            elif rec["indicator_code"] == "PSD_SBO_TOTAL_USE":
-                use_map[rec["price_date"]] = rec["value"]
-            elif rec["indicator_code"] == "PSD_SBO_ENDING_STOCKS":
-                stk_map[rec["price_date"]] = rec["value"]
-        for dt in set(use_map) & set(stk_map):
-            total_use = use_map[dt]
-            if total_use and total_use > 0:
-                stu = round(stk_map[dt] / total_use * 100, 2)
-                records.append({**base, "price_date": dt,
-                                 "indicator_code": "PSD_SBO_STU",
-                                 "value": stu, "unit": "percent"})
+        df_rec = pd.DataFrame(records)
+        if not df_rec.empty:
+            piv = df_rec.pivot_table(index="price_date", columns="indicator_code",
+                                     values="value", aggfunc="first")
+            for dt, row in piv.iterrows():
+                es = row.get("PSD_SBO_ENDING_STOCKS")
+                tu = row.get("PSD_SBO_TOTAL_USE")
+                if pd.notna(es) and pd.notna(tu) and tu > 0:
+                    records.append({**base, "price_date": dt, "unit": "percent",
+                                    "indicator_code": "PSD_SBO_STU",
+                                    "value": round(es / tu * 100, 2)})
 
     return pd.DataFrame(records)
 
@@ -154,7 +124,6 @@ def parse_psd_file(xlsx_path: Path) -> pd.DataFrame:
 def run(psd_dir: Path = PSD_DIR, output_dir: Path = OUTPUT_DIR) -> None:
     target_files = [psd_dir / f for f in PSD_FILES_TO_INGEST if (psd_dir / f).exists()]
     missing = [f for f in PSD_FILES_TO_INGEST if not (psd_dir / f).exists()]
-
     if missing:
         print(f"[경고] 다음 파일 없음: {missing}")
     if not target_files:
@@ -167,13 +136,14 @@ def run(psd_dir: Path = PSD_DIR, output_dir: Path = OUTPUT_DIR) -> None:
         print(f"  처리 중: {f.name}")
         try:
             df = parse_psd_file(f)
-            all_frames.append(df)
+            if not df.empty:
+                all_frames.append(df)
             print(f"    → {len(df)}건 추출")
         except Exception as e:
             print(f"    [오류] {f.name}: {e}")
 
     if not all_frames:
-        print("[오류] 추출된 데이터 없음.")
+        print("[경고] 추출된 PS&D 레코드 없음 — parquet 미생성.")
         return
 
     combined = pd.concat(all_frames, ignore_index=True)
