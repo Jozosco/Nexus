@@ -62,7 +62,7 @@ jobs:
 
   # ── WBS 1.1.3: 해운 지수 히스토리 ─────────────────────────────────────────────
   # BACKFILL_MODE=true: BCAA(Perplexity, 오늘만) 건너뜀 → TE BDI 히스토리 / stooq 폴백
-  # stooq 폴백: pandas-datareader stooq — API 키 불필요, ^BDI 심볼 사용
+  # stooq 폴백: httpx로 stooq CSV 직접 다운로드(^bdi) — API 키 불필요 (A-053)
   shipping-backfill:
     name: "1.1.3 | Shipping Indices Backfill (BDI via TE → stooq fallback)"
     runs-on: ubuntu-latest
@@ -73,8 +73,8 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        # pandas-datareader: stooq BDI 폴백 (TE 키 미등록 시)
-        run: pip install openai pandas pyarrow tradingeconomics pandas-datareader
+        # httpx: stooq CSV 직접 호출 (pandas-datareader 제거 — pandas 2.x 비호환, A-053)
+        run: pip install openai httpx pandas pyarrow tradingeconomics
       - name: Run shipping connector (historical)
         env:
           PERPLEXITY_API_KEY:         ${{ secrets.PERPLEXITY_API_KEY }}

@@ -177,38 +177,50 @@ def fetch_bdi_te(start_date: str | None = None, end_date: str | None = None) -> 
 
 
 def fetch_bdi_stooq(start_date: str = "2017-01-01") -> pd.DataFrame:
-    """pandas-datareader stooq를 통한 BDI 히스토리 폴백 (Trading Economics 키 미등록 시).
+    """stooq.com CSV 직접 다운로드로 BDI 히스토리 수집 (TE 키 미등록/실패 시 폴백).
 
-    stooq.com 무료 데이터 — API 키 불필요. BDI 심볼: ^BDI 또는 BCOM:IN.
-    TE 히스토리 조회 실패 또는 키 미등록 시에만 호출.
+    A-053: 기존 pandas-datareader는 pandas 2.x/3.x와 호환 불가
+    (`deprecate_kwarg() missing 1 required positional argument`). httpx로 stooq CSV
+    엔드포인트를 직접 호출해 의존성 제거.
+
+    stooq CSV: https://stooq.com/q/d/l/?s=<symbol>&d1=YYYYMMDD&d2=YYYYMMDD&i=d
+    응답 형식: Date,Open,High,Low,Close,Volume — API 키 불필요.
     """
-    try:
-        from pandas_datareader import data as pdr  # type: ignore
-        end = date.today().isoformat()
-        # stooq BDI 심볼: ^BDI (stooq 인덱스 형식). BCOM:IN은 Bloomberg 상품 지수 — 잘못된 심볼이었음.
-        for symbol in ("BDI", "^BDI", "BALT:IN"):
-            try:
-                df_raw = pdr.get_data_stooq(symbol, start=start_date, end=end)
-                if df_raw is not None and not df_raw.empty:
-                    close_col = next((c for c in ["Close", "close", "Zamkniecie"] if c in df_raw.columns), None)
-                    if close_col:
-                        df = pd.DataFrame({
-                            "price_date":     pd.to_datetime(df_raw.index),
-                            "value":          pd.to_numeric(df_raw[close_col], errors="coerce"),
-                            "source_name":    "stooq/BalticExchange",
-                            "indicator_code": "BDI",
-                            "unit":           "points",
-                            "note":           f"[STOOQ-FREE: BDI 히스토리 ({start_date}~{end})]",
-                            "ingested_at":    pd.Timestamp.utcnow(),
-                        }).dropna(subset=["price_date", "value"])
-                        if not df.empty:
-                            print(f"[완료] BDI stooq 히스토리 {len(df)}건 ({symbol})")
-                            return df.sort_values("price_date")
-            except Exception as inner_e:
-                print(f"[경고] stooq {symbol} 실패: {inner_e}")
+    import io
+
+    end = date.today()
+    d1 = start_date.replace("-", "")
+    d2 = end.strftime("%Y%m%d")
+    # stooq Baltic Dry 심볼: ^bdi (인덱스). 폴백 심볼 순차 시도.
+    for symbol in ("^bdi", "bdi"):
+        url = f"https://stooq.com/q/d/l/?s={symbol}&d1={d1}&d2={d2}&i=d"
+        try:
+            resp = httpx.get(url, timeout=30)
+            resp.raise_for_status()
+            text = resp.text.strip()
+            # stooq는 데이터 없을 때 'No data' 또는 HTML 반환
+            if not text or "No data" in text or text.lower().startswith("<"):
+                print(f"[경고] stooq {symbol}: 데이터 없음")
                 continue
-    except ImportError:
-        print("[경고] pandas-datareader 미설치 — pip install pandas-datareader")
+            raw = pd.read_csv(io.StringIO(text))
+            if "Date" not in raw.columns or "Close" not in raw.columns:
+                print(f"[경고] stooq {symbol}: 예상 컬럼 없음 ({list(raw.columns)})")
+                continue
+            df = pd.DataFrame({
+                "price_date":     pd.to_datetime(raw["Date"], errors="coerce"),
+                "value":          pd.to_numeric(raw["Close"], errors="coerce"),
+                "source_name":    "stooq/BalticExchange",
+                "indicator_code": "BDI",
+                "unit":           "points",
+                "note":           f"[STOOQ-FREE: BDI 히스토리 ({start_date}~{end.isoformat()})]",
+                "ingested_at":    pd.Timestamp.utcnow(),
+            }).dropna(subset=["price_date", "value"])
+            if not df.empty:
+                print(f"[완료] BDI stooq 히스토리 {len(df)}건 ({symbol})")
+                return df.sort_values("price_date").reset_index(drop=True)
+        except Exception as e:
+            print(f"[경고] stooq {symbol} 실패: {e}")
+            continue
     return pd.DataFrame()
 
 

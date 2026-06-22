@@ -327,12 +327,17 @@ LASSO_ZERO_DIAGNOSIS: list[dict] = [
 FILE_PATTERNS: dict[str, str] = {
     "economic_indicators": "거시경제(Fed/CPI/FX/Brent)",
     "shipping_indices":    "해운지수(BCAA/BDI)",
-    "crop_data":           "작황(WASDE/PSD)",
+    "crop_data":           "작황(WASDE/PSD API)",
+    "wasde_historical":    "작황(WASDE 수동 업로드)",
+    "psd_historical":      "작황(PS&D 수동 업로드)",
     "climate_data":        "기후(ONI/기상이상)",
     "geopolitical_indices":"지정학(GPR/호르무즈)",
     "production_data":     "생산량(NASS/FAOSTAT/NASA)",
     "commodity_data":      "상품가격(CBOT/CPO/ARS/가뭄)",
     "customs_import":      "수입통계(관세청 HS1507)",
+    "gats_quantity_historical": "무역통계(GATS 미국 수출량)",
+    "gats_value_historical":    "무역통계(GATS 미국 수출액)",
+    "fao_amis_historical": "수급전망(FAO AMIS)",
     "geointel":            "지정학 인텔리전스(USGS/NOAA/GDELT/FIRMS)",
 }
 
@@ -376,13 +381,45 @@ def _freshness_flag(df: pd.DataFrame, stale_days: int = 5) -> str:
     return f"🚨 STALE ({biz_days_old}영업일)" if biz_days_old > stale_days else "✅ OK"
 
 
+def _data_integrity_flag(df: pd.DataFrame) -> str:
+    """데이터 무결성(완전성) 판정: value 비결측 비율 기반.
+
+    완전성 = 비결측 value / 전체 행. ≥0.95 PASS · ≥0.80 WARN · 그 외 LOW.
+    indicator_code/value 스키마가 아니면 numeric 컬럼 평균 비결측률 사용.
+    """
+    if "value" in df.columns:
+        total = len(df)
+        non_null = int(pd.to_numeric(df["value"], errors="coerce").notna().sum())
+    else:
+        num = df.select_dtypes(include="number")
+        if num.empty or len(df) == 0:
+            return "N/A"
+        total = num.size
+        non_null = int(num.notna().sum().sum())
+    if total == 0:
+        return "N/A"
+    pct = non_null / total * 100
+    flag = "✅" if pct >= 95 else ("⚠️" if pct >= 80 else "🚨")
+    return f"{flag} {pct:.0f}%"
+
+
+def _indicator_count(df: pd.DataFrame) -> int:
+    """수집된 변수(지표) 항목 수."""
+    if "indicator_code" in df.columns:
+        return int(df["indicator_code"].nunique())
+    num = [c for c in df.select_dtypes(include="number").columns
+           if c not in ("ingested_at", "rows")]
+    return len(num)
+
+
 def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
-    """커넥터별 데이터 현황 테이블."""
+    """커넥터별 데이터 현황 테이블 (변수항목·행수·날짜범위·무결성·신선도)."""
     rows = []
     for key, label in FILE_PATTERNS.items():
         if key not in frames:
-            rows.append({"커넥터": label, "파일수": 0, "행수": 0,
-                         "날짜범위": "미수집", "신선도": "❌ 데이터 없음"})
+            rows.append({"커넥터": label, "변수항목": 0, "행수": 0,
+                         "날짜범위": "미수집", "무결성": "N/A",
+                         "신선도": "❌ 데이터 없음"})
             continue
         df = frames[key]
         date_col = next((c for c in ["price_date", "ingested_at"] if c in df.columns), None)
@@ -393,9 +430,10 @@ def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
             date_range = "N/A"
         rows.append({
             "커넥터":   label,
-            "파일수":   1,
+            "변수항목": _indicator_count(df),
             "행수":     len(df),
             "날짜범위": date_range,
+            "무결성":   _data_integrity_flag(df),
             "신선도":   _freshness_flag(df),
         })
     return pd.DataFrame(rows)
@@ -1864,14 +1902,15 @@ def run(days: int = 7) -> None:
     md_lines += [
         "",
         "## 활용 데이터",
-        "| 커넥터 | 행수 | 날짜범위 | 신선도 |",
-        "|---|---|---|---|",
+        "| 커넥터 | 변수항목 | 행수 | 날짜범위 | 무결성 | 신선도 |",
+        "|---|---|---|---|---|---|",
     ]
     if not status_df.empty:
         for _, row in status_df.iterrows():
             md_lines.append(
-                f"| {row.get('커넥터', '?')} | {row.get('행수', '?')} | "
-                f"{row.get('날짜범위', '?')} | {row.get('신선도', '?')} |"
+                f"| {row.get('커넥터', '?')} | {row.get('변수항목', '?')} | "
+                f"{row.get('행수', '?')} | {row.get('날짜범위', '?')} | "
+                f"{row.get('무결성', '?')} | {row.get('신선도', '?')} |"
             )
     md_lines += [
         "",

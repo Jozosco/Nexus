@@ -3,28 +3,30 @@
 USDA FAS WASDE Excel 수동 업로드 데이터 수집 스크립트 (WBS 1.1.41)
 
 입력: data/raw/USDA/WASDE/*.xlsx  (17년~26년 취합본, 월별 시트)
-출력: data/raw/wasde_historical_{YYYY}.parquet  → Snowflake (Phase B)
+출력: data/raw/wasde_historical.parquet
 
-시트 구조:
-  - 각 파일은 해당 연도의 1월~12월 (또는 수집된 월까지) 시트를 포함
-  - 각 시트: USDA WASDE 형식의 대두/유지류 공급·수요 테이블
+파일 형식 주의 (A-050):
+  - 24년~26년: 정상 OOXML(.xlsx, zip) — tidy long 포맷
+  - 17년~23년: 사내 문서보안(DRM) "SAFER" 래퍼로 암호화됨 → 어떤 파서도 해독 불가.
+    매직바이트가 'PK'(zip)가 아니면 DRM/비정상으로 판단하고 건너뜀.
+    해결: DRM 클라이언트에서 평문 .xlsx로 재저장 후 재업로드 필요 (사용자 수동 작업).
 
-수집 지표:
-  - WASDE_SBO_PRODUCTION     : 대두유 글로벌 생산량 (1,000 MT)
-  - WASDE_SBO_CONSUMPTION    : 대두유 글로벌 소비량 (1,000 MT)
-  - WASDE_SBO_EXPORTS        : 대두유 글로벌 수출량 (1,000 MT)
-  - WASDE_SBO_ENDING_STOCKS  : 대두유 기말재고 (1,000 MT)
-  - WASDE_SBO_STU            : 재고사용비율 Ending Stocks / Total Use × 100 (%)
-  - WASDE_SOY_PRODUCTION     : 대두 글로벌 생산량 (100만 MT) [선행 지표]
+tidy long 포맷 (24년~):
+  컬럼 = [Report Title, Attribute, Reliability Projection, Commodity, Region,
+          Market Year, Proj Est Flag, Annual/Quarter Flag, Value, Unit]
+  시트명 = 보고서 발행월 (예: 'Jan 12' = 1월 12일 발행)
 
-제약:
-  - openpyxl 미사용 (CLAUDE.md §2): pipeline 데이터는 Snowflake 경유
-  - 이 스크립트는 scripts/ 전용 수동 실행 도구
-  - Snowflake 연동은 Phase B에서 추가
+수집 지표 (World / United States):
+  WASDE_SBO_PRODUCTION      : 대두유 생산량 (Million MT)
+  WASDE_SBO_EXPORTS         : 대두유 수출량
+  WASDE_SBO_IMPORTS         : 대두유 수입량
+  WASDE_SBO_ENDING_STOCKS   : 대두유 기말재고
+  WASDE_SBO_DOMESTIC_USE    : 대두유 국내소비(Domestic Total)
+  WASDE_SBO_STU             : 재고사용비율 = Ending Stocks / Domestic Total × 100 (%)
+  WASDE_US_SBO_*            : 미국 한정 동일 지표
 """
 from __future__ import annotations
 
-import os
 import re
 from datetime import date
 from pathlib import Path
@@ -32,156 +34,153 @@ from typing import Optional
 
 import pandas as pd
 
-# ── 경로 상수 ─────────────────────────────────────────────────────────────────
-WASDE_DIR   = Path("data/raw/USDA/WASDE")
-OUTPUT_DIR  = Path("data/raw")
-REPORT_DIR  = Path("reports/pipeline")
+WASDE_DIR  = Path("data/raw/USDA/WASDE")
+OUTPUT_DIR = Path("data/raw")
 
-# 파일명 → 연도 추출 패턴: "17년_곡물 및 유지류 취합본.xlsx" → 2017
+# 파일명 → 연도: "17년_..." / "26년 1~5월_..." → 2017 / 2026
 _YEAR_RE = re.compile(r"^(\d{2})년")
 
-# 대두유 행 식별 키워드 (한국어/영어 혼용 취합본 고려)
-_SBO_KEYWORDS = [
-    "대두유", "SBO", "Soybean Oil", "Soybean oil",
-    "Soybean Oils", "Bean Oil",
-]
-_SOY_KEYWORDS = [
-    "대두", "Soybeans", "Soybean", "대두(대두박·두유 포함)",
-]
+# 시트명 → 월: 'Jan 12' / '1월' / 'Jan' → 1
+_MONTH_MAP = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
 
-# 컬럼명 → 지표코드 매핑 후보 (취합본 포맷에 따라 달라질 수 있음)
-_COL_MAP: dict[str, str] = {
-    "production":        "WASDE_SBO_PRODUCTION",
-    "생산량":            "WASDE_SBO_PRODUCTION",
-    "consumption":       "WASDE_SBO_CONSUMPTION",
-    "소비량":            "WASDE_SBO_CONSUMPTION",
-    "exports":           "WASDE_SBO_EXPORTS",
-    "수출량":            "WASDE_SBO_EXPORTS",
-    "ending stocks":     "WASDE_SBO_ENDING_STOCKS",
-    "기말재고":          "WASDE_SBO_ENDING_STOCKS",
-    "total use":         "WASDE_SBO_TOTAL_USE",
-    "총소비":            "WASDE_SBO_TOTAL_USE",
+# WASDE Attribute → 지표 접미사
+_ATTR_MAP = {
+    "Production":      "PRODUCTION",
+    "Exports":         "EXPORTS",
+    "Imports":         "IMPORTS",
+    "Ending Stocks":   "ENDING_STOCKS",
+    "Domestic Total":  "DOMESTIC_USE",
+    "Beginning Stocks": "BEGINNING_STOCKS",
+}
+
+# Region → 지표 접두사
+_REGION_PREFIX = {
+    "World":         "WASDE_SBO_",
+    "United States": "WASDE_US_SBO_",
 }
 
 
 def _year_from_filename(filename: str) -> Optional[int]:
-    """파일명에서 연도 추출: '17년_...' → 2017."""
     m = _YEAR_RE.match(filename)
-    if not m:
-        return None
-    yy = int(m.group(1))
-    return 2000 + yy
+    return 2000 + int(m.group(1)) if m else None
 
 
 def _month_from_sheet(sheet_name: str) -> Optional[int]:
-    """시트명에서 월 추출: '1월', 'Jan', '1', '01' → 1."""
-    month_map = {
-        "jan": 1, "feb": 2, "mar": 3, "apr": 4,
-        "may": 5, "jun": 6, "jul": 7, "aug": 8,
-        "sep": 9, "oct": 10, "nov": 11, "dec": 12,
-    }
     sn = sheet_name.strip().lower()
-    if sn in month_map:
-        return month_map[sn]
-    m = re.match(r"^(\d{1,2})월?$", sn)
+    if sn[:3] in _MONTH_MAP:
+        return _MONTH_MAP[sn[:3]]
+    m = re.match(r"^(\d{1,2})\s*월?", sn)
     if m:
         v = int(m.group(1))
         return v if 1 <= v <= 12 else None
     return None
 
 
-def _extract_sbo_row(df: pd.DataFrame, keywords: list[str]) -> Optional[pd.Series]:
-    """DataFrame에서 대두유 행 탐색 (첫 번째 컬럼 기준)."""
-    first_col = df.iloc[:, 0].astype(str)
-    for kw in keywords:
-        matches = first_col[first_col.str.contains(kw, case=False, na=False)]
-        if not matches.empty:
-            return df.loc[matches.index[0]]
-    return None
-
-
-def _compute_stu(production: float, consumption: float, ending_stocks: float) -> Optional[float]:
-    """재고사용비율(STU) 계산: Ending Stocks / Total Use × 100."""
-    total_use = consumption  # 간이 근사
-    if total_use and total_use > 0:
-        return round(ending_stocks / total_use * 100, 2)
-    return None
-
-
-def parse_wasde_file(xlsx_path: Path) -> pd.DataFrame:
-    """단일 WASDE 취합본 Excel → 정규화 DataFrame 변환."""
-    year = _year_from_filename(xlsx_path.name)
-    if year is None:
-        raise ValueError(f"[오류] 연도 추출 실패: {xlsx_path.name}. 파일명 형식 확인 필요.")
-
+def _is_ooxml(path: Path) -> bool:
+    """매직바이트로 정상 OOXML(zip) 여부 판정. DRM/HTML 래퍼 차단."""
     try:
-        xl = pd.ExcelFile(xlsx_path, engine="openpyxl")
-    except Exception as e:
-        raise RuntimeError(f"[오류] Excel 파일 로드 실패: {xlsx_path}: {e}") from e
+        with open(path, "rb") as fh:
+            return fh.read(4) == b"PK\x03\x04"
+    except OSError:
+        return False
 
+
+def _detect_wrapper(path: Path) -> str:
+    """비정상 파일의 래퍼 종류 식별 (로그 메시지용)."""
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(64)
+    except OSError:
+        return "읽기 실패"
+    if b"SAFER" in head or b"DOCUMENT" in head:
+        return "문서보안(DRM) 래퍼 — 평문 재저장 필요"
+    if head[:1] == b"<":
+        return "HTML/XML 래퍼"
+    if head[:4] == b"\xd0\xcf\x11\xe0":
+        return "구형 .xls(OLE2) — xlrd 필요"
+    return f"미상(매직 {head[:4].hex()})"
+
+
+def _latest_market_year(my_series: pd.Series) -> Optional[str]:
+    """'2021/22','2023/24' 중 가장 최신 마케팅연도 문자열 반환."""
+    best, best_key = None, -1
+    for v in my_series.dropna().astype(str).unique():
+        m = re.match(r"(\d{4})", v.strip())
+        if m and int(m.group(1)) > best_key:
+            best_key, best = int(m.group(1)), v
+    return best
+
+
+def parse_wasde_tidy(xlsx_path: Path, year: int) -> pd.DataFrame:
+    """정상 OOXML(tidy long) WASDE 파일 파싱."""
+    xl = pd.ExcelFile(xlsx_path, engine="openpyxl")
     records: list[dict] = []
+
     for sheet_name in xl.sheet_names:
         month = _month_from_sheet(sheet_name)
         if month is None:
-            continue  # 목차, 메모 시트 등 건너뜀
-
+            continue
         price_date = date(year, month, 1)
 
-        try:
-            df_sheet = xl.parse(sheet_name, header=None)
-        except Exception as e:
-            print(f"  [경고] 시트 파싱 실패 {sheet_name}: {e}")
+        df = xl.parse(sheet_name, header=0)
+        # 컬럼명 정규화: 'Market Year'/'MarketYear' 양쪽 포맷 대응
+        norm = {re.sub(r"\s+", "", str(c)).lower(): c for c in df.columns}
+        col = {
+            "attribute":   norm.get("attribute"),
+            "commodity":   norm.get("commodity"),
+            "region":      norm.get("region"),
+            "market_year": norm.get("marketyear"),
+            "value":       norm.get("value"),
+        }
+        if any(v is None for v in col.values()):
             continue
 
-        # 대두유 행 탐색
-        sbo_row = _extract_sbo_row(df_sheet, _SBO_KEYWORDS)
-        if sbo_row is None:
-            print(f"  [정보] {year}/{month:02d}: 대두유 행 없음 — 건너뜀")
+        sbo = df[df[col["commodity"]].astype(str).str.strip() == "Soybean Oil"]
+        if sbo.empty:
             continue
 
-        # 수치 컬럼 추출 (숫자형 컬럼만)
-        numeric_vals = pd.to_numeric(sbo_row, errors="coerce").dropna()
-        if len(numeric_vals) < 3:
-            print(f"  [경고] {year}/{month:02d}: 유효 수치 부족 ({len(numeric_vals)}개)")
-            continue
-
-        # 컬럼 위치 기반 순서 추정 (production / consumption / exports / ending_stocks)
-        col_values = numeric_vals.values.tolist()
-
-        base_record = {
-            "price_date":     price_date,
-            "source_name":    "USDA_WASDE_XLSX",
-            "unit":           "1000MT",
-            "ingested_at":    pd.Timestamp.utcnow(),
-            "note":           f"{xlsx_path.name} / {sheet_name}",
+        base = {
+            "price_date":  price_date,
+            "source_name": "USDA_WASDE_XLSX",
+            "unit":        "1000000MT",
+            "ingested_at": pd.Timestamp.utcnow(),
+            "note":        f"{xlsx_path.name} / {sheet_name}",
         }
 
-        # 최소 4개 수치가 있으면 순서대로 매핑
-        indicator_order = [
-            "WASDE_SBO_PRODUCTION",
-            "WASDE_SBO_CONSUMPTION",
-            "WASDE_SBO_EXPORTS",
-            "WASDE_SBO_ENDING_STOCKS",
-        ]
-        for i, code in enumerate(indicator_order):
-            if i < len(col_values):
-                records.append({**base_record, "indicator_code": code, "value": col_values[i]})
+        for region, prefix in _REGION_PREFIX.items():
+            reg = sbo[sbo[col["region"]].astype(str).str.strip() == region]
+            if reg.empty:
+                continue
+            my = _latest_market_year(reg[col["market_year"]])
+            if my is None:
+                continue
+            cur = reg[reg[col["market_year"]].astype(str).str.strip() == my]
 
-        # STU 파생 계산
-        if len(col_values) >= 4:
-            stu = _compute_stu(col_values[0], col_values[1], col_values[3])
-            if stu is not None:
-                records.append({**base_record, "indicator_code": "WASDE_SBO_STU",
-                                 "value": stu, "unit": "percent"})
+            vals: dict[str, float] = {}
+            for _, r in cur.iterrows():
+                attr = str(r[col["attribute"]]).strip()
+                code = _ATTR_MAP.get(attr)
+                v = pd.to_numeric(r[col["value"]], errors="coerce")
+                if code and pd.notna(v):
+                    vals[code] = float(v)
+                    records.append({**base, "market_year": my,
+                                    "indicator_code": f"{prefix}{code}",
+                                    "value": float(v)})
 
-    if not records:
-        print(f"  [경고] {xlsx_path.name}: 추출된 레코드 없음")
+            # STU = Ending Stocks / Domestic Total × 100
+            es, du = vals.get("ENDING_STOCKS"), vals.get("DOMESTIC_USE")
+            if es is not None and du and du > 0:
+                records.append({**base, "market_year": my, "unit": "percent",
+                                "indicator_code": f"{prefix}STU",
+                                "value": round(es / du * 100, 2)})
 
     return pd.DataFrame(records)
 
 
 def run(wasde_dir: Path = WASDE_DIR, output_dir: Path = OUTPUT_DIR) -> None:
-    """전체 WASDE Excel 파일 수집·정규화·저장."""
     xlsx_files = sorted(wasde_dir.glob("*.xlsx"))
     if not xlsx_files:
         print(f"[오류] {wasde_dir}에 xlsx 파일 없음. 파일 업로드 후 재실행하세요.")
@@ -189,17 +188,33 @@ def run(wasde_dir: Path = WASDE_DIR, output_dir: Path = OUTPUT_DIR) -> None:
 
     print(f"[C-04] WASDE Excel {len(xlsx_files)}개 파일 파싱 시작...")
     all_frames: list[pd.DataFrame] = []
+    skipped_drm: list[str] = []
+
     for f in xlsx_files:
+        if not _is_ooxml(f):
+            reason = _detect_wrapper(f)
+            print(f"  [건너뜀] {f.name}: {reason}")
+            skipped_drm.append(f.name)
+            continue
         print(f"  처리 중: {f.name}")
+        year = _year_from_filename(f.name)
+        if year is None:
+            print(f"    [경고] 연도 추출 실패 — 건너뜀")
+            continue
         try:
-            df = parse_wasde_file(f)
-            all_frames.append(df)
+            df = parse_wasde_tidy(f, year)
+            if not df.empty:
+                all_frames.append(df)
             print(f"    → {len(df)}건 추출")
         except Exception as e:
             print(f"    [오류] {f.name}: {e}")
 
+    if skipped_drm:
+        print(f"\n[경고] DRM/비정상 형식으로 건너뛴 파일 {len(skipped_drm)}개: {skipped_drm}")
+        print("       → 문서보안 해제 후 평문 .xlsx로 재업로드 필요 (수동 작업).")
+
     if not all_frames:
-        print("[오류] 추출된 데이터 없음.")
+        print("[경고] 추출된 WASDE 레코드 없음 — parquet 미생성.")
         return
 
     combined = pd.concat(all_frames, ignore_index=True)
@@ -211,7 +226,7 @@ def run(wasde_dir: Path = WASDE_DIR, output_dir: Path = OUTPUT_DIR) -> None:
 
     print(f"\n[완료] {len(combined)}건 → {out_path}")
     print(f"  기간: {combined['price_date'].min()} ~ {combined['price_date'].max()}")
-    print(f"  지표: {combined['indicator_code'].unique().tolist()}")
+    print(f"  지표: {sorted(combined['indicator_code'].unique())}")
 
 
 if __name__ == "__main__":
