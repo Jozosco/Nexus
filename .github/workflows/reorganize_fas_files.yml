@@ -1,17 +1,19 @@
-# USDA FAS 파일 구조 재정리 — Session 27 (요청 1.1.1 / 1.2)
+# USDA FAS 파일 구조 재정리 — Session 27~29 (요청 1.1.1 / 1.2 / A-059)
 # 대상 브랜치(main)에 업로드된 GAIN PDF + GATS Excel을 표준 폴더 구조로 이동.
 #
 # 이동 규칙:
-#   1. PDF 분류 이동 (repo root + data/raw/USDA/FAS root):
+#   1. PDF 분류 이동 (repo root + data/raw/USDA/FAS root + GAIN root):
 #        - Biofuels 배치(2020-09~12 또는 biofuel/biodiesel/ethanol/renewable 키워드)
 #            → data/raw/USDA/FAS/GAIN/Biofuels/
+#        - data/raw/USDA/FAS/GAIN/ root 직접 적재분 (Biofuels 주제 전체)
+#            → data/raw/USDA/FAS/GAIN/Biofuels/ (A-059: 263개 파일 일괄 이동)
 #        - 그 외(Oilseeds 보고서, 2022-01~04 포함) → data/raw/USDA/FAS/GAIN/Oilseeds/
 #   2. 기존 GATS/*.xlsx (수출량+재수출량, HS 1507.10)        → data/raw/USDA/FAS/GATS/1507.10/
 #   3. FAS root *수출량.xlsx (HS 1507.90)                    → data/raw/USDA/FAS/GATS/1507.90/
 #   4. FAS root 9개년 *수출액*.xlsx (수출액 USD, 3개 품목)   → data/raw/USDA/FAS/GATS/export_value_top10/
 #
-# PDF 분류 근거(A-057): 사용자 업로드 시 Biofuels 2020-09~12분과 Oilseeds 2022-01~04분이
-#   repo 루트에 잘못 적재됨. 파일명 규칙 YY.MM_Country_Title.pdf 의 연월 + 주제 키워드로 분기.
+# PDF 분류 근거(A-057/A-059): GAIN root에 직접 적재된 파일(263개, 2017~2026)은 모두
+#   Biofuels 주제 보고서임. 파일명 키워드 불문 GAIN/Biofuels/로 일괄 이동.
 #
 # ※ export_value_top10: 9개년 파일은 대두(HS1201)·대두박(HS2304)·대두유(HS1507) 수출"액"(USD)
 #    데이터로, 1507.10/1507.90 수출"량" 파일의 요약본이 아님. 별도 폴더로 분리 보관.
@@ -83,6 +85,12 @@ jobs:
             | while IFS= read -r -d '' f; do route_pdf "$f"; done
           find data/raw/USDA/FAS -maxdepth 1 -type f -name "*.pdf" -print0 \
             | while IFS= read -r -d '' f; do route_pdf "$f"; done
+          # A-059: GAIN root 직접 적재 PDF → 전체 Biofuels로 이동 (사용자 명시 요청)
+          find data/raw/USDA/FAS/GAIN -maxdepth 1 -type f -name "*.pdf" -print0 \
+            | while IFS= read -r -d '' f; do
+                echo "[이동-A059] $f -> $BIOFUELS/"
+                git mv -k -- "$f" "$BIOFUELS/" || mv -- "$f" "$BIOFUELS/"
+              done
 
       - name: Move existing GATS xlsx to GATS/1507.10
         run: |
