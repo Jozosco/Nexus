@@ -22,7 +22,7 @@ on:
         required: false
         default: "2025"
       connector:
-        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs / geointel / fao-amis / usda-xlsx)"
+        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs / geointel / fao-amis / usda-xlsx / gain-pdf)"
         required: false
         default: "all"
       skip_analysis:
@@ -290,6 +290,48 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  # ── WBS 1.1.43: USDA FAS GAIN 보고서 PDF 판독·요약 (Oilseeds + Biofuels) ──────
+  # GAIN PDF를 판독해 연·월·국가별 요약(.md) + 메타/신호 parquet 생성.
+  # 파일명 규칙 YY.MM_Country_Title.pdf. API 키 불필요. (A-058)
+  gain-pdf-ingest:
+    name: "1.1.43 | USDA FAS GAIN PDF Ingest (연·월·국가별 요약)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'gain-pdf' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pdfplumber pandas pyarrow
+      - name: Check for GAIN PDFs
+        id: check_pdf
+        run: |
+          COUNT=$(find data/raw/USDA/FAS/GAIN -name "*.pdf" 2>/dev/null | wc -l)
+          echo "pdf_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "GAIN PDF 파일 수: $COUNT"
+      - name: Run GAIN PDF ingest
+        if: steps.check_pdf.outputs.pdf_count != '0'
+        run: python scripts/ingest_gain_pdf.py
+      - name: Upload GAIN metadata parquet
+        if: steps.check_pdf.outputs.pdf_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-gain-pdf-${{ github.run_id }}
+          path: data/raw/gain_historical.parquet
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Upload GAIN summaries (연·월·국가별 .md)
+        if: steps.check_pdf.outputs.pdf_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gain-summaries-${{ github.run_id }}
+          path: data/processed/gain_summaries/**
+          retention-days: 90
+          if-no-files-found: warn
+
   # ── WBS 1.1.42: USDA FAS 수동 업로드 Excel 수집 (WASDE · PSD · GATS) ──────────
   # main 브랜치에 수동 업로드된 Excel 파일을 Parquet으로 변환.
   # API 키 불필요. 파일이 없으면 각 단계가 자동 건너뜀.
@@ -413,6 +455,7 @@ jobs:
       - customs-backfill
       - fao-amis-ingest
       - usda-manual-xlsx-ingest
+      - gain-pdf-ingest
     if: always()
     steps:
       - uses: actions/checkout@v4
