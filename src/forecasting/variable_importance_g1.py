@@ -1568,8 +1568,11 @@ def _render_html(
         "@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');"
         if lang == "ko" else ""
     )
+    # weasyprint(PDF)는 @import 웹폰트를 오프라인 CI에서 받지 못함 → 시스템 설치 폰트명을
+    # 1순위로 둬야 한국어 글리프가 '?'로 깨지지 않음. apt fonts-noto-cjk = 'Noto Sans CJK KR'.
+    # (A-056: 'Noto Sans KR'는 웹폰트명이라 CI 미설치 → 폴백 실패 → notdef '?' 발생)
     font_family = (
-        "'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif"
+        "'Noto Sans CJK KR', 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif"
         if lang == "ko" else
         "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
     )

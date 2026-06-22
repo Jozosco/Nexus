@@ -24,9 +24,12 @@ from pathlib import Path
 CSS_STYLE = """
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
 
+/* weasyprint(PDF)는 오프라인 CI에서 @import 웹폰트를 받지 못하므로 apt fonts-noto-cjk가
+   설치하는 시스템 폰트명 'Noto Sans CJK KR'을 1순위로 둔다 (A-056). 웹폰트명만 쓰면
+   한국어 글리프가 notdef('?')로 깨진다. */
 * { box-sizing: border-box; }
 body {
-    font-family: 'Noto Sans KR', 'Noto Sans', 'Malgun Gothic', sans-serif;
+    font-family: 'Noto Sans CJK KR', 'Noto Sans KR', 'Noto Sans', 'Malgun Gothic', sans-serif;
     font-size: 10pt;
     line-height: 1.6;
     color: #1a1a2e;

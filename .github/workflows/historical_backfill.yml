@@ -643,8 +643,11 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: python src/forecasting/variable_importance_g1.py 1825
-      - name: Generate Markdown + PDF reports
-        run: python scripts/generate_research_pdf.py reports/pipeline
+      # NOTE(A-056): generate_research_pdf.py 를 reports/pipeline 에 돌리던 단계 제거.
+      # 해당 스크립트는 g1_*_ko.md(구형 "TOP 10" 요약)를 ko.html/ko.pdf 로 재렌더링해
+      # variable_importance_g1.py 가 만든 '상위 5개 핵심 변수' 리치 KO 리포트를 덮어썼음.
+      # (EN 은 _en.md 가 없어 덮이지 않아 영어만 정상 → "한국어만 깨짐" 증상의 진짜 원인)
+      # variable_importance_g1.py 가 ko/en HTML+PDF 를 모두 생성하므로 이 단계는 불필요.
       - name: Append G1 summary to Step Summary
         run: |
           python - <<'PYEOF'
