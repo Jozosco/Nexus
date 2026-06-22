@@ -22,7 +22,7 @@ on:
         required: false
         default: "2025"
       connector:
-        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs / geointel / fao-amis / usda-xlsx)"
+        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs / geointel / fao-amis / usda-xlsx / gain-pdf)"
         required: false
         default: "all"
       skip_analysis:
@@ -290,6 +290,48 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  # ── WBS 1.1.43: USDA FAS GAIN 보고서 PDF 판독·요약 (Oilseeds + Biofuels) ──────
+  # GAIN PDF를 판독해 연·월·국가별 요약(.md) + 메타/신호 parquet 생성.
+  # 파일명 규칙 YY.MM_Country_Title.pdf. API 키 불필요. (A-058)
+  gain-pdf-ingest:
+    name: "1.1.43 | USDA FAS GAIN PDF Ingest (연·월·국가별 요약)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'gain-pdf' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pdfplumber pandas pyarrow
+      - name: Check for GAIN PDFs
+        id: check_pdf
+        run: |
+          COUNT=$(find data/raw/USDA/FAS/GAIN -name "*.pdf" 2>/dev/null | wc -l)
+          echo "pdf_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "GAIN PDF 파일 수: $COUNT"
+      - name: Run GAIN PDF ingest
+        if: steps.check_pdf.outputs.pdf_count != '0'
+        run: python scripts/ingest_gain_pdf.py
+      - name: Upload GAIN metadata parquet
+        if: steps.check_pdf.outputs.pdf_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-gain-pdf-${{ github.run_id }}
+          path: data/raw/gain_historical.parquet
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Upload GAIN summaries (연·월·국가별 .md)
+        if: steps.check_pdf.outputs.pdf_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gain-summaries-${{ github.run_id }}
+          path: data/processed/gain_summaries/**
+          retention-days: 90
+          if-no-files-found: warn
+
   # ── WBS 1.1.42: USDA FAS 수동 업로드 Excel 수집 (WASDE · PSD · GATS) ──────────
   # main 브랜치에 수동 업로드된 Excel 파일을 Parquet으로 변환.
   # API 키 불필요. 파일이 없으면 각 단계가 자동 건너뜀.
@@ -413,6 +455,7 @@ jobs:
       - customs-backfill
       - fao-amis-ingest
       - usda-manual-xlsx-ingest
+      - gain-pdf-ingest
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -643,8 +686,11 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: python src/forecasting/variable_importance_g1.py 1825
-      - name: Generate Markdown + PDF reports
-        run: python scripts/generate_research_pdf.py reports/pipeline
+      # NOTE(A-056): generate_research_pdf.py 를 reports/pipeline 에 돌리던 단계 제거.
+      # 해당 스크립트는 g1_*_ko.md(구형 "TOP 10" 요약)를 ko.html/ko.pdf 로 재렌더링해
+      # variable_importance_g1.py 가 만든 '상위 5개 핵심 변수' 리치 KO 리포트를 덮어썼음.
+      # (EN 은 _en.md 가 없어 덮이지 않아 영어만 정상 → "한국어만 깨짐" 증상의 진짜 원인)
+      # variable_importance_g1.py 가 ko/en HTML+PDF 를 모두 생성하므로 이 단계는 불필요.
       - name: Append G1 summary to Step Summary
         run: |
           python - <<'PYEOF'

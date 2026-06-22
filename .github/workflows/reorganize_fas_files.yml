@@ -2,10 +2,16 @@
 # 대상 브랜치(main)에 업로드된 GAIN PDF + GATS Excel을 표준 폴더 구조로 이동.
 #
 # 이동 규칙:
-#   1. 모든 PDF (repo root + data/raw/USDA/FAS root) → data/raw/USDA/FAS/GAIN/Oilseeds/
+#   1. PDF 분류 이동 (repo root + data/raw/USDA/FAS root):
+#        - Biofuels 배치(2020-09~12 또는 biofuel/biodiesel/ethanol/renewable 키워드)
+#            → data/raw/USDA/FAS/GAIN/Biofuels/
+#        - 그 외(Oilseeds 보고서, 2022-01~04 포함) → data/raw/USDA/FAS/GAIN/Oilseeds/
 #   2. 기존 GATS/*.xlsx (수출량+재수출량, HS 1507.10)        → data/raw/USDA/FAS/GATS/1507.10/
 #   3. FAS root *수출량.xlsx (HS 1507.90)                    → data/raw/USDA/FAS/GATS/1507.90/
 #   4. FAS root 9개년 *수출액*.xlsx (수출액 USD, 3개 품목)   → data/raw/USDA/FAS/GATS/export_value_top10/
+#
+# PDF 분류 근거(A-057): 사용자 업로드 시 Biofuels 2020-09~12분과 Oilseeds 2022-01~04분이
+#   repo 루트에 잘못 적재됨. 파일명 규칙 YY.MM_Country_Title.pdf 의 연월 + 주제 키워드로 분기.
 #
 # ※ export_value_top10: 9개년 파일은 대두(HS1201)·대두박(HS2304)·대두유(HS1507) 수출"액"(USD)
 #    데이터로, 1507.10/1507.90 수출"량" 파일의 요약본이 아님. 별도 폴더로 분리 보관.
@@ -50,24 +56,33 @@ jobs:
       - name: Create destination folders
         run: |
           mkdir -p "data/raw/USDA/FAS/GAIN/Oilseeds"
+          mkdir -p "data/raw/USDA/FAS/GAIN/Biofuels"
           mkdir -p "data/raw/USDA/FAS/GATS/1507.10"
           mkdir -p "data/raw/USDA/FAS/GATS/1507.90"
           mkdir -p "data/raw/USDA/FAS/GATS/export_value_top10"
 
-      - name: Move PDF files to GAIN/Oilseeds
+      - name: Move PDF files to GAIN/{Biofuels,Oilseeds} by topic
         run: |
           set -e
-          DEST="data/raw/USDA/FAS/GAIN/Oilseeds"
+          OILSEEDS="data/raw/USDA/FAS/GAIN/Oilseeds"
+          BIOFUELS="data/raw/USDA/FAS/GAIN/Biofuels"
+          route_pdf() {
+            f="$1"
+            base=$(basename "$f")
+            # Biofuels 배치: 2020-09~12 업로드분 또는 바이오연료 주제 키워드
+            if printf '%s' "$base" | grep -qE '^20\.(09|10|11|12)_' \
+               || printf '%s' "$base" | grep -qiE 'biofuel|biodiesel|ethanol|renewable energy|feed-in tariff|carbon intensity|countervailing duties against us biodiesel'; then
+              DEST="$BIOFUELS"
+            else
+              DEST="$OILSEEDS"
+            fi
+            echo "[이동] $f -> $DEST/"
+            git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
+          }
           find . -maxdepth 1 -type f -name "*.pdf" -print0 \
-            | while IFS= read -r -d '' f; do
-                echo "[이동] $f -> $DEST/"
-                git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
-              done
+            | while IFS= read -r -d '' f; do route_pdf "$f"; done
           find data/raw/USDA/FAS -maxdepth 1 -type f -name "*.pdf" -print0 \
-            | while IFS= read -r -d '' f; do
-                echo "[이동] $f -> $DEST/"
-                git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
-              done
+            | while IFS= read -r -d '' f; do route_pdf "$f"; done
 
       - name: Move existing GATS xlsx to GATS/1507.10
         run: |
@@ -114,6 +129,20 @@ jobs:
             '- 파싱 도구(예정): scripts/ingest_gain_oilseeds_pdf.py (pdfplumber 기반)' \
             > "data/raw/USDA/FAS/GAIN/Oilseeds/README.md"
 
+      - name: Write GAIN Biofuels README
+        run: |
+          printf '%s\n' \
+            '# USDA FAS GAIN — Biofuels Reports' \
+            '' \
+            'USDA Foreign Agricultural Service GAIN(Global Agricultural Information' \
+            'Network) 발행 Biofuels 관련 보고서 PDF 모음.' \
+            '' \
+            '- 파일명 규칙: `YY.MM_Country_Title.pdf` (YY.MM = 발행 연월, Country = 발행 대상국)' \
+            '- 분류 기준: 2020-09~12 업로드분 + biofuel/biodiesel/ethanol/renewable 주제 키워드' \
+            '- 대두유 활용: 바이오디젤·SAF 수요 정책(RVO/EU RED) → 식용유↔연료 수요 전환 신호' \
+            '  → G2 변동성 레이어 보조 입력 (식용유 수요 채널)' \
+            > "data/raw/USDA/FAS/GAIN/Biofuels/README.md"
+
       - name: Write GATS README
         run: |
           printf '%s\n' \
@@ -154,6 +183,6 @@ jobs:
           COUNT=$(git diff --cached --name-only | wc -l)
           git commit \
             -m "data: reorganize USDA FAS GAIN(PDF)/GATS(xlsx) into standard folders" \
-            -m "PDF -> GAIN/Oilseeds/ | GATS xlsx -> 1507.10/ | FAS-root 수출량 -> 1507.90/ | 9개년 수출액 -> export_value_top10/. 변경 파일 수: ${COUNT}"
+            -m "PDF -> GAIN/Biofuels|Oilseeds (주제 분기) | GATS xlsx -> 1507.10/ | FAS-root 수출량 -> 1507.90/ | 9개년 수출액 -> export_value_top10/. 변경 파일 수: ${COUNT}"
           git push origin HEAD:${{ github.event.inputs.target_branch || 'main' }}
           echo "[완료] ${COUNT}개 항목 재정리 -> ${{ github.event.inputs.target_branch || 'main' }} 브랜치 push 완료"
