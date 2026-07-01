@@ -417,7 +417,7 @@ def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     rows = []
     for key, label in FILE_PATTERNS.items():
         if key not in frames:
-            rows.append({"커넥터": label, "변수항목": 0, "행수": 0,
+            rows.append({"변수 항목": label, "변수별 항목 수": 0, "행수": 0,
                          "날짜범위": "미수집", "무결성": "N/A",
                          "신선도": "❌ 데이터 없음"})
             continue
@@ -429,12 +429,12 @@ def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
         else:
             date_range = "N/A"
         rows.append({
-            "커넥터":   label,
-            "변수항목": _indicator_count(df),
-            "행수":     len(df),
-            "날짜범위": date_range,
-            "무결성":   _data_integrity_flag(df),
-            "신선도":   _freshness_flag(df),
+            "변수 항목":     label,
+            "변수별 항목 수": _indicator_count(df),
+            "행수":         len(df),
+            "날짜범위":     date_range,
+            "무결성":       _data_integrity_flag(df),
+            "신선도":       _freshness_flag(df),
         })
     return pd.DataFrame(rows)
 
@@ -928,7 +928,7 @@ def _render_executive_summary(
         signal_text = "✅ 정상 — 현재 구조적 임계값 위반 없음" if lang == "ko" else "✅ NORMAL — No structural threshold breaches"
     elif breach_count <= 2:
         signal_class = "signal-amber"
-        signal_text = f"⚠️ 주의 — {breach_count}개 임계값 위반 감지. 모니터링 강화 필요." if lang == "ko" else f"⚠️ CAUTION — {breach_count} threshold breach(es) detected. Increase monitoring."
+        signal_text = f"⚠️ 주의 — {breach_count}개 요소가 임계치를 상회하였으므로 주의하십시오." if lang == "ko" else f"⚠️ CAUTION — {breach_count} threshold breach(es) detected. Increase monitoring."
     else:
         signal_class = "signal-red"
         signal_text = f"🚨 긴급 — {breach_count}개 임계값 위반. C-03 진행 전 인간 검토 필요." if lang == "ko" else f"🚨 URGENT — {breach_count} threshold breaches. Human review required before C-03 proceeds."
@@ -969,7 +969,7 @@ def _render_executive_summary(
 <table class="tbl">
 <thead><tr>
   <th>{'카테고리' if lang == 'ko' else 'Category'}</th>
-  <th>{'변수수' if lang == 'ko' else 'Variables'}</th>
+  <th>{'변수 개수' if lang == 'ko' else 'Variables'}</th>
   <th>{'유의변수(|r|>0.3)' if lang == 'ko' else 'Significant (|r|>0.3)'}</th>
   <th>{'평균 |r|' if lang == 'ko' else 'Mean |r|'}</th>
   <th>{'대표 변수' if lang == 'ko' else 'Top Variable'}</th>
@@ -986,9 +986,8 @@ def _render_executive_summary(
         top_r_val = category_summary[top_cat]["mean_abs_r"]
         if lang == "ko":
             clevel_msg = (
-                f"현재 {top_cat}이 대두유 가격 변동성에 가장 높은 영향을 미치고 있습니다 "
-                f"(평균 |r|={top_r_val:.2f}). "
-                f"{breach_count}개 구조적 임계값이 활성화됨."
+                f"현재 '{top_cat}'가 가장 높은 유의변수로 수치를 기록"
+                f"(평균 |r|={top_r_val:.2f})하며 대두유 가격 변동성에 높은 영향을 미치고 있습니다."
             )
         else:
             clevel_msg = (
@@ -1191,61 +1190,62 @@ def _render_feature_selection_methodology(lang: str = "ko") -> str:
       2단계 단변량 스크리닝 (Pearson r, Granger)
       3단계 다중공선성 제거 (VIF, LASSO L1)
       4단계 ML 중요도 순위 (LASSO+SHAP+Granger 가중 합산)
-      5단계 도메인 검토 (P1-01~04)
+      5단계 실무자 검토
 
-    Phase A 핵심 피처 8개 (D-015):
+    Phase A 핵심 변수 8개 (내부 근거 D-015):
       CBOT_SBO_FUTURES, CPO_SBO_SPREAD, WASDE_SBO_STU, BDI,
       FX_BRL_USD, ENSO_ONI, PSD_SOY_CRUSH, GATS_US_SBO_EXPORT_KOREA
     """
     # ── 5단계 게이트 표 ─────────────────────────────────────────────────────────
     if lang == "ko":
-        title    = "피처 엔지니어링 및 선택 방법론"
-        subtitle = "의사결정 D-014 (5단계 게이트) · D-015 (Phase A 핵심 피처 8개)"
-        gate_hdr = ["단계", "게이트명", "기준 / 도구", "임계값", "담당"]
+        # (내부 근거: D-014 5단계 게이트 · D-015 Phase A 핵심 변수 8개 — MEMORY 참조. 리포트 본문 비노출)
+        title    = "Feature 선택 및 엔지니어링"
+        subtitle = "5단계 Engineering 게이트 · Phase A 핵심 변수 8개"
+        gate_hdr = ["단계", "과정", "방법", "임계값"]
         gate_rows = [
-            ("1단계", "DQSOps 품질 게이트",     "C-08 5차원 가중합산 점수",           "≥ 0.70 PASS",           "C-08"),
-            ("2단계", "단변량 스크리닝",          "Pearson |r| · Granger 인과검정",    "|r|≥0.25, p<0.05 (Bonferroni 보정)", "C-03/C-06"),
-            ("3단계", "다중공선성 제거",          "VIF < 5 · LASSO L1 정규화",         "VIF 임계값 5.0",        "C-03"),
-            ("4단계", "ML 중요도 순위 합산",      "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "종합 순위 상위 선택", "C-03"),
-            ("5단계", "도메인 전문가 검토",       "P1-01~04 정성 평가 + 상품 논리 검증", "합의 승인",            "P1-01~04"),
+            ("1단계", "DQSOps 품질 게이트",     "DQSOps 가중치 점수 (5차원)",         "≥ 0.70 PASS"),
+            ("2단계", "단변량 스크리닝",          "Pearson |r| · Granger 인과검정",    "|r|≥0.25, p<0.05 (Bonferroni 보정)"),
+            ("3단계", "다중공선성 제거",          "VIF < 5 · LASSO L1 정규화",         "VIF 임계값 5.0"),
+            ("4단계", "ML 중요도 순위 합산",      "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "종합 순위 상위 선택"),
+            ("5단계", "실무자 검토",             "정성 평가 + 상관도 논리 검증",       "합의 승인"),
         ]
-        hdr_var = "피처 코드"
-        hdr_cat = "카테고리"
-        hdr_ratio = "D-015 핵심 선정 근거"
-        hdr_stat  = "Phase A 수집 상태"
-        core_title = "Phase A 핵심 피처 8개 (D-015)"
+        hdr_var = "변수명"
+        hdr_cat = "항목"
+        hdr_ratio = "선정 근거"
+        hdr_stat  = "수집 현황"
+        core_title = "Phase A 핵심 변수: 8개"
         note_txt = (
-            "피처 선택 기준은 AIC/BIC/F1-Score 단일 지표가 아닌, "
+            "변수 선택 기준은 AIC/BIC/F1-Score 단일 지표가 아닌, "
             "데이터 품질(DQSOps) → 통계적 유의성(Pearson/Granger) → 공선성 제거(VIF/LASSO) → "
-            "ML 중요도(SHAP) → 도메인 검토(P1-01~04) 5단계 게이트를 순차 적용합니다. "
-            "Phase A에서는 8개 핵심 피처를 우선 확보하며, G1/G2/G3 별 최종 피처 수는 "
+            "ML 중요도(SHAP) → 실무자 검토의 5단계 Engineering을 순차 적용합니다. "
+            "Phase A에서는 8개 핵심 변수를 우선 확보하며, G1/G2/G3 별 최종 변수 수는 "
             "G1=12~15개(SHAP 상위), G2=10~14개(시계열 CV), G3=6~10개(Markov 파시모니)로 목표합니다."
         )
         status_collected  = "✅ 수집 중"
         status_partial    = "⚠️ 일부 수집"
         status_missing    = "❌ 미구현"
     else:
-        title    = "Feature Engineering & Selection Methodology"
-        subtitle = "Decision D-014 (5-Stage Gate) · D-015 (Phase A Core 8 Features)"
-        gate_hdr = ["Stage", "Gate Name", "Criteria / Tools", "Threshold", "Owner"]
+        title    = "Feature Selection & Engineering"
+        subtitle = "5-Stage Engineering Gate · Phase A Core 8 Variables"
+        gate_hdr = ["Stage", "Process", "Method", "Threshold"]
         gate_rows = [
-            ("Stage 1", "DQSOps Quality Gate",     "C-08 5-dimension weighted score",             "≥ 0.70 PASS",              "C-08"),
-            ("Stage 2", "Univariate Screening",    "Pearson |r| · Granger causality test",        "|r|≥0.25, p<0.05 (Bonferroni)", "C-03/C-06"),
-            ("Stage 3", "Multicollinearity Removal","VIF < 5 · LASSO L1 regularization",          "VIF threshold 5.0",        "C-03"),
-            ("Stage 4", "ML Importance Ranking",   "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "Top-ranked selected", "C-03"),
-            ("Stage 5", "Domain Expert Review",    "P1-01~04 qualitative review + commodity logic", "Consensus approval",      "P1-01~04"),
+            ("Stage 1", "DQSOps Quality Gate",     "DQSOps weighted score (5-dim)",               "≥ 0.70 PASS"),
+            ("Stage 2", "Univariate Screening",    "Pearson |r| · Granger causality test",        "|r|≥0.25, p<0.05 (Bonferroni)"),
+            ("Stage 3", "Multicollinearity Removal","VIF < 5 · LASSO L1 regularization",          "VIF threshold 5.0"),
+            ("Stage 4", "ML Importance Ranking",   "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "Top-ranked selected"),
+            ("Stage 5", "Practitioner Review",     "Qualitative review + correlation logic",       "Consensus approval"),
         ]
-        hdr_var  = "Feature Code"
-        hdr_cat  = "Category"
-        hdr_ratio = "D-015 Core Selection Rationale"
-        hdr_stat  = "Phase A Collection Status"
-        core_title = "Phase A Core Features — 8 Selected (D-015)"
+        hdr_var  = "Variable"
+        hdr_cat  = "Item"
+        hdr_ratio = "Selection Rationale"
+        hdr_stat  = "Collection Status"
+        core_title = "Phase A Core Variables — 8"
         note_txt = (
-            "Feature selection does NOT rely on a single criterion (AIC/BIC/F1-Score). "
-            "Instead, a sequential 5-stage gate is applied: "
+            "Variable selection does NOT rely on a single criterion (AIC/BIC/F1-Score). "
+            "Instead, a sequential 5-stage engineering gate is applied: "
             "data quality (DQSOps) → statistical significance (Pearson/Granger) → "
-            "collinearity removal (VIF/LASSO) → ML importance (SHAP) → domain review (P1-01~04). "
-            "Phase A targets 8 core features first. Final feature counts by model: "
+            "collinearity removal (VIF/LASSO) → ML importance (SHAP) → practitioner review. "
+            "Phase A targets 8 core variables first. Final counts by model: "
             "G1=12–15 (SHAP top-N), G2=10–14 (time-series CV), G3=6–10 (Markov parsimony)."
         )
         status_collected  = "✅ Collecting"
@@ -1256,8 +1256,7 @@ def _render_feature_selection_methodology(lang: str = "ko") -> str:
     gate_rows_html = "".join(
         f"<tr><td style='font-weight:bold;color:#1565c0'>{r[0]}</td>"
         f"<td>{r[1]}</td><td style='font-size:11px'>{r[2]}</td>"
-        f"<td style='color:#c62828;font-weight:bold'>{r[3]}</td>"
-        f"<td style='font-size:11px'>{r[4]}</td></tr>"
+        f"<td style='color:#c62828;font-weight:bold'>{r[3]}</td></tr>"
         for r in gate_rows
     )
     gate_table = (
@@ -1495,9 +1494,8 @@ def _render_top5_variables(
     if lang == "ko":
         section_title = "상위 5개 핵심 변수"
         note_text = (
-            "LASSO 분석 결과 기준 상위 5개 변수. "
-            "데이터 미수집 시 D-015 Phase A 설계 순위 표시. "
-            "선택 기준: D-014 5단계 게이트(DQSOps → Pearson/Granger → VIF/LASSO → ML 순위 → 도메인 검토)."
+            "LASSO 분석 결과 기준 상위 5개 변수 선정 "
+            "선택 기준: 5단계 Engineering(DQSOps → Pearson/Granger → VIF/LASSO → ML 순위 → 실무자 검토)."
         )
         col_rank  = "순위"
         col_var   = "변수 코드"
@@ -1732,12 +1730,12 @@ def _render_html(
 <h1>{title}<br><small style="font-size:14px;color:#5c6bc0">{sub}</small></h1>
 
 <div class="meta">
-  <strong>{'생성 시각 (UTC)' if lang == 'ko' else 'Generated (UTC)'}:</strong> {run_ts} &nbsp;│&nbsp;
-  <strong>{'활용 데이터 양' if lang == 'ko' else 'Data Range'}:</strong> {data_period if data_period else (f"{'최근' if lang == 'ko' else 'Last'} {days}{'일' if lang == 'ko' else ' days'}") }
+  <strong>{'생성 일자' if lang == 'ko' else 'Generated (UTC)'}:</strong> {run_ts[:10] if lang == 'ko' else run_ts} &nbsp;│&nbsp;
+  <strong>{'데이터 범위' if lang == 'ko' else 'Data Range'}:</strong> {data_period if data_period else (f"{'최근' if lang == 'ko' else 'Last'} {days}{'일' if lang == 'ko' else ' days'}") }
 </div>
 
 <div class="note">
-  <strong>Phase A 분석 구성:</strong>
+  <strong>{'적용된 분석론' if lang == 'ko' else 'Phase A Analysis'}:</strong>
   기술통계·LASSO 상관분석·Granger 인과검정(2017~작년 연도별) 수행.
   XGBoost+SHAP, TCN-XGBoost 하이브리드는 Phase B(Snowflake 연동 후) 적용 예정.
 </div>
@@ -1753,9 +1751,6 @@ def _render_html(
 {feature_selection_html}
 
 {top5_html}
-
-<h2>{lasso_title}</h2>
-{lasso_html}
 
 <h2>{'구조적 단절 임계값 현황' if lang == 'ko' else 'Structural Break Status'}</h2>
 {alerts_html}
@@ -1880,7 +1875,7 @@ def run(days: int = 7) -> None:
     breach = [a for a in alerts if "🚨" in a.get("상태", "")]
     md_lines = [
         f"# 대두유 가격 핵심 영향 인자 분석 보고서 — {run_ts[:10]}",
-        f"**활용 데이터 양**: {data_period if data_period else f'최근 {days}일'}  |  **생성**: {run_ts} UTC",
+        f"**데이터 범위**: {data_period if data_period else f'최근 {days}일'}  |  **생성 일자**: {run_ts[:10]}",
         "",
         "## 구조적 단절 임계값 현황",
     ]
@@ -1905,13 +1900,13 @@ def run(days: int = 7) -> None:
     md_lines += [
         "",
         "## 활용 데이터",
-        "| 커넥터 | 변수항목 | 행수 | 날짜범위 | 무결성 | 신선도 |",
+        "| 변수 항목 | 변수별 항목 수 | 행수 | 날짜범위 | 무결성 | 신선도 |",
         "|---|---|---|---|---|---|",
     ]
     if not status_df.empty:
         for _, row in status_df.iterrows():
             md_lines.append(
-                f"| {row.get('커넥터', '?')} | {row.get('변수항목', '?')} | "
+                f"| {row.get('변수 항목', '?')} | {row.get('변수별 항목 수', '?')} | "
                 f"{row.get('행수', '?')} | {row.get('날짜범위', '?')} | "
                 f"{row.get('무결성', '?')} | {row.get('신선도', '?')} |"
             )
