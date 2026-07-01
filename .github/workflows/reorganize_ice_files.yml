@@ -1,0 +1,111 @@
+# ICE 월별 거래량 파일 재정리 — Session 30 (조정자 요청)
+# data/raw 루트에 업로드된 ICE 'Monthly Volumes' xlsx를 표준 폴더로 이동.
+#
+# 폴더 구조:
+#   data/raw/ICE/Reports/Monthly Volumes/U.S./   ← ICE Futures U.S. 시장
+#   data/raw/ICE/Reports/Monthly Volumes/E.U./   ← ICE Futures & Options Europe 시장
+#
+# 이동 규칙(파일명 YYYY_Monthly Volumes {유형}.xlsx):
+#   *_Monthly Volumes Futures.xlsx           → U.S./  (ICE Futures U.S. — Financial·Agri·Energy)
+#   *_Monthly Volumes Options.xlsx           → U.S./  (ICE Futures U.S. — Financial·Agri·Energy)
+#   *_Monthly Volumes Futures&Options.xlsx   → E.U./  (ICE Futures & Options Europe — Oil·Energy)
+#
+# ※ 주의(A-060): 조정자 안내상 'Options'(U.S.) 10개 파일은 업로드 목록에 있었으나
+#   현재 리포지토리에는 Futures(10)·Futures&Options(10)만 존재. Options는 재업로드 필요.
+#
+# 실행 방식: 비기본 브랜치 workflow_dispatch 403 → A-041 push 트리거 패턴.
+#   dev 브랜치에서 이 파일 변경 시 자동 1회 실행 → 내부에서 main checkout·이동·push.
+name: Reorganize ICE Monthly Volumes Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "재정리 대상 브랜치"
+        required: true
+        default: "main"
+  push:
+    branches:
+      - "claude/setup-nexus-llm-tools-RX4aS"
+    paths:
+      - ".github/workflows/reorganize_ice_files.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  reorganize:
+    name: "Reorganize ICE Monthly Volumes files"
+    runs-on: ubuntu-latest
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch || 'main' }}
+          fetch-depth: 0
+
+      - name: Create destination folders
+        run: |
+          mkdir -p "data/raw/ICE/Reports/Monthly Volumes/U.S."
+          mkdir -p "data/raw/ICE/Reports/Monthly Volumes/E.U."
+
+      - name: Move ICE Monthly Volumes xlsx to U.S. / E.U.
+        run: |
+          set -e
+          US="data/raw/ICE/Reports/Monthly Volumes/U.S."
+          EU="data/raw/ICE/Reports/Monthly Volumes/E.U."
+          route_ice() {
+            f="$1"
+            base=$(basename "$f")
+            # Futures&Options → 유럽 시장; Futures 또는 Options → 미국 시장
+            if printf '%s' "$base" | grep -qiE 'Futures&Options'; then
+              DEST="$EU"
+            elif printf '%s' "$base" | grep -qiE 'Monthly Volumes (Futures|Options)\.xlsx$'; then
+              DEST="$US"
+            else
+              echo "[건너뜀] 규칙 불일치: $base"; return 0
+            fi
+            echo "[이동] $f -> $DEST/"
+            git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
+          }
+          find data/raw -maxdepth 1 -type f -iname "*Monthly Volumes*.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do route_ice "$f"; done
+
+      - name: Write ICE README
+        run: |
+          printf '%s\n' \
+            '# ICE — Historical Monthly Volumes Reports' \
+            '' \
+            'Intercontinental Exchange(ICE) 시장별 월간 거래량(Historical Monthly Volumes) 리포트.' \
+            '' \
+            '## 폴더 구조' \
+            '' \
+            '| 폴더 | 시장 | 기초자산 유형 | 파일 유형 |' \
+            '|---|---|---|---|' \
+            '| `U.S./` | ICE Futures U.S. | Financial · Agricultural · Energy | Futures, Options |' \
+            '| `E.U./` | ICE Futures & Options Europe | Oil · Energy | Futures&Options |' \
+            '' \
+            '- 파일명 규칙: `YYYY_Monthly Volumes {유형}.xlsx` (YYYY = 연도, 2017~2026)' \
+            '- 대두유 활용: 농산물(대두유·대두·대두박) 선물·옵션 거래량 → 시장 유동성·헤지 수요' \
+            '  대리지표. 거래량 급증은 변동성·가격 발견 활동 선행 신호(G1 보조, G2 변동성 레이어).' \
+            '- ※ Options(U.S.) 파일은 재업로드 대기 상태 (A-060).' \
+            > "data/raw/ICE/Reports/Monthly Volumes/README.md"
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "[정보] 변경 사항 없음 — 이미 정리됨 또는 대상 파일 없음."
+            exit 0
+          fi
+          COUNT=$(git diff --cached --name-only | wc -l)
+          git commit \
+            -m "data: reorganize ICE Monthly Volumes into ICE/Reports/Monthly Volumes/{U.S.,E.U.}" \
+            -m "Futures·Options -> U.S. | Futures&Options -> E.U. 변경 파일 수: ${COUNT} (A-060)"
+          git push origin HEAD:${{ github.event.inputs.target_branch || 'main' }}
+          echo "[완료] ${COUNT}개 항목 재정리 -> ${{ github.event.inputs.target_branch || 'main' }} push 완료"
