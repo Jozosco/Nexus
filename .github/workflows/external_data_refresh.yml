@@ -7,9 +7,14 @@ name: External Data Pipeline — Daily Refresh (WBS 1.1.2~1.1.7)
 # 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음
 
 on:
-  # 스케줄: 일~목 20:30 UTC = KST 월~금 05:30, 시장 개장 45분 전
-  schedule:
-    - cron: "30 20 * * 0-4"
+  # ⏸️ 일시 중단 (Session 30, 조정자 요청) — 9개년 히스토리 기반 G1 분석의 결과
+  #   일관성·적시성 확보를 위해 매일 자동 수집을 일시 정지함.
+  #   재개하려면 아래 schedule 블록의 주석을 해제할 것.
+  #   ※ GitHub는 기본 브랜치(main) 사본의 schedule만 실행하므로, 실제 중단은
+  #     이 변경이 main에 병합된 뒤 적용됨.
+  # schedule:
+  #   # 스케줄: 일~목 20:30 UTC = KST 월~금 05:30, 시장 개장 45분 전
+  #   - cron: "30 20 * * 0-4"
   workflow_dispatch:
     # 스케줄 실행: 모든 커넥터 자동 실행 (connector 입력값 무시 — github.event_name == 'schedule' 조건 적용)
     # 수동 실행: connector 선택 가능 (기본값: all). 특정 커넥터만 재실행할 때 사용.
