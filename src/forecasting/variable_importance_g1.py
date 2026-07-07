@@ -338,6 +338,8 @@ FILE_PATTERNS: dict[str, str] = {
     "gats_quantity_historical": "무역통계(GATS 미국 수출량)",
     "gats_value_historical":    "무역통계(GATS 미국 수출액)",
     "fao_amis_historical": "수급전망(FAO AMIS)",
+    "te_commodities_historical": "상품가격(TE 대체재·에너지·해운 9개년)",
+    "gain_historical":     "정책신호(USDA FAS GAIN PDF)",
     "geointel":            "지정학 인텔리전스(USGS/NOAA/GDELT/FIRMS)",
 }
 
@@ -731,12 +733,91 @@ def _granger_causality_by_year(
     return pd.DataFrame(rows) if rows else pd.DataFrame()
 
 
+def _series_from_frames(
+    frames: dict[str, pd.DataFrame], codes: list[str]
+) -> pd.Series:
+    """여러 parquet 프레임에서 지정 indicator_code(들)의 value 시계열을 취합.
+
+    codes 우선순위: 앞선 코드가 관측치가 있으면 그것을 우선 사용(예: 9개년 TE_BDI 우선).
+    반환: price_date 오름차순 정렬된 float Series (없으면 빈 Series).
+    """
+    for code in codes:
+        parts: list[pd.DataFrame] = []
+        for df in frames.values():
+            if "indicator_code" not in df.columns or "value" not in df.columns:
+                continue
+            sub = df[df["indicator_code"] == code]
+            if not sub.empty:
+                parts.append(sub)
+        if not parts:
+            continue
+        merged = pd.concat(parts, ignore_index=True)
+        date_col = "price_date" if "price_date" in merged.columns else None
+        if date_col:
+            merged = merged.sort_values(date_col)
+        vals = pd.to_numeric(merged["value"], errors="coerce").dropna()
+        if not vals.empty:
+            return vals.reset_index(drop=True)
+    return pd.Series(dtype="float64")
+
+
+def _iqr_cap(s: pd.Series, k: float = 1.5) -> pd.Series:
+    """IQR 방식 이상치 캡핑 (MEMORY M-003). GARCH/z-score 전처리 표준."""
+    if len(s) < 4:
+        return s
+    q1, q3 = s.quantile(0.25), s.quantile(0.75)
+    iqr = q3 - q1
+    if iqr <= 0:
+        return s
+    return s.clip(lower=q1 - k * iqr, upper=q3 + k * iqr)
+
+
+def _rolling_zscore(
+    s: pd.Series, window: int = 90, min_periods: int = 30
+) -> tuple[float, int, str]:
+    """이상치 캡 후 trailing 롤링 z-score. 반환 (z, n_obs, 신뢰도라벨).
+
+    C-06/C-08 협의(A-062): min_periods=30으로 표준편차 안정성 확보.
+    신뢰도: n≥60 '정상' · 30≤n<60 '주의(관측 부족)' · n<30 '저신뢰'.
+    """
+    vals = _iqr_cap(s.dropna())
+    n = len(vals)
+    if n < min_periods:
+        return (float("nan"), n, "저신뢰")
+    roll_mean = vals.rolling(window=window, min_periods=min_periods).mean().iloc[-1]
+    roll_std = vals.rolling(window=window, min_periods=min_periods).std(ddof=1).iloc[-1]
+    if not roll_std or roll_std <= 0 or pd.isna(roll_std):
+        return (0.0, n, "정상")
+    z = (vals.iloc[-1] - roll_mean) / roll_std
+    conf = "정상" if n >= 60 else "주의(관측 부족)"
+    return (float(z), n, conf)
+
+
+def _normalize_gpr(s: pd.Series) -> pd.Series:
+    """원시 GPR 지수 → [0,1] min-max 정규화 (A-062).
+
+    gpr_connector는 원지수(Caldara & Iacoviello, 벤치마크 100 스케일)만 'GPR'로 출력하고
+    'GPR_NORMALIZED'는 산출하지 않아 G1 임계 조회가 상시 실패했음(네이밍/파생 부재).
+    본 함수가 파생 단계를 대신 수행해 정규화 시계열을 생성한다.
+    """
+    vals = pd.to_numeric(s, errors="coerce").dropna()
+    if vals.empty:
+        return vals
+    lo, hi = vals.min(), vals.max()
+    if hi <= lo:
+        return pd.Series([0.0] * len(vals), index=vals.index)
+    return (vals - lo) / (hi - lo)
+
+
 def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
     """C-03 구조적 단절 임계값 현황 점검.
 
     주의: 커넥터 수집 실패 시 해당 임계값 항목은 '데이터 미수집' 상태로 표시됨.
     동일 값이 반복되면 원인 1순위: 커넥터 수집 실패 → 새 parquet 미생성.
     원인 2순위: 월별 지표(GPR/ENSO)의 갱신 주기 — 한 달에 한 번만 변경 정상.
+
+    A-062: BDI는 9개년 TE_BDI 우선 사용 + IQR 캡·min_periods=30 z-score(신뢰도 라벨).
+           GPR_NORMALIZED는 원시 GPR에서 [0,1] 정규화 파생(percentile 임계).
     """
     alerts = []
     today = date.today().isoformat()
@@ -747,38 +828,28 @@ def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
         max_ts = pd.to_datetime(df["ingested_at"], utc=True, errors="coerce").max()
         return pd.notna(max_ts) and np.busday_count(max_ts.date(), date.today()) <= stale_days
 
-    # GPR 지수 (normalized)
-    if "geopolitical_indices" in frames:
-        gpr_df = frames["geopolitical_indices"]
-        if "indicator_code" in gpr_df.columns:
-            gpr = gpr_df[gpr_df["indicator_code"] == "GPR_NORMALIZED"]
-        else:
-            gpr = pd.DataFrame()
-        if not gpr.empty and "value" in gpr.columns and not gpr["value"].dropna().empty:
-            latest_gpr = float(gpr["value"].dropna().iloc[-1])
-            fresh = _is_fresh(gpr_df)
-            alerts.append({
-                "변수": "GPR_NORMALIZED",
-                "현재값": round(latest_gpr, 4),
-                "임계값": THRESHOLDS["GPR_NORMALIZED"]["alert"],
-                "상태": "🚨 임계초과" if latest_gpr > 0.022 else "✅ 정상",
-                "설명": THRESHOLDS["GPR_NORMALIZED"]["label"],
-                "데이터신선도": "✅ 최신" if fresh else "⚠️ STALE — 커넥터 수집 실패 의심",
-            })
-        else:
-            alerts.append({
-                "변수": "GPR_NORMALIZED",
-                "현재값": "N/A",
-                "임계값": THRESHOLDS["GPR_NORMALIZED"]["alert"],
-                "상태": "❓ 데이터 미수집",
-                "설명": THRESHOLDS["GPR_NORMALIZED"]["label"],
-                "데이터신선도": "❌ parquet 없음",
-            })
+    # GPR 지수 — 원시 GPR(또는 기존 GPR_NORMALIZED)에서 [0,1] 정규화 파생 (A-062)
+    gpr_raw = _series_from_frames(frames, ["GPR_NORMALIZED", "GPR"])
+    gpr_fresh = _is_fresh(frames["geopolitical_indices"]) if "geopolitical_indices" in frames else False
+    if len(gpr_raw) >= 12:
+        gpr_norm = _normalize_gpr(gpr_raw)
+        latest_norm = float(gpr_norm.iloc[-1])
+        # 분포 기반 임계: 정규화 시계열의 90번째 백분위 초과 시 경보(레거시 절대 0.022 대체)
+        p90 = float(gpr_norm.quantile(0.90))
+        breach = latest_norm >= p90
+        alerts.append({
+            "변수": "GPR_NORMALIZED",
+            "현재값": round(latest_norm, 3),
+            "임계값": f"P90={p90:.3f}",
+            "상태": "🚨 임계초과" if breach else "✅ 정상",
+            "설명": THRESHOLDS["GPR_NORMALIZED"]["label"] + " (원시 GPR→[0,1] 정규화 파생)",
+            "데이터신선도": "✅ 최신" if gpr_fresh else "⚠️ STALE (월별 갱신 정상)",
+        })
     else:
         alerts.append({
             "변수": "GPR_NORMALIZED", "현재값": "N/A",
-            "임계값": 0.022, "상태": "❓ 데이터 미수집",
-            "설명": "지정학 리스크 지수 — geopolitical_indices 커넥터 수집 실패",
+            "임계값": THRESHOLDS["GPR_NORMALIZED"]["alert"], "상태": "❓ 데이터 미수집",
+            "설명": "지정학 리스크 지수 — geopolitical_indices GPR parquet 없음/부족",
             "데이터신선도": "❌ parquet 없음",
         })
 
@@ -812,44 +883,34 @@ def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
             "데이터신선도": "❌ parquet 없음",
         })
 
-    # BDI z-score (90일 rolling)
-    if "shipping_indices" in frames:
-        bdi_df = frames["shipping_indices"]
-        bdi = bdi_df[bdi_df["indicator_code"] == "BDI"] if "indicator_code" in bdi_df.columns else pd.DataFrame()
-        if not bdi.empty and "value" in bdi.columns and len(bdi) > 3:
-            vals = pd.to_numeric(bdi["value"], errors="coerce").dropna()
-            if len(vals) >= 5:
-                roll_mean = vals.rolling(min(90, len(vals))).mean().iloc[-1]
-                roll_std  = vals.rolling(min(90, len(vals))).std().iloc[-1]
-                z = (vals.iloc[-1] - roll_mean) / roll_std if roll_std > 0 else 0.0
-                fresh = _is_fresh(bdi_df)
-                alerts.append({
-                    "변수": "BDI_ZSCORE",
-                    "현재값": round(z, 2),
-                    "임계값": "2.0σ",
-                    "상태": "🚨 임계초과" if z > 2.0 else "✅ 정상",
-                    "설명": THRESHOLDS["BDI"]["label"],
-                    "데이터신선도": "✅ 최신" if fresh else "⚠️ STALE — 커넥터 수집 실패 의심",
-                })
-            else:
-                alerts.append({
-                    "변수": "BDI_ZSCORE", "현재값": f"{len(vals)}건(부족)",
-                    "임계값": "2.0σ", "상태": "⚠️ 데이터 부족 (90일 미만)",
-                    "설명": "BDI — z-score 계산 최소 5건 필요",
-                    "데이터신선도": "⚠️ 데이터 부족",
-                })
-        else:
-            alerts.append({
-                "변수": "BDI_ZSCORE", "현재값": "N/A", "임계값": "2.0σ",
-                "상태": "❓ 데이터 미수집",
-                "설명": "해운비용 급등 — shipping_indices 커넥터 수집 실패",
-                "데이터신선도": "❌ parquet 없음",
-            })
+    # BDI z-score — 9개년 TE_BDI 우선, 폴백 shipping_indices BDI. IQR 캡 + min_periods=30 (A-062)
+    bdi_vals = _series_from_frames(frames, ["TE_BDI", "BDI"])
+    bdi_fresh = (_is_fresh(frames["te_commodities_historical"])
+                 if "te_commodities_historical" in frames
+                 else (_is_fresh(frames["shipping_indices"]) if "shipping_indices" in frames else False))
+    if len(bdi_vals) >= 30:
+        z, n_obs, conf = _rolling_zscore(bdi_vals, window=90, min_periods=30)
+        conf_icon = "✅ 최신" if bdi_fresh else "⚠️ STALE 의심"
+        alerts.append({
+            "변수": "BDI_ZSCORE",
+            "현재값": f"{z:.2f} (n={n_obs}, {conf})",
+            "임계값": "2.0σ",
+            "상태": "🚨 임계초과" if (z == z and z > 2.0) else "✅ 정상",
+            "설명": THRESHOLDS["BDI"]["label"],
+            "데이터신선도": conf_icon,
+        })
+    elif len(bdi_vals) > 0:
+        alerts.append({
+            "변수": "BDI_ZSCORE", "현재값": f"{len(bdi_vals)}건(부족)",
+            "임계값": "2.0σ", "상태": "⚠️ 데이터 부족 (30건 미만)",
+            "설명": "BDI — 안정적 z-score 최소 30건 필요",
+            "데이터신선도": "⚠️ 데이터 부족",
+        })
     else:
         alerts.append({
             "변수": "BDI_ZSCORE", "현재값": "N/A", "임계값": "2.0σ",
             "상태": "❓ 데이터 미수집",
-            "설명": "해운비용 급등 — shipping_indices 커넥터 수집 실패",
+            "설명": "해운비용 급등 — TE_BDI/shipping_indices parquet 없음",
             "데이터신선도": "❌ parquet 없음",
         })
 
@@ -1204,7 +1265,7 @@ def _render_feature_selection_methodology(lang: str = "ko") -> str:
         gate_hdr = ["단계", "과정", "방법", "임계값"]
         gate_rows = [
             ("1단계", "DQSOps 품질 게이트",     "DQSOps 가중치 점수 (5차원)",         "≥ 0.70 PASS"),
-            ("2단계", "단변량 스크리닝",          "Pearson |r| · Granger 인과검정",    "|r|≥0.25, p<0.05 (Bonferroni 보정)"),
+            ("2단계", "단변량 스크리닝",          "Pearson |r| · Granger · AIC/BIC 정보기준", "|r|≥0.25, p<0.05, ΔAIC<-2"),
             ("3단계", "다중공선성 제거",          "VIF < 5 · LASSO L1 정규화",         "VIF 임계값 5.0"),
             ("4단계", "ML 중요도 순위 합산",      "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "종합 순위 상위 선택"),
             ("5단계", "실무자 검토",             "정성 평가 + 상관도 논리 검증",       "합의 승인"),
@@ -1230,7 +1291,7 @@ def _render_feature_selection_methodology(lang: str = "ko") -> str:
         gate_hdr = ["Stage", "Process", "Method", "Threshold"]
         gate_rows = [
             ("Stage 1", "DQSOps Quality Gate",     "DQSOps weighted score (5-dim)",               "≥ 0.70 PASS"),
-            ("Stage 2", "Univariate Screening",    "Pearson |r| · Granger causality test",        "|r|≥0.25, p<0.05 (Bonferroni)"),
+            ("Stage 2", "Univariate Screening",    "Pearson |r| · Granger · AIC/BIC info criteria", "|r|≥0.25, p<0.05, ΔAIC<-2"),
             ("Stage 3", "Multicollinearity Removal","VIF < 5 · LASSO L1 regularization",          "VIF threshold 5.0"),
             ("Stage 4", "ML Importance Ranking",   "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "Top-ranked selected"),
             ("Stage 5", "Practitioner Review",     "Qualitative review + correlation logic",       "Consensus approval"),

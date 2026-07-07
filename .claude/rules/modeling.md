@@ -5,10 +5,12 @@
 
 ---
 
-## Phase A Data Constraint (Applies to G1 and G2)
-> **MEMORY D-006**: Internal S&OP data (daily inventory, shipment volume, unit cost)
-> unavailable in Phase A — only monthly aggregates exist. All G1/G2 modeling uses
-> **external pipeline data exclusively**. Internal monthly data enters as Phase B validation only.
+## Data Constraint — External-Only (Applies to G1/G2/G3)
+> **MEMORY D-021 (supersedes D-006)**: 내부 S&OP/ERP 데이터는 **가용량 부족 + 더미 비중 과다**로
+> **분석에 사용하지 않는다**. 기존 "Phase A 외부전용 → Phase B 내부검증" 이원 설계에서 내부 데이터
+> 축을 **전면 제거**함. 모든 G1/G2/G3 모델링은 **외부 파이프라인 데이터 전용**이며, 내부 데이터를
+> 학습·검증·피처 어디에도 투입하지 않는다.
+> (구 D-006: "Phase A 외부전용 / Phase B 내부검증" — 더 이상 유효하지 않음.)
 
 ---
 

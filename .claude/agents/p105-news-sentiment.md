@@ -1,7 +1,7 @@
 ---
 id: P1-05
 name: News & Sentiment Analyst — SBO Market Intelligence
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 llm_route: STRUCTURED_EXTRACT
 thinking_mode: disabled
 pattern: Expert Pool

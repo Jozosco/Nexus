@@ -17,6 +17,8 @@ env/
 # Data — API 수집 parquet 파일은 PII·독점 데이터 포함 가능 (CLAUDE.md §data)
 data/raw/*.parquet
 data/raw/**/*.parquet
+# xlsx_exports는 parquet에서 파이프라인이 재생성하는 열람 사본 (아티팩트) — README만 추적
+data/raw/xlsx_exports/**/*.xlsx
 # 수동 업로드 참조 데이터(Excel·PDF)는 커밋 허용
 !data/raw/USDA/**/*.xlsx
 !data/raw/FAO/**/*.pdf
