@@ -1265,7 +1265,7 @@ def _render_feature_selection_methodology(lang: str = "ko") -> str:
         gate_hdr = ["단계", "과정", "방법", "임계값"]
         gate_rows = [
             ("1단계", "DQSOps 품질 게이트",     "DQSOps 가중치 점수 (5차원)",         "≥ 0.70 PASS"),
-            ("2단계", "단변량 스크리닝",          "Pearson |r| · Granger 인과검정",    "|r|≥0.25, p<0.05 (Bonferroni 보정)"),
+            ("2단계", "단변량 스크리닝",          "Pearson |r| · Granger · AIC/BIC 정보기준", "|r|≥0.25, p<0.05, ΔAIC<-2"),
             ("3단계", "다중공선성 제거",          "VIF < 5 · LASSO L1 정규화",         "VIF 임계값 5.0"),
             ("4단계", "ML 중요도 순위 합산",      "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "종합 순위 상위 선택"),
             ("5단계", "실무자 검토",             "정성 평가 + 상관도 논리 검증",       "합의 승인"),
@@ -1291,7 +1291,7 @@ def _render_feature_selection_methodology(lang: str = "ko") -> str:
         gate_hdr = ["Stage", "Process", "Method", "Threshold"]
         gate_rows = [
             ("Stage 1", "DQSOps Quality Gate",     "DQSOps weighted score (5-dim)",               "≥ 0.70 PASS"),
-            ("Stage 2", "Univariate Screening",    "Pearson |r| · Granger causality test",        "|r|≥0.25, p<0.05 (Bonferroni)"),
+            ("Stage 2", "Univariate Screening",    "Pearson |r| · Granger · AIC/BIC info criteria", "|r|≥0.25, p<0.05, ΔAIC<-2"),
             ("Stage 3", "Multicollinearity Removal","VIF < 5 · LASSO L1 regularization",          "VIF threshold 5.0"),
             ("Stage 4", "ML Importance Ranking",   "0.4×LASSO_rank + 0.3×SHAP_rank + 0.3×Granger_rank", "Top-ranked selected"),
             ("Stage 5", "Practitioner Review",     "Qualitative review + correlation logic",       "Consensus approval"),

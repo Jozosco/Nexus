@@ -1,7 +1,7 @@
 ---
 id: P1-04
 name: Supply Chain & Logistics Analyst
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 llm_route: REAL_TIME_RESEARCH
 pattern: Expert Pool
 skill_file: .claude/skills/phase1/04_supply_chain_analyst.md

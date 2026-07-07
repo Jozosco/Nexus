@@ -1,7 +1,7 @@
 ---
 id: C-04
 name: Document Intelligence & ML Infrastructure Engineer
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 llm_route: STRUCTURED_EXTRACT
 thinking_mode: disabled
 pattern: Expert Pool
