@@ -411,6 +411,25 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+      # A-061: Trading Economics 9개년 히스토리(대체재·에너지·해운) 정형화
+      - name: Check for Trading Economics Excel files
+        id: check_te
+        run: |
+          COUNT=$(find "data/raw/Trading Economics" -name "*.xlsx" 2>/dev/null | wc -l)
+          echo "xlsx_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "TE xlsx 파일 수: $COUNT"
+      - name: Run Trading Economics Excel ingest
+        if: steps.check_te.outputs.xlsx_count != '0'
+        run: python scripts/ingest_te_xlsx.py
+      - name: Upload Trading Economics output
+        if: steps.check_te.outputs.xlsx_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-te-commodities-${{ github.run_id }}
+          path: data/raw/te_commodities_historical.parquet
+          retention-days: 90
+          if-no-files-found: warn
+
   # ── WBS 1.4.1: GPR × SBO 상관관계 분석 (백필 완료 후 실행) ───────────────────
   gpr-sbo-correlation:
     name: "1.4.1 | GPR × SBO Correlation Analysis (Post-Backfill)"

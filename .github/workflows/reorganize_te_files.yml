@@ -1,0 +1,119 @@
+# Trading Economics 히스토리 파일 재정리 — Session 31 (조정자 요청)
+# data/raw 루트에 업로드된 TE 9개년 xlsx를 표준 폴더로 이동.
+#
+# 폴더 구조:
+#   data/raw/Trading Economics/Markets/Commodities/Agricultural/
+#   data/raw/Trading Economics/Markets/Commodities/Energy/
+#   data/raw/Trading Economics/Markets/Commodities/Shipping Indices/
+#
+# 분류(파일명 2017~2026_{Commodity}_..._{Units}.xlsx):
+#   Agricultural     : Canola, Palm Oil, Rapeseed, Soybeans, Sunflower Oil
+#   Energy           : Brent Crude Oil, Coal, EU Natural Gas, Natural Gas,
+#                      UK Natural Gas, Gasoline, WTI Crude Oil
+#   Shipping Indices : BDI, Containerized Freight Index
+#
+# ※ 주의(A-061): 조정자 요청서에는 에너지 품목이 "→ Agricultural"로 표기됐으나, 별도
+#   'Energy' 하위폴더를 명시 생성하셨고 품목 성격이 에너지이므로 오기로 판단해 Energy로 라우팅함.
+#   (필요 시 재지정 가능 — 확인 요청)
+#
+# 실행: 비기본 브랜치 workflow_dispatch 403 → A-041 push 트리거 패턴.
+name: Reorganize Trading Economics Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "재정리 대상 브랜치"
+        required: true
+        default: "main"
+  push:
+    branches:
+      - "claude/setup-nexus-llm-tools-RX4aS"
+    paths:
+      - ".github/workflows/reorganize_te_files.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  reorganize:
+    name: "Reorganize Trading Economics files"
+    runs-on: ubuntu-latest
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch || 'main' }}
+          fetch-depth: 0
+
+      - name: Create destination folders
+        run: |
+          BASE="data/raw/Trading Economics/Markets/Commodities"
+          mkdir -p "$BASE/Agricultural" "$BASE/Energy" "$BASE/Shipping Indices"
+
+      - name: Move Trading Economics xlsx by commodity class
+        run: |
+          set -e
+          BASE="data/raw/Trading Economics/Markets/Commodities"
+          AGRI="$BASE/Agricultural"; ENER="$BASE/Energy"; SHIP="$BASE/Shipping Indices"
+          route_te() {
+            f="$1"; base=$(basename "$f")
+            if printf '%s' "$base" | grep -qiE 'BDI|Containerized Freight'; then
+              DEST="$SHIP"
+            elif printf '%s' "$base" | grep -qiE 'Canola|Palm Oil|Rapeseed|Soybeans|Sunflower Oil'; then
+              DEST="$AGRI"
+            elif printf '%s' "$base" | grep -qiE 'Brent|Coal|Natural Gas|Gasoline|WTI'; then
+              DEST="$ENER"
+            else
+              echo "[건너뜀] 분류 불가: $base"; return 0
+            fi
+            echo "[이동] $f -> $DEST/"
+            git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
+          }
+          # 파일명 접두사 YYYY~YYYY_ 형태만 대상
+          find data/raw -maxdepth 1 -type f -name "*.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do
+                case "$(basename "$f")" in
+                  [0-9][0-9][0-9][0-9]~[0-9][0-9][0-9][0-9]_*) route_te "$f" ;;
+                esac
+              done
+
+      - name: Write Trading Economics README
+        run: |
+          BASE="data/raw/Trading Economics/Markets/Commodities"
+          printf '%s\n' \
+            '# Trading Economics — Markets / Commodities (2017~2026 히스토리)' \
+            '' \
+            'Trading Economics 제공 9개년(2017.01.01~2026.07.01) 상품 시세 히스토리 xlsx.' \
+            'TE API 실시간 수집 불안정(요청 근거)으로 수동 업로드 히스토리를 1차 소스로 사용.' \
+            '' \
+            '## 폴더 구조' \
+            '' \
+            '| 폴더 | 품목 | 대두유 분석 역할 |' \
+            '|---|---|---|' \
+            '| `Agricultural/` | Canola·Palm Oil·Rapeseed·Soybeans·Sunflower Oil | 대체재(유지류) 스프레드·보완재(대두) 크러시 |' \
+            '| `Energy/` | Brent·WTI·Coal·(EU/UK/US) Natural Gas·Gasoline | 바이오디젤 채널·운임 원가(벙커유) |' \
+            '| `Shipping Indices/` | BDI·Containerized Freight Index | 해상 운임 충격 → CIF 원가 |' \
+            '' \
+            '- 파일명: `YYYY~YYYY_{Commodity}_{Exchange}_{Units}.xlsx`' \
+            '- 시트명: `YYYY년` (연도별 시트)' \
+            '- 파서: scripts/ingest_te_xlsx.py (연도 시트 → 롱포맷 parquet)' \
+            > "$BASE/README.md"
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "[정보] 변경 없음 — 이미 정리됨 또는 대상 없음."; exit 0
+          fi
+          COUNT=$(git diff --cached --name-only | wc -l)
+          git commit \
+            -m "data: reorganize Trading Economics history into Markets/Commodities/{Agricultural,Energy,Shipping Indices}" \
+            -m "Canola·Palm·Rapeseed·Soybeans·Sunflower->Agricultural | Brent·WTI·Coal·NatGas·Gasoline->Energy | BDI·CFI->Shipping. 변경: ${COUNT} (A-061)"
+          git push origin HEAD:${{ github.event.inputs.target_branch || 'main' }}
+          echo "[완료] ${COUNT}개 재정리 push 완료"
