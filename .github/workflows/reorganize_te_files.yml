@@ -52,17 +52,19 @@ jobs:
       - name: Create destination folders
         run: |
           BASE="data/raw/Trading Economics/Markets/Commodities"
-          mkdir -p "$BASE/Agricultural" "$BASE/Energy" "$BASE/Shipping Indices"
+          mkdir -p "$BASE/Agricultural" "$BASE/Energy" "$BASE/Shipping Indices" "$BASE/Industrial"
 
       - name: Move Trading Economics xlsx by commodity class
         run: |
           set -e
           BASE="data/raw/Trading Economics/Markets/Commodities"
-          AGRI="$BASE/Agricultural"; ENER="$BASE/Energy"; SHIP="$BASE/Shipping Indices"
+          AGRI="$BASE/Agricultural"; ENER="$BASE/Energy"; SHIP="$BASE/Shipping Indices"; INDU="$BASE/Industrial"
           route_te() {
             f="$1"; base=$(basename "$f")
-            if printf '%s' "$base" | grep -qiE 'BDI|Containerized Freight'; then
+            if printf '%s' "$base" | grep -qiE 'BDI|Containerized Freight|Container Index|Drewry|WCI'; then
               DEST="$SHIP"
+            elif printf '%s' "$base" | grep -qiE 'Di-ammonium|DAP|Urea'; then
+              DEST="$INDU"
             elif printf '%s' "$base" | grep -qiE 'Canola|Palm Oil|Rapeseed|Soybeans|Sunflower Oil'; then
               DEST="$AGRI"
             elif printf '%s' "$base" | grep -qiE 'Brent|Coal|Natural Gas|Gasoline|WTI'; then
@@ -70,11 +72,14 @@ jobs:
             else
               echo "[건너뜀] 분류 불가: $base"; return 0
             fi
+            # 이미 올바른 폴더면 건너뜀
+            if [ "$(dirname "$f")" = "$DEST" ]; then return 0; fi
             echo "[이동] $f -> $DEST/"
             git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
           }
-          # 파일명 접두사 YYYY~YYYY_ 형태만 대상
-          find data/raw -maxdepth 1 -type f -name "*.xlsx" -print0 \
+          # 대상: data/raw 루트 + Commodities 루트(하위폴더 미분류분) — YYYY~YYYY_ 접두사만
+          { find data/raw -maxdepth 1 -type f -name "*.xlsx" -print0; \
+            find "$BASE" -maxdepth 1 -type f -name "*.xlsx" -print0; } \
             | while IFS= read -r -d '' f; do
                 case "$(basename "$f")" in
                   [0-9][0-9][0-9][0-9]~[0-9][0-9][0-9][0-9]_*) route_te "$f" ;;
