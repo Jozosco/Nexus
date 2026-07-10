@@ -182,13 +182,32 @@ def fetch_argentina_indec() -> pd.DataFrame:
     return df
 
 
+# NASA POWER 파라미터 선별 (Standard Resolution · community=AG · A-065)
+# C-03·P1-01·P1-03 협의: 대두 수율 구동 인자(열스트레스·수분·일사·토양수분)만 선별.
+# High Resolution은 2024년만 제공 → 9개년 히스토리 부적합. Standard(월별, ~현재)로 확정.
+# 근거 문서: docs/research_desk/realtime_data_acquisition/nasa_power_selection_2026_07_10.md
+NASA_POWER_PARAMS: dict[str, tuple[str, str]] = {
+    "T2M":               ("°C",          "기온(2m)"),
+    "T2M_MAX":           ("°C",          "최고기온(열스트레스)"),
+    "T2M_MIN":           ("°C",          "최저기온(냉해)"),
+    "PRECTOTCORR":       ("mm/day",      "강수(수분 공급)"),
+    "RH2M":              ("%",           "상대습도(병해·증산)"),
+    "ALLSKY_SFC_SW_DWN": ("MJ/m^2/day",  "전천 일사(광합성 에너지)"),
+    "ALLSKY_SFC_PAR_TOT":("W/m^2",       "광합성유효복사 PAR"),
+    "GWETROOT":          ("0-1",         "근권 토양수분(가뭄)"),
+    "GWETTOP":           ("0-1",         "표층 토양수분"),
+}
+
+
 def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
-    """NASA POWER API — 원산지별 월별 농업기상 (기온·강수·습도).
-    참고: github.com/kdmayer/nasa-power-api | 키 불필요 | community=AG
-    수집 범위: start_date(기본 2020-01-01)부터 현재까지 (다른 커넥터와 통일).
+    """NASA POWER API — 원산지별 월별 농업기상 (선별 9종 파라미터).
+    참고: github.com/kdmayer/nasa-power-api | 키 불필요 | community=AG (Agroclimatology)
+    수집 범위: start_date(기본 2017-01-01)부터 현재까지.
+    선별 근거: 대두 수율 구동 = 열(T2M/MAX/MIN)·수분(강수/토양수분)·일사(SW/PAR)·습도(A-065).
     """
     end   = date.today()
-    start = start_date if start_date else date(2017, 1, 1)  # 수집 범위 표준화
+    start = start_date if start_date else date(2017, 1, 1)
+    param_csv = ",".join(NASA_POWER_PARAMS)
     rows = []
     for location, coord in ORIGIN_COORDS.items():
         try:
@@ -198,38 +217,30 @@ def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
                 "latitude":   coord["lat"],
                 "longitude":  coord["lon"],
                 "community":  "AG",
-                "parameters": "T2M,PRECTOTCORR,RH2M",
+                "parameters": param_csv,
                 "format":     "JSON",
                 "user":       "nexus_project",
                 "header":     "true",
             })
             payload = r.json()
             props   = payload.get("properties", {}).get("parameter", {})
-            for ym, t2m_val in props.get("T2M", {}).items():
-                precip = props.get("PRECTOTCORR", {}).get(ym, None)
-                rh2m   = props.get("RH2M", {}).get(ym, None)
-                try:
-                    rows.append({
-                        "price_date":     f"{ym[:4]}-{ym[4:]}-01",
-                        "source_name":    "NASA_POWER",
-                        "indicator_code": f"T2M_{location}",
-                        "region":         location,
-                        "country":        coord["country"],
-                        "value":          float(t2m_val),
-                        "unit":           "°C",
-                    })
-                    if precip is not None:
+            for param, (unit, _desc) in NASA_POWER_PARAMS.items():
+                series = props.get(param, {})
+                for ym, val in series.items():
+                    if val is None or float(val) <= -999:   # POWER 결측 센티넬
+                        continue
+                    try:
                         rows.append({
                             "price_date":     f"{ym[:4]}-{ym[4:]}-01",
                             "source_name":    "NASA_POWER",
-                            "indicator_code": f"PRECIP_{location}",
+                            "indicator_code": f"{param}_{location}",
                             "region":         location,
                             "country":        coord["country"],
-                            "value":          float(precip),
-                            "unit":           "mm/day",
+                            "value":          float(val),
+                            "unit":           unit,
                         })
-                except (ValueError, TypeError):
-                    continue
+                    except (ValueError, TypeError):
+                        continue
         except Exception as e:
             print(f"[경고] NASA POWER {location} 수집 실패: {e}")
     if not rows:

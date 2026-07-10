@@ -34,7 +34,8 @@ OUT_PATH  = Path("data/raw/te_commodities_historical.parquet")
 
 # 품목 → 카테고리 (폴더 미존재 시 파일명 기반 분류)
 _AGRI = {"canola", "palm oil", "rapeseed", "soybeans", "sunflower oil"}
-_SHIP = {"bdi", "containerized freight index"}
+_SHIP = {"bdi", "containerized freight index", "drewry world container index"}
+_INDU = {"di-ammonium", "urea", "dap"}
 # 그 외 에너지 (brent, wti, coal, natural gas, gasoline 등)
 
 _YEAR_SHEET_RE = re.compile(r"(\d{4})\s*년")
@@ -49,11 +50,15 @@ def _classify(commodity: str, parent: str) -> str:
         return "Energy"
     if "shipping" in p:
         return "Shipping Indices"
+    if "industrial" in p:
+        return "Industrial"
     c = commodity.lower()
     if c in _AGRI:
         return "Agricultural"
     if c in _SHIP:
         return "Shipping Indices"
+    if c in _INDU:
+        return "Industrial"
     return "Energy"
 
 
