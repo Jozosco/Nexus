@@ -1,0 +1,99 @@
+# NASA POWER Agroclimatology 파일 재정리 — Session 33 (조정자 요청, A-066)
+# data/raw 루트 업로드 xlsx → 국가별 폴더로 이동.
+#
+# 폴더: data/raw/NASA Power/Agroclimatology/{United States,Brazil,Argentina,China}/
+# 분류(파일명 YYYY~YYYY_{Region}_Agr..climatology..xlsx):
+#   US    : Illinois, Iowa, Indiana
+#   Brazil: MatoGrosso, MatoGrossodoSul, Parana
+#   Argentina: Cordoba, SantaFe, Buenos Aires
+#   China : Heilongjiang, Shandong, Jiangsu
+#
+# 실행: 비기본 브랜치 workflow_dispatch 403 → A-041 push 트리거 패턴.
+name: Reorganize NASA POWER Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "재정리 대상 브랜치"
+        required: true
+        default: "main"
+  push:
+    branches:
+      - "claude/setup-nexus-llm-tools-RX4aS"
+    paths:
+      - ".github/workflows/reorganize_nasa_power_files.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  reorganize:
+    name: "Reorganize NASA POWER agroclimatology files"
+    runs-on: ubuntu-latest
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch || 'main' }}
+          fetch-depth: 0
+
+      - name: Create destination folders
+        run: |
+          BASE="data/raw/NASA Power/Agroclimatology"
+          mkdir -p "$BASE/United States" "$BASE/Brazil" "$BASE/Argentina" "$BASE/China"
+
+      - name: Move NASA POWER xlsx by producing country
+        run: |
+          set -e
+          BASE="data/raw/NASA Power/Agroclimatology"
+          route_nasa() {
+            f="$1"; base=$(basename "$f")
+            if   printf '%s' "$base" | grep -qiE 'Illinois|Iowa|Indiana'; then D="$BASE/United States"
+            elif printf '%s' "$base" | grep -qiE 'MatoGrosso|MatoGrossodoSul|Parana'; then D="$BASE/Brazil"
+            elif printf '%s' "$base" | grep -qiE 'Cordoba|SantaFe|Santa Fe|Buenos Aires'; then D="$BASE/Argentina"
+            elif printf '%s' "$base" | grep -qiE 'Heilongjiang|Shandong|Jiangsu'; then D="$BASE/China"
+            else echo "[건너뜀] 분류 불가: $base"; return 0; fi
+            echo "[이동] $f -> $D/"
+            git mv -k -- "$f" "$D/" || mv -- "$f" "$D/"
+          }
+          find data/raw -maxdepth 1 -type f -iname "*climatology*.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do route_nasa "$f"; done
+
+      - name: Write NASA POWER README
+        run: |
+          BASE="data/raw/NASA Power/Agroclimatology"
+          printf '%s\n' \
+            '# NASA POWER — Agroclimatology (주요 생산국 3대 산지, 2017~2025)' \
+            '' \
+            'NASA POWER Single Point · Standard Resolution · Monthly · community=AG.' \
+            '대두 주요 생산국별 3대 산지(재배 grow / 압착 crush)의 농업기상 히스토리.' \
+            '' \
+            '| 국가 | 산지 (역할) |' \
+            '|---|---|' \
+            '| United States | Illinois(grow_crush)·Iowa(grow_crush)·Indiana(grow) |' \
+            '| Brazil | MatoGrosso(grow_crush)·Parana(grow_crush)·MatoGrossodoSul(grow) |' \
+            '| Argentina | Cordoba(grow)·SantaFe(crush)·Buenos Aires(grow) |' \
+            '| China | Heilongjiang(grow)·Shandong(crush)·Jiangsu(crush) |' \
+            '' \
+            '- 파일명: `YYYY~YYYY_{Region}_Agroclimatology Dataset(s).xlsx` · 시트: `YYYY년`' \
+            '- 파라미터 10종: T2M·T2M_MAX·T2M_MIN·PRECTOTCORR·RH2M·ALLSKY_SFC_SW_DWN·' \
+            '  ALLSKY_SFC_PAR_TOT·GWETROOT·GWETTOP 등 (열·수분·일사·토양수분)' \
+            '- 파서: scripts/ingest_nasa_power_xlsx.py → nasa_power_agroclimatology_historical.parquet' \
+            > "$BASE/README.md"
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "[정보] 변경 없음."; exit 0; fi
+          COUNT=$(git diff --cached --name-only | wc -l)
+          git commit \
+            -m "data: reorganize NASA POWER agroclimatology into country folders" \
+            -m "US/Brazil/Argentina/China 3대 산지별 9개년. 변경: ${COUNT} (A-066)"
+          git push origin HEAD:${{ github.event.inputs.target_branch || 'main' }}
+          echo "[완료] ${COUNT}개 재정리 push"

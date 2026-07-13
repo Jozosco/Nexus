@@ -1,0 +1,43 @@
+# src/semantic/query_templates.yaml — 카테고리별 쿼리 ↔ indicator_code (시맨틱 레이어 ④)
+# 목적: Perplexity/GDELT 검색을 고정 템플릿화 → ad-hoc 프롬프트 제거, 재현성 확보.
+# 카테고리별 신뢰 도메인 서브셋(≤20)으로 Perplexity search_domain_filter 상한 회피.
+# 관리: P1-05 · P1-06 · C-02. 초안(scaffold).
+version: 0.1-draft
+updated: 2026-07-10
+
+templates:
+  - indicator: ARG_EXPORT_TAX_SENTIMENT
+    category: policy
+    query: "Argentina soybean oil export tax (retenciones) rate change last 30 days"
+    domains: [reuters.com, bloomberg.com, bcr.com.ar, spglobal.com, agricensus.com]
+    window_days: 30
+  - indicator: INDIA_DUTY_SENTIMENT
+    category: policy
+    query: "India edible/soybean oil import duty change HS 1507 last 60 days"
+    domains: [reuters.com, seaofindia.com, commerce.gov.in, agricensus.com]
+    window_days: 60
+  - indicator: BIODIESEL_POLICY_SENTIMENT
+    category: policy
+    query: "Indonesia Malaysia B35 B40 biodiesel mandate; EU RED III; US RVO change"
+    domains: [gapki.id, mpoc.org.my, ec.europa.eu, epa.gov, reuters.com, theicct.org]
+    window_days: 60
+  - indicator: US_CN_TARIFF_SENTIMENT
+    category: geopolitical
+    query: "US China soybean tariff escalation retaliatory duty last 30 days"
+    domains: [reuters.com, bloomberg.com, customs.gov.cn, spglobal.com]
+    window_days: 30
+  - indicator: WASDE_CONSENSUS_SCORE
+    category: supply
+    query: "USDA WASDE soybean oil ending stocks production vs consensus surprise"
+    domains: [usda.gov, reuters.com, agricensus.com, igc.int]
+    window_days: 30
+  - indicator: BLACKSEA_RISK_SENTIMENT
+    category: geopolitical
+    query: "Black Sea grain corridor Ukraine sunflower oil export disruption"
+    domains: [reuters.com, apk-inform.com, spglobal.com, igc.int]
+    window_days: 14
+  - indicator: BRAZIL_CROP_SENTIMENT
+    category: climate
+    query: "Brazil soybean crop weather planting harvest CONAB forecast"
+    domains: [conab.gov.br, abiove.org.br, reuters.com, usda.gov]
+    window_days: 30

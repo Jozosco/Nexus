@@ -1,0 +1,121 @@
+# src/semantic/entities.yaml — 정규 엔티티 ↔ 동의어 사전 (시맨틱 레이어 ③)
+# 목적: 비정형 데이터의 표기 변형(다국어 포함)을 정규 엔티티로 통일 → 신호 재현성.
+# 관리: P1-06(주도) · P1-05 · C-02. 초안(scaffold) — 담당 확정 후 확장.
+# 스키마: canonical | class | synonyms[] | linked_indicator | note
+#
+# ⚠️ No.3 답변: 이전 문서엔 Argentina만 예시였으나, 아래는 전체 엔티티 클래스 초안.
+#    도메인 세부(신규 정책명·기업)는 담당이 보강.
+
+version: 0.1-draft
+updated: 2026-07-10
+
+# ── 국가/주체 ──────────────────────────────────────────────
+countries:
+  - canonical: Argentina
+    class: country
+    synonyms: [Argentina, 아르헨티나, ARG, "Rosario", "Pampas"]
+    linked_indicator: ARG_EXPORT_TAX_SENTIMENT
+  - canonical: Brazil
+    class: country
+    synonyms: [Brazil, 브라질, BRA, "Mato Grosso", "CONAB", "ABIOVE"]
+    linked_indicator: BRAZIL_CROP_SENTIMENT
+  - canonical: Indonesia
+    class: country
+    synonyms: [Indonesia, 인도네시아, IDN, GAPKI, Pertamina]
+    linked_indicator: BIODIESEL_POLICY_SENTIMENT
+  - canonical: Malaysia
+    class: country
+    synonyms: [Malaysia, 말레이시아, MYS, MPOB, MPOC]
+    linked_indicator: CPO_POLICY_SENTIMENT
+  - canonical: India
+    class: country
+    synonyms: [India, 인도, IND, SEA, "Solvent Extractors"]
+    linked_indicator: INDIA_DUTY_SENTIMENT
+  - canonical: China
+    class: country
+    synonyms: [China, 중국, CHN, GACC, Sinograin]
+    linked_indicator: US_CN_TARIFF_SENTIMENT
+  - canonical: EU
+    class: country
+    synonyms: [EU, "European Union", 유럽연합, "EU Commission", FEDIOL]
+    linked_indicator: EU_POLICY_SENTIMENT
+  - canonical: Ukraine
+    class: country
+    synonyms: [Ukraine, 우크라이나, UKR, "Black Sea", Odesa, "APK-Inform"]
+    linked_indicator: BLACKSEA_RISK_SENTIMENT
+  - canonical: Korea
+    class: country
+    synonyms: [Korea, "South Korea", 한국, KOR, 관세청]
+    linked_indicator: KOREA_IMPORT_CONTEXT
+
+# ── 정책/무역 이벤트 ───────────────────────────────────────
+policy_events:
+  - canonical: Export Tax
+    class: policy
+    synonyms: ["export tax", "export duty", "export ban", 수출세, retenciones, retención]
+    linked_indicator: ARG_EXPORT_TAX_SENTIMENT
+  - canonical: Import Duty
+    class: policy
+    synonyms: ["import duty", "import tariff", 수입관세, MFN, AIDC]
+    linked_indicator: INDIA_DUTY_SENTIMENT
+  - canonical: Biodiesel Mandate
+    class: policy
+    synonyms: [B35, B40, RVO, "RED III", "blending mandate", 바이오디젤, "renewable diesel", SAF, HVO]
+    linked_indicator: BIODIESEL_POLICY_SENTIMENT
+  - canonical: Tariff War
+    class: policy
+    synonyms: ["US-China trade war", "retaliatory tariff", "Section 301", 관세전쟁, 보복관세]
+    linked_indicator: US_CN_TARIFF_SENTIMENT
+  - canonical: Palm Export Levy
+    class: policy
+    synonyms: ["CPO export levy", "palm oil export ban", "DMO", 수출레비]
+    linked_indicator: CPO_POLICY_SENTIMENT
+
+# ── 지정학/해운 ───────────────────────────────────────────
+geopolitical:
+  - canonical: Red Sea Disruption
+    class: chokepoint
+    synonyms: ["Red Sea", Houthi, "Bab-el-Mandeb", 홍해, 후티]
+    linked_indicator: SBO_STRAIT_RISK
+  - canonical: Hormuz Risk
+    class: chokepoint
+    synonyms: ["Strait of Hormuz", 호르무즈, "Iran tanker"]
+    linked_indicator: HORMUZ_THREAT_LEVEL
+  - canonical: Suez Disruption
+    class: chokepoint
+    synonyms: ["Suez Canal", "Cape of Good Hope", 수에즈, 희망봉]
+    linked_indicator: SBO_STRAIT_RISK
+  - canonical: Black Sea Corridor
+    class: chokepoint
+    synonyms: ["Black Sea grain", "grain corridor", 흑해, "sunflower oil export"]
+    linked_indicator: BLACKSEA_RISK_SENTIMENT
+
+# ── 수급/기상 ─────────────────────────────────────────────
+supply_climate:
+  - canonical: WASDE Surprise
+    class: supply
+    synonyms: [WASDE, "ending stocks", consensus, surprise, 수급전망]
+    linked_indicator: WASDE_CONSENSUS_SCORE
+  - canonical: ENSO Phase
+    class: climate
+    synonyms: ["El Nino", "La Nina", 엘니뇨, 라니냐, drought, 가뭄, ENSO]
+    linked_indicator: ENSO_ONI
+  - canonical: Crush Margin
+    class: supply
+    synonyms: ["crush margin", "board crush", 압착마진, "oil share"]
+    linked_indicator: SBO_CRUSH_SPREAD
+
+# ── 대체·보완재 ───────────────────────────────────────────
+substitutes:
+  - canonical: Palm Oil
+    class: substitute
+    synonyms: [CPO, "palm oil", 팜유, "crude palm oil", FCPO]
+    linked_indicator: CPO_SBO_SPREAD
+  - canonical: Sunflower Oil
+    class: substitute
+    synonyms: ["sunflower oil", 해바라기유, "sunflower seed oil"]
+    linked_indicator: TE_SUNFLOWER_OIL
+  - canonical: Rapeseed Oil
+    class: substitute
+    synonyms: [rapeseed, canola, 유채유, 카놀라, "MATIF rapeseed"]
+    linked_indicator: TE_RAPESEED

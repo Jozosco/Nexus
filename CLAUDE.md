@@ -110,5 +110,9 @@ docs:     revise CLAUDE.md session protocol
 
 | File | Rule |
 |---|---|
-| `MEMORY.md` | Append learnings and resolved blockers. Never overwrite. Read at §BOOT step 2. |
+| `MEMORY.md` | Append learnings and resolved blockers. Never overwrite. Read at §BOOT step 2. 최근(당월~직전월)만 유지. |
+| `docs/memory_archive/YYYY-MM.md` | 월별 아카이브(내용 무변경). 필요 시 온디맨드 로드 — 아래 @import 참조. |
 | `git log --oneline -20` | Run to reconstruct prior decisions before starting a task with no recent MEMORY.md entry. |
+
+> **컨텍스트 최적화(JIT · pointer-not-copy)**: 오래된 학습은 아카이브로 이관하고 포인터만 유지.
+> 과거 세부가 필요할 때만 로드: @docs/memory_archive/2026-04.md · @docs/memory_archive/2026-05.md

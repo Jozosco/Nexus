@@ -1,0 +1,36 @@
+# src/semantic/metrics.yaml — 감성·정책 지표 정의 (시맨틱 레이어 ①)
+# 목적: 각 출력 신호의 표준 정의(코드·범위·단위) 고정 → 모두가 같은 의미로 소비.
+# 관리: P1-05 · P1-06. 초안(scaffold).
+version: 0.1-draft
+updated: 2026-07-10
+
+metrics:
+  - code: SBO_NEWS_SENTIMENT
+    range: [-1.0, 1.0]
+    unit: sentiment_score
+    desc: 대두유 전반 뉴스 감성(부정 −1 ~ 긍정 +1)
+    source: [GDELT, Perplexity, FinBERT]
+  - code: ARG_EXPORT_TAX_SENTIMENT
+    range: [-1.0, 1.0]
+    unit: sentiment_score
+    desc: 아르헨티나 수출세 동향(인상=공급위축=+가격압력)
+  - code: INDIA_DUTY_SENTIMENT
+    range: [-1.0, 1.0]
+    unit: sentiment_score
+    desc: 인도 식용유 수입관세 변동(인하=수요증가)
+  - code: BIODIESEL_POLICY_SENTIMENT
+    range: [-1.0, 1.0]
+    unit: sentiment_score
+    desc: 인니·말레이·EU·US 바이오디젤 의무(강화=식용유↔연료 수요전환)
+  - code: US_CN_TARIFF_SENTIMENT
+    range: [-1.0, 1.0]
+    unit: sentiment_score
+    desc: 미중 관세 긴장(고조=무역흐름 재편)
+  - code: WASDE_CONSENSUS_SCORE
+    range: [-1.0, 1.0]
+    unit: surprise_score
+    desc: WASDE 발표 vs 컨센서스(강세=bullish +)
+  - code: NEWS_POLICY_FLAG
+    range: [0, 1]
+    unit: binary_flag
+    desc: 정책 이벤트 발생 여부(이진)
