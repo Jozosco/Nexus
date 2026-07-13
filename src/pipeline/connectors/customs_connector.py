@@ -310,43 +310,57 @@ def fetch_comtrade_sbo_imports_fallback(start_year: int = 2017) -> pd.DataFrame:
         print("[경고] comtradeapicall 미설치 — pip install comtradeapicall")
         return pd.DataFrame()
 
+    # A-067 진단 해결: ①12개월 일괄 → 분기(3개월) 배치로 500건 상한 회피
+    #   ②429 시 break(전체 중단) → 지수 백오프 재시도 후 다음 배치 계속
+    #   ③무료(previewFinalData 500건) 경로 로그 명시
+    print(f"[정보] UN Comtrade 경로: {'getFinalData(유료키)' if sub_key else 'previewFinalData(무료·500건/호출)'}")
     end_d = date.today().replace(day=1) - timedelta(days=1)
-    year_batches: dict[int, list[str]] = {}
+    quarter_batches: list[tuple[int, int, list[str]]] = []
     d = date(start_year, 1, 1)
+    cur: list[str] = []
     while d.replace(day=1) <= end_d.replace(day=1):
-        year_batches.setdefault(d.year, []).append(d.strftime("%Y%m"))
+        cur.append(d.strftime("%Y%m"))
+        if d.month % 3 == 0:          # 분기 경계
+            quarter_batches.append((d.year, (d.month - 1) // 3 + 1, cur))
+            cur = []
         d = date(d.year + (d.month // 12), (d.month % 12) + 1, 1)
+    if cur:
+        quarter_batches.append((d.year, (d.month - 1) // 3 + 1, cur))
+
+    def _call_with_backoff(period_str: str, max_retries: int = 4):
+        delay = 2
+        for attempt in range(max_retries):
+            try:
+                call_fn = comtradeapicall.getFinalData if sub_key else comtradeapicall.previewFinalData
+                kwargs: dict[str, Any] = dict(
+                    typeCode="C", freqCode="M", clCode="HS",
+                    period=period_str, reporterCode=COMTRADE_REPORTER_KOREA,
+                    cmdCode="1507", flowCode="M",
+                    partnerCode=None, partner2Code=None,
+                    customsCode=None, motCode=None,
+                    maxRecords=10000 if sub_key else 500,
+                    format_output="JSON", aggregateBy=None,
+                    breakdownMode="classic", countOnly=None, includeDesc=True,
+                )
+                if sub_key:
+                    kwargs["subscription_key"] = sub_key
+                return call_fn(**kwargs)
+            except Exception as e:
+                if ("429" in str(e) or "rate" in str(e).lower()) and attempt < max_retries - 1:
+                    print(f"[경고] Comtrade 레이트 리밋 — {delay}s 후 재시도 ({attempt+1}/{max_retries})")
+                    time.sleep(delay)
+                    delay *= 2
+                    continue
+                print(f"[경고] Comtrade {period_str[:6]}~: {e}")
+                return None
 
     all_frames: list[pd.DataFrame] = []
-    for yr, yr_periods in sorted(year_batches.items()):
-        period_str = ",".join(yr_periods)
-        try:
-            call_fn = comtradeapicall.getFinalData if sub_key else comtradeapicall.previewFinalData
-            kwargs: dict[str, Any] = dict(
-                typeCode="C", freqCode="M", clCode="HS",
-                period=period_str,
-                reporterCode=COMTRADE_REPORTER_KOREA,
-                cmdCode="1507",
-                flowCode="M",
-                partnerCode=None, partner2Code=None,
-                customsCode=None, motCode=None,
-                maxRecords=10000 if sub_key else 500,
-                format_output="JSON",
-                aggregateBy=None, breakdownMode="classic",
-                countOnly=None, includeDesc=True,
-            )
-            if sub_key:
-                kwargs["subscription_key"] = sub_key
-            df = call_fn(**kwargs)
-            if df is not None and not df.empty:
-                all_frames.append(df)
-                print(f"[정보] UN Comtrade {yr}: {len(df)}건")
-            time.sleep(1)
-        except Exception as e:
-            if "429" in str(e) or "rate" in str(e).lower():
-                print(f"[경고] UN Comtrade 레이트 리밋 ({yr}): {e}")
-                break
-            print(f"[경고] UN Comtrade {yr}: {e}")
+    for yr, q, periods in quarter_batches:
+        df = _call_with_backoff(",".join(periods))
+        if df is not None and not df.empty:
+            all_frames.append(df)
+            print(f"[정보] UN Comtrade {yr}Q{q}: {len(df)}건")
+        time.sleep(1)
 
     if not all_frames:
         return pd.DataFrame()
