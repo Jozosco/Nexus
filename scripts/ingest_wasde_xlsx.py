@@ -46,20 +46,54 @@ _MONTH_MAP = {
     "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
 }
 
-# WASDE Attribute → 지표 접미사
+# WASDE Attribute → 지표 접미사 (session34 §2.2 선별)
 _ATTR_MAP = {
-    "Production":      "PRODUCTION",
-    "Exports":         "EXPORTS",
-    "Imports":         "IMPORTS",
-    "Ending Stocks":   "ENDING_STOCKS",
-    "Domestic Total":  "DOMESTIC_USE",
-    "Beginning Stocks": "BEGINNING_STOCKS",
+    "Production":        "PRODUCTION",
+    "Exports":           "EXPORTS",
+    "Exports, Total":    "EXPORTS",
+    "Imports":           "IMPORTS",
+    "Ending Stocks":     "ENDING_STOCKS",
+    "Ending Stocks, Total": "ENDING_STOCKS",
+    "Beginning Stocks":  "BEGINNING_STOCKS",
+    "Domestic Total":    "DOMESTIC_USE",
+    "Domestic, Total":   "DOMESTIC_USE",
+    "Domestic Use":      "DOMESTIC_USE",
+    "Total Use":         "TOTAL_USE",
+    "Use, Total":        "TOTAL_USE",
+    "Total Supply":      "TOTAL_SUPPLY",
+    "Supply, Total":     "TOTAL_SUPPLY",
+    "Crushings":         "CRUSH",
+    "Domestic Crush":    "CRUSH",
+    "Crush":             "CRUSH",
+    "Yield":             "YIELD",
+    "Area Harvested":    "AREA_HARVESTED",
+    "Area Planted":      "AREA_PLANTED",
+    "Avg. Farm Price":   "FARM_PRICE",
+    "For Methyl Ester":  "BIODIESEL_USE",
+    "Ethanol for Fuel":  "ETHANOL_USE",
+    "Food Seed & Industrial":  "FSI",
+    "Food, Seed & Industrial": "FSI",
+}
+
+# Commodity(tidy 명칭) → 지표 인픽스 (session34 §2.1 선별)
+_COMMODITY_MAP = {
+    "Soybean Oil":      "SBO",
+    "Oil, Soybean":     "SBO",
+    "Soybean Meal":     "MEAL",
+    "Meal, Soybean":    "MEAL",
+    "Oilseed, Soybean": "SOY",
+    "Soybean":          "SOY",
+    "Soybeans":         "SOY",
+    "Vegetable Oils":   "VEGOIL",
+    "Oilseeds":         "OILSEEDS",
+    "Oilmeals":         "OILMEALS",
+    "Corn":             "CORN",
 }
 
 # Region → 지표 접두사
 _REGION_PREFIX = {
-    "World":         "WASDE_SBO_",
-    "United States": "WASDE_US_SBO_",
+    "World":         "WASDE_",
+    "United States": "WASDE_US_",
 }
 
 
@@ -138,50 +172,53 @@ def parse_wasde_tidy(xlsx_path: Path, year: int) -> pd.DataFrame:
         if any(v is None for v in col.values()):
             continue
 
-        sbo = df[df[col["commodity"]].astype(str).str.strip() == "Soybean Oil"]
-        if sbo.empty:
-            continue
-
+        comm_series = df[col["commodity"]].astype(str).str.strip()
         base = {
             "price_date":  price_date,
             "source_name": "USDA_WASDE_XLSX",
             "unit":        "1000000MT",
-            "ingested_at": pd.Timestamp.utcnow(),
+            "ingested_at": pd.Timestamp.now("UTC"),
             "note":        f"{xlsx_path.name} / {sheet_name}",
         }
 
-        for region, prefix in _REGION_PREFIX.items():
-            reg = sbo[sbo[col["region"]].astype(str).str.strip() == region]
-            if reg.empty:
+        for comm_name, infix in _COMMODITY_MAP.items():
+            comm_df = df[comm_series == comm_name]
+            if comm_df.empty:
                 continue
-            my = _latest_market_year(reg[col["market_year"]])
-            if my is None:
-                continue
-            cur = reg[reg[col["market_year"]].astype(str).str.strip() == my]
+            for region, prefix in _REGION_PREFIX.items():
+                reg = comm_df[comm_df[col["region"]].astype(str).str.strip() == region]
+                if reg.empty:
+                    continue
+                my = _latest_market_year(reg[col["market_year"]])
+                if my is None:
+                    continue
+                cur = reg[reg[col["market_year"]].astype(str).str.strip() == my]
 
-            vals: dict[str, float] = {}
-            for _, r in cur.iterrows():
-                attr = str(r[col["attribute"]]).strip()
-                code = _ATTR_MAP.get(attr)
-                v = pd.to_numeric(r[col["value"]], errors="coerce")
-                if code and pd.notna(v):
-                    vals[code] = float(v)
-                    records.append({**base, "market_year": my,
-                                    "indicator_code": f"{prefix}{code}",
-                                    "value": float(v)})
+                vals: dict[str, float] = {}
+                for _, r in cur.iterrows():
+                    attr = str(r[col["attribute"]]).strip()
+                    code = _ATTR_MAP.get(attr)
+                    v = pd.to_numeric(r[col["value"]], errors="coerce")
+                    if code and pd.notna(v) and code not in vals:
+                        vals[code] = float(v)
+                        records.append({**base, "market_year": my,
+                                        "indicator_code": f"{prefix}{infix}_{code}",
+                                        "value": float(v)})
 
-            # STU = Ending Stocks / Domestic Total × 100
-            es, du = vals.get("ENDING_STOCKS"), vals.get("DOMESTIC_USE")
-            if es is not None and du and du > 0:
-                records.append({**base, "market_year": my, "unit": "percent",
-                                "indicator_code": f"{prefix}STU",
-                                "value": round(es / du * 100, 2)})
+                # STU = Ending Stocks / (Total Use|Domestic) × 100 — SBO 핵심
+                es = vals.get("ENDING_STOCKS")
+                du = vals.get("TOTAL_USE") or vals.get("DOMESTIC_USE")
+                if es is not None and du and du > 0:
+                    records.append({**base, "market_year": my, "unit": "percent",
+                                    "indicator_code": f"{prefix}{infix}_STU",
+                                    "value": round(es / du * 100, 2)})
 
     return pd.DataFrame(records)
 
 
 def run(wasde_dir: Path = WASDE_DIR, output_dir: Path = OUTPUT_DIR) -> None:
-    xlsx_files = sorted(wasde_dir.glob("*.xlsx"))
+    # 하위 폴더('곡물 및 유지류 취합본/') 포함 재귀 탐색
+    xlsx_files = sorted(wasde_dir.rglob("*.xlsx"))
     if not xlsx_files:
         print(f"[오류] {wasde_dir}에 xlsx 파일 없음. 파일 업로드 후 재실행하세요.")
         return
