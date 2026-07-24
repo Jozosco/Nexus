@@ -73,9 +73,14 @@ Classify the current market into Bear (하락장) / Bull (상승장) / Neutral r
 | **Climate / Agriculture** | ENSO index (El Niño / La Niña phase), USDA WASDE crop yield data, origin-country weather anomalies (US, Argentina, Brazil, Vietnam), EPA Renewable Fuel Standard (RFS) |
 | **Domestic Korea** | BOK base rate, domestic CPI, total soybean oil import volumes, substitute oil prices (palm oil, sunflower oil), domestic RFS biodiesel blend mandate (2030 target: 5%), government grain strategic reserve policy |
 
-### 3.2 Internal Data
+### 3.2 Internal Data — ⛔ EXCLUDED (MEMORY D-021)
 
-| Domain | Key Data Points |
+> **결정 D-021 (2026-07)**: 내부 S&OP/ERP 데이터는 **가용량 부족 + 더미 비중 과다**로
+> **분석에 일절 사용하지 않는다**. 아래 표는 *참고용 도메인 목록*일 뿐이며, G1/G2/G3의 학습·검증·
+> 피처 어디에도 투입되지 않는다. 모든 모델링은 **외부 파이프라인 데이터 전용**(구 "Phase B 내부검증"
+> 설계는 폐기). 상세: `.claude/rules/modeling.md`.
+
+| Domain | Key Data Points (참고용 — 미사용) |
 |---|---|
 | **S&OP** | Soybean oil input per SKU (kg/unit), Master Production Schedule (MPS), forecast vs. actual MAPE, seasonality coefficients, portfolio demand forecast (planned vs. executed) |
 | **Procurement** | Order history (qty · contract unit price · order date · ETA), crude vs. refined import ratio and price delta, CFR freight change history, lead-time variance (contracted vs. actual), hedging P&L vs. market spot price at receipt, supplier offer price vs. market benchmark |

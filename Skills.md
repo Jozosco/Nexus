@@ -108,7 +108,7 @@ NotebookLM serves as the project's **persistent knowledge base layer** — a cit
 | Source citation | Every answer cites the exact uploaded document and page — critical for procurement audit trails |
 | Audio summaries | Dense WASDE or EPA regulatory reports can be consumed as audio briefings |
 | Persistent knowledge | Uploaded documents persist across sessions; Perplexity searches are ephemeral |
-| Private documents | Internal reports, supplier benchmarks, and procurement history can be uploaded without public indexing |
+| Private documents | 외부 공개 보고서(WASDE·GAIN·EPA 등) 업로드용. ⛔ **내부 S&OP/조달 데이터는 분석 미사용**(MEMORY D-021) — 업로드·투입 금지 |
 
 ### Integration Workflow (Current — No Public API)
 ```
