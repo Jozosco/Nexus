@@ -1,0 +1,140 @@
+# 전체 데이터 폴더 재정리 — Session 34 (조정자 요청 1.3)
+# 15개년 스코프(2010~2026) 확장에 따른 카테고리/연/월 구조 정리.
+#
+# 작업:
+#  1. FAO AMIS: '{YY}년 {M}월_Market Monitor Issue.pdf' → FAO/AMIS/{YYYY}/ (연도별)
+#  2. ICE U.S.: '{YYYY}_Monthly Volume(s) {Futures|Options}.xlsx'
+#       → ICE/Reports/Monthly Volumes/U.S./{Futures|Options}/
+#  3. USDA WASDE: '{YY}년[_...]_곡물 및 유지류 취합본.xlsx' → 접미사 제거 후
+#       USDA/WASDE/곡물 및 유지류 취합본/{YY년[...]}.xlsx
+#  4. USDA FAS GAIN: '{YY}.{MM}_...pdf' (Biofuels/Oilseeds) → {sub}/{YYYY}/{MM}/ (연·월별)
+#  5. 관세청 폴더 생성: data/raw/관세청/Import Export Performance by Commodity and Country(GW)/
+#
+# 실행: 비기본 브랜치 workflow_dispatch 403 → A-041 push 트리거 패턴.
+name: Reorganize All Data Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "재정리 대상 브랜치"
+        required: true
+        default: "main"
+  push:
+    branches:
+      - "claude/setup-nexus-llm-tools-RX4aS"
+    paths:
+      - ".github/workflows/reorganize_all_data_files.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  reorganize:
+    name: "Reorganize FAO/ICE/WASDE/GAIN + 관세청 folder"
+    runs-on: ubuntu-latest
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch || 'main' }}
+          fetch-depth: 0
+
+      # ── 1. FAO AMIS → 연도별 ────────────────────────────────
+      - name: Organize FAO AMIS by year
+        run: |
+          set -e
+          SRC="data/raw/FAO/AMIS"
+          [ -d "$SRC" ] || exit 0
+          find "$SRC" -maxdepth 1 -type f -name "*.pdf" -print0 \
+            | while IFS= read -r -d '' f; do
+                base=$(basename "$f")
+                yy=$(printf '%s' "$base" | grep -oE '^[0-9]{2}' | head -1)
+                [ -z "$yy" ] && { echo "[건너뜀] 연도 파싱 실패: $base"; continue; }
+                dest="$SRC/20$yy"
+                mkdir -p "$dest"
+                git mv -k -- "$f" "$dest/" || mv -- "$f" "$dest/"
+              done
+
+      # ── 2. ICE U.S. → Futures/Options ──────────────────────
+      - name: Split ICE U.S. into Futures/Options
+        run: |
+          set -e
+          SRC="data/raw/ICE/Reports/Monthly Volumes/U.S."
+          [ -d "$SRC" ] || exit 0
+          mkdir -p "$SRC/Futures" "$SRC/Options"
+          find "$SRC" -maxdepth 1 -type f -name "*.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do
+                base=$(basename "$f")
+                if printf '%s' "$base" | grep -qiE 'Option'; then d="$SRC/Options"
+                elif printf '%s' "$base" | grep -qiE 'Future'; then d="$SRC/Futures"
+                else echo "[건너뜀] $base"; continue; fi
+                git mv -k -- "$f" "$d/" || mv -- "$f" "$d/"
+              done
+
+      # ── 3. USDA WASDE → 곡물 및 유지류 취합본/ (접미사 제거) ──
+      - name: Move WASDE compilation files (strip suffix)
+        run: |
+          set -e
+          SRC="data/raw/USDA/WASDE"
+          [ -d "$SRC" ] || exit 0
+          DEST="$SRC/곡물 및 유지류 취합본"
+          mkdir -p "$DEST"
+          find "$SRC" -maxdepth 1 -type f -name "*곡물 및 유지류 취합본*.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do
+                base=$(basename "$f")
+                newname=$(printf '%s' "$base" | sed 's/_곡물 및 유지류 취합본//')
+                git mv -k -- "$f" "$DEST/$newname" || mv -- "$f" "$DEST/$newname"
+              done
+
+      # ── 4. USDA FAS GAIN → 연/월별 (Biofuels/Oilseeds 유지) ──
+      - name: Organize GAIN PDFs by year/month
+        run: |
+          set -e
+          for sub in Biofuels Oilseeds; do
+            SRC="data/raw/USDA/FAS/GAIN/$sub"
+            [ -d "$SRC" ] || continue
+            find "$SRC" -maxdepth 1 -type f -name "*.pdf" -print0 \
+              | while IFS= read -r -d '' f; do
+                  base=$(basename "$f")
+                  yy=$(printf '%s' "$base" | grep -oE '^[0-9]{2}\.[0-9]{2}' | head -1)
+                  [ -z "$yy" ] && { echo "[건너뜀] $base"; continue; }
+                  year="20${yy%%.*}"; month="${yy##*.}"
+                  dest="$SRC/$year/$month"
+                  mkdir -p "$dest"
+                  git mv -k -- "$f" "$dest/" || mv -- "$f" "$dest/"
+                done
+          done
+
+      # ── 5. 관세청 폴더 생성 (업로드 대기) ───────────────────
+      - name: Create Korea Customs (관세청) folder
+        run: |
+          BASE="data/raw/관세청/Import Export Performance by Commodity and Country(GW)"
+          mkdir -p "$BASE"
+          printf '%s\n' \
+            '# 관세청 — 품목별 국가별 수출입실적 (GW)' \
+            '' \
+            '관세청 제공 HS코드 기반 수출입 통관 실적 (2010~2026, 16개년).' \
+            '' \
+            '- 집계: 수입=CIF USD, 수출=FOB USD · 중량=순중량(kg)' \
+            '- 갱신: 월별(매월 15일경, 정정·취하 반영)' \
+            '- HS 단위: 2·4·6·10 단위 집계' \
+            '- 대두유 HS: 1507.10(.1000/.2000), 1507.90(.1010/.1020)' \
+            '- 파서(예정): scripts/ingest_customs_gw_xlsx.py' \
+            > "$BASE/README.md"
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "[정보] 변경 없음."; exit 0; fi
+          COUNT=$(git diff --cached --name-only | wc -l)
+          git commit \
+            -m "data: reorganize FAO/ICE/WASDE/GAIN by category/year/month + 관세청 folder (Session 34)" \
+            -m "FAO→연도별 · ICE U.S.→Futures/Options · WASDE→취합본폴더(접미사제거) · GAIN→연/월별. 변경: ${COUNT}"
+          git push origin HEAD:${{ github.event.inputs.target_branch || 'main' }}
+          echo "[완료] ${COUNT}개 항목 재정리 push"
