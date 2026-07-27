@@ -1,30 +1,36 @@
-name: Historical Data Backfill — 2017~현재 전체 수집 (WBS 1.1.21)
+name: Historical Analysis Pipeline (2010~) — 과거 데이터 기반 현황·대안 분석
 
-# 목적: 2017년부터 현재까지 데이터를 일괄 수집 → C-08 DQ → C-06 EDA → G1 분석
-# 실행 순서: 모든 커넥터 병렬 수집 → backfill-summary → c08-dq → c06-eda → g1-analysis
+# 역할(C-01·C-03 협의, Session 36): 2010년 이후 확보 히스토리(data/raw 수동 업로드)를
+#   정형화·분석하여 ①공급/수요·가격 변동 추세와 유의 인자·논리 파악 ②현재와 유사한 과거
+#   사례(호르무즈 지정학·바이오디젤 정책 등)의 영향도 규명. → 현황 진단·대안 수립.
+#   (구 'Historical Data Backfill — 2017~현재'에서 개명, 스코프 2010~ 확장)
 #
-# BACKFILL_MODE=true: 모든 커넥터에 주입 → Perplexity 실시간(오늘 날짜만) 자동 건너뜀
-# 실행 조건: workflow_dispatch 수동 실행 전용 (스케줄 없음)
-# 예상 소요: ~25분 (커넥터 병렬 ~15분 + C-08/C-06/G1 직렬 ~10분)
+# Req 1.2.1: 이 파이프라인은 **히스토리(수동 업로드) 데이터 전용** — 실시간 API 호출 제외.
+#   include_api=true 로 명시할 때만 API 커넥터 실행(기본 제외). 실행: workflow_dispatch 전용.
+# 실행 기준: 과거 연도 신규/수정 데이터가 있을 때만 실행(불필요 시 미실행) — 조정자 결정.
 #
-# HITL 준수: G1 분석은 데이터 이해 목적 — 조달 실행은 별도 CLAUDE.md §6 게이트 통과 필요
-# 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음
+# HITL 준수: 분석은 데이터 이해 목적 — 조달 실행은 별도 CLAUDE.md §6 게이트 통과 필요
+# 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음 (D-021)
 
 on:
   workflow_dispatch:
     inputs:
       start_year:
-        description: "수집 시작 연도 (기본: 2017)"
+        description: "수집 시작 연도 (기본: 2010)"
         required: false
-        default: "2017"
+        default: "2010"
       end_year:
-        description: "수집 종료 연도 (기본: 2025)"
+        description: "수집 종료 연도 (기본: 2026)"
         required: false
-        default: "2025"
+        default: "2026"
       connector:
-        description: "특정 커넥터만 실행 (all / economic / shipping / wasde / climate / gpr / production / commodity / customs / geointel / fao-amis / usda-xlsx / gain-pdf)"
+        description: "특정 커넥터만 실행 (all / usda-xlsx / gain-pdf / fao-amis / customs-gw / gpr)"
         required: false
         default: "all"
+      include_api:
+        description: "실시간 API 커넥터 포함 여부 (기본 false — 히스토리 전용, Req 1.2.1)"
+        required: false
+        default: "false"
       skip_analysis:
         description: "수집 후 C-08/C-06/G1 분석 건너뛰기 (true / false)"
         required: false
@@ -35,7 +41,7 @@ jobs:
   economic-backfill:
     name: "1.1.2 | Economic Indicators Backfill (FRED · BOK ECOS · EIA)"
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'economic' }}
+    if: ${{ (github.event.inputs.connector == 'all' || github.event.inputs.connector == 'economic') && github.event.inputs.include_api == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -66,7 +72,7 @@ jobs:
   shipping-backfill:
     name: "1.1.3 | Shipping Indices Backfill (BDI via TE → stooq fallback)"
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'shipping' }}
+    if: ${{ (github.event.inputs.connector == 'all' || github.event.inputs.connector == 'shipping') && github.event.inputs.include_api == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -94,7 +100,7 @@ jobs:
   wasde-backfill:
     name: "1.1.4 | WASDE / USDA Crop Data Backfill (FAS OpenData)"
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'wasde' }}
+    if: ${{ (github.event.inputs.connector == 'all' || github.event.inputs.connector == 'wasde') && github.event.inputs.include_api == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -123,7 +129,7 @@ jobs:
   climate-backfill:
     name: "1.1.5 | Climate Backfill — Open-Meteo ERA5-Land (12 Production Regions)"
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'climate' }}
+    if: ${{ (github.event.inputs.connector == 'all' || github.event.inputs.connector == 'climate') && github.event.inputs.include_api == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -178,7 +184,7 @@ jobs:
   production-backfill:
     name: "1.1.7 | Production & Agromet Backfill (USDA NASS · FAOSTAT · FAS ESR)"
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'production' }}
+    if: ${{ (github.event.inputs.connector == 'all' || github.event.inputs.connector == 'production') && github.event.inputs.include_api == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -206,7 +212,7 @@ jobs:
   commodity-backfill:
     name: "Commodity Prices Backfill (CBOT BO=F · ARS/USD · USDM Drought)"
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'commodity' }}
+    if: ${{ (github.event.inputs.connector == 'all' || github.event.inputs.connector == 'commodity') && github.event.inputs.include_api == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -234,7 +240,7 @@ jobs:
   customs-backfill:
     name: "1.1.2+ | Korea Customs HS 1507 Import Backfill (data.go.kr)"
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs' }}
+    if: ${{ (github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs') && github.event.inputs.include_api == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
