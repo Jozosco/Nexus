@@ -2,7 +2,7 @@ name: LLM & Data API Health Check
 
 on:
   schedule:
-    - cron: "0 9 * * 1"   # 매주 월요일 오전 9시 (UTC) — 주간 시작 전 확인
+    - cron: "0 9 */2 * *"   # 2일마다 오전 9시 (UTC) — 조정자 결정(Session 36)
   workflow_dispatch:        # 수동 실행 허용
 
 jobs:

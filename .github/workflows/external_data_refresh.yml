@@ -1,10 +1,11 @@
-name: External Data Pipeline — Daily Refresh (WBS 1.1.2~1.1.7)
+name: Data Integration & Reporting Pipeline (수집·실시간 통합 → 리포트)
 
-# 실행 환경 주의:
-#   Phase A (현재): GitHub Actions runner에서 API 호출 → Azure Blob 저장
-#   Phase B (Snowflake 등록 후): Azure ML 파이프라인 트리거로 전환
+# 역할(C-01·C-03 협의, Session 36): 확보 데이터(data/raw 히스토리) + 실시간 API 수집분을
+#   통합·분석하여 리포트(G1 등)를 생성. Phase 1(핵심변수 식별)·Phase 2 Preview(가격밴드)
+#   실전 적용 준비 완료 시까지 **수동 실행(workflow_dispatch)만** 유지 — 조정자 결정.
+#   (구 'External Data Pipeline — Daily Refresh'에서 개명·일별 스케줄 제거)
 #
-# 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음
+# 보안 경계: 내부 ERP 데이터는 이 워크플로우에서 절대 처리하지 않음 (D-021)
 
 on:
   # ⏸️ 일시 중단 (Session 30, 조정자 요청) — 9개년 히스토리 기반 G1 분석의 결과
