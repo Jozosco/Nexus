@@ -161,17 +161,17 @@ def _kosis_b64_key(raw_key: str) -> str:
     return _b64.b64encode(stripped.encode()).decode()
 
 
-def fetch_kosis_cpi_korea(start_yyyymm: str = "202001") -> pd.DataFrame:
-    """KOSIS API — 한국 소비자물가지수(CPI_KOREA) 실제 데이터 수집.
+def fetch_kosis_cpi_korea(start_yyyymm: str = "201001") -> pd.DataFrame:
+    """KOSIS API — 한국 소비자물가지수(CPI_KOREA) 수집 (신규 URL 방식, A-070).
 
-    엔드포인트: statisticsData.do?method=getList
-    orgId=101: 통계청 | tblId=DT_1J22003: 소비자물가지수 전국 (2020=100)
-    itmId=T10+: 총지수 | objL1=0: 전국
-
-    KOSIS 필요 데이터 목록 (C-01/C-03/P1-01 협의 확정):
-      - CPI_KOREA      (DT_1J22003): 전국 소비자물가 총지수 — Nexus 거시경제 변수
-      - CPI_FOOD       (DT_1J22002): 품목성질별 CPI (식품/비식품) — 식용유 물가 압력
-      - PPI_KOREA      (DT_1G04003): 생산자물가지수 — 원가 압력 선행지표 (Phase B 추가 예정)
+    구 statisticsData.do 서비스 중단 → **statisticsParameterData.do** URL 생성 방식으로 전환
+    (조정자 제공 신규 키·URL). 작성기관: 국가데이터처(orgId=101).
+    참조 테이블 2종:
+      - DT_1J22003: 소비자물가지수(2020=100) 전국 총지수 → CPI_KOREA_TOTAL
+      - DT_1J22002: 품목성질별 소비자물가지수(2020=100) → CPI_KOREA_ITEM_CLASS
+    파라미터(조정자 URL): itmId=T+ · objL1(테이블별) · format=json · jsonVD=Y · prdSe=M ·
+      startPrdDe=201001 · outputFields · smblChk=N · orgId=101 · tblId
+    ⚠️ 키는 env KOSIS_API_KEY (Base64) — 하드코딩 금지, 노출 시 로테이션.
     """
     api_key = os.environ.get("KOSIS_API_KEY", "").strip()
     if not api_key:
@@ -180,31 +180,33 @@ def fetch_kosis_cpi_korea(start_yyyymm: str = "202001") -> pd.DataFrame:
 
     b64_key = _kosis_b64_key(api_key)
     end_yyyymm = date.today().strftime("%Y%m")
+    OUTPUT_FIELDS = "ORG_ID+TBL_ID+OBJ_ID+OBJ_NM_ENG+NM_ENG+ITM_NM_ENG+UNIT_NM_ENG+PRD_SE+PRD_DE+"
 
-    # 수집 대상 테이블 (CPI 총지수 + 품목성질별)
+    # 수집 대상 테이블 (CPI 총지수 + 품목성질별). objL1은 테이블별 분류값.
     KOSIS_TABLES = [
-        {"tblId": "DT_1J22003", "itmId": "T10+", "objL1": "0", "label": "CPI_KOREA_TOTAL"},
-        {"tblId": "DT_1J22002", "itmId": "T10+", "objL1": "0", "label": "CPI_KOREA_FOOD_CLASS"},
+        {"tblId": "DT_1J22003", "objL1": "T10", "label": "CPI_KOREA_TOTAL"},
+        {"tblId": "DT_1J22002", "objL1": "",    "label": "CPI_KOREA_ITEM_CLASS"},
     ]
 
     all_rows: list[dict] = []
     for tbl in KOSIS_TABLES:
         try:
-            raw = _fetch("https://kosis.kr/openapi/Param/statisticsData.do", {
-                "method":     "getList",
-                "apiKey":     b64_key,
-                "itmId":      tbl["itmId"],
-                "objL1":      tbl["objL1"],
-                "objL2":      "",
-                "objL3":      "",
-                "format":     "json",
-                "jsonVD":     "Y",
-                "vwCd":       "MT_ZTITLE",
-                "startPrdDe": start_yyyymm,
-                "endPrdDe":   end_yyyymm,
-                "prdSe":      "M",
-                "orgId":      "101",
-                "tblId":      tbl["tblId"],
+            raw = _fetch("https://kosis.kr/openapi/Param/statisticsParameterData.do", {
+                "method":       "getList",
+                "apiKey":       b64_key,
+                "itmId":        "T+",
+                "objL1":        tbl["objL1"],
+                "objL2":        "", "objL3": "", "objL4": "",
+                "objL5":        "", "objL6": "", "objL7": "", "objL8": "",
+                "format":       "json",
+                "jsonVD":       "Y",
+                "prdSe":        "M",
+                "startPrdDe":   start_yyyymm,
+                "endPrdDe":     end_yyyymm,
+                "outputFields": OUTPUT_FIELDS,
+                "smblChk":      "N",
+                "orgId":        "101",
+                "tblId":        tbl["tblId"],
             })
             if not raw:
                 print(f"[경고] KOSIS {tbl['tblId']}: 응답 없음")
@@ -218,7 +220,7 @@ def fetch_kosis_cpi_korea(start_yyyymm: str = "202001") -> pd.DataFrame:
                         "price_date":     pd.to_datetime(period, format="%Y%m", errors="coerce"),
                         "indicator_code": tbl["label"],
                         "value":          pd.to_numeric(str(value).replace(",", ""), errors="coerce"),
-                        "source_name":    "KOSIS/통계청",
+                        "source_name":    "KOSIS/국가데이터처",
                         "tbl_id":         tbl["tblId"],
                     })
             print(f"[정보] KOSIS {tbl['tblId']} ({tbl['label']}): {len(records)}건")

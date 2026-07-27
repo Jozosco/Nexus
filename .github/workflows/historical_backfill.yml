@@ -219,7 +219,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install httpx yfinance pandas pyarrow tradingeconomics
+        run: pip install httpx yfinance curl_cffi pandas pyarrow tradingeconomics
       - name: Run commodity connector (historical)
         env:
           FRED_API_KEY:               ${{ secrets.FRED_API_KEY }}
