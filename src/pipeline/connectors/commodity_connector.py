@@ -51,18 +51,40 @@ def _get(url: str, params: dict | None = None, headers: dict | None = None,
 
 # ── 1. CBOT 대두유 선물 (BO=F) ──────────────────────────────────────────────
 
+def _yf_session():
+    """curl_cffi 브라우저 임퍼소네이션 세션 — Yahoo 레이트리밋/차단 완화 (A-071).
+    원인①: yfinance 기본 requests가 Yahoo에 429(레이트리밋)·차단 유발.
+    해결: curl_cffi로 실제 브라우저 TLS 지문(impersonate) 모방 → 429 대폭 감소.
+    미설치 시 None 반환(기본 세션 사용).
+    """
+    try:
+        from curl_cffi import requests as cffi_requests
+        return cffi_requests.Session(impersonate="chrome")
+    except ImportError:
+        print("[정보] curl_cffi 미설치 — 기본 세션 사용(429 위험). pip install curl_cffi 권장")
+        return None
+
+
 def fetch_bo_futures_yfinance(days_back: int = 10) -> pd.DataFrame:
-    """CBOT BO=F 일간 OHLCV — yfinance (Yahoo Finance IP 차단 위험, 재시도 포함)."""
+    """CBOT BO=F 일간 OHLCV — yfinance + curl_cffi 세션 (A-071).
+
+    미수집 원인·해결(조정자 확인):
+      ① 레이트리밋(429) → curl_cffi 브라우저 임퍼소네이션 세션 사용(하단 _yf_session).
+      ② 사내 IP 방화벽 → yfinance 요청 도메인(query1/2.finance.yahoo.com) 승인 요청 필요
+         (담당자 방화벽 허용). Actions runner는 사내망 밖이라 ②는 해당 없음.
+    """
     try:
         import yfinance as yf
     except ImportError:
         print("[경고] yfinance 미설치 — BO=F yfinance 건너뜀 (Nasdaq Data Link 폴백 사용)")
         return pd.DataFrame()
 
+    session = _yf_session()
     delay = 10
     for attempt in range(3):
         try:
-            df = yf.Ticker("BO=F").history(period=f"{days_back}d", auto_adjust=True)
+            ticker = yf.Ticker("BO=F", session=session) if session else yf.Ticker("BO=F")
+            df = ticker.history(period=f"{days_back}d", auto_adjust=True)
             if df.empty:
                 print("[경고] BO=F yfinance: 데이터 없음 — Nasdaq Data Link 폴백으로 전환")
                 return pd.DataFrame()
