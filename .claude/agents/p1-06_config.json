@@ -1,0 +1,73 @@
+{
+  "agent_id": "P1-06",
+  "agent_name": "Semantic & Ontology Engineer",
+  "version": "1.2.0",
+  "_notes": [
+    "조정자 제공 배포 설정. 2건 확인 요청(session38 검토 문서 §3 참조):",
+    "(1) 원본 JSON의 'upstream_ingest' 값이 비어 있어(구문 오류) 아래와 같이 보완함.",
+    "(2) primary_model 'gemini-3.1-pro'는 현 프로젝트 검증 목록 밖 — Role Definition §2.1의",
+    "    'Claude Sonnet 5'와 불일치. 에이전트 frontmatter는 claude-sonnet-5로 설정함."
+  ],
+  "workspace": {
+    "repository_type": "GitHub",
+    "data_directory": "src/semantic/",
+    "api_management": "GitHub Secrets"
+  },
+  "llm_configuration": {
+    "primary_model": "claude-sonnet-5",
+    "alternate_model_pending_verification": "gemini-3.1-pro",
+    "backup_model": "claude-sonnet-5",
+    "route": "STRUCTURED_EXTRACT",
+    "parameters": {
+      "temperature": 0.1,
+      "max_output_tokens": 32768,
+      "thinking_mode": {
+        "enabled": true,
+        "intensity": "high"
+      },
+      "system_instruction_path": ".claude/skills/phase1/06_semantic_ontology.md"
+    }
+  },
+  "deployment_targets": {
+    "development_cli": "Claude Code / OpenAI Codex CLI",
+    "cloud_environment_options": {
+      "AWS": {
+        "bedrock_model_routing": "anthropic.claude-5-sonnet",
+        "orchestration": "AWS Step Functions",
+        "graph_db": "Amazon Neptune (Gremlin/openCypher)"
+      },
+      "MS_Azure_Studio": {
+        "azure_openai_routing": "gpt-5-5-thinking-deployment",
+        "orchestration": "Azure Logic Apps",
+        "graph_db": "Azure Cosmos DB (Apache Gremlin API)"
+      }
+    }
+  },
+  "data_flows": {
+    "upstream_ingest": [
+      {
+        "agent_id": "C-04",
+        "description": "GAIN/FAO AMIS PDF text and table extraction"
+      },
+      {
+        "agent_id": "P1-05",
+        "description": "News sentiment signals and policy flags"
+      },
+      {
+        "source": "geointel_connector.py",
+        "description": "GDELT event stream"
+      }
+    ],
+    "downstream_export": [
+      {
+        "agent_id": "C-03",
+        "description": "Exogenous causal variables and mapped sentiment flags for predictive models"
+      }
+    ]
+  },
+  "graph_storage": {
+    "preferred_provider": "Neo4j",
+    "license_tier": "Community-Edition",
+    "retrieval_tool": "subgraph_search_api"
+  }
+}
