@@ -109,6 +109,42 @@ jobs:
                 done
           done
 
+      # ── 4b. 관세청 GW 대두유 HS 폴더 정리 (Session 38) ──────
+      #   ① 'Refined oil (.10)' → '(Whole) Refined Soybean Oil (.1090)' 개명
+      #   ② 'Soya-bean Oil Fractions (.9000)' 생성 + 1507.90 루트 GW 파일 이동
+      #   ③ 오적재 GATS 파일(YYYY년 미국 對국가별 수출량) → USDA/FAS/GATS/1507.90 반환
+      - name: Reorganize Korea Customs GW soybean-oil HS folders
+        run: |
+          set -e
+          BASE="data/raw/관세청/Import Export Performance by Commodity and Country(GW)/Soybean Oil/1507.90"
+          [ -d "$BASE" ] || exit 0
+          # ① 개명
+          if [ -d "$BASE/Refined oil (.10)" ]; then
+            mkdir -p "$BASE/(Whole) Refined Soybean Oil (.1090)"
+            find "$BASE/Refined oil (.10)" -maxdepth 1 -type f -print0 \
+              | while IFS= read -r -d '' f; do
+                  git mv -k -- "$f" "$BASE/(Whole) Refined Soybean Oil (.1090)/" \
+                    || mv -- "$f" "$BASE/(Whole) Refined Soybean Oil (.1090)/"
+                done
+            rmdir "$BASE/Refined oil (.10)" 2>/dev/null || true
+          fi
+          # ③ 오적재 GATS 파일 반환 (먼저 처리 — ②에서 섞이지 않도록)
+          GATS_DEST="data/raw/USDA/FAS/GATS/1507.90"
+          mkdir -p "$GATS_DEST"
+          find "$BASE" -maxdepth 1 -type f -name "*미국 對국가별 수출량*.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do
+                echo "[반환] $(basename "$f") -> GATS/1507.90/"
+                git mv -k -- "$f" "$GATS_DEST/" || mv -- "$f" "$GATS_DEST/"
+              done
+          # ② Fractions 폴더 + 루트 GW 파일 이동
+          FRAC="$BASE/Soya-bean Oil Fractions (.9000)"
+          mkdir -p "$FRAC"
+          find "$BASE" -maxdepth 1 -type f -name "*.xlsx" -print0 \
+            | while IFS= read -r -d '' f; do
+                echo "[이동] $(basename "$f") -> Soya-bean Oil Fractions (.9000)/"
+                git mv -k -- "$f" "$FRAC/" || mv -- "$f" "$FRAC/"
+              done
+
       # ── 5. 관세청 폴더 생성 (업로드 대기) ───────────────────
       - name: Create Korea Customs (관세청) folder
         run: |
