@@ -296,6 +296,38 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+  # ── WBS 1.1.48: 관세청 GW 확장 수집 (대체·보완재 × 확대 원산지) ────────────────
+  # 업로드본과 동일 포맷(연도시트×월행×5지표)으로 품목(HS)별·국가별 xlsx 생성 (A-073)
+  # data.go.kr REST — 개발 샌드박스 프록시 차단이라 Actions에서만 수집 가능(A-069)
+  customs-gw-extended:
+    name: "1.1.48 | Korea Customs GW Extended (대체·보완재 HS × 원산지)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs-gw' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow openpyxl
+      - name: Run Korea Customs GW extended ingest
+        env:
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+          HISTORICAL_START_YEAR:  ${{ github.event.inputs.start_year }}
+          HISTORICAL_END_YEAR:    ${{ github.event.inputs.end_year }}
+        run: python scripts/ingest_customs_gw_xlsx.py
+      - name: Upload customs GW outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: customs-gw-extended-${{ github.run_id }}
+          path: |
+            data/raw/customs_gw_historical.parquet
+            data/raw/관세청/**/*.xlsx
+          retention-days: 90
+          if-no-files-found: warn
+
   # ── WBS 1.1.43: USDA FAS GAIN 보고서 PDF 판독·요약 (Oilseeds + Biofuels) ──────
   # GAIN PDF를 판독해 연·월·국가별 요약(.md) + 메타/신호 parquet 생성.
   # 파일명 규칙 YY.MM_Country_Title.pdf. API 키 불필요. (A-058)

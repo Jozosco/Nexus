@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
 """
-관세청 품목별 국가별 수출입실적(GW) — 대체재·보완재 HS코드 수집 (WBS 1.1.48 · A-069)
+관세청 품목별 국가별 수출입실적(GW) — 대체·보완재 확장 수집 (WBS 1.1.48 · A-069/A-073)
 
-목적(조정자 Req 2.1): 대두유 대체재(타 식용유)·보완재(대두·대두박·바이오디젤) HS코드의
-한국 수출입 실적을 관세청 API로 수집해 **품목별 .xlsx** 생성. HS 선정 근거:
-docs/research_desk/session34_data_selection_2026_07_10.md §3.
+목적(조정자 Req): 대두유 외 **대체재·보완재**와 **추가 원산지**의 한국 수출입 실적을 관세청 API로
+수집해, 기존 업로드본과 **완전히 동일한 형식**(연도별 시트 × 월별 행 × 5개 지표 열)으로 저장.
 
-엔드포인트: http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList  (XML)
-인증: 환경변수 DATA_GO_KR_SERVICE_KEY  (⚠️ 코드/저장소에 키 하드코딩 금지 — CLAUDE.md §2)
-파라미터: strtYymm·endYymm(YYYYMM) · hsSgn(HS 2/4/6/10자리) · cntyCd(국가, 선택)
+저장 규칙(조정자 지정):
+  data/raw/관세청/Import Export Performance by Commodity and Country(GW)/
+      {품목명 (HS코드)}/{국가}.xlsx
+  예) 'Palm Oil (1511)/China.xlsx' · 'Soybean (1201.90)/Brazil.xlsx'
+  시트: '{YYYY}년' · 행: '{M}월' · 열: 무역수지(달러)·수출액(달러)·수출량(kg)·수입액(달러)·수입량(kg)
 
-응답 필드: impDlr(수입 USD·CIF) · impWgt(수입 kg) · expDlr(수출 USD·FOB) · expWgt ·
-           hsCd · statCd(국가) · statKor(품목명) · year(YYYY.MM)
+엔드포인트: http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList  (REST, XML)
+인증: 환경변수 DATA_GO_KR_SERVICE_KEY  (⚠️ 하드코딩 금지 — CLAUDE.md §2)
 
-출력: data/raw/관세청/Import Export Performance by Commodity and Country(GW)/{Commodity}.xlsx
-      + 통합 data/raw/customs_gw_historical.parquet
-
-⚠️ 실행 환경: 이 스크립트는 data.go.kr 접근이 가능한 GitHub Actions에서 실행.
-   (개발 샌드박스 프록시는 apis.data.go.kr 차단 — A-069)
+⚠️ 실행 환경: apis.data.go.kr 은 개발 샌드박스 프록시에서 차단(A-069) → **GitHub Actions 전용**.
 
 의존성: httpx · pandas · openpyxl
 """
@@ -25,7 +22,6 @@ from __future__ import annotations
 
 import os
 import time
-import re
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -33,42 +29,43 @@ import httpx
 import pandas as pd
 
 BASE_URL = "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList"
-OUT_DIR  = Path("data/raw/관세청/Import Export Performance by Commodity and Country(GW)")
+GW_ROOT  = Path("data/raw/관세청/Import Export Performance by Commodity and Country(GW)")
 PARQUET  = Path("data/raw/customs_gw_historical.parquet")
 
 START_YEAR = int(os.environ.get("HISTORICAL_START_YEAR", "2010"))
 END_YEAR   = int(os.environ.get("HISTORICAL_END_YEAR", "2026"))
 
-# 품목 → HS코드 (session34 §3 대체재·보완재)
-HS_COMMODITIES: dict[str, list[str]] = {
-    # 대체재 (타 식용유)
-    "Palm_Oil":        ["1511"],
-    "Sunflower_Oil":   ["151211", "151219"],
-    "Rapeseed_Oil":    ["151411", "151419"],
-    "PalmKernel_Oil":  ["151321", "151329"],
-    "Coconut_Oil":     ["151311", "151319"],
-    "Cottonseed_Oil":  ["151221", "151229"],
-    # 보완재·업스트림·연관
-    "Soybean":         ["120110", "120190"],
-    "Soybean_Meal":    ["2304"],
-    "Biodiesel":       ["3826"],
-    "Glycerol":        ["1520"],
-    # 확보 대두유(참조 재수집)
-    "Soybean_Oil":     ["1507101000", "1507102000", "1507901010", "1507901020"],
+# 품목 → (폴더명, HS코드) — session37 §4 확정(대체재·보완재)
+COMMODITIES: list[tuple[str, str]] = [
+    ("Palm Oil (1511)",            "1511"),
+    ("Sunflower Oil (1512.11)",    "151211"),
+    ("Sunflower Oil (1512.19)",    "151219"),
+    ("Rapeseed Oil (1514.11)",     "151411"),
+    ("Rapeseed Oil (1514.19)",     "151419"),
+    ("Palm Kernel Oil (1513.21)",  "151321"),
+    ("Soybean (1201.90)",          "120190"),
+    ("Soybean Meal (2304)",        "2304"),
+    ("Biodiesel (3826)",           "3826"),
+]
+
+# 국가코드 → 파일명(기존 업로드본 표기 준수: U.S.A / Argentina …)
+COUNTRIES: dict[str, str] = {
+    "US": "U.S.A", "BR": "Brazil", "AR": "Argentina", "CN": "China",
+    # session37 §4.1 확대 원산지
+    "MY": "Malaysia", "ID": "Indonesia", "PY": "Paraguay",
+    "VN": "Vietnam", "NL": "Netherlands", "ES": "Spain",
 }
-# 주요 원산지 (빈 리스트면 전체 국가 집계)
-COUNTRIES = ["US", "CN", "BR", "AR", "MY", "ID", "UA"]
+
+_COL_ORDER = ["무역수지(달러)", "수출액(달러)", "수출량(kg)", "수입액(달러)", "수입량(kg)"]
 
 
-def _fetch(hs: str, yymm_start: str, yymm_end: str, cnty: str | None,
-           max_retries: int = 4) -> list[dict]:
+def _fetch_year(hs: str, cnty: str, year: int, max_retries: int = 4) -> list[dict]:
+    """단일 (HS·국가·연도) 월별 실적 조회 — 지수 백오프 재시도."""
     key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
     if not key:
         raise RuntimeError("[오류] DATA_GO_KR_SERVICE_KEY 미등록 — GitHub Secrets 등록 필요")
-    params = {"serviceKey": key, "strtYymm": yymm_start,
-              "endYymm": yymm_end, "hsSgn": hs}
-    if cnty:
-        params["cntyCd"] = cnty
+    params = {"serviceKey": key, "strtYymm": f"{year}01",
+              "endYymm": f"{year}12", "hsSgn": hs, "cntyCd": cnty}
     delay = 2
     for attempt in range(max_retries):
         try:
@@ -77,75 +74,72 @@ def _fetch(hs: str, yymm_start: str, yymm_end: str, cnty: str | None,
             root = ET.fromstring(r.text)
             code = root.findtext(".//resultCode")
             if code not in ("00", None):
-                msg = root.findtext(".//resultMsg")
-                print(f"    [경고] {hs}/{cnty}: resultCode={code} {msg}")
+                print(f"    [경고] {hs}/{cnty}/{year}: resultCode={code} "
+                      f"{root.findtext('.//resultMsg')}")
                 return []
             rows = []
             for it in root.findall(".//item"):
-                yr = it.findtext("year", "")
-                if "총계" in yr or it.findtext("hsCd") in ("-", None):
-                    continue
+                yr = (it.findtext("year") or "").strip()
+                if "총계" in yr or "." not in yr:
+                    continue                      # 연 총계 행 제외 — 월별만
+                month = int(yr.split(".")[1])
                 rows.append({
-                    "year_month": yr, "hs_code": it.findtext("hsCd"),
-                    "country": it.findtext("statCd"),
-                    "country_kr": it.findtext("statCdCntnKor1"),
-                    "item_kr": it.findtext("statKor"),
-                    "imp_usd": pd.to_numeric(it.findtext("impDlr"), errors="coerce"),
-                    "imp_wgt_kg": pd.to_numeric(it.findtext("impWgt"), errors="coerce"),
-                    "exp_usd": pd.to_numeric(it.findtext("expDlr"), errors="coerce"),
-                    "exp_wgt_kg": pd.to_numeric(it.findtext("expWgt"), errors="coerce"),
+                    "year": year, "month": month,
+                    "무역수지(달러)": pd.to_numeric(it.findtext("balPayments"), errors="coerce"),
+                    "수출액(달러)":  pd.to_numeric(it.findtext("expDlr"), errors="coerce"),
+                    "수출량(kg)":    pd.to_numeric(it.findtext("expWgt"), errors="coerce"),
+                    "수입액(달러)":  pd.to_numeric(it.findtext("impDlr"), errors="coerce"),
+                    "수입량(kg)":    pd.to_numeric(it.findtext("impWgt"), errors="coerce"),
                 })
             return rows
         except Exception as e:
             if attempt < max_retries - 1:
                 time.sleep(delay); delay *= 2; continue
-            print(f"    [경고] {hs}/{cnty} 수집 실패: {e}")
+            print(f"    [경고] {hs}/{cnty}/{year} 수집 실패: {e}")
             return []
 
 
-def fetch_commodity(commodity: str, hs_list: list[str]) -> pd.DataFrame:
-    print(f"[C-03] {commodity}: HS {hs_list} 수집...")
-    records: list[dict] = []
-    targets = COUNTRIES or [None]
-    for hs in hs_list:
-        for cnty in targets:
-            for yr in range(START_YEAR, END_YEAR + 1):
-                rows = _fetch(hs, f"{yr}01", f"{yr}12", cnty)
-                for row in rows:
-                    row["commodity"] = commodity
-                    records.append(row)
-                time.sleep(0.3)
-    if not records:
-        return pd.DataFrame()
-    df = pd.DataFrame(records)
-    # year_month 'YYYY.MM' → price_date
-    df["price_date"] = pd.to_datetime(df["year_month"].str.replace(".", "-", regex=False),
-                                      format="%Y-%m", errors="coerce")
-    df["source_name"] = "KoreaCustoms_GW"
-    df["ingested_at"] = pd.Timestamp.now("UTC")
-    return df.dropna(subset=["price_date"]).reset_index(drop=True)
+def _write_gw_xlsx(rows: list[dict], out_path: Path) -> None:
+    """업로드본과 동일 포맷으로 저장: 연도별 시트 × 월행 × 5지표열."""
+    if not rows:
+        return
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(rows)
+    with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
+        for year, g in df.groupby("year"):
+            sheet = g.set_index("month").reindex(range(1, 13))[_COL_ORDER]
+            sheet.index = [f"{m}월" for m in sheet.index]
+            sheet.index.name = None
+            sheet.to_excel(writer, sheet_name=f"{int(year)}년")
 
 
 def run() -> None:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    all_frames = []
-    for commodity, hs_list in HS_COMMODITIES.items():
-        df = fetch_commodity(commodity, hs_list)
-        if df.empty:
-            print(f"  [정보] {commodity}: 데이터 없음")
-            continue
-        # tz 제거 후 품목별 xlsx
-        xl = df.copy()
-        xl["ingested_at"] = xl["ingested_at"].dt.tz_localize(None)
-        out = OUT_DIR / f"{commodity}.xlsx"
-        xl.to_excel(out, index=False)
-        all_frames.append(df)
-        print(f"  [xlsx] {out.name}: {len(df):,}행 "
-              f"({df['price_date'].min().date()}~{df['price_date'].max().date()})")
-    if all_frames:
-        combined = pd.concat(all_frames, ignore_index=True)
-        combined.to_parquet(PARQUET, index=False)
-        print(f"\n[완료] → {PARQUET} ({len(combined):,}행, {combined['commodity'].nunique()}품목)")
+    all_records: list[dict] = []
+    for folder, hs in COMMODITIES:
+        print(f"[C-03] {folder} (HS {hs}) 수집...")
+        for cnty_code, cnty_name in COUNTRIES.items():
+            rows: list[dict] = []
+            for year in range(START_YEAR, END_YEAR + 1):
+                rows.extend(_fetch_year(hs, cnty_code, year))
+                time.sleep(0.3)
+            if not rows:
+                print(f"  [정보] {folder}/{cnty_name}: 데이터 없음")
+                continue
+            out = GW_ROOT / folder / f"{cnty_name}.xlsx"
+            _write_gw_xlsx(rows, out)
+            print(f"  [xlsx] {folder}/{cnty_name}.xlsx ({len(rows)}개월)")
+            for r in rows:
+                all_records.append({**r, "commodity": folder, "hs_code": hs,
+                                    "country": cnty_name,
+                                    "price_date": pd.Timestamp(year=r["year"],
+                                                               month=r["month"], day=1),
+                                    "source_name": "KoreaCustoms_GW",
+                                    "ingested_at": pd.Timestamp.now("UTC")})
+    if all_records:
+        pd.DataFrame(all_records).to_parquet(PARQUET, index=False)
+        print(f"\n[완료] → {PARQUET} ({len(all_records):,}행)")
+    else:
+        print("\n[경고] 수집 데이터 없음 — 키·네트워크 확인(Actions에서 실행 필요)")
 
 
 if __name__ == "__main__":
