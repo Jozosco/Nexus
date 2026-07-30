@@ -169,17 +169,21 @@ jobs:
               b64_key = api_key
           except Exception:
               b64_key = base64.b64encode(api_key.encode()).decode()
-          # statisticsData.do: 실제 CPI 데이터 조회 (statisticsParamData.do는 메타데이터만)
+          # A-070: 구 statisticsData.do 서비스 중단(404) → statisticsParameterData.do URL 방식
+          #        (조정자 제공 URL — itmId=T+/objL1=T10/outputFields/smblChk=N)
           r = httpx.get(
-              "https://kosis.kr/openapi/Param/statisticsData.do",
+              "https://kosis.kr/openapi/Param/statisticsParameterData.do",
               params={
                   "method": "getList", "apiKey": b64_key,
-                  "itmId": "T10+", "objL1": "0",
-                  "objL2": "", "objL3": "",
+                  "itmId": "T+", "objL1": "T10",
+                  "objL2": "", "objL3": "", "objL4": "",
+                  "objL5": "", "objL6": "", "objL7": "", "objL8": "",
                   "format": "json", "jsonVD": "Y",
-                  "vwCd": "MT_ZTITLE",
+                  "prdSe": "M",
                   "startPrdDe": "202401", "endPrdDe": "202412",
-                  "prdSe": "M", "orgId": "101", "tblId": "DT_1J22003",
+                  "outputFields": "ORG_ID+TBL_ID+PRD_SE+PRD_DE+",
+                  "smblChk": "N",
+                  "orgId": "101", "tblId": "DT_1J22003",
               },
               timeout=15,
           )
