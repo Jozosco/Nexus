@@ -338,7 +338,10 @@ FILE_PATTERNS: dict[str, str] = {
     "gats_quantity_historical": "무역통계(GATS 미국 수출량)",
     "gats_value_historical":    "무역통계(GATS 미국 수출액)",
     "fao_amis_historical": "수급전망(FAO AMIS)",
-    "te_commodities_historical": "상품가격(TE 대체재·에너지·해운 9개년)",
+    "te_commodities_historical": "상품가격(TE 대체재·에너지·해운 15개년)",
+    "nasa_power_agroclimatology_historical": "작황기상(NASA POWER 12산지 15개년)",
+    "customs_gw_historical": "수입통계(관세청 GW 확장 수집)",
+    "ice_monthly_volumes": "시장유동성(ICE 선물·옵션 거래량)",
     "gain_historical":     "정책신호(USDA FAS GAIN PDF)",
     "geointel":            "지정학 인텔리전스(USGS/NOAA/GDELT/FIRMS)",
 }
@@ -479,7 +482,7 @@ def _pivot_for_correlation(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
 
 def _lasso_importance(wide: pd.DataFrame, target_col: str | None = None) -> pd.DataFrame:
     """LASSO 회귀로 변수 중요도 계산. target_col이 없으면 가장 완전한 컬럼을 사용."""
-    from sklearn.linear_model import LassoCV
+    from sklearn.linear_model import ElasticNetCV
     from sklearn.preprocessing import StandardScaler
 
     if wide.empty or len(wide) < 10:
@@ -509,7 +512,11 @@ def _lasso_importance(wide: pd.DataFrame, target_col: str | None = None) -> pd.D
     X_scaled = scaler.fit_transform(X)
 
     try:
-        lasso = LassoCV(cv=min(5, len(y) // 2), max_iter=5000, random_state=42)
+        # D10(설계결정): 곡물 복합체 강상관(대두-옥수수 r=0.66 등) 환경에서 순수 LASSO는
+        # 상관 변수군 중 1개만 남기고 전부 0으로 만드는 불안정성 존재 → ElasticNet(L1+L2)으로
+        # 상관 그룹을 완만하게 축소해 공선성 하에서도 안정적 계수 산출 (l1_ratio 0.5 균형).
+        lasso = ElasticNetCV(l1_ratio=0.5, cv=min(5, len(y) // 2),
+                             max_iter=5000, random_state=42)
         lasso.fit(X_scaled, y)
         coefs = dict(zip(X.columns, lasso.coef_))
     except Exception:
@@ -721,7 +728,11 @@ def _granger_causality_by_year(
                 best_lag = min(result, key=lambda lg: result[lg][0]["ssr_ftest"][1])
                 f_stat   = round(float(result[best_lag][0]["ssr_ftest"][0]), 4)
                 p_val    = round(float(result[best_lag][0]["ssr_ftest"][1]), 4)
-                causal   = "✅ 인과관계 있음" if p_val < GRANGER_ALPHA else "— 기각불가"
+                # D11(설계결정): 변수 다중검정 → Bonferroni 보정 유의수준 α/m 적용.
+                # 미보정 α=0.05로 30개 변수 검정 시 기대 허위양성 ~1.5건 → 허위 인과 억제.
+                alpha_adj = GRANGER_ALPHA / max(1, len(ready_vars))
+                causal   = ("✅ 인과관계 있음(Bonf.)" if p_val < alpha_adj
+                            else ("🟡 미보정 유의" if p_val < GRANGER_ALPHA else "— 기각불가"))
                 rows.append({"변수": var, "연도": period_label,
                              "관측치수": len(data), "F통계량": f_stat,
                              "p값": p_val, "최적시차": best_lag, "인과성": causal})
@@ -762,7 +773,16 @@ def _series_from_frames(
 
 
 def _iqr_cap(s: pd.Series, k: float = 1.5) -> pd.Series:
-    """IQR 방식 이상치 캡핑 (MEMORY M-003). GARCH/z-score 전처리 표준."""
+    """IQR 방식 이상치 캡핑 (MEMORY M-003 · 설계결정 D6).
+
+    D6 근거(C-03): 통상 '이상치 제거'엔 IQR 3.0(극단값)을 쓰지만, 여기서의 용도는 제거가 아닌
+    **분산 민감 통계(롤링 z-score·표준편차)의 안정화 캡핑**임. 상품 시계열은 두꺼운 꼬리를 가져
+    3.0 캡은 2021·2022급 스파이크를 그대로 통과시켜 롤링 σ를 부풀리고 이후 수개월간 z-score를
+    과소평가(경보 둔감화)함. Tukey 내측 울타리(1.5)로 캡하면 스파이크의 '발생'은 여전히 z>2σ로
+    감지되면서 σ 오염은 차단됨. 단, **레벨·수익률 분석용 원시 시계열은 캡핑하지 않고 보존**
+    (진짜 위기 신호 왜곡 방지) — 캡은 z-score 경로에서만 적용한다. 데이터 '오류' 제거가 필요한
+    경우에만 k=3.0을 별도 사용.
+    """
     if len(s) < 4:
         return s
     q1, q3 = s.quantile(0.25), s.quantile(0.75)

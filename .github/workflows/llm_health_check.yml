@@ -22,6 +22,7 @@ jobs:
       # ── LLM APIs ────────────────────────────────────────────────────────────
 
       - name: Check Perplexity API
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: |
@@ -45,6 +46,7 @@ jobs:
           EOF
 
       - name: Check Gemini API
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
@@ -61,6 +63,7 @@ jobs:
           EOF
 
       - name: Check OpenAI API
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -93,6 +96,7 @@ jobs:
         run: pip install httpx tradingeconomics
 
       - name: Check FRED API (Fed Funds Rate endpoint)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
@@ -112,6 +116,7 @@ jobs:
           EOF
 
       - name: Check EIA API (Brent Crude endpoint)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
         run: |
@@ -132,6 +137,7 @@ jobs:
           EOF
 
       - name: Check BOK ECOS API (KRW/USD rate endpoint)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           BOK_ECOS_API_KEY: ${{ secrets.BOK_ECOS_API_KEY }}
         run: |
@@ -154,6 +160,7 @@ jobs:
           EOF
 
       - name: Check KOSIS API — CPI_KOREA 실데이터 조회 (MEMORY A-010, A-020, A-024)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
         run: |
@@ -180,7 +187,7 @@ jobs:
                   "objL5": "", "objL6": "", "objL7": "", "objL8": "",
                   "format": "json", "jsonVD": "Y",
                   "prdSe": "M",
-                  "startPrdDe": "202401", "endPrdDe": "202412",
+                  "startPrdDe": "201001", "endPrdDe": "202612",
                   "outputFields": "ORG_ID+TBL_ID+PRD_SE+PRD_DE+",
                   "smblChk": "N",
                   "orgId": "101", "tblId": "DT_1J22003",
@@ -191,10 +198,11 @@ jobs:
           data = r.json()
           rows = data if isinstance(data, list) else data.get("data", data.get("row", []))
           assert len(rows) > 0, f"[오류] KOSIS CPI 데이터 0건: {data}"
-          print(f"✅ KOSIS API 정상 — CPI_KOREA(DT_1J22003) {len(rows)}건 (2024년, Nexus 거시경제 변수)")
+          print(f"✅ KOSIS API 정상 — CPI_KOREA(DT_1J22003) {len(rows)}건 (2010~2026, Nexus 거시경제 변수)")
           EOF
 
       - name: Check USDA FAS OpenData API (PSD SBO endpoint)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           USDA_FAS_API_KEY: ${{ secrets.USDA_FAS_API_KEY }}
         run: |
@@ -214,6 +222,7 @@ jobs:
           EOF
 
       - name: Check USDA NASS QuickStats API (Soybean Production endpoint)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           USDA_NASS_QUICKSTATS_API_KEY: ${{ secrets.USDA_NASS_QUICKSTATS_API_KEY }}
           USDA_API_KEY:                 ${{ secrets.USDA_API_KEY }}
@@ -243,6 +252,7 @@ jobs:
           EOF
 
       - name: Check USDA ARMS API (Soybean Production Cost)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           USDA_ARM_API_KEY: ${{ secrets.USDA_ARM_API_KEY }}
         run: |
@@ -270,6 +280,7 @@ jobs:
           EOF
 
       - name: Check ECMWF CDS API (ERA5 connection)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           ECMWF_API_KEY: ${{ secrets.ECMWF_API_KEY }}
         run: |
@@ -298,6 +309,7 @@ jobs:
           EOF
 
       - name: Check Korea Customs API — data.go.kr HS 1507 (MEMORY A-011, A-018)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
         run: |
@@ -334,6 +346,7 @@ jobs:
           EOF
 
       - name: Check Trading Economics API (BDI + CPO)
+        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
         env:
           TRADING_ECONOMICS_API_KEY: ${{ secrets.TRADING_ECONOMICS_API_KEY }}
         run: |
