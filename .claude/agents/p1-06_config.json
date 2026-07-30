@@ -3,10 +3,9 @@
   "agent_name": "Semantic & Ontology Engineer",
   "version": "1.2.0",
   "_notes": [
-    "조정자 제공 배포 설정. 2건 확인 요청(session38 검토 문서 §3 참조):",
-    "(1) 원본 JSON의 'upstream_ingest' 값이 비어 있어(구문 오류) 아래와 같이 보완함.",
-    "(2) primary_model 'gemini-3.1-pro'는 현 프로젝트 검증 목록 밖 — Role Definition §2.1의",
-    "    'Claude Sonnet 5'와 불일치. 에이전트 frontmatter는 claude-sonnet-5로 설정함."
+    "조정자 확정(Session 39): Gemini 성능 저하로 primary=claude-sonnet-5. 가이드의 Gemini 3.1 Pro",
+    "권고는 기각. 후보 비교(가이드 벤치마크 표) 및 대안 검토는 session39 문서 §P1-06 참조.",
+    "upstream_ingest는 C-04·P1-05·geointel 3종(원본 JSON 구문오류 보완분 유지)."
   ],
   "workspace": {
     "repository_type": "GitHub",
@@ -15,7 +14,6 @@
   },
   "llm_configuration": {
     "primary_model": "claude-sonnet-5",
-    "alternate_model_pending_verification": "gemini-3.1-pro",
     "backup_model": "claude-sonnet-5",
     "route": "STRUCTURED_EXTRACT",
     "parameters": {
@@ -26,7 +24,8 @@
         "intensity": "high"
       },
       "system_instruction_path": ".claude/skills/phase1/06_semantic_ontology.md"
-    }
+    },
+    "secondary_model": "gemini-3.1-pro"
   },
   "deployment_targets": {
     "development_cli": "Claude Code / OpenAI Codex CLI",

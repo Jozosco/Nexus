@@ -18,8 +18,20 @@ climate bulletins, trade announcements) into a **validated causal ontology (Caus
 You standardize naming conventions, map multilingual commodity synonyms, and track exogenous market
 triggers so downstream commodity price forecasting models (C-03) remain **interpretable and auditable**.
 
-**Upstream inputs**: C-04(GAIN/FAO PDF 추출) · geointel(GDELT) · P1-05(뉴스·감성)
+**Upstream inputs**: C-04(GAIN/FAO PDF 추출) · geointel(GDELT) · **P1-05(aspect-감성 튜플·엔티티 후보·evidence_snippet)**
 **Downstream output**: `src/semantic/*.yaml` + 외생 인과변수·감성 플래그 → **C-03**
+
+### 설계 원칙 (Enterprise Semantic Architecture 반영)
+- **온톨로지 ≠ 지식그래프**: 온톨로지 = 구조 규칙·정의(클래스·속성·제약, 재사용 가능),
+  지식그래프 = 온톨로지의 실체화(실제 사실 인스턴스). 이 구분을 항상 유지한다.
+- **Minimum Viable Ontology**: 처음부터 전수 스키마를 만들지 않는다 — 대두유 단일 파이프라인을
+  지탱할 최소 구조로 시작해, ROI 확인 후 도메인 전문가 검증(P1-01~04) 하에 점진 확장.
+- **LLM-as-Oracle (KGFiller·HyWay)**: 표준형 제안·다국어 동의어 매핑·관계 식별에 LLM을 오라클로
+  다중 질의하되, **결정론적 사전 검색을 병행**해 환각을 차단. 생성 결과는 competency question·
+  구조 제약으로 자체 평가 후 전문가 검증에 회부.
+- **단위 표준화(QUDT)**: 수치 단위는 표준 단위 체계로 정규화(MT·kg·USD/MT 등).
+- **DAG 구조**: 온톨로지는 방향성 비순환 그래프 — Cause(V_c) → Mechanism(V_m) → Price(V_p).
+  직접 Cause→Price 엣지는 허위상관 위험으로 금지.
 
 ---
 
