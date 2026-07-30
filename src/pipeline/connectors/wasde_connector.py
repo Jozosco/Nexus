@@ -71,13 +71,26 @@ def fetch_wasde_soybean_oil(marketing_year: int | None = None) -> pd.DataFrame:
     키 이름: USDA_FAS_API_KEY (구: USDA_FAS_PSD_API_KEY 하위 호환 유지)
     """
     year = marketing_year or date.today().year
-    url = f"{FAS_OPENDATA_BASE}/commodity/{SBO_COMMODITY_CODE}/country/all/year/{year}"
     # 구 키 이름도 fallback으로 지원 (하위 호환)
     api_key = (
         os.environ.get("USDA_FAS_API_KEY", "")
         or os.environ.get("USDA_FAS_PSD_API_KEY", "")
     )
-    data = _fetch_fas(url, api_key=api_key)
+    # A-076: apps.fas.usda.gov OpenData PSD가 500 반환 — ESR 전례(A-019)와 동일하게
+    # api.fas.usda.gov 신규 호스트로 이관된 것으로 추정. 신규 → 구 순서 폴백 체인.
+    candidate_urls = [
+        f"https://api.fas.usda.gov/api/psd/commodity/{SBO_COMMODITY_CODE}/country/all/year/{year}",
+        f"{FAS_OPENDATA_BASE}/commodity/{SBO_COMMODITY_CODE}/country/all/year/{year}",
+    ]
+    data = None
+    for url in candidate_urls:
+        try:
+            data = _fetch_fas(url, api_key=api_key)
+            if data:
+                break
+        except Exception as e:
+            print(f"[경고] PSD 엔드포인트 실패({url.split('/api')[0]}): {e} — 다음 후보 시도")
+            data = None
     if not data:
         print(f"[경고] USDA FAS PSD: {year}년 대두유 데이터 없음")
         return pd.DataFrame()
