@@ -353,6 +353,16 @@ jobs:
       - name: Run GAIN PDF ingest
         if: steps.check_pdf.outputs.pdf_count != '0'
         run: python scripts/ingest_gain_pdf.py
+      - name: Generate per-PDF summaries next to files (Req 3 — C-04/P1-05/06)
+        if: steps.check_pdf.outputs.pdf_count != '0'
+        run: |
+          pip install pyyaml
+          python scripts/summarize_pdfs.py gain
+          # 생성된 요약 md를 main에 커밋 (PDF 동일 폴더 — 조정자 지정 저장 방식)
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "data/raw/USDA/FAS/GAIN"
+          git diff --cached --quiet || (git commit -m "data: GAIN per-PDF summary md 생성 (A-079)" && git push origin HEAD:main)
       - name: Upload GAIN metadata parquet
         if: steps.check_pdf.outputs.pdf_count != '0'
         uses: actions/upload-artifact@v4

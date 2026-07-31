@@ -33,7 +33,14 @@ REPORT_DIR  = "reports/pipeline"
 GRANGER_MIN_OBS = 30                                    # 검정 최소 관측치
 GRANGER_MAX_LAG = 4                                     # 최대 시차 (분기 기준)
 GRANGER_ALPHA   = 0.05                                  # 유의수준
-GRANGER_YEARS   = list(range(2017, date.today().year))  # 2017 ~ 작년
+# ── 분석창·Granger 기간 설계 (Session 41 · 조정자 확정) ─────────────────────────
+# 분석 종료일: 기본 2025-12-31 — 2026 호르무즈 사태(진행 중 극단 이벤트)가 '평상시' 인과계수를
+# 오염시키지 않도록 추정창에서 제외. 2026-01~06은 유사사례 검증용 이벤트 창으로 별도 취급.
+# (env ANALYSIS_END_DATE로 재지정 가능 — 근거: reports/market/analysis_window_rationale.md)
+ANALYSIS_END_DATE = os.environ.get("ANALYSIS_END_DATE", "2025-12-31")
+GRANGER_START_YEAR = 2010                                # 15개년 기준선 (구 2017 하드코딩 수정)
+# Granger 3단 설계(C-03): ①전체(2010~) → ②5년 구간 → ③유사사례 이벤트 연도 정밀
+GRANGER_EVENT_YEARS = [2012, 2018, 2020, 2022, 2025]     # 미가뭄·미중관세·코로나·러우/팜금수·호르무즈전야
 
 # ── G1 변수 설명 사전 (C-01/C-03 공동 관리) ──────────────────────────────────
 VARIABLE_CATALOG: list[dict] = [
@@ -417,11 +424,23 @@ def _indicator_count(df: pd.DataFrame) -> int:
     return len(num)
 
 
+# 수동 전용(Historical) 실행에서 부재가 설계상 정상인 API 커넥터 — 미수집 행 미표시(Req 1.1)
+# (수동 대체: TE→상품·해운 / WASDE·PSD xlsx→작황·수급 / 관세청 GW→수입 / NASA xlsx→기상)
+API_OPTIONAL_PATTERNS = {
+    "economic_indicators", "shipping_indices", "crop_data", "climate_data",
+    "production_data", "commodity_data", "customs_import", "geointel",
+}
+
+
 def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """커넥터별 데이터 현황 테이블 (변수항목·행수·날짜범위·무결성·신선도)."""
     rows = []
+    skipped_api = []
     for key, label in FILE_PATTERNS.items():
         if key not in frames:
+            if key in API_OPTIONAL_PATTERNS:
+                skipped_api.append(label)   # 수동 전용 실행 — 설계상 부재(행 미표시)
+                continue
             rows.append({"변수 항목": label, "변수별 항목 수": 0, "행수": 0,
                          "날짜범위": "미수집", "무결성": "N/A",
                          "신선도": "❌ 데이터 없음"})
@@ -441,11 +460,17 @@ def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
             "무결성":       _data_integrity_flag(df),
             "신선도":       _freshness_flag(df),
         })
+    if skipped_api:
+        rows.append({"변수 항목": f"(API 선택 {len(skipped_api)}종 — include_api=true 시 수집)",
+                     "변수별 항목 수": "—", "행수": "—", "날짜범위": "—",
+                     "무결성": "—", "신선도": "설계상 미실행"})
     return pd.DataFrame(rows)
 
 
 def _pivot_for_correlation(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
-    """모든 numeric 시계열을 price_date 기준으로 pivot하여 상관분석용 wide-format 생성."""
+    """모든 numeric 시계열을 price_date 기준으로 pivot하여 상관분석용 wide-format 생성.
+    Session 41: 추정창은 ANALYSIS_END_DATE(기본 2025-12-31)로 클립 — 2026 호르무즈 이벤트
+    구간이 평상시 인과계수를 오염시키지 않도록 함(이벤트 창은 Granger ③단계에서 별도)."""
     series: dict[str, pd.Series] = {}
 
     for key, df in frames.items():
@@ -477,7 +502,12 @@ def _pivot_for_correlation(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
 
     wide = pd.DataFrame(series)
     wide = wide.sort_index().ffill(limit=3)  # 최대 3일 forward-fill
-    return wide
+    _wide_out = wide
+    try:
+        _wide_out = _wide_out.loc[:pd.Timestamp(ANALYSIS_END_DATE)]
+    except Exception:
+        pass
+    return _wide_out
 
 
 def _lasso_importance(wide: pd.DataFrame, target_col: str | None = None) -> pd.DataFrame:
@@ -667,12 +697,21 @@ def _granger_causality_by_year(
         except Exception:
             pass
 
-    # 분석 기간 정의: 연도별 + 전체
-    last_year = date.today().year - 1
+    # 분석 기간 3단 설계(Session 41 · Req 1.4.3): ①전체 → ②5년 구간 → ③이벤트 연도
+    last_year = min(date.today().year - 1, int(ANALYSIS_END_DATE[:4]))
     periods: list[tuple[str, str, str | int]] = [
-        (f"{yr}-01-01", f"{yr}-12-31", yr) for yr in GRANGER_YEARS if yr <= last_year
+        (f"{GRANGER_START_YEAR}-01-01", ANALYSIS_END_DATE,
+         f"① 전체({GRANGER_START_YEAR}~{last_year})"),
     ]
-    periods.append(("2017-01-01", f"{last_year}-12-31", f"전체(2017~{last_year})"))
+    seg_start = GRANGER_START_YEAR
+    while seg_start <= last_year:
+        seg_end = min(seg_start + 4, last_year)
+        periods.append((f"{seg_start}-01-01", f"{seg_end}-12-31",
+                        f"② 구간({seg_start}~{seg_end})"))
+        seg_start += 5
+    for yr in GRANGER_EVENT_YEARS:
+        if GRANGER_START_YEAR <= yr <= last_year:
+            periods.append((f"{yr}-01-01", f"{yr}-12-31", f"③ 이벤트({yr})"))
 
     rows: list[dict] = []
     for p_start, p_end, period_label in periods:
@@ -1390,6 +1429,7 @@ def _render_feature_selection_methodology(lang: str = "ko") -> str:
 def _render_causal_chains(
     lang: str = "ko",
     extra_chains: list[dict[str, str]] | None = None,
+    max_chains: int | None = None,
 ) -> str:
     """대두유 가격에 영향을 주는 인과관계 체인을 HTML로 렌더링.
 
@@ -1399,6 +1439,8 @@ def _render_causal_chains(
                          "category_ko": "...", "category_en": "..."}]
     """
     all_chains = _CAUSAL_CHAINS + (extra_chains or [])
+    if max_chains:
+        all_chains = all_chains[:max_chains]
 
     # 카테고리별 그룹화
     by_cat: dict[str, list[dict]] = {}
@@ -1685,7 +1727,8 @@ def _render_html(
     top5_html = _render_top5_variables(importance_df, current_values or {}, lang=lang)
 
     # causal chains
-    causal_chains_html = _render_causal_chains(lang=lang)
+    # Req 1.4.4: 본문에는 핵심 변수 관련 체인만(상위 6개) — 전체는 src/semantic/causal_chains.md
+    causal_chains_html = _render_causal_chains(lang=lang, max_chains=6)
 
     # variable catalog
     catalog_html = _render_variable_catalog(lang=lang)
@@ -1817,8 +1860,9 @@ def _render_html(
 
 <div class="note">
   <strong>{'적용된 분석론' if lang == 'ko' else 'Phase A Analysis'}:</strong>
-  기술통계·LASSO 상관분석·Granger 인과검정(2017~작년 연도별) 수행.
-  XGBoost+SHAP, TCN-XGBoost 하이브리드는 Phase B(Snowflake 연동 후) 적용 예정.
+  기술통계·ElasticNet 상관분석·Granger 인과검정(3단: 전체 2010~ → 5년 구간 → 이벤트 연도) 수행.
+  분석창: 2010-01~{ANALYSIS_END_DATE[:7]} (2026 호르무즈 이벤트 창은 별도 검증용).
+  방법론 상세: reports/market/ · 인과 온톨로지 전체: src/semantic/causal_chains.md
 </div>
 
 {exec_html}
@@ -1826,35 +1870,26 @@ def _render_html(
 <h2>{'활용 데이터' if lang == 'ko' else 'Data Collection Status'}</h2>
 {status_html}
 
-<h2>{'변수 중요도 (LASSO 기반)' if lang == 'ko' else 'Variable Importance (LASSO-based)'}</h2>
+<h2>{'변수 중요도 (ElasticNet 기반)' if lang == 'ko' else 'Variable Importance (ElasticNet-based)'}</h2>
 {imp_html}
-
-{feature_selection_html}
 
 {top5_html}
 
 <h2>{'구조적 단절 임계값 현황' if lang == 'ko' else 'Structural Break Status'}</h2>
 {alerts_html}
 
-<div class="note">
-  임계값 정의 (C-03): GPR &gt; 0.022 (지정학) · BDI z &gt; 2σ (해운) · WASDE STU &lt; 10% (공급) · CPO-SBO spread &gt; $175/MT (대체)
-</div>
-
-<h2>{thr_title}</h2>
-{threshold_rationale_html}
-
-<h2>{catalog_title}</h2>
-<div class="note" style="margin-bottom:8px">{catalog_note}</div>
-{catalog_html}
-
-{granger_conditions_section}
-
 {granger_results_section}
 
 {causal_chains_html}
 
+<h2>{'부록 — ' if lang == 'ko' else 'Appendix — '}{catalog_title}</h2>
+<div class="note" style="margin-bottom:8px">{catalog_note}
+{'변수별 수집 출처·갱신 주기는 본 부록에만 수록함(본문 간결화 — Req 1.4.1).' if lang == 'ko' else ''}</div>
+{catalog_html}
+
 <div class="footer">
-  Project Nexus · 대두유 가격 핵심 영향 인자 분석 보고서 · Branch: claude/setup-nexus-llm-tools-RX4aS · {run_ts} UTC
+  Project Nexus · 대두유 가격 핵심 영향 인자 분석 보고서 · {run_ts[:10]}<br>
+  {'방법론·임계값 산출근거: reports/market/ | Granger 사전조건 분류·전체 인과 온톨로지: src/semantic/ (Req 1.4.2/1.4.4/1.4.5)' if lang == 'ko' else 'Methodology & threshold rationale: reports/market/ | Full causal ontology: src/semantic/'}
 </div>
 </body>
 </html>"""

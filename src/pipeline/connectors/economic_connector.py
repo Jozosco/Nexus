@@ -109,12 +109,14 @@ def fetch_eia_brent(start: str, end: str) -> pd.DataFrame:
 
 def fetch_bok_krw_usd(start: str, end: str) -> pd.DataFrame:
     """BOK ECOS KRW/USD 환율 수집. T+2 결제일 오프셋은 소비 측에서 적용 (MEMORY M-002)."""
-    api_key = os.environ.get("BOK_ECOS_API_KEY")
+    # A-078: ERROR-100(필수값 누락)의 흔한 원인 = 키 끝 공백/개행 → URL 경로 세그먼트 오염.
+    #        반드시 strip. 또한 2010~2026 일별은 ~6,000행 → 요청건수 5000 초과분 잘림 → 100000.
+    api_key = os.environ.get("BOK_ECOS_API_KEY", "").strip()
     if not api_key:
         raise EnvironmentError("[오류] BOK_ECOS_API_KEY 환경변수가 설정되지 않았습니다.")
     start_fmt = start.replace("-", "")
     end_fmt   = end.replace("-", "")
-    url = f"{BOK_BASE}/{api_key}/json/kr/1/5000/731Y001/DD/{start_fmt}/{end_fmt}/0000001"
+    url = f"{BOK_BASE}/{api_key}/json/kr/1/100000/731Y001/DD/{start_fmt}/{end_fmt}/0000001"
     data = _fetch(url, {})
 
     # BOK ECOS 오류 응답: 정상이면 "StatisticSearch" 키, 오류이면 "RESULT" 키
@@ -180,12 +182,13 @@ def fetch_kosis_cpi_korea(start_yyyymm: str = "201001") -> pd.DataFrame:
 
     b64_key = _kosis_b64_key(api_key)
     end_yyyymm = date.today().strftime("%Y%m")
-    OUTPUT_FIELDS = "ORG_ID+TBL_ID+OBJ_ID+OBJ_NM_ENG+NM_ENG+ITM_NM_ENG+UNIT_NM_ENG+PRD_SE+PRD_DE+"
+    # A-078: DT(관측값)가 outputFields에 없으면 레코드는 오지만 값 파싱이 전부 None → 0건 저장.
+    OUTPUT_FIELDS = "ORG_ID+TBL_ID+OBJ_ID+ITM_ID+OBJ_NM_ENG+NM_ENG+ITM_NM_ENG+UNIT_NM_ENG+PRD_SE+PRD_DE+DT+"
 
     # 수집 대상 테이블 (CPI 총지수 + 품목성질별). objL1은 테이블별 분류값.
     KOSIS_TABLES = [
         {"tblId": "DT_1J22003", "objL1": "T10", "label": "CPI_KOREA_TOTAL"},
-        {"tblId": "DT_1J22002", "objL1": "",    "label": "CPI_KOREA_ITEM_CLASS"},
+        {"tblId": "DT_1J22002", "objL1": "ALL", "label": "CPI_KOREA_ITEM_CLASS"},
     ]
 
     all_rows: list[dict] = []
@@ -237,7 +240,10 @@ def fetch_kosis_cpi_korea(start_yyyymm: str = "201001") -> pd.DataFrame:
     return df
 
 
-def run(start_date: str = "2020-01-01", end_date: str | None = None) -> None:
+def run(start_date: str | None = None, end_date: str | None = None) -> None:
+    # 2010.01 기준선(조정자): HISTORICAL_START_YEAR 환경변수 우선, 기본 2010
+    if start_date is None:
+        start_date = f"{os.environ.get('HISTORICAL_START_YEAR', '2010')}-01-01"
     end   = end_date or date.today().isoformat()
     start = start_date
     os.makedirs(OUTPUT_DIR, exist_ok=True)

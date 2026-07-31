@@ -188,7 +188,7 @@ jobs:
                   "format": "json", "jsonVD": "Y",
                   "prdSe": "M",
                   "startPrdDe": "201001", "endPrdDe": "202612",
-                  "outputFields": "ORG_ID+TBL_ID+PRD_SE+PRD_DE+",
+                  "outputFields": "ORG_ID+TBL_ID+PRD_SE+PRD_DE+DT+",
                   "smblChk": "N",
                   "orgId": "101", "tblId": "DT_1J22003",
               },
