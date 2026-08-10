@@ -297,7 +297,7 @@ jobs:
           else:
               auth_header = {"X-CDS-API-KEY": api_key}
           r = httpx.get(
-              "https://cds.climate.copernicus.eu/api/v2/resources/",
+              "https://cds.climate.copernicus.eu/api/v2/resources",   # A-080: 후행 슬래시 제거(308)
               headers=auth_header,
               timeout=20,
           )
@@ -334,14 +334,13 @@ jobs:
               timeout=20,
           )
           r.raise_for_status()
-          try:
-              data = r.json()
-          except (json.JSONDecodeError, ValueError):
-              snippet = r.text[:200].replace("\n", " ")
-              raise AssertionError(f"[오류] 관세청 API JSON 파싱 실패 — 파라미터 오류 의심: {snippet}")
-          body = data.get("response", {}).get("body", {})
-          items = body.get("items", [])
-          count = len(items) if isinstance(items, list) else (1 if isinstance(items, dict) else 0)
+          # A-080: 관세청 API는 **XML로 응답**(JSON 아님) — resultCode 00이면 정상.
+          #        기존 r.json() 파싱은 구조적 오류였음(응답 자체는 정상 데이터).
+          text = r.text
+          if "<resultCode>00</resultCode>" not in text:
+              snippet = text[:200].replace("\n", " ")
+              raise AssertionError(f"[오류] 관세청 API 비정상 응답: {snippet}")
+          count = text.count("<item>")
           print(f"✅ Korea Customs API 정상 — HS 1507901010 2025-01 수입 레코드 {count}건")
           EOF
 

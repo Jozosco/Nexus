@@ -55,6 +55,11 @@ def _fetch_arms(params: dict, api_key: str = "", max_retries: int = 4) -> list |
     for attempt in range(max_retries):
         try:
             r = httpx.get(ARMS_BASE, params=params, timeout=30)
+            # A-080: ARMS 404 = 리포트/카테고리 조합 미존재(서비스 정상) → 치명 오류 아님.
+            #        생산비용은 분석 보조 지표이므로 경고 후 빈 결과 반환.
+            if r.status_code == 404:
+                print(f"[경고] USDA ARMS 404 — 해당 리포트 조합 미제공(건너뜀): {params.get('year')}")
+                return []
             r.raise_for_status()
             return r.json()
         except (httpx.HTTPStatusError, httpx.RequestError) as e:

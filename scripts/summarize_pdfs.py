@@ -39,6 +39,7 @@ _SIGNALS = {
 }
 _BULL = r"(surge|rally|increase|rise|tighten|deficit|shortage|hike|higher)"
 _BEAR = r"(decline|drop|fall|decrease|surplus|bumper|record\s+crop|lower|cut)"
+_LAST_META: dict = {}
 _VEGOIL_HINT = re.compile(r"(soy(bean)?\s*oil|vegetable\s*oil|palm\s*oil|sun(flower)?\s*oil|rapeseed|canola|oilseed)", re.I)
 
 
@@ -85,8 +86,23 @@ def _vegoil_excerpt(text: str, limit: int = 1500) -> str:
     return body[:limit]
 
 
+def _summary_path(pdf: Path) -> Path:
+    """요약 저장 위치 — 카테고리 루트의 summary/ 폴더 (조정자 지정, Req 1.2).
+    예) GAIN/Biofuels/2020/09/x.pdf → GAIN/Biofuels/summary/2020/09/x.md
+    """
+    parts = pdf.parts
+    for anchor in ("Biofuels", "Oilseeds", "AMIS"):
+        if anchor in parts:
+            i = parts.index(anchor)
+            root = Path(*parts[: i + 1])
+            rel = Path(*parts[i + 1 :]).with_suffix(".md")
+            return root / "summary" / rel
+    return pdf.with_suffix(".md")
+
+
 def summarize_pdf(pdf: Path, entities: dict[str, list[str]]) -> bool:
-    out = pdf.with_suffix(".md")
+    out = _summary_path(pdf)
+    out.parent.mkdir(parents=True, exist_ok=True)
     text, n_pages = _extract_text(pdf)
     low = text.lower()
     readable = len(text.strip()) > 80
@@ -116,6 +132,13 @@ def summarize_pdf(pdf: Path, entities: dict[str, list[str]]) -> bool:
         f"---\n*자동 생성: scripts/summarize_pdfs.py · 출처 파일: `{pdf.name}` (동일 폴더)*",
     ]
     out.write_text("\n".join(lines), encoding="utf-8")
+    _LAST_META.clear()
+    _LAST_META.update({
+        "file": pdf.name, "path": str(pdf), "summary": str(out),
+        "readable": readable, "pages": n_pages, "chars": len(text.strip()),
+        "signals": "|".join(signals), "tone": tone,
+        "bull": bull, "bear": bear, "entities": "|".join(found_entities[:12]),
+    })
     return readable
 
 
@@ -130,18 +153,30 @@ def run(target: str, year: str | None = None) -> None:
         print("사용법: summarize_pdfs.py [fao|gain] [YYYY]"); return
     print(f"[C-04→P1-05→P1-06] {target} PDF {len(pdfs)}건 요약 생성...")
     ok = fail = 0
+    index_rows: list[dict] = []
     for i, pdf in enumerate(pdfs, 1):
         try:
             if summarize_pdf(pdf, entities):
                 ok += 1
             else:
                 fail += 1
+            index_rows.append(dict(_LAST_META))
         except Exception as e:
             fail += 1
             print(f"  [오류] {pdf.name}: {e}")
         if i % 25 == 0:
             print(f"  … {i}/{len(pdfs)}")
-    print(f"[완료] 요약 md {ok+fail}건 생성 (판독 정상 {ok} · 실패 {fail}) — 각 PDF 동일 폴더에 저장")
+    print(f"[완료] 요약 md {ok+fail}건 생성 (판독 정상 {ok} · 실패 {fail}) — summary/ 폴더에 저장")
+    # 코퍼스 인덱스 CSV (C-03 분석 투입용 — 신호 태그 시계열화 기반)
+    if index_rows:
+        import csv
+        root = FAO_DIR if target == "fao" else GAIN_DIR
+        idx = root / "summary_index.csv"
+        idx.parent.mkdir(parents=True, exist_ok=True)
+        with open(idx, "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.DictWriter(f, fieldnames=list(index_rows[0].keys()))
+            w.writeheader(); w.writerows(index_rows)
+        print(f"[완료] 코퍼스 인덱스 → {idx} ({len(index_rows)}행)")
 
 
 if __name__ == "__main__":
