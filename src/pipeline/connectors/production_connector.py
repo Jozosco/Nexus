@@ -73,7 +73,8 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
             "commodity_desc": "SOYBEANS",
             "statisticcat_desc": "PRODUCTION",
             "agg_level_desc": "STATE",
-            "year__GE": 2017,   # 수집 범위 표준화: 2017년 이후
+            # 2010 기준선(조정자 지시) — HISTORICAL_START_YEAR 우선
+            "year__GE": int(os.environ.get("HISTORICAL_START_YEAR", "2010")),
             "unit_desc": "BU",
             "format": "JSON",
         })
@@ -388,7 +389,7 @@ def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
     frames = [
-        fetch_usda_nass_soybeans(),                    # year__GE=2020
+        fetch_usda_nass_soybeans(),                    # year__GE=2010 (A-080)
         fetch_faostat_soybeans(),                      # year_start=2020
         fetch_argentina_indec(),
         fetch_nasa_power_agromet(),                    # start_date=2020-01-01

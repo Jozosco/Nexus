@@ -24,7 +24,7 @@ on:
         required: false
         default: "2026"
       connector:
-        description: "특정 커넥터만 실행 (all / usda-xlsx / gain-pdf / fao-amis / customs-gw / gpr)"
+        description: "특정 커넥터만 실행 (all / usda-xlsx / gain-pdf / fao-amis / customs-gw / databento / gpr)"
         required: false
         default: "all"
       include_api:
@@ -293,6 +293,39 @@ jobs:
         with:
           name: backfill-fao-amis-${{ github.run_id }}
           path: data/raw/fao_amis_historical.parquet
+          retention-days: 90
+          if-no-files-found: warn
+
+  # ── WBS 1.1.52: Databento CBOT 대두유 선물(ZL) 15개년 (A-081) ────────────────
+  databento-bo:
+    name: "1.1.52 | Databento BO=F/ZL 15개년 (GLBX.MDP3 · ohlcv-1d)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'databento' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install dependencies
+        run: pip install databento pandas pyarrow openpyxl
+      - name: Run Databento ZL ingest
+        env:
+          DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+          DATABENTO_START:   "2010-06-06"
+        run: python scripts/ingest_databento_bo.py
+      - name: Commit collected files to main
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/Databento || true
+          git diff --cached --quiet || (git commit -m "data: Databento ZL(BO=F) 15개년 수집 (A-081)" && git push origin HEAD:main)
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: databento-bo-${{ github.run_id }}
+          path: |
+            data/raw/Databento/**
+            data/raw/databento_bo_historical.parquet
           retention-days: 90
           if-no-files-found: warn
 
