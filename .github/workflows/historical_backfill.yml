@@ -36,6 +36,11 @@ on:
         required: false
         default: "false"
 
+# A-083: github-actions[bot] push 403의 근본 원인 — permissions 블록 부재 시 GITHUB_TOKEN이
+# 읽기 전용으로 발급됨. Databento/GAIN 요약/customs-gw의 main 커밋에 write 필요.
+permissions:
+  contents: write
+
 jobs:
   # ── WBS 1.1.2: 경제 지표 히스토리 ────────────────────────────────────────────
   economic-backfill:

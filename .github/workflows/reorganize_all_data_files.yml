@@ -109,6 +109,33 @@ jobs:
                 done
           done
 
+      # ── 4a2. 저장소 루트 YY.MM PDF → GAIN/Oilseeds/{Y}/{M} (Session 43, Req 2.1.1) ──
+      - name: Move repo-root GAIN PDFs to Oilseeds year/month
+        run: |
+          set -e
+          DEST_BASE="data/raw/USDA/FAS/GAIN/Oilseeds"
+          find . -maxdepth 1 -type f -name "[0-9][0-9].[0-9][0-9]_*.pdf" -print0 \
+            | while IFS= read -r -d '' f; do
+                base=$(basename "$f")
+                yy=$(printf '%s' "$base" | grep -oE '^[0-9]{2}\.[0-9]{2}')
+                year="20${yy%%.*}"; month="${yy##*.}"
+                dest="$DEST_BASE/$year/$month"
+                mkdir -p "$dest"
+                git mv -k -- "$f" "$dest/" || mv -- "$f" "$dest/"
+              done
+
+      # ── 4a3. GATS 수출량·재수출량 csv → Oilseeds/Soybean Oil/Exports & Re-Exports/1507.10.0000 ──
+      - name: Move GATS export/re-export csv (Session 43, Req 2.1.2)
+        run: |
+          set -e
+          DEST="data/raw/USDA/FAS/GATS/Oilseeds/Soybean Oil/Exports & Re-Exports/1507.10.0000"
+          mkdir -p "$DEST"
+          find "data/raw/USDA/FAS/GATS" -maxdepth 1 -type f \( -name "*수출량*.csv" -o -name "*재수출량*.csv" \) -print0 \
+            | while IFS= read -r -d '' f; do
+                echo "[이동] $(basename "$f")"
+                git mv -k -- "$f" "$DEST/" || mv -- "$f" "$DEST/"
+              done
+
       # ── 4b. 관세청 GW 대두유 HS 폴더 정리 (Session 38) ──────
       #   ① 'Refined oil (.10)' → '(Whole) Refined Soybean Oil (.1090)' 개명
       #   ② 'Soya-bean Oil Fractions (.9000)' 생성 + 1507.90 루트 GW 파일 이동

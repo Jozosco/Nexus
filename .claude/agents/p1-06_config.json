@@ -3,9 +3,8 @@
   "agent_name": "Semantic & Ontology Engineer",
   "version": "1.2.0",
   "_notes": [
-    "조정자 확정(Session 39): Gemini 성능 저하로 primary=claude-sonnet-5. 가이드의 Gemini 3.1 Pro",
-    "권고는 기각. 후보 비교(가이드 벤치마크 표) 및 대안 검토는 session39 문서 §P1-06 참조.",
-    "upstream_ingest는 C-04·P1-05·geointel 3종(원본 JSON 구문오류 보완분 유지)."
+    "조정자 지시(Session 43): Gemini 성능 급락 → 전면 배제. secondary=gpt-5.6-sol.",
+    "교차검증: 모든 정형·비정형 분석은 OpenAI gpt-5.6-sol/luna(Reasoning Pro·high/xhigh)로 상시 수행."
   ],
   "workspace": {
     "repository_type": "GitHub",
@@ -25,7 +24,7 @@
       },
       "system_instruction_path": ".claude/skills/phase1/06_semantic_ontology.md"
     },
-    "secondary_model": "gemini-3.1-pro"
+    "secondary_model": "gpt-5.6-sol"
   },
   "deployment_targets": {
     "development_cli": "Claude Code / OpenAI Codex CLI",
@@ -68,5 +67,16 @@
     "preferred_provider": "Neo4j",
     "license_tier": "Community-Edition",
     "retrieval_tool": "subgraph_search_api"
+  },
+  "cross_validation": {
+    "provider": "openai",
+    "models": [
+      "gpt-5.6-sol",
+      "gpt-5.6-luna"
+    ],
+    "reasoning_mode": "pro",
+    "reasoning_effort": "high|xhigh",
+    "scope": "all structured+unstructured analysis",
+    "always_on": true
   }
 }

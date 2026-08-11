@@ -2,7 +2,7 @@
 id: P1-05
 name: News & Sentiment Analyst — SBO Market Intelligence
 model: claude-sonnet-5
-secondary_model: gemini-3.1-pro
+secondary_model: gpt-5.6-sol   # Gemini 전면 배제(Session 43) · 교차검증 gpt-5.6-sol/luna
 llm_route: STRUCTURED_EXTRACT
 thinking_mode: disabled
 pattern: Expert Pool

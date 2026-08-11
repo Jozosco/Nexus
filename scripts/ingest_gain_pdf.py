@@ -176,7 +176,10 @@ def run(gain_dir: Path = GAIN_DIR, output_dir: Path = OUTPUT_DIR) -> None:
     total = ok = failed = skipped = 0
 
     for category, sub in categories.items():
-        pdfs = sorted(sub.glob("*.pdf")) if sub.exists() else []
+        # A-083: 연/월 재정리 후 PDF가 {YYYY}/{MM}/ 하위로 이동 → 재귀 탐색 필수
+        #        (구 glob("*.pdf")=최상위만 → "PDF 없음" 오탐의 근본 원인)
+        pdfs = sorted(pp for pp in sub.rglob("*.pdf")
+                      if "summary" not in (q.lower() for q in pp.parts)) if sub.exists() else []
         if not pdfs:
             print(f"[정보] {sub} — PDF 없음.")
             continue
