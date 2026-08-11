@@ -87,17 +87,11 @@ def _vegoil_excerpt(text: str, limit: int = 1500) -> str:
 
 
 def _summary_path(pdf: Path) -> Path:
-    """요약 저장 위치 — 카테고리 루트의 summary/ 폴더 (조정자 지정, Req 1.2).
-    예) GAIN/Biofuels/2020/09/x.pdf → GAIN/Biofuels/summary/2020/09/x.md
+    """요약 저장 위치 v2 (조정자 지정, Session 43):
+    FAO AMIS : AMIS/{YYYY}/Summary/{name}.md          (연도 폴더 내 Summary)
+    GAIN     : {sub}/{YYYY}/{MM}/Summary/{name}.md    (월 폴더 내 Summary)
     """
-    parts = pdf.parts
-    for anchor in ("Biofuels", "Oilseeds", "AMIS"):
-        if anchor in parts:
-            i = parts.index(anchor)
-            root = Path(*parts[: i + 1])
-            rel = Path(*parts[i + 1 :]).with_suffix(".md")
-            return root / "summary" / rel
-    return pdf.with_suffix(".md")
+    return pdf.parent / "Summary" / pdf.with_suffix(".md").name
 
 
 def summarize_pdf(pdf: Path, entities: dict[str, list[str]]) -> bool:
@@ -117,19 +111,45 @@ def summarize_pdf(pdf: Path, entities: dict[str, list[str]]) -> bool:
             if any(re.search(r"\b" + re.escape(s.lower()) + r"\b", low) for s in syns if len(s) > 2):
                 found_entities.append(canonical)
 
+    # '비정형데이터 요약본 Template.md' 자동화 서브셋 (C-04·P1-05·P1-06 협의):
+    # 기계 추출 가능 항목(1.1/1.2 메타·2.2 판단표·3.1 국가·5.1 신호·8.1 키워드)만 기입,
+    # 서술형 섹션(경영진 요약·전망·한국 해석)은 템플릿 원칙 4에 따라 '미확인' —
+    # LLM 정밀 요약(P1-05 Phase B)에서 작성. 원문에 없는 값 추정 금지.
     lines = [
-        f"# 요약 — {pdf.name}",
+        f"# 비정형 요약 — {pdf.name}",
         "",
-        f"- **판독(C-04)**: {'✅ 정상' if readable else '🚨 실패(스캔본 가능성)'} · 페이지 {n_pages} · 추출 {len(text.strip()):,}자",
-        f"- **신호 태그(P1-05)**: {', '.join(signals) if signals else '—'}",
-        f"- **방향성 힌트(P1-05)**: {tone} (상방어 {bull} · 하방어 {bear})",
-        f"- **엔티티 후보(P1-06)**: {', '.join(found_entities[:12]) if found_entities else '—'}",
+        "## 1. 문서 기본정보 (템플릿 §1.1/§1.2 — C-04)",
+        "| 항목 | 내용 |",
+        "|---|---|",
+        f"| 파일명 | `{pdf.name}` |",
+        f"| 문서 경로 | `{pdf.parent}` |",
+        f"| 판독 상태 | {'✅ 정상' if readable else '🚨 실패(스캔본 가능성)'} |",
+        f"| PDF 전체 페이지 | {n_pages} |",
+        f"| 추출 문자 수 | {len(text.strip()):,} |",
+        "| 발행일·기준 시점 | 미확인(파일명 연·월 참조) |",
         "",
-        "## 식용유 관련 발췌 (원문 그대로 — provenance)",
+        "## 2. 핵심 판단 요약표 (템플릿 §2.2 — P1-05)",
+        "| 항목 | 값 |",
+        "|---|---|",
+        f"| aspect 신호 태그 | {', '.join(signals) if signals else '문서 내 언급 없음'} |",
+        f"| 방향성(SBO 가격 기준) | {tone} (상방어 {bull} · 하방어 {bear}) |",
+        "| 신뢰도 | 자동(키워드 기반) — LLM 정밀 스코어는 Phase B |",
         "",
-        _vegoil_excerpt(text) if readable else "_(텍스트 추출 실패)_",
+        "## 3. 관련 국가·엔티티 (템플릿 §3.1 — P1-06)",
+        f"- 정규 엔티티 후보: {', '.join(found_entities[:12]) if found_entities else '문서 내 언급 없음'}",
         "",
-        f"---\n*자동 생성: scripts/summarize_pdfs.py · 출처 파일: `{pdf.name}` (동일 폴더)*",
+        "## 5. 인과 신호 (템플릿 §5.1 — 원인→메커니즘→가격 매핑은 P1-06 온톨로지 참조)",
+        f"- 감지 신호: {', '.join(signals) if signals else '—'} → src/semantic/causal_chains.md 의 해당 체인 참조",
+        "",
+        "## 근거 발췌 (템플릿 원칙 2 — verbatim provenance)",
+        "",
+        _vegoil_excerpt(text) if readable else "_(텍스트 추출 실패 — 판독 불가)_",
+        "",
+        "## 미작성 섹션 (템플릿 원칙 4)",
+        "- 경영진 요약(§2.1)·수급/가격 전망(§6)·한국 관점 해석(§7): **미확인 — 자동 단계에서는 미작성**",
+        "  (LLM 정밀 요약 Phase B에서 작성 예정. 원문에 없는 값 추정 금지)",
+        "",
+        f"---\n*자동 생성: scripts/summarize_pdfs.py v2 · 템플릿: .claude/agents/비정형데이터 요약본 Template.md*",
     ]
     out.write_text("\n".join(lines), encoding="utf-8")
     _LAST_META.clear()
@@ -170,8 +190,7 @@ def run(target: str, year: str | None = None) -> None:
     # 코퍼스 인덱스 CSV (C-03 분석 투입용 — 신호 태그 시계열화 기반)
     if index_rows:
         import csv
-        root = FAO_DIR if target == "fao" else GAIN_DIR
-        idx = root / "summary_index.csv"
+        idx = Path("data/processed") / f"unstructured_index_{target}.csv"
         idx.parent.mkdir(parents=True, exist_ok=True)
         with open(idx, "w", newline="", encoding="utf-8-sig") as f:
             w = csv.DictWriter(f, fieldnames=list(index_rows[0].keys()))

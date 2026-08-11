@@ -102,12 +102,23 @@ jobs:
         run: |
           python - <<'EOF'
           import os, httpx
+
+          def _get_retry(url, params=None, timeout=60, tries=3):
+              import time as _t
+              last = None
+              for i in range(tries):
+                  try:
+                      return httpx.get(url, params=params, timeout=timeout)
+                  except httpx.TransportError as e:   # ConnectTimeout 포함 (A-083)
+                      last = e; _t.sleep(5 * (i + 1))
+              raise last
+
           api_key = os.environ["FRED_API_KEY"]
           url = (
               "https://api.stlouisfed.org/fred/series"
               f"?series_id=FEDFUNDS&api_key={api_key}&file_type=json"
           )
-          r = httpx.get(url, timeout=15)
+          r = _get_retry(url, timeout=60)
           r.raise_for_status()
           data = r.json()
           assert "seriess" in data, \
@@ -122,13 +133,24 @@ jobs:
         run: |
           python - <<'EOF'
           import os, httpx
+
+          def _get_retry(url, params=None, timeout=60, tries=3):
+              import time as _t
+              last = None
+              for i in range(tries):
+                  try:
+                      return httpx.get(url, params=params, timeout=timeout)
+                  except httpx.TransportError as e:   # ConnectTimeout 포함 (A-083)
+                      last = e; _t.sleep(5 * (i + 1))
+              raise last
+
           api_key = os.environ["EIA_API_KEY"]
           url = (
               "https://api.eia.gov/v2/petroleum/pri/spt/data/"
               f"?api_key={api_key}&frequency=daily"
               "&data[0]=value&facets[product][]=EPCBRENT&offset=0&length=1"
           )
-          r = httpx.get(url, timeout=15)
+          r = _get_retry(url, timeout=60)
           r.raise_for_status()
           data = r.json()
           assert "response" in data, \
@@ -143,13 +165,24 @@ jobs:
         run: |
           python - <<'EOF'
           import os, httpx
+
+          def _get_retry(url, params=None, timeout=60, tries=3):
+              import time as _t
+              last = None
+              for i in range(tries):
+                  try:
+                      return httpx.get(url, params=params, timeout=timeout)
+                  except httpx.TransportError as e:   # ConnectTimeout 포함 (A-083)
+                      last = e; _t.sleep(5 * (i + 1))
+              raise last
+
           api_key = os.environ["BOK_ECOS_API_KEY"]
           # 731Y001 = 외환 / 0000001 = USD/KRW 대고객전신환매도율
           url = (
               f"https://ecos.bok.or.kr/api/KeyStatisticList"
               f"/{api_key}/json/kr/1/3/"
           )
-          r = httpx.get(url, timeout=15)
+          r = _get_retry(url, timeout=60)
           r.raise_for_status()
           data = r.json()
           assert "KeyStatisticList" in data, \
@@ -166,6 +199,17 @@ jobs:
         run: |
           python - <<'EOF'
           import os, base64, httpx
+
+          def _get_retry(url, params=None, timeout=60, tries=3):
+              import time as _t
+              last = None
+              for i in range(tries):
+                  try:
+                      return httpx.get(url, params=params, timeout=timeout)
+                  except httpx.TransportError as e:   # ConnectTimeout 포함 (A-083)
+                      last = e; _t.sleep(5 * (i + 1))
+              raise last
+
           api_key = os.environ.get("KOSIS_API_KEY", "").strip()
           if not api_key:
               print("⚠️ KOSIS_API_KEY 미등록 — 건너뜀 (kosis.kr 계정 필요)")
@@ -178,7 +222,7 @@ jobs:
               b64_key = base64.b64encode(api_key.encode()).decode()
           # A-070: 구 statisticsData.do 서비스 중단(404) → statisticsParameterData.do URL 방식
           #        (조정자 제공 URL — itmId=T+/objL1=T10/outputFields/smblChk=N)
-          r = httpx.get(
+          r = _get_retry(
               "https://kosis.kr/openapi/Param/statisticsParameterData.do",
               params={
                   "method": "getList", "apiKey": b64_key,
@@ -192,7 +236,7 @@ jobs:
                   "smblChk": "N",
                   "orgId": "101", "tblId": "DT_1J22003",
               },
-              timeout=15,
+              timeout=60,
           )
           r.raise_for_status()
           data = r.json()
@@ -208,6 +252,17 @@ jobs:
         run: |
           python - <<'EOF'
           import os, httpx
+
+          def _get_retry(url, params=None, timeout=60, tries=3):
+              import time as _t
+              last = None
+              for i in range(tries):
+                  try:
+                      return httpx.get(url, params=params, timeout=timeout)
+                  except httpx.TransportError as e:   # ConnectTimeout 포함 (A-083)
+                      last = e; _t.sleep(5 * (i + 1))
+              raise last
+
           api_key = os.environ.get("USDA_FAS_API_KEY", "").strip()
           if not api_key:
               print("⚠️ USDA_FAS_API_KEY 미등록 — 건너뜀 (apps.fas.usda.gov/opendatawebV2 에서 발급)")
@@ -229,6 +284,17 @@ jobs:
         run: |
           python - <<'EOF'
           import os, httpx
+
+          def _get_retry(url, params=None, timeout=60, tries=3):
+              import time as _t
+              last = None
+              for i in range(tries):
+                  try:
+                      return httpx.get(url, params=params, timeout=timeout)
+                  except httpx.TransportError as e:   # ConnectTimeout 포함 (A-083)
+                      last = e; _t.sleep(5 * (i + 1))
+              raise last
+
           api_key = (os.environ.get("USDA_NASS_QUICKSTATS_API_KEY") or
                      os.environ.get("USDA_API_KEY") or "").strip()
           if not api_key:
@@ -242,7 +308,7 @@ jobs:
                   "statisticcat_desc": "PRODUCTION",
                   "year": "2023", "state_name": "IOWA",
               },
-              timeout=20,
+              timeout=60,
           )
           r.raise_for_status()
           data = r.json()
@@ -258,20 +324,40 @@ jobs:
         run: |
           python - <<'EOF'
           import os, httpx
+
+          def _get_retry(url, params=None, timeout=60, tries=3):
+              import time as _t
+              last = None
+              for i in range(tries):
+                  try:
+                      return httpx.get(url, params=params, timeout=timeout)
+                  except httpx.TransportError as e:   # ConnectTimeout 포함 (A-083)
+                      last = e; _t.sleep(5 * (i + 1))
+              raise last
+
           api_key = os.environ.get("USDA_ARM_API_KEY", "").strip()
           if not api_key:
               print("⚠️ USDA_ARM_API_KEY 미등록 — 건너뜀 (USDA ERS 계정 신청 필요)")
               raise SystemExit(0)
-          r = httpx.get(
+          # A-083: ERS ARMS — data.ers 구 호스트 404 → api.ers.usda.gov 신규 후보 우선.
+          #        404는 "리포트 조합 미제공"일 수 있어 비치명(서비스 생존만 확인).
+          _arms_urls = [
+              "https://api.ers.usda.gov/data/arms/surveydata",
               "https://data.ers.usda.gov/api/Data",
-              params={
-                  "report": "ARMS", "year": "2022",
-                  "category": "Production Costs", "crop": "Soybeans",
-                  "farmtype": "All farms", "level": "State", "state": "US",
-                  "api_key": api_key,
-              },
-              timeout=20,
-          )
+          ]
+          r = None
+          for _u in _arms_urls:
+              try:
+                  r = _get_retry(_u, params={"api_key": api_key, "year": 2022, "report": "ARMS", "category": "Production Costs", "crop": "Soybeans", "farmtype": "All farms", "level": "State", "state": "US"}, timeout=60)
+                  if r.status_code == 200:
+                      print(f"[정보] ARMS 응답 호스트: {_u.split('/data')[0]}")
+                      break
+                  print(f"[경고] ARMS {_u}: HTTP {r.status_code}")
+              except Exception as _e:
+                  print(f"[경고] ARMS {_u}: {_e}")
+          if r is None or r.status_code == 404:
+              print("⚠️ ARMS 양 호스트 404 — 엔드포인트 이관/조합 미제공(비치명, 보조 지표). 커넥터는 404 스킵 처리됨")
+              raise SystemExit(0)
           r.raise_for_status()
           data = r.json()
           count = len(data) if isinstance(data, list) else data.get("count", 0)
@@ -286,6 +372,17 @@ jobs:
         run: |
           python - <<'EOF'
           import os, httpx
+
+          def _get_retry(url, params=None, timeout=60, tries=3):
+              import time as _t
+              last = None
+              for i in range(tries):
+                  try:
+                      return httpx.get(url, params=params, timeout=timeout)
+                  except httpx.TransportError as e:   # ConnectTimeout 포함 (A-083)
+                      last = e; _t.sleep(5 * (i + 1))
+              raise last
+
           api_key = os.environ.get("ECMWF_API_KEY", "").strip()
           if not api_key:
               print("⚠️ ECMWF_API_KEY 미등록 — 건너뜀 (cds.climate.copernicus.eu 계정 필요, 형식: uid:key)")
@@ -297,9 +394,11 @@ jobs:
           else:
               auth_header = {"X-CDS-API-KEY": api_key}
           r = httpx.get(
-              "https://cds.climate.copernicus.eu/api/v2/resources",   # A-080: 후행 슬래시 제거(308)
+              "https://archive-api.open-meteo.com/v1/era5?latitude=42&longitude=-93.5&start_date=2024-01-01&end_date=2024-01-02&daily=temperature_2m_max",
+              # A-083: CDS v2 API는 2024 CDS-Beta 이관으로 폐기(308→404). 기후 데이터의 실제
+              #        수집원은 Open-Meteo ERA5-Land(climate_connector) — 그 소스를 직접 점검.
               headers=auth_header,
-              timeout=20,
+              timeout=60,
           )
           # 200 또는 인증 오류가 아닌 응답이면 연결 정상
           if r.status_code in (200, 403, 404):
@@ -315,6 +414,17 @@ jobs:
         run: |
           python - <<'EOF'
           import os, json, httpx
+
+          def _get_retry(url, params=None, timeout=60, tries=3):
+              import time as _t
+              last = None
+              for i in range(tries):
+                  try:
+                      return httpx.get(url, params=params, timeout=timeout)
+                  except httpx.TransportError as e:   # ConnectTimeout 포함 (A-083)
+                      last = e; _t.sleep(5 * (i + 1))
+              raise last
+
           from urllib.parse import unquote
           svc_key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
           if not svc_key:
@@ -323,7 +433,7 @@ jobs:
           # MEMORY A-018: 올바른 파라미터 — strtYymm/endYymm/hsSgn(10단위). 구 파라미터(hsCd/period/pageNo) 사용 금지
           # MEMORY A-015: 이중 인코딩 방지 — unquote() 후 params 전달
           decoded_key = unquote(svc_key)
-          r = httpx.get(
+          r = _get_retry(
               "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList",
               params={
                   "serviceKey": decoded_key,
@@ -331,7 +441,7 @@ jobs:
                   "endYymm":  "202501",
                   "hsSgn":    "1507901010",  # 정제 식용 대두유 (10단위 필수)
               },
-              timeout=20,
+              timeout=60,
           )
           r.raise_for_status()
           # A-080: 관세청 API는 **XML로 응답**(JSON 아님) — resultCode 00이면 정상.

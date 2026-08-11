@@ -1,0 +1,13 @@
+{
+  "policy": "조정자 지시(Session 43): 모든 데이터 분석(정형+비정형)의 교차검증은 OpenAI로 상시 수행",
+  "provider": "openai",
+  "primary": "gpt-5.6-sol",
+  "alternate": "gpt-5.6-luna",
+  "reasoning_mode": "pro",
+  "reasoning_effort": [
+    "high",
+    "xhigh"
+  ],
+  "gemini_status": "전면 배제 — 성능 급락(조정자 판단). gemini_client는 유지하되 라우팅 제외",
+  "note": "모델 ID는 조정자 지정 명칭. OpenAI 콘솔 정식 ID 확인 후 필요 시 매핑 갱신"
+}
