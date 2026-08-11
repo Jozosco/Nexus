@@ -527,6 +527,9 @@ jobs:
         with:
           path: data/raw/
           merge-multiple: true
+      - name: Rebuild unstructured signal time series (통합 분석 입력 — Session 44)
+        # 커밋된 비정형 인덱스 CSV에서 UNSTR_* parquet 재생성 → 정형+비정형 통합 분석
+        run: python scripts/build_unstructured_timeseries.py || true
       - name: Run C-03 G1 variable importance analysis
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
