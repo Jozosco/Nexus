@@ -18,7 +18,7 @@
 | 신뢰도 | 자동(키워드 기반) — LLM 정밀 스코어는 Phase B |
 
 ## 3. 관련 국가·엔티티 (템플릿 §3.1 — P1-06)
-- 정규 엔티티 후보: Argentina, Brazil, Indonesia, India, China, EU, Ukraine, Import Duty, WASDE Surprise
+- 정규 엔티티 후보: Import Volume, Harvest Delay, Soybean, Bear Regime, Neutral Regime, Source Document
 
 ## 5. 인과 신호 (템플릿 §5.1 — 원인→메커니즘→가격 매핑은 P1-06 온톨로지 참조)
 - 감지 신호: 물류충격, 바이오연료수요, 수입관세, 압착, 재고 → src/semantic/causal_chains.md 의 해당 체인 참조
