@@ -351,6 +351,7 @@ FILE_PATTERNS: dict[str, str] = {
     "ice_monthly_volumes": "시장유동성(ICE 선물·옵션 거래량)",
     "gain_historical":     "정책신호(USDA FAS GAIN PDF)",
     "geointel":            "지정학 인텔리전스(USGS/NOAA/GDELT/FIRMS)",
+    "unstructured_signals_historical": "비정형 신호 시계열(GAIN·FAO 요약 → 월별 태그·톤)",
 }
 
 

@@ -45,13 +45,23 @@ triggers so downstream commodity price forecasting models (C-03) remain **interp
 
 ---
 
-## Ontological Schema (GitHub 4-state, 상대경로 `src/semantic/`)
-| 파일 | 내용 |
-|---|---|
-| `entities.yaml` | 표준 품목명·지역시장·기상패턴 ↔ 다국어 동의어·상업적 변형 |
-| `metrics.yaml` | 감성값·수급지표·정책코드 정의(명시적 수치 범위 포함) |
-| `ontology.yaml` | 유효 `Cause → Mechanism → Price` 방향성 그래프 |
-| `query_templates.yaml` | 자연어 조달 질의 ↔ 표준 지표코드 매핑 템플릿 |
+## Ontological Schema (GitHub 6-state, 상대경로 `src/semantic/`)
+> **기준 문서**: `.claude/agents/Semantic Layer & Ontology_ERD_v1.0.md` (ERD §8 매핑) ·
+> **기준 사전**: `비정형 분석용_핵심 용어 사전집_v1.0.xlsx` (152 용어 · 관계 23종 → v2 YAML 반영 완료)
+
+| 파일 | ERD 적재 대상 | 내용 |
+|---|---|---|
+| `entities.yaml` (v2) | CANONICAL_ENTITY·ENTITY_ALIAS·GEO_ENTITY·COMMODITY_PROFILE | 152 용어 — 표준명(EN/KO)·동의어·정의·해석규칙·가격방향·단위·경보기준·상태(`status`)·담당(`owner_agent`) |
+| `metrics.yaml` (v2) | INDICATOR_DEFINITION·UNIT_DEFINITION | 지표 방향 의미·집계 규칙·권장 출처 + QUDT-lite 단위 사전 |
+| `ontology.yaml` (v2) | RELATION_TYPE·MARKET_MECHANISM | 관계 23종(domain/range/대칭성) + DAG 규칙 + 금지 관계 |
+| `query_templates.yaml` (v2) | QUERY_TEMPLATE | 필수 슬롯·출력 스키마(P1-05 §3)·근거 반환 규칙 |
+| `provenance.yaml` (신규) | SourceDocument·EvidenceSpan | 페이지·bbox·해시·추출 버전 — 역추적 계약 |
+| `event_schema.json` (신규) | MarketEvent·CausalClaim·TradeFlow·Forecast·KoreaImpact | 시간·지역·근거·신뢰도 필수화 JSON Schema |
+
+### 엔티티 수명주기 (ERD 보완 항목)
+- `status: active / deprecated / candidate` — 신규 후보는 `candidate`로 등록 후 도메인 검증(P1-01~04)
+  통과 시 `active` 승격. 폐기 용어는 삭제하지 않고 `deprecated`로 보존(과거 문서 매칭 유지).
+- 검증된 CausalClaim(`review_status: validated`)만 지식그래프로 투영(S1).
 
 ---
 
@@ -93,3 +103,23 @@ triggers so downstream commodity price forecasting models (C-03) remain **interp
 - 외부 공개 소스 전용(D-021) · 출처 3종 메타 필수 · Cause→Price 직접연결 금지.
 - 모든 산출은 `src/semantic/` 상대경로 기준. API 키는 GitHub Secrets.
 - 그래프 저장소: Neo4j Community(선호) — 도입 전까지 YAML 기반 운용.
+
+## Evaluation Boundaries (ERD §9)
+Structured Outputs의 스키마 준수는 **의미 정확성을 보장하지 않는다**. 아래 평가 세트를 분리 운영:
+| 평가 단위 | 대표 지표 |
+|---|---|
+| 엔터티 | 정밀도·재현율·동음이의어 오류율 |
+| 관계 | Cause–Mechanism–Outcome 완전성 · 관계 방향 정확도 |
+| 근거 | 페이지 일치율 · exact_quote 일치율 · 표 셀 일치율 |
+| 수치 | 값·단위·통화·기간 정확도 |
+| 전망 | 관측/전망 구분 · 시계열 누수 · 방향·구간 정확도 |
+대표 PDF 10개로 사람이 만든 ground truth 기준선을 수립(ERD Phase 1)하고 모델·프롬프트·스키마
+버전별 회귀 평가를 기록한다.
+
+## Competency Questions (ERD §11 — 자체 검증 체크)
+산출물 커밋 전 아래 질문에 답할 수 있어야 한다:
+1. 현재 SBO 가격의 상승·하락 압력을 만든 외생 원인과 그 시장 메커니즘은? (CQ-1)
+2. 각 인과 주장의 원문 문서·페이지·정확 인용문을 즉시 반환할 수 있는가? (CQ-2)
+3. CFR/FOB · 원유/정제유 · 현물/선물 · 통화·단위가 섞여 잘못 비교된 값은 없는가? (CQ-4)
+4. 관측 사실과 전망, 모델 추론과 전문가 해석이 분리돼 있는가? (CQ-5)
+5. 내부 ERP·S&OP·조달원가가 피처·평가에 유입되지 않았는가? (CQ-8 · D-021)

@@ -70,6 +70,17 @@ models (C-03, G2, G3).
 ### Stage 4 — Provenance (필수)
 모든 aspect 점수는 원문 **verbatim `evidence_snippet`** 동반 — 근거 없는 주장 금지(환각 방어).
 조달 담당자가 buy/hold 승인 전 촉발 문장을 직접 검수할 수 있어야 한다.
+근거 메타데이터는 `src/semantic/provenance.yaml`의 **EvidenceSpan 계약**(document_id·page·
+exact_quote·extractor_version)을 따르고, 사건형 신호는 `src/semantic/event_schema.json`
+스키마로 직렬화한다(ERD §8).
+
+### Stage 5 — Dictionary Alignment (ERD 연동)
+- 엔티티 표기는 `src/semantic/entities.yaml`(v2 — 152 용어)의 canonical로 정규화하고
+  `dictionary_terms`(term_id)를 출력에 병기한다. 미등록 용어는 P1-06에 `candidate`로 제안.
+- 지표 방향·집계·출처는 `src/semantic/metrics.yaml`의 INDICATOR_DEFINITION을 준수
+  (예: `INDIA_DUTY_SENTIMENT`는 관세 **인하**가 + — 방향 의미 사전 확인 필수).
+- 검색 실행은 `src/semantic/query_templates.yaml`의 필수 슬롯·근거 반환 규칙을 따른다
+  (ad-hoc 프롬프트 금지).
 
 ---
 

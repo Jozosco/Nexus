@@ -1,36 +1,166 @@
-# src/semantic/metrics.yaml — 감성·정책 지표 정의 (시맨틱 레이어 ①)
-# 목적: 각 출력 신호의 표준 정의(코드·범위·단위) 고정 → 모두가 같은 의미로 소비.
-# 관리: P1-05 · P1-06. 초안(scaffold).
-version: 0.1-draft
-updated: 2026-07-10
+# src/semantic/metrics.yaml — 지표·단위 정의 (시맨틱 레이어 ②)
+# ERD 매핑(§8): INDICATOR_DEFINITION + UNIT_DEFINITION
+#   보완 항목: 방향 의미(direction_semantics) · 집계 규칙(aggregation) · 권장 출처(recommended_sources)
+# 원칙(ERD §13): 지표는 값·단위·방향의 동일 의미를 보장한다. 관측(Observation)과 전망(Forecast)을
+#   섞지 않으며, 모든 감성·플래그 지표는 evidence_snippet(근거 발췌)을 동반해야 한다.
+# 관리: P1-06 (보완: P1-05·C-04·C-08)
+version: '2.0'
+updated: 2026-08-11
+erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md §8
+dictionary_ref: src/semantic/entities.yaml (v2.0 — 152 용어)
 
+# ── UNIT_DEFINITION ──────────────────────────────────────────────────────────
+# QUDT 계열 경량 단위 사전(C-010). converted=False 원시값 보존 원칙(D8)과 함께 사용.
+units:
+  - code: USD_PER_MT
+    label: 달러/메트릭톤
+    quantity_kind: Price
+    si_convertible: false
+    note: CFR/FOB/CIF 무역 조건을 반드시 별도 필드로 병기(경계 - 조건 상이 값 직접 비교 금지)
+  - code: USC_PER_LB
+    label: 미국센트/파운드
+    quantity_kind: Price
+    si_convertible: false
+    note: CME ZL(CBOT 대두유 선물) 표준 호가 단위. 1 USc/lb ≈ 22.0462 USD/MT
+  - code: MT
+    label: 메트릭톤
+    quantity_kind: Mass
+    si_convertible: true
+  - code: KG
+    label: 킬로그램
+    quantity_kind: Mass
+    si_convertible: true
+    note: 관세청 수출입량 원단위 — MT 변환 시 1,000 나눔(원시값 보존)
+  - code: USD
+    label: 미국 달러
+    quantity_kind: Currency
+    si_convertible: false
+    note: 통화 환산은 월별 FRED 환율 기준(D8). 미확보 시 converted=False 보존
+  - code: PCT
+    label: 퍼센트
+    quantity_kind: Ratio
+    si_convertible: false
+    note: 수준(level)과 변화율(YoY/MoM)을 별도 필드로 구분 — 혼용 금지
+  - code: INDEX
+    label: 지수(무차원)
+    quantity_kind: Index
+    si_convertible: false
+    note: 기준연도·기준값을 메타데이터에 병기(예 - CPI 2020=100)
+  - code: SENTIMENT_SCORE
+    label: 감성 점수
+    quantity_kind: Score
+    range: [-1.0, 1.0]
+    note: +1.0=강한 SBO 가격 상방 · 0=중립 · -1.0=강한 하방. 범위 밖 값은 C-08 반려
+  - code: CONFIDENCE
+    label: 신뢰도
+    quantity_kind: Score
+    range: [0.0, 1.0]
+    note: 출처 신뢰도·명시성·시의성 기반(P1-05 §2 Stage 3)
+  - code: BINARY_FLAG
+    label: 이진 플래그
+    quantity_kind: Flag
+    range: [0, 1]
+  - code: SCALE_1_3
+    label: 위협 수준(1~3)
+    quantity_kind: OrdinalScale
+    note: 1=주의 · 2=경계 · 3=심각 (HORMUZ_THREAT_LEVEL 등)
+  - code: SCALE_0_100
+    label: 복합 지수(0~100)
+    quantity_kind: Index
+    note: 가중 합산 복합 위험 지수(GEOINTEL/STRAIT 계열)
+
+# ── INDICATOR_DEFINITION — 비정형 분석 출력 지표 (P1-05 ABSA 7종 + 파생) ──────
 metrics:
   - code: SBO_NEWS_SENTIMENT
+    name_ko: 대두유 종합 뉴스 감성
+    unit: SENTIMENT_SCORE
     range: [-1.0, 1.0]
-    unit: sentiment_score
-    desc: 대두유 전반 뉴스 감성(부정 −1 ~ 긍정 +1)
-    source: [GDELT, Perplexity, FinBERT]
+    aspect_category: SBO_General_Trade
+    direction_semantics: +는 SBO 가격 상방 압력(수출 호조·압착마진 악화·현물 프리미엄), -는 하방(풍작·수요 둔화)
+    aggregation: 일별 문서 평균(Confidence 가중). 동일 사건 중복 기사는 document_id 기준 1회만 반영
+    recommended_sources: [USDA_GAIN, FAO_AMIS, GDELT, Perplexity_sonar-pro]
+    evidence_required: true
+    owner_agent: P1-05
+    dictionary_terms: [TERM-060, TERM-061]
   - code: ARG_EXPORT_TAX_SENTIMENT
+    name_ko: 아르헨티나 수출세 동향
+    unit: SENTIMENT_SCORE
     range: [-1.0, 1.0]
-    unit: sentiment_score
-    desc: 아르헨티나 수출세 동향(인상=공급위축=+가격압력)
+    aspect_category: Policy_Taxation
+    direction_semantics: 세율 인상=공급 위축=+(가격 상방) · 인하/유예=-(하방). DAG상 EXPORT_TAX→SUPPLY_CONTRACTION→PRICE
+    aggregation: 일별 최대 절대값(정책 발표는 평균이 아닌 피크 신호가 유의)
+    recommended_sources: [USDA_GAIN_Argentina, Reuters, BCR]
+    evidence_required: true
+    owner_agent: P1-05
+    dictionary_terms: [TERM-041]
   - code: INDIA_DUTY_SENTIMENT
+    name_ko: 인도 식용유 수입관세 동향
+    unit: SENTIMENT_SCORE
     range: [-1.0, 1.0]
-    unit: sentiment_score
-    desc: 인도 식용유 수입관세 변동(인하=수요증가)
+    aspect_category: Policy_Tariff
+    direction_semantics: 관세 인하=인도 수입수요 증가=+(글로벌 가격 상방) · 인상=-. 방향이 직관과 반대임에 주의(수요국 관세)
+    aggregation: 일별 최대 절대값
+    recommended_sources: [USDA_GAIN_India, SEA_of_India, Reuters]
+    evidence_required: true
+    owner_agent: P1-05
+    dictionary_terms: [TERM-042]
   - code: BIODIESEL_POLICY_SENTIMENT
+    name_ko: 바이오디젤 의무혼합 정책
+    unit: SENTIMENT_SCORE
     range: [-1.0, 1.0]
-    unit: sentiment_score
-    desc: 인니·말레이·EU·US 바이오디젤 의무(강화=식용유↔연료 수요전환)
+    aspect_category: Policy_Biofuel
+    direction_semantics: 의무 확대(B35→B40·RVO 상향·45Z)=유지 수요 증가=+ · 축소/유예=-
+    aggregation: 일별 최대 절대값. 국가별(US/ID/MY/EU/BR) 서브 신호를 evidence에 구분 기재
+    recommended_sources: [EPA_RFS, USDA_GAIN_Biofuels, GAPKI, MPOC]
+    evidence_required: true
+    owner_agent: P1-05
+    dictionary_terms: [TERM-044, TERM-045]
   - code: US_CN_TARIFF_SENTIMENT
+    name_ko: 미·중 관세 긴장도
+    unit: SENTIMENT_SCORE
     range: [-1.0, 1.0]
-    unit: sentiment_score
-    desc: 미중 관세 긴장(고조=무역흐름 재편)
+    aspect_category: Geopolitical_Tariff
+    direction_semantics: 긴장 고조=무역흐름 재편·미국산 압착 수요 변화=방향 CONTEXT(체인 확인 필수 — 직접 가격 엣지 금지)
+    aggregation: 일별 Confidence 가중 평균
+    recommended_sources: [Reuters, Bloomberg, MOFCOM, USTR]
+    evidence_required: true
+    owner_agent: P1-05
+    dictionary_terms: [TERM-043]
   - code: WASDE_CONSENSUS_SCORE
+    name_ko: WASDE 컨센서스 서프라이즈
+    unit: SENTIMENT_SCORE
     range: [-1.0, 1.0]
-    unit: surprise_score
-    desc: WASDE 발표 vs 컨센서스(강세=bullish +)
-  - code: NEWS_POLICY_FLAG
+    aspect_category: Supply_Report
+    direction_semantics: 기말재고 하향 서프라이즈=+(강세) · 상향=-(약세). 발표일에만 유효(월 1회)
+    aggregation: 발표일 단일값 — 일별 보간 금지(월간 이벤트 지표)
+    recommended_sources: [USDA_WASDE, Reuters_poll]
+    evidence_required: true
+    owner_agent: P1-05
+    dictionary_terms: [TERM-030]
+  - code: LOGISTICS_DISRUPTION_FLAG
+    name_ko: 물류 충격 플래그
+    unit: BINARY_FLAG
     range: [0, 1]
-    unit: binary_flag
-    desc: 정책 이벤트 발생 여부(이진)
+    aspect_category: Logistics_Shock
+    direction_semantics: 1=해협(호르무즈·파나마·수에즈)·항만·운임 충격 발생 → CFR 도착 원가 상방
+    aggregation: 일별 OR(하나라도 충격이면 1). 해제 판정은 연속 3일 무신호
+    recommended_sources: [AISstream, GDELT, Perplexity_sonar-pro, Baltic_Exchange]
+    evidence_required: true
+    owner_agent: P1-05
+    dictionary_terms: [TERM-070, TERM-071, TERM-072]
+  - code: NEWS_POLICY_FLAG
+    name_ko: 정책 이벤트 발생 플래그
+    unit: BINARY_FLAG
+    range: [0, 1]
+    aspect_category: Policy_Event
+    direction_semantics: 1=정책 이벤트 발생(방향성 없음 — 방향은 개별 SENTIMENT 지표가 담당)
+    aggregation: 일별 OR
+    recommended_sources: [USDA_GAIN, GDELT]
+    evidence_required: true
+    owner_agent: P1-05
+
+# ── 파이프라인 정형 지표와의 경계 ─────────────────────────────────────────────
+# 정형 지표(CBOT_BO_CLOSE, WASDE_SBO_STU, BDI, ENSO_ONI, GPR 등)의 정의·출처는
+# data/schemas/*.yaml + FILE_PATTERNS(variable_importance_g1.py)가 관리한다.
+# 본 파일은 **비정형 파생 지표**의 의미 계약만 담당한다(중복 정의 금지).
+structured_indicators_ref: data/schemas/

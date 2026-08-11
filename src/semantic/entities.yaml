@@ -1,121 +1,3265 @@
-# src/semantic/entities.yaml — 정규 엔티티 ↔ 동의어 사전 (시맨틱 레이어 ③)
-# 목적: 비정형 데이터의 표기 변형(다국어 포함)을 정규 엔티티로 통일 → 신호 재현성.
-# 관리: P1-06(주도) · P1-05 · C-02. 초안(scaffold) — 담당 확정 후 확장.
-# 스키마: canonical | class | synonyms[] | linked_indicator | note
-#
-# ⚠️ No.3 답변: 이전 문서엔 Argentina만 예시였으나, 아래는 전체 엔티티 클래스 초안.
-#    도메인 세부(신규 정책명·기업)는 담당이 보강.
-
-version: 0.1-draft
-updated: 2026-07-10
-
-# ── 국가/주체 ──────────────────────────────────────────────
-countries:
-  - canonical: Argentina
-    class: country
-    synonyms: [Argentina, 아르헨티나, ARG, "Rosario", "Pampas"]
-    linked_indicator: ARG_EXPORT_TAX_SENTIMENT
-  - canonical: Brazil
-    class: country
-    synonyms: [Brazil, 브라질, BRA, "Mato Grosso", "CONAB", "ABIOVE"]
-    linked_indicator: BRAZIL_CROP_SENTIMENT
-  - canonical: Indonesia
-    class: country
-    synonyms: [Indonesia, 인도네시아, IDN, GAPKI, Pertamina]
-    linked_indicator: BIODIESEL_POLICY_SENTIMENT
-  - canonical: Malaysia
-    class: country
-    synonyms: [Malaysia, 말레이시아, MYS, MPOB, MPOC]
-    linked_indicator: CPO_POLICY_SENTIMENT
-  - canonical: India
-    class: country
-    synonyms: [India, 인도, IND, SEA, "Solvent Extractors"]
-    linked_indicator: INDIA_DUTY_SENTIMENT
-  - canonical: China
-    class: country
-    synonyms: [China, 중국, CHN, GACC, Sinograin]
-    linked_indicator: US_CN_TARIFF_SENTIMENT
-  - canonical: EU
-    class: country
-    synonyms: [EU, "European Union", 유럽연합, "EU Commission", FEDIOL]
-    linked_indicator: EU_POLICY_SENTIMENT
-  - canonical: Ukraine
-    class: country
-    synonyms: [Ukraine, 우크라이나, UKR, "Black Sea", Odesa, "APK-Inform"]
-    linked_indicator: BLACKSEA_RISK_SENTIMENT
-  - canonical: Korea
-    class: country
-    synonyms: [Korea, "South Korea", 한국, KOR, 관세청]
-    linked_indicator: KOREA_IMPORT_CONTEXT
-
-# ── 정책/무역 이벤트 ───────────────────────────────────────
-policy_events:
-  - canonical: Export Tax
-    class: policy
-    synonyms: ["export tax", "export duty", "export ban", 수출세, retenciones, retención]
-    linked_indicator: ARG_EXPORT_TAX_SENTIMENT
-  - canonical: Import Duty
-    class: policy
-    synonyms: ["import duty", "import tariff", 수입관세, MFN, AIDC]
-    linked_indicator: INDIA_DUTY_SENTIMENT
-  - canonical: Biodiesel Mandate
-    class: policy
-    synonyms: [B35, B40, RVO, "RED III", "blending mandate", 바이오디젤, "renewable diesel", SAF, HVO]
-    linked_indicator: BIODIESEL_POLICY_SENTIMENT
-  - canonical: Tariff War
-    class: policy
-    synonyms: ["US-China trade war", "retaliatory tariff", "Section 301", 관세전쟁, 보복관세]
-    linked_indicator: US_CN_TARIFF_SENTIMENT
-  - canonical: Palm Export Levy
-    class: policy
-    synonyms: ["CPO export levy", "palm oil export ban", "DMO", 수출레비]
-    linked_indicator: CPO_POLICY_SENTIMENT
-
-# ── 지정학/해운 ───────────────────────────────────────────
-geopolitical:
-  - canonical: Red Sea Disruption
-    class: chokepoint
-    synonyms: ["Red Sea", Houthi, "Bab-el-Mandeb", 홍해, 후티]
-    linked_indicator: SBO_STRAIT_RISK
-  - canonical: Hormuz Risk
-    class: chokepoint
-    synonyms: ["Strait of Hormuz", 호르무즈, "Iran tanker"]
-    linked_indicator: HORMUZ_THREAT_LEVEL
-  - canonical: Suez Disruption
-    class: chokepoint
-    synonyms: ["Suez Canal", "Cape of Good Hope", 수에즈, 희망봉]
-    linked_indicator: SBO_STRAIT_RISK
-  - canonical: Black Sea Corridor
-    class: chokepoint
-    synonyms: ["Black Sea grain", "grain corridor", 흑해, "sunflower oil export"]
-    linked_indicator: BLACKSEA_RISK_SENTIMENT
-
-# ── 수급/기상 ─────────────────────────────────────────────
-supply_climate:
-  - canonical: WASDE Surprise
-    class: supply
-    synonyms: [WASDE, "ending stocks", consensus, surprise, 수급전망]
-    linked_indicator: WASDE_CONSENSUS_SCORE
-  - canonical: ENSO Phase
-    class: climate
-    synonyms: ["El Nino", "La Nina", 엘니뇨, 라니냐, drought, 가뭄, ENSO]
-    linked_indicator: ENSO_ONI
-  - canonical: Crush Margin
-    class: supply
-    synonyms: ["crush margin", "board crush", 압착마진, "oil share"]
-    linked_indicator: SBO_CRUSH_SPREAD
-
-# ── 대체·보완재 ───────────────────────────────────────────
-substitutes:
-  - canonical: Palm Oil
-    class: substitute
-    synonyms: [CPO, "palm oil", 팜유, "crude palm oil", FCPO]
-    linked_indicator: CPO_SBO_SPREAD
-  - canonical: Sunflower Oil
-    class: substitute
-    synonyms: ["sunflower oil", 해바라기유, "sunflower seed oil"]
-    linked_indicator: TE_SUNFLOWER_OIL
-  - canonical: Rapeseed Oil
-    class: substitute
-    synonyms: [rapeseed, canola, 유채유, 카놀라, "MATIF rapeseed"]
-    linked_indicator: TE_RAPESEED
+version: '2.0'
+source: 비정형 분석용_핵심 용어 사전집_v1.0.xlsx (조정자 제공, 152 용어)
+erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md §8
+managed_by: 'P1-06 (보완: C-04·P1-01~05)'
+economy_and_trade:
+- term_id: TERM-001
+  canonical: Federal Funds Rate
+  canonical_ko: 미 연방기금금리
+  class: EconomicIndicator
+  category: 경제·무역
+  subcategory: 거시경제
+  abbr: FEDFUNDS
+  synonyms:
+  - Fed funds rate
+  - policy rate
+  definition: 미국의 단기 정책금리 지표로 달러·금융비용·원자재 위험선호에 영향을 준다.
+  interpretation_rules: 금리 상승을 대두유 가격 상승으로 자동 변환하지 말고 달러·수요·재고 경로를 확인한다.
+  impact_target: Macro/FX
+  price_direction: CONTEXT
+  unit_range: '%'
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P101
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-002
+  canonical: Consumer Price Index
+  canonical_ko: 소비자물가지수
+  class: EconomicIndicator
+  category: 경제·무역
+  subcategory: 거시경제
+  abbr: CPI
+  synonyms:
+  - global CPI
+  - CPIAUCSL
+  - inflation index
+  definition: 소비자 물가수준의 변화를 나타내는 지수다.
+  interpretation_rules: 전년동월비와 지수 레벨을 구분하고 국가·기준연도를 함께 저장한다.
+  impact_target: Demand/Cost
+  price_direction: CONTEXT
+  unit_range: index or % YoY
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P101
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-003
+  canonical: Inflation
+  canonical_ko: 인플레이션
+  class: EconomicCondition
+  category: 경제·무역
+  subcategory: 거시경제
+  abbr: ''
+  synonyms:
+  - price inflation
+  - 물가상승률
+  definition: 전반적인 가격수준의 지속적 상승이다.
+  interpretation_rules: CPI 수준과 상승률을 혼동하지 않으며 명목가격 상승을 실질 수급 변화로 해석하지 않는다.
+  impact_target: Demand/Cost
+  price_direction: CONTEXT
+  unit_range: '%'
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-README,GH-P101
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-004
+  canonical: VIX Index
+  canonical_ko: 변동성지수
+  class: RiskIndicator
+  category: 경제·무역
+  subcategory: 거시경제
+  abbr: VIX
+  synonyms:
+  - fear index
+  - VIXCLS
+  definition: 미국 주식시장의 기대 변동성 지표로 글로벌 위험회피의 대용치다.
+  interpretation_rules: 대두유 직접 원인이 아니라 금융환경 컨텍스트로 분류한다.
+  impact_target: Risk Premium
+  price_direction: UP_RISK
+  unit_range: index
+  alert_criteria: 통계적 임계값 사용
+  priority: C
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P101
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-005
+  canonical: Gross Domestic Product
+  canonical_ko: 국내총생산
+  class: EconomicIndicator
+  category: 경제·무역
+  subcategory: 거시경제
+  abbr: GDP
+  synonyms:
+  - economic growth
+  definition: 국가 경제활동의 총생산 규모다.
+  interpretation_rules: 명목·실질, 전기비·전년비, 국가를 반드시 구분한다.
+  impact_target: Demand
+  price_direction: CONTEXT
+  unit_range: currency or %
+  alert_criteria: 문서별
+  priority: C
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P101
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-006
+  canonical: KRW per USD
+  canonical_ko: 원/달러 환율
+  class: ExchangeRate
+  category: 경제·무역
+  subcategory: 외환
+  abbr: KRW/USD
+  synonyms:
+  - USD/KRW
+  - won-dollar rate
+  definition: 1달러당 원화 가격으로 한국의 수입원가를 결정하는 핵심 환율이다.
+  interpretation_rules: 표기 방향을 확인한다. KRW/USD 상승은 원화 약세이자 원화 수입원가 상승이다.
+  impact_target: Korea Import Cost
+  price_direction: UP
+  unit_range: KRW per USD
+  alert_criteria: '>2σ deviation'
+  priority: A
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-007
+  canonical: BRL per USD
+  canonical_ko: 브라질 헤알/달러 환율
+  class: ExchangeRate
+  category: 경제·무역
+  subcategory: 외환
+  abbr: BRL/USD
+  synonyms:
+  - USD/BRL
+  - real-dollar
+  definition: 브라질 수출경쟁력과 생산자 판매 유인을 설명하는 환율이다.
+  interpretation_rules: 표기 방향·현지통화 기준을 확인하고 가격 효과는 수출공급 메커니즘을 통해 판단한다.
+  impact_target: Export Supply
+  price_direction: CONTEXT
+  unit_range: BRL per USD
+  alert_criteria: 통계적 임계값
+  priority: B
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-008
+  canonical: ARS per USD
+  canonical_ko: 아르헨티나 페소/달러 환율
+  class: ExchangeRate
+  category: 경제·무역
+  subcategory: 외환
+  abbr: ARS/USD
+  synonyms:
+  - USD/ARS
+  - peso devaluation
+  definition: 아르헨티나 수출세·생산자 판매유인과 결합해 수출공급에 영향을 주는 환율이다.
+  interpretation_rules: 공식환율과 병행환율을 구분하고 DEXARUE는 저장소에서 유효하지 않은 FRED 코드로 표시되어 있다.
+  impact_target: Export Supply
+  price_direction: CONTEXT
+  unit_range: ARS per USD
+  alert_criteria: 데이터 공백
+  priority: A
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-009
+  canonical: CNY per USD
+  canonical_ko: 중국 위안/달러 환율
+  class: ExchangeRate
+  category: 경제·무역
+  subcategory: 외환
+  abbr: CNY/USD
+  synonyms:
+  - USD/CNY
+  - yuan-dollar
+  definition: 중국의 수입비용·수요와 관련된 환율이다.
+  interpretation_rules: 표기 방향과 중국 수입수요 연결 근거가 있을 때만 가격 신호로 사용한다.
+  impact_target: Import Demand
+  price_direction: CONTEXT
+  unit_range: CNY per USD
+  alert_criteria: 통계적 임계값
+  priority: C
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-010
+  canonical: MYR per USD
+  canonical_ko: 말레이시아 링깃/달러 환율
+  class: ExchangeRate
+  category: 경제·무역
+  subcategory: 외환
+  abbr: MYR/USD
+  synonyms:
+  - USD/MYR
+  - ringgit-dollar
+  definition: 팜유 경쟁가격과 대체재 관계에 영향을 줄 수 있는 환율이다.
+  interpretation_rules: 대두유 직접 신호가 아니라 팜유 상대가격 경로가 확인될 때 사용한다.
+  impact_target: Substitute Price
+  price_direction: CONTEXT
+  unit_range: MYR per USD
+  alert_criteria: 통계적 임계값
+  priority: C
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-011
+  canonical: T+2 FX Settlement Offset
+  canonical_ko: T+2 환율 결제 오프셋
+  class: BusinessRule
+  category: 경제·무역
+  subcategory: 외환
+  abbr: T+2 FX
+  synonyms:
+  - settlement lag
+  definition: CFR/CIF 계산 시 계약일과 실제 환율 결제일 차이를 반영하는 프로젝트 규칙이다.
+  interpretation_rules: 모든 CFR/CIF 원화 환산에서 적용하고 기준일을 기록한다.
+  impact_target: Korea Import Cost
+  price_direction: CONTEXT
+  unit_range: business days
+  alert_criteria: 필수 적용
+  priority: A
+  ambiguity_risk: 중
+  relations: APPLIES_TO
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-012
+  canonical: Import Volume
+  canonical_ko: 수입량
+  class: TradeMetric
+  category: 경제·무역
+  subcategory: 국제무역
+  abbr: ''
+  synonyms:
+  - imports
+  - import quantity
+  definition: 특정 국가가 외국에서 들여온 품목의 물량이다.
+  interpretation_rules: 금액과 물량, 원산지와 도착지를 구분하며 단위를 정규화한다.
+  impact_target: Demand/Trade
+  price_direction: CONTEXT
+  unit_range: MT
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-README,GH-C04
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-013
+  canonical: Export Volume
+  canonical_ko: 수출량
+  class: TradeMetric
+  category: 경제·무역
+  subcategory: 국제무역
+  abbr: ''
+  synonyms:
+  - exports
+  - export quantity
+  definition: 특정 국가가 해외로 반출한 품목의 물량이다.
+  interpretation_rules: 생산량과 수출가능물량을 구분하고 재수출 여부를 확인한다.
+  impact_target: Supply/Trade
+  price_direction: DOWN_IF_UP
+  unit_range: MT
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-README,GH-C04
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-014
+  canonical: Trade Balance
+  canonical_ko: 무역수지
+  class: TradeMetric
+  category: 경제·무역
+  subcategory: 국제무역
+  abbr: ''
+  synonyms:
+  - net exports
+  definition: 수출액에서 수입액을 뺀 값이다.
+  interpretation_rules: 품목별 수급과 국가 전체 무역수지를 혼동하지 않는다.
+  impact_target: Trade
+  price_direction: CONTEXT
+  unit_range: currency
+  alert_criteria: 문서별
+  priority: C
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-README,GH-C04
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-015
+  canonical: Global Agricultural Trade System
+  canonical_ko: USDA 농업무역통계 시스템
+  class: DataSource
+  category: 경제·무역
+  subcategory: 국제무역
+  abbr: GATS
+  synonyms:
+  - USDA GATS
+  definition: USDA의 농산물 수출입 통계 시스템이다.
+  interpretation_rules: WASDE 전망치와 GATS 실적치를 구분한다.
+  impact_target: Trade
+  price_direction: CONTEXT
+  unit_range: various
+  alert_criteria: 월별/연도별
+  priority: B
+  ambiguity_risk: 중
+  relations: PROVIDES
+  source_code: GH-README,GH-C04
+  status: active
+  owner_agent: P1-06
+agriculture_and_agrometeorology:
+- term_id: TERM-016
+  canonical: El Niño–Southern Oscillation
+  canonical_ko: 엘니뇨·남방진동
+  class: ClimatePattern
+  category: 농업·농기상
+  subcategory: 기후지수
+  abbr: ENSO
+  synonyms:
+  - El Nino Southern Oscillation
+  definition: 열대 태평양 해수면온도와 대기 순환의 결합 변동이다.
+  interpretation_rules: 단일 방향 가격 신호가 아니며 발생 지역·작기·강도와 연결한다.
+  impact_target: Yield
+  price_direction: CONTEXT
+  unit_range: phase/index
+  alert_criteria: ONI 기준
+  priority: A
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P103
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-017
+  canonical: Oceanic Niño Index
+  canonical_ko: 해양니뇨지수
+  class: ClimateIndicator
+  category: 농업·농기상
+  subcategory: 기후지수
+  abbr: ONI
+  synonyms:
+  - ENSO ONI
+  definition: ENSO 위상을 판정하는 3개월 이동 평균 해수면온도 편차 지표다.
+  interpretation_rules: 지속기간과 기준구역을 확인하고 단발 월 수치로 위상을 단정하지 않는다.
+  impact_target: Yield
+  price_direction: CONTEXT
+  unit_range: °C anomaly
+  alert_criteria: ≤-0.5 La Niña; ≥+0.5 El Niño
+  priority: A
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P103
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-018
+  canonical: El Niño
+  canonical_ko: 엘니뇨
+  class: ClimatePattern
+  category: 농업·농기상
+  subcategory: 기후지수
+  abbr: ''
+  synonyms:
+  - warm phase
+  definition: ENSO의 온난 위상이다.
+  interpretation_rules: 원산지별 강수·기온 영향이 다르므로 일반화하지 않는다.
+  impact_target: Yield
+  price_direction: CONTEXT
+  unit_range: phase
+  alert_criteria: ONI ≥+0.5
+  priority: B
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P103
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-019
+  canonical: La Niña
+  canonical_ko: 라니냐
+  class: ClimatePattern
+  category: 농업·농기상
+  subcategory: 기후지수
+  abbr: ''
+  synonyms:
+  - cold phase
+  - La Nina
+  definition: ENSO의 한랭 위상으로 남미 대두 작황 위험과 자주 연결된다.
+  interpretation_rules: 프로젝트에서는 남미 수율 하방 가능성을 중점 감시하되 실제 강수 근거를 함께 요구한다.
+  impact_target: Yield
+  price_direction: UP_RISK
+  unit_range: phase
+  alert_criteria: ONI ≤-0.5
+  priority: A
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-README,GH-P103
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-020
+  canonical: Standardized Precipitation Index
+  canonical_ko: 표준강수지수
+  class: ClimateIndicator
+  category: 농업·농기상
+  subcategory: 기후지수
+  abbr: SPI
+  synonyms:
+  - drought index
+  definition: 기간별 강수 부족·과잉을 표준화한 지수다.
+  interpretation_rules: '집계기간(예: 60일)을 반드시 저장한다.'
+  impact_target: Yield
+  price_direction: UP_RISK
+  unit_range: z-score
+  alert_criteria: SPI <-1.5 for 60 days
+  priority: A
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P103
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-021
+  canonical: Precipitation Deficit
+  canonical_ko: 강수 부족
+  class: WeatherEvent
+  category: 농업·농기상
+  subcategory: 이상기상
+  abbr: ''
+  synonyms:
+  - rainfall deficit
+  - precipitation anomaly
+  definition: 평년 대비 일정 기간의 누적 강수 부족이다.
+  interpretation_rules: 기간과 평년 기준을 함께 기록한다.
+  impact_target: Yield
+  price_direction: UP_RISK
+  unit_range: '% below normal'
+  alert_criteria: Iowa 30-day >40% below normal
+  priority: A
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-P103,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-022
+  canonical: Temperature Anomaly
+  canonical_ko: 기온 편차
+  class: WeatherEvent
+  category: 농업·농기상
+  subcategory: 이상기상
+  abbr: ''
+  synonyms:
+  - heat anomaly
+  definition: 평년 대비 기온의 편차다.
+  interpretation_rules: 평균·최고기온과 기준기간을 구분한다.
+  impact_target: Yield
+  price_direction: UP_RISK
+  unit_range: °C anomaly
+  alert_criteria: pollination >+2°C
+  priority: A
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-P103,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-023
+  canonical: Heatwave
+  canonical_ko: 폭염
+  class: WeatherEvent
+  category: 농업·농기상
+  subcategory: 이상기상
+  abbr: ''
+  synonyms:
+  - extreme heat
+  definition: 고온이 일정 기간 지속되는 극한기상 사건이다.
+  interpretation_rules: 온도와 지속일수, 생육단계를 함께 요구한다.
+  impact_target: Yield
+  price_direction: UP_RISK
+  unit_range: °C/days
+  alert_criteria: Mato Grosso >38°C for 5+ days
+  priority: A
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-P103,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-024
+  canonical: Drought
+  canonical_ko: 가뭄
+  class: WeatherEvent
+  category: 농업·농기상
+  subcategory: 이상기상
+  abbr: ''
+  synonyms:
+  - meteorological drought
+  - agricultural drought
+  definition: 강수·토양수분 부족이 작물 생육을 제약하는 상태다.
+  interpretation_rules: 기상가뭄과 농업가뭄을 구분하고 지수·지역 근거를 요구한다.
+  impact_target: Yield
+  price_direction: UP_RISK
+  unit_range: category/index
+  alert_criteria: SPI/soil moisture 기준
+  priority: A
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-P103,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-025
+  canonical: Flood
+  canonical_ko: 홍수
+  class: WeatherEvent
+  category: 농업·농기상
+  subcategory: 이상기상
+  abbr: ''
+  synonyms:
+  - inundation
+  - excess rainfall
+  definition: 침수 또는 과도한 강수로 파종·수확·물류를 방해하는 사건이다.
+  interpretation_rules: 작황 피해와 항만·내륙운송 피해를 분리한다.
+  impact_target: Yield/Logistics
+  price_direction: UP_RISK
+  unit_range: event
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-P103,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-026
+  canonical: Soil Moisture Percentile
+  canonical_ko: 토양수분 백분위
+  class: ClimateIndicator
+  category: 농업·농기상
+  subcategory: 이상기상
+  abbr: ''
+  synonyms:
+  - soil moisture
+  definition: 과거 분포에서 현재 토양수분의 상대적 위치다.
+  interpretation_rules: 절대 수분함량과 백분위를 구분한다.
+  impact_target: Yield
+  price_direction: UP_RISK
+  unit_range: percentile
+  alert_criteria: Córdoba <25th percentile
+  priority: A
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-P103,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-027
+  canonical: Extreme Weather Event
+  canonical_ko: 극한기상 사건
+  class: EventType
+  category: 농업·농기상
+  subcategory: 이상기상
+  abbr: ''
+  synonyms:
+  - climate shock
+  definition: 폭염·가뭄·홍수·태풍 등 정상범위를 크게 벗어난 사건의 상위 분류다.
+  interpretation_rules: 구체 사건 유형과 지리·기간을 반드시 하위 속성으로 기록한다.
+  impact_target: Supply/Logistics
+  price_direction: UP_RISK
+  unit_range: event
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: CLASSIFIES
+  source_code: GH-P103,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-028
+  canonical: Pollination Window
+  canonical_ko: 수분기
+  class: CropStage
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - flowering period
+  definition: 수량이 고온·수분 스트레스에 특히 민감한 개화·수분 시기다.
+  interpretation_rules: 미국과 남미의 월이 다르므로 지역별 달력을 사용한다.
+  impact_target: Yield
+  price_direction: UP_RISK
+  unit_range: date range
+  alert_criteria: US Jul-Aug; BR/AR Jan-Feb
+  priority: A
+  ambiguity_risk: 상
+  relations: OCCURS_DURING
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-029
+  canonical: Crop Yield
+  canonical_ko: 작물 수율
+  class: AgriculturalMetric
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - yield per hectare
+  - bushels per acre
+  definition: 단위면적당 수확량이다.
+  interpretation_rules: 총생산량과 구분하고 단위 변환 근거를 보존한다.
+  impact_target: Supply
+  price_direction: DOWN_IF_UP
+  unit_range: t/ha or bu/acre
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-030
+  canonical: Planted Area
+  canonical_ko: 파종면적
+  class: AgriculturalMetric
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - sown area
+  definition: 작물을 심은 전체 면적이다.
+  interpretation_rules: 수확면적과 구분한다.
+  impact_target: Supply
+  price_direction: DOWN_IF_UP
+  unit_range: ha/acres
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-031
+  canonical: Harvested Area
+  canonical_ko: 수확면적
+  class: AgriculturalMetric
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - area harvested
+  definition: 실제로 수확된 면적이다.
+  interpretation_rules: 파종면적보다 작을 수 있으며 피해면적을 암시할 수 있다.
+  impact_target: Supply
+  price_direction: DOWN_IF_UP
+  unit_range: ha/acres
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-032
+  canonical: Production Volume
+  canonical_ko: 생산량
+  class: SupplyMetric
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - output
+  - crop production
+  definition: 특정 기간에 생산된 품목의 총물량이다.
+  interpretation_rules: 대두 생산과 대두유 생산을 구분한다.
+  impact_target: Supply
+  price_direction: DOWN_IF_UP
+  unit_range: MT
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-033
+  canonical: Crushing Volume
+  canonical_ko: 대두 크러싱 물량
+  class: ProcessingMetric
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - soybean crush
+  definition: 착유를 위해 가공된 대두의 물량이다.
+  interpretation_rules: 대두유 산출량과 동일하지 않으며 수율·회수율이 필요하다.
+  impact_target: Supply
+  price_direction: DOWN_IF_UP
+  unit_range: MT
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-034
+  canonical: Crushing Rate
+  canonical_ko: 크러싱 비율
+  class: ProcessingMetric
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - crush rate
+  definition: 가용 대두 또는 설비 대비 실제 착유 가공 비율이다.
+  interpretation_rules: 분모 정의를 원문에서 확인한다.
+  impact_target: Supply
+  price_direction: DOWN_IF_UP
+  unit_range: '%'
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-035
+  canonical: Ending Stocks
+  canonical_ko: 기말재고
+  class: StockMetric
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - carryout stocks
+  definition: 마케팅연도 말의 재고량이다.
+  interpretation_rules: 시작재고·총재고와 구분하고 마케팅연도를 명시한다.
+  impact_target: Supply
+  price_direction: DOWN_IF_UP
+  unit_range: MT
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-036
+  canonical: Stock-to-Use Ratio
+  canonical_ko: 재고율
+  class: SupplyDemandIndicator
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: STU
+  synonyms:
+  - stocks-to-use
+  definition: 기말재고를 연간 사용량으로 나눈 수급긴축 지표다.
+  interpretation_rules: 비율 하락은 일반적으로 가격 상방 압력이다.
+  impact_target: Price
+  price_direction: UP_IF_DOWN
+  unit_range: '%'
+  alert_criteria: <10% supply stress
+  priority: A
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-037
+  canonical: Harvest Delay
+  canonical_ko: 수확 지연
+  class: AgriculturalEvent
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - late harvest
+  definition: 기상·노동·물류로 수확 일정이 늦어지는 사건이다.
+  interpretation_rules: 총생산 감소와 출하 시점 지연을 구분한다.
+  impact_target: Supply/Lead Time
+  price_direction: UP_RISK
+  unit_range: days/weeks
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-038
+  canonical: Marketing Year
+  canonical_ko: 마케팅연도
+  class: TimePeriod
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: MY
+  synonyms:
+  - 2024/25
+  - crop marketing year
+  definition: 생산·수급 통계가 적용되는 품목별 유통연도다.
+  interpretation_rules: 달력연도와 다르며 저장소 규칙의 시작일 변환은 출처별 검증이 필요하다.
+  impact_target: Time
+  price_direction: CONTEXT
+  unit_range: YYYY/YY
+  alert_criteria: USDA 규칙
+  priority: A
+  ambiguity_risk: 상
+  relations: VALID_DURING
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-039
+  canonical: World Agricultural Supply and Demand Estimates
+  canonical_ko: 세계 농산물 수급 전망
+  class: DataSource
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: WASDE
+  synonyms:
+  - USDA WASDE
+  definition: USDA가 발간하는 월간 세계 농산물 수급 전망이다.
+  interpretation_rules: 전망치와 사후 확정치를 구분하고 발표월·마케팅연도를 기록한다.
+  impact_target: Supply/Demand
+  price_direction: CONTEXT
+  unit_range: report
+  alert_criteria: 월간
+  priority: A
+  ambiguity_risk: 중
+  relations: PROVIDES
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-040
+  canonical: Yield Revision
+  canonical_ko: 수율 전망 수정
+  class: ForecastSignal
+  category: 농업·농기상
+  subcategory: 생육·생산
+  abbr: ''
+  synonyms:
+  - WASDE yield revision
+  definition: 이전 전망 대비 수율 예상치 변경이다.
+  interpretation_rules: 수준과 변화폭, 시장 컨센서스 대비 서프라이즈를 구분한다.
+  impact_target: Supply/Price
+  price_direction: CONTEXT
+  unit_range: '% or unit'
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: FORECASTS
+  source_code: GH-P103,GH-C04,GH-README
+  status: active
+  owner_agent: P1-06
+market,_price_and_procurement:
+- term_id: TERM-041
+  canonical: Soybean
+  canonical_ko: 대두
+  class: Commodity
+  category: 시장·가격·조달
+  subcategory: 품목·형태
+  abbr: ''
+  synonyms:
+  - soybeans
+  - soy bean
+  definition: 대두유의 원료가 되는 유지종자다.
+  interpretation_rules: 대두와 대두유를 동일 품목으로 집계하지 않는다.
+  impact_target: Upstream Supply
+  price_direction: CONTEXT
+  unit_range: MT
+  alert_criteria: 범위 확인
+  priority: A
+  ambiguity_risk: 상
+  relations: PRODUCES
+  source_code: GH-README,GH-C04,GH-P106
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-042
+  canonical: Soybean Oil
+  canonical_ko: 대두유
+  class: Commodity
+  category: 시장·가격·조달
+  subcategory: 품목·형태
+  abbr: SBO
+  synonyms:
+  - soy oil
+  - soya oil
+  - 대두유
+  definition: 프로젝트의 핵심 대상 품목으로 조유와 정제유를 포함한다.
+  interpretation_rules: 현재 프로젝트 범위는 대두유만이며 다른 원료로 자동 확장하지 않는다.
+  impact_target: Price/Supply/Demand
+  price_direction: CONTEXT
+  unit_range: MT or USD/MT
+  alert_criteria: 핵심 범위
+  priority: A
+  ambiguity_risk: 상
+  relations: CLASSIFIED_AS
+  source_code: GH-README,GH-C04,GH-P106
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-043
+  canonical: Crude Soybean Oil
+  canonical_ko: 대두유 조유
+  class: CommodityForm
+  category: 시장·가격·조달
+  subcategory: 품목·형태
+  abbr: CSBO
+  synonyms:
+  - crude SBO
+  - crude soy oil
+  definition: 정제 전 단계의 대두유다.
+  interpretation_rules: 정제유와 HS Code·가격·관세를 구분한다.
+  impact_target: Price/Supply
+  price_direction: CONTEXT
+  unit_range: MT or USD/MT
+  alert_criteria: HS 150710 계열
+  priority: A
+  ambiguity_risk: 상
+  relations: IS_FORM_OF
+  source_code: GH-README,GH-C04,GH-P106
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-044
+  canonical: Refined Soybean Oil
+  canonical_ko: 정제 대두유
+  class: CommodityForm
+  category: 시장·가격·조달
+  subcategory: 품목·형태
+  abbr: RSBO
+  synonyms:
+  - refined SBO
+  definition: 정제 공정을 거친 대두유다.
+  interpretation_rules: 조유와 혼합 집계하지 않고 베트남 등 2차 가공지 역할을 확인한다.
+  impact_target: Price/Supply
+  price_direction: CONTEXT
+  unit_range: MT or USD/MT
+  alert_criteria: HS 150790 계열
+  priority: A
+  ambiguity_risk: 상
+  relations: IS_FORM_OF
+  source_code: GH-README,GH-C04,GH-P106
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-045
+  canonical: Crude Degummed Soybean Oil
+  canonical_ko: 탈검 대두유 조유
+  class: CommodityForm
+  category: 시장·가격·조달
+  subcategory: 품목·형태
+  abbr: CDSO
+  synonyms:
+  - degummed SBO
+  - crude degummed soy oil
+  definition: 검질을 제거한 대두유 조유의 상업적 형태다.
+  interpretation_rules: crude와 refined 사이의 가공단계를 계약·규격 문맥에서 확인한다.
+  impact_target: Price/Quality
+  price_direction: CONTEXT
+  unit_range: MT or USD/MT
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 상
+  relations: IS_FORM_OF
+  source_code: GH-README,GH-C04,GH-P106
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-046
+  canonical: Vegetable Oil
+  canonical_ko: 식물성 유지
+  class: CommodityClass
+  category: 시장·가격·조달
+  subcategory: 품목·형태
+  abbr: ''
+  synonyms:
+  - edible oils
+  - veg oil
+  definition: 대두유·팜유·카놀라유·해바라기유 등을 포함하는 상위 품목군이다.
+  interpretation_rules: 식물성 유지 일반 뉴스는 대두유 연결 메커니즘이 있을 때만 포함한다.
+  impact_target: Substitution
+  price_direction: CONTEXT
+  unit_range: various
+  alert_criteria: 직접 연결 필요
+  priority: A
+  ambiguity_risk: 상
+  relations: CLASSIFIES
+  source_code: GH-README,GH-C04,GH-P106
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-047
+  canonical: HS 1507
+  canonical_ko: 대두유 HS 1507 계열
+  class: CommodityCode
+  category: 시장·가격·조달
+  subcategory: 품목·형태
+  abbr: HS1507
+  synonyms:
+  - Harmonized System 1507
+  definition: 대두유와 그 분획물의 국제 통일상품분류 계열이다.
+  interpretation_rules: 국가별 세부 10자리 코드는 상이할 수 있어 관할국 코드를 확인한다.
+  impact_target: Trade
+  price_direction: CONTEXT
+  unit_range: code
+  alert_criteria: whitelist 적용
+  priority: A
+  ambiguity_risk: 상
+  relations: IDENTIFIES
+  source_code: GH-README,GH-C04,GH-P106
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-048
+  canonical: HS 1507101000
+  canonical_ko: 조유 대두유 세번
+  class: CommodityCode
+  category: 시장·가격·조달
+  subcategory: 품목·형태
+  abbr: ''
+  synonyms:
+  - crude soybean oil code
+  definition: 저장소가 사용하는 조유 대두유 10자리 코드다.
+  interpretation_rules: 관세 관할과 적용연도를 확인한다.
+  impact_target: Trade
+  price_direction: CONTEXT
+  unit_range: code
+  alert_criteria: C-04 whitelist
+  priority: A
+  ambiguity_risk: 중
+  relations: IDENTIFIES
+  source_code: GH-README,GH-C04,GH-P106
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-049
+  canonical: HS 1507901010/1020
+  canonical_ko: 정제 대두유 세번
+  class: CommodityCode
+  category: 시장·가격·조달
+  subcategory: 품목·형태
+  abbr: ''
+  synonyms:
+  - refined soybean oil codes
+  definition: 저장소가 사용하는 정제 대두유 세부 코드 집합이다.
+  interpretation_rules: 두 코드의 품목 세부 정의를 원문 관세표에서 확인한다.
+  impact_target: Trade
+  price_direction: CONTEXT
+  unit_range: code
+  alert_criteria: C-04 whitelist
+  priority: A
+  ambiguity_risk: 상
+  relations: IDENTIFIES
+  source_code: GH-README,GH-C04,GH-P106
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-050
+  canonical: Spot Price
+  canonical_ko: 현물가격
+  class: PriceMetric
+  category: 시장·가격·조달
+  subcategory: 가격·스프레드
+  abbr: ''
+  synonyms:
+  - cash price
+  - spot offer
+  definition: 즉시 또는 근접 인도의 시장가격이다.
+  interpretation_rules: 선물가격·계약가격·CFR/CIF 가격과 구분한다.
+  impact_target: Price
+  price_direction: CONTEXT
+  unit_range: USD/MT
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-051
+  canonical: Futures Price
+  canonical_ko: 선물가격
+  class: PriceMetric
+  category: 시장·가격·조달
+  subcategory: 가격·스프레드
+  abbr: ''
+  synonyms:
+  - CBOT soybean oil futures
+  - BO=F
+  definition: 거래소의 미래 인도 표준계약 가격이다.
+  interpretation_rules: 실물 CFR 도착가격과 동일하지 않으며 베이시스·운임·환율이 필요하다.
+  impact_target: Price
+  price_direction: CONTEXT
+  unit_range: cents/lb or contract unit
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-052
+  canonical: Price Band
+  canonical_ko: 가격밴드
+  class: ForecastMetric
+  category: 시장·가격·조달
+  subcategory: 가격·스프레드
+  abbr: ''
+  synonyms:
+  - forecast interval
+  - upper/lower band
+  definition: G2가 산출하는 상·하한을 포함한 확률적 가격 범위다.
+  interpretation_rules: 점예측과 구분하고 신뢰수준·기간을 기록한다.
+  impact_target: Price
+  price_direction: CONTEXT
+  unit_range: price range
+  alert_criteria: confidence interval required
+  priority: A
+  ambiguity_risk: 상
+  relations: FORECASTS
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-053
+  canonical: CPO–SBO Spread
+  canonical_ko: 팜유–대두유 스프레드
+  class: SpreadIndicator
+  category: 시장·가격·조달
+  subcategory: 가격·스프레드
+  abbr: CPO-SBO
+  synonyms:
+  - SBO premium over CPO
+  definition: 대두유와 팜유의 상대가격 차이다.
+  interpretation_rules: 가격 방향과 기준(FOB/CIF)을 맞추고 절대차·비율을 구분한다.
+  impact_target: Substitution
+  price_direction: UP_RISK
+  unit_range: USD/MT or %
+  alert_criteria: SBO premium >15% over CPO CIF Korea
+  priority: A
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-054
+  canonical: Brazil–US CFR Spread
+  canonical_ko: 브라질–미국 CFR 스프레드
+  class: SpreadIndicator
+  category: 시장·가격·조달
+  subcategory: 가격·스프레드
+  abbr: ''
+  synonyms:
+  - origin CFR spread
+  definition: 브라질산과 미국산 대두유의 한국 도착 기준 가격 차이다.
+  interpretation_rules: 동일 품질·기간·통화·도착항 조건을 맞춘다.
+  impact_target: Origin Choice
+  price_direction: CONTEXT
+  unit_range: USD/MT
+  alert_criteria: '>USD 20/MT'
+  priority: A
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-055
+  canonical: Crude Palm Oil
+  canonical_ko: 팜유 조유
+  class: Commodity
+  category: 시장·가격·조달
+  subcategory: 가격·스프레드
+  abbr: CPO
+  synonyms:
+  - palm oil
+  definition: 대두유의 주요 가격·수요 대체재다.
+  interpretation_rules: 팜유 자체 뉴스는 대체수요 경로가 있을 때만 대두유 분석에 포함한다.
+  impact_target: Substitution
+  price_direction: DOWN_RISK
+  unit_range: MT or USD/MT
+  alert_criteria: spread threshold
+  priority: A
+  ambiguity_risk: 중
+  relations: SUBSTITUTES_FOR
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-056
+  canonical: Canola Oil
+  canonical_ko: 카놀라유
+  class: Commodity
+  category: 시장·가격·조달
+  subcategory: 가격·스프레드
+  abbr: ''
+  synonyms:
+  - rapeseed oil
+  definition: 대두유와 경쟁 가능한 식물성 유지 대체재다.
+  interpretation_rules: 카놀라유와 유채유의 지역별 명칭·품질을 확인한다.
+  impact_target: Substitution
+  price_direction: CONTEXT
+  unit_range: MT or USD/MT
+  alert_criteria: Canola CFR > SBO by USD 20/MT
+  priority: B
+  ambiguity_risk: 중
+  relations: SUBSTITUTES_FOR
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-057
+  canonical: Sunflower Oil
+  canonical_ko: 해바라기유
+  class: Commodity
+  category: 시장·가격·조달
+  subcategory: 가격·스프레드
+  abbr: ''
+  synonyms:
+  - sun oil
+  definition: 흑해 수급·분쟁에 민감한 식물성 유지 대체재다.
+  interpretation_rules: 흑해 리스크가 대두유에 미치는 간접 대체수요 경로를 확인한다.
+  impact_target: Substitution
+  price_direction: UP_RISK
+  unit_range: MT or USD/MT
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 중
+  relations: SUBSTITUTES_FOR
+  source_code: GH-README,GH-P101,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-058
+  canonical: Bull Regime
+  canonical_ko: 상승장
+  class: MarketRegime
+  category: 시장·가격·조달
+  subcategory: 레짐·의사결정
+  abbr: Bull
+  synonyms:
+  - bullish
+  - price-up regime
+  definition: 대두유 가격이 지속 상승하는 시장 레짐이다.
+  interpretation_rules: 프로젝트의 sentiment +1도 가격 상방 기준이다. 공급 긍정과 혼동하지 않는다.
+  impact_target: Price
+  price_direction: UP
+  unit_range: label
+  alert_criteria: 모델 판정
+  priority: A
+  ambiguity_risk: 상
+  relations: CLASSIFIES
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-059
+  canonical: Bear Regime
+  canonical_ko: 하락장
+  class: MarketRegime
+  category: 시장·가격·조달
+  subcategory: 레짐·의사결정
+  abbr: Bear
+  synonyms:
+  - bearish
+  - price-down regime
+  definition: 대두유 가격이 지속 하락하는 시장 레짐이다.
+  interpretation_rules: 프로젝트에서는 Hold와 연결되며 공급 부족의 부정적 의미와 혼동하지 않는다.
+  impact_target: Price
+  price_direction: DOWN
+  unit_range: label
+  alert_criteria: 모델 판정
+  priority: A
+  ambiguity_risk: 상
+  relations: CLASSIFIES
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-060
+  canonical: Neutral Regime
+  canonical_ko: 중립장
+  class: MarketRegime
+  category: 시장·가격·조달
+  subcategory: 레짐·의사결정
+  abbr: Neutral
+  synonyms:
+  - mixed
+  - balanced
+  definition: 상·하방 신호가 균형이거나 방향성이 부족한 레짐이다.
+  interpretation_rules: 중립을 데이터 없음과 구분한다.
+  impact_target: Price
+  price_direction: FLAT
+  unit_range: label
+  alert_criteria: 모델 판정
+  priority: A
+  ambiguity_risk: 중
+  relations: CLASSIFIES
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-061
+  canonical: Buy Recommendation
+  canonical_ko: 매수 검토 신호
+  class: DecisionSignal
+  category: 시장·가격·조달
+  subcategory: 레짐·의사결정
+  abbr: Buy
+  synonyms:
+  - procurement buy signal
+  definition: 현재 가격에서 구매를 검토하도록 제시하는 정보성 신호다.
+  interpretation_rules: 자율 실행이 아니며 HITL 승인 전 확정 거래로 표현하지 않는다.
+  impact_target: Procurement
+  price_direction: CONTEXT
+  unit_range: label
+  alert_criteria: human approval
+  priority: A
+  ambiguity_risk: 상
+  relations: RECOMMENDS
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-062
+  canonical: Hold Recommendation
+  canonical_ko: 보류 신호
+  class: DecisionSignal
+  category: 시장·가격·조달
+  subcategory: 레짐·의사결정
+  abbr: Hold
+  synonyms:
+  - wait
+  - delay purchase
+  definition: 가격 진입 개선을 기다리도록 구매를 보류하는 정보성 신호다.
+  interpretation_rules: 수요 소멸이 아니라 조달 시점 연기의 의미다.
+  impact_target: Procurement
+  price_direction: CONTEXT
+  unit_range: label
+  alert_criteria: human approval
+  priority: A
+  ambiguity_risk: 상
+  relations: RECOMMENDS
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+energy_and_biofuel:
+- term_id: TERM-063
+  canonical: West Texas Intermediate
+  canonical_ko: 서부텍사스산 원유
+  class: EnergyCommodity
+  category: 에너지·바이오연료
+  subcategory: 에너지 가격
+  abbr: WTI
+  synonyms:
+  - WTI crude
+  definition: 미국 기준 원유가격으로 바이오연료 경제성과 생산비의 외생 변수다.
+  interpretation_rules: 대두유 직접 가격이 아니며 바이오연료 수요·에너지 비용 경로를 확인한다.
+  impact_target: Biofuel Demand/Cost
+  price_direction: UP_RISK
+  unit_range: USD/bbl
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-README,GH-P101
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-064
+  canonical: Brent Crude
+  canonical_ko: 브렌트유
+  class: EnergyCommodity
+  category: 에너지·바이오연료
+  subcategory: 에너지 가격
+  abbr: Brent
+  synonyms:
+  - Brent crude oil
+  definition: 글로벌 기준 원유가격이다.
+  interpretation_rules: WTI와 혼합하지 말고 계약월·현물/선물을 구분한다.
+  impact_target: Biofuel Demand/Cost
+  price_direction: UP_RISK
+  unit_range: USD/bbl
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-README,GH-P101
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-065
+  canonical: Biodiesel Feedstock
+  canonical_ko: 바이오디젤 원료
+  class: CommodityRole
+  category: 에너지·바이오연료
+  subcategory: 에너지 가격
+  abbr: ''
+  synonyms:
+  - biofuel feedstock
+  - industrial vegetable oil
+  definition: 바이오디젤 생산에 투입되는 유지 원료 역할이다.
+  interpretation_rules: 식용 수요와 산업용 수요를 분리한다.
+  impact_target: Demand
+  price_direction: UP
+  unit_range: MT
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: USED_AS
+  source_code: GH-README,GH-P101
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-066
+  canonical: Renewable Fuel Standard
+  canonical_ko: 미국 재생연료 의무제
+  class: BiofuelPolicy
+  category: 에너지·바이오연료
+  subcategory: 바이오연료 정책
+  abbr: RFS
+  synonyms:
+  - EPA RFS
+  definition: 미국에서 운송연료의 재생연료 사용을 의무화하는 정책 체계다.
+  interpretation_rules: 정책 발표·최종 규칙·의무량 적용연도를 구분한다.
+  impact_target: Industrial Demand
+  price_direction: UP
+  unit_range: policy
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: REGULATES
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-067
+  canonical: Renewable Volume Obligation
+  canonical_ko: 재생연료 의무량
+  class: PolicyMetric
+  category: 에너지·바이오연료
+  subcategory: 바이오연료 정책
+  abbr: RVO
+  synonyms:
+  - RVOs
+  definition: RFS 아래에서 설정되는 연도별 재생연료 의무 물량이다.
+  interpretation_rules: 제안치와 최종치를 구분하고 카테고리를 확인한다.
+  impact_target: Industrial Demand
+  price_direction: UP
+  unit_range: volume/%
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-068
+  canonical: Biodiesel Blend Mandate
+  canonical_ko: 바이오디젤 혼합의무
+  class: BiofuelPolicy
+  category: 에너지·바이오연료
+  subcategory: 바이오연료 정책
+  abbr: ''
+  synonyms:
+  - biofuel blending mandate
+  definition: 경유 등에 바이오디젤을 일정 비율 혼합하도록 요구하는 정책이다.
+  interpretation_rules: 표기 Bxx의 기준·시행일·적용지역을 함께 저장한다.
+  impact_target: Industrial Demand
+  price_direction: UP
+  unit_range: '%'
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: REGULATES
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-069
+  canonical: B20
+  canonical_ko: 바이오디젤 20% 혼합
+  class: PolicyLevel
+  category: 에너지·바이오연료
+  subcategory: 바이오연료 정책
+  abbr: B20
+  synonyms:
+  - 20 percent blend
+  definition: 연료 중 바이오디젤 혼합 목표 또는 의무 비율 20%를 뜻한다.
+  interpretation_rules: 실제 시행과 목표를 구분한다.
+  impact_target: Industrial Demand
+  price_direction: UP
+  unit_range: 20%
+  alert_criteria: jurisdiction-specific
+  priority: B
+  ambiguity_risk: 중
+  relations: IS_LEVEL_OF
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-070
+  canonical: B35
+  canonical_ko: 바이오디젤 35% 혼합
+  class: PolicyLevel
+  category: 에너지·바이오연료
+  subcategory: 바이오연료 정책
+  abbr: B35
+  synonyms:
+  - 35 percent blend
+  definition: 혼합 목표 또는 의무 비율 35%다.
+  interpretation_rules: 인도네시아 등 관할과 시행시점을 명시한다.
+  impact_target: Industrial Demand
+  price_direction: UP
+  unit_range: 35%
+  alert_criteria: jurisdiction-specific
+  priority: B
+  ambiguity_risk: 중
+  relations: IS_LEVEL_OF
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-071
+  canonical: B40
+  canonical_ko: 바이오디젤 40% 혼합
+  class: PolicyLevel
+  category: 에너지·바이오연료
+  subcategory: 바이오연료 정책
+  abbr: B40
+  synonyms:
+  - 40 percent blend
+  definition: 혼합 목표 또는 의무 비율 40%다.
+  interpretation_rules: 원료가 팜유인지 대두유인지 직접 수요와 대체효과를 구분한다.
+  impact_target: Industrial Demand
+  price_direction: UP_RISK
+  unit_range: 40%
+  alert_criteria: jurisdiction-specific
+  priority: A
+  ambiguity_risk: 상
+  relations: IS_LEVEL_OF
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-072
+  canonical: B50
+  canonical_ko: 바이오디젤 50% 혼합
+  class: PolicyLevel
+  category: 에너지·바이오연료
+  subcategory: 바이오연료 정책
+  abbr: B50
+  synonyms:
+  - 50 percent blend
+  definition: 혼합 목표 또는 의무 비율 50%다.
+  interpretation_rules: 저장소에서 일정과 대두유 수요 영향이 TBD로 표시되므로 확정 사실로 쓰지 않는다.
+  impact_target: Industrial Demand
+  price_direction: UP_RISK
+  unit_range: 50%
+  alert_criteria: timeline TBD
+  priority: A
+  ambiguity_risk: 상
+  relations: IS_LEVEL_OF
+  source_code: GH-README,GH-P105
+  status: active
+  owner_agent: P1-06
+geopolitics_and_security:
+- term_id: TERM-073
+  canonical: Geopolitical Risk Index
+  canonical_ko: 지정학적 위험지수
+  class: RiskIndicator
+  category: 지정학·안보
+  subcategory: 리스크 지수
+  abbr: GPR
+  synonyms:
+  - GPR Index
+  definition: 전쟁·긴장 관련 텍스트 빈도를 이용한 지정학 위험 지수다.
+  interpretation_rules: 원지수(기준 약 100)와 0~1 정규화 값을 혼동하지 않는다.
+  impact_target: Risk Premium/Logistics
+  price_direction: UP_RISK
+  unit_range: index
+  alert_criteria: raw ≥200; normalized threshold 별도
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P102,GH-P103
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-074
+  canonical: Economic Policy Uncertainty Index
+  canonical_ko: 경제정책 불확실성지수
+  class: RiskIndicator
+  category: 지정학·안보
+  subcategory: 리스크 지수
+  abbr: EPU
+  synonyms:
+  - EPU Index
+  definition: 신문 텍스트 등을 기반으로 경제정책 불확실성을 측정하는 지수다.
+  interpretation_rules: 지수 원천·국가·기준값을 기록한다.
+  impact_target: Risk Premium
+  price_direction: UP_RISK
+  unit_range: index
+  alert_criteria: '>300'
+  priority: B
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-P102,GH-P103
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-075
+  canonical: Compound Event
+  canonical_ko: 복합 사건
+  class: EventType
+  category: 지정학·안보
+  subcategory: 리스크 지수
+  abbr: ''
+  synonyms:
+  - compound shock
+  definition: 기후와 지정학 등 둘 이상의 충격이 동시에 또는 연쇄적으로 발생하는 사건이다.
+  interpretation_rules: 각 구성 사건과 중복 집계를 분리하고 상호작용 근거를 요구한다.
+  impact_target: Supply/Logistics
+  price_direction: UP_RISK
+  unit_range: event
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: COMPOSED_OF
+  source_code: GH-P102,GH-P103
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-076
+  canonical: Risk Contagion
+  canonical_ko: 리스크 전이
+  class: MarketMechanism
+  category: 지정학·안보
+  subcategory: 리스크 지수
+  abbr: ''
+  synonyms:
+  - risk propagation
+  definition: 한 국가·경로·품목의 충격이 연결망을 통해 다른 시장으로 전파되는 메커니즘이다.
+  interpretation_rules: 상관관계가 아닌 연결 경로를 명시한다.
+  impact_target: Systemic Risk
+  price_direction: UP_RISK
+  unit_range: path
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 상
+  relations: PROPAGATES_TO
+  source_code: GH-P102,GH-P103
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-077
+  canonical: Geopolitical Conflict
+  canonical_ko: 지정학적 분쟁
+  class: GeopoliticalEvent
+  category: 지정학·안보
+  subcategory: 분쟁·제재
+  abbr: ''
+  synonyms:
+  - war
+  - armed conflict
+  definition: 국가·비국가 행위자 간 군사·안보 충돌이다.
+  interpretation_rules: 사건명·행위자·지역·시작일을 구체화한다.
+  impact_target: Logistics/Trade
+  price_direction: UP_RISK
+  unit_range: event
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P102
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-078
+  canonical: Economic Sanction
+  canonical_ko: 경제제재
+  class: PolicyEvent
+  category: 지정학·안보
+  subcategory: 분쟁·제재
+  abbr: ''
+  synonyms:
+  - trade sanction
+  - financial sanction
+  definition: 특정 국가·기관·품목의 거래·금융을 제한하는 조치다.
+  interpretation_rules: 발표와 발효, 1차·2차 제재, 품목 범위를 구분한다.
+  impact_target: Trade/Logistics
+  price_direction: UP_RISK
+  unit_range: policy
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: RESTRICTS
+  source_code: GH-README,GH-P102
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-079
+  canonical: Trade War
+  canonical_ko: 무역전쟁
+  class: GeopoliticalEvent
+  category: 지정학·안보
+  subcategory: 분쟁·제재
+  abbr: ''
+  synonyms:
+  - trade tensions
+  definition: 상호 관세·규제 보복이 반복되는 국가 간 무역갈등이다.
+  interpretation_rules: 단일 관세 발표와 장기적 갈등 레짐을 구분한다.
+  impact_target: Trade/Demand
+  price_direction: CONTEXT
+  unit_range: event
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-README,GH-P102
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-080
+  canonical: Political Instability
+  canonical_ko: 정치불안
+  class: GeopoliticalEvent
+  category: 지정학·안보
+  subcategory: 분쟁·제재
+  abbr: ''
+  synonyms:
+  - government instability
+  - unrest
+  definition: 정부 기능·정책 지속성·사회질서의 불안정 상태다.
+  interpretation_rules: 정량 지표가 없으면 방향과 신뢰도를 낮춘다.
+  impact_target: Supply/Trade
+  price_direction: UP_RISK
+  unit_range: event/index
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P102
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-081
+  canonical: Strait of Hormuz
+  canonical_ko: 호르무즈 해협
+  class: Chokepoint
+  category: 지정학·안보
+  subcategory: 핵심 경로 위험
+  abbr: ''
+  synonyms:
+  - Hormuz Strait
+  definition: 중동 원유·해상운송의 핵심 해협으로 분쟁 시 보험료·우회·운임 위험이 커진다.
+  interpretation_rules: 대두유 직항 여부보다 글로벌 선박·에너지 비용 전이 경로를 확인한다.
+  impact_target: Freight/Energy
+  price_direction: UP_RISK
+  unit_range: location
+  alert_criteria: AWRP >3x baseline
+  priority: A
+  ambiguity_risk: 상
+  relations: ROUTED_VIA
+  source_code: GH-README,GH-P102,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-082
+  canonical: Black Sea
+  canonical_ko: 흑해
+  class: TradeRegion
+  category: 지정학·안보
+  subcategory: 핵심 경로 위험
+  abbr: ''
+  synonyms:
+  - Black Sea corridor
+  definition: 곡물·해바라기유 교역과 전쟁위험이 집중되는 해역이다.
+  interpretation_rules: 대두유에는 대체재·운임 경로로 연결되는 경우가 많다.
+  impact_target: Substitution/Logistics
+  price_direction: UP_RISK
+  unit_range: location
+  alert_criteria: war-risk >5x baseline
+  priority: A
+  ambiguity_risk: 상
+  relations: ROUTED_VIA
+  source_code: GH-README,GH-P102,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-083
+  canonical: Panama Canal
+  canonical_ko: 파나마 운하
+  class: Chokepoint
+  category: 지정학·안보
+  subcategory: 핵심 경로 위험
+  abbr: ''
+  synonyms:
+  - Panama Canal delays
+  definition: 미주 항로의 핵심 운하로 수위·대기시간이 항로 효율에 영향을 준다.
+  interpretation_rules: 가뭄 사건과 운하 대기시간을 별도 엔터티로 연결한다.
+  impact_target: Lead Time/Freight
+  price_direction: UP_RISK
+  unit_range: location
+  alert_criteria: wait-time evidence
+  priority: B
+  ambiguity_risk: 중
+  relations: ROUTED_VIA
+  source_code: GH-README,GH-P102,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-084
+  canonical: AIS Vessel Traffic Anomaly
+  canonical_ko: AIS 선박통행 이상
+  class: LogisticsIndicator
+  category: 지정학·안보
+  subcategory: 핵심 경로 위험
+  abbr: AIS
+  synonyms:
+  - vessel traffic anomaly
+  definition: 자동식별시스템 기준 선박 통행량이 평소와 크게 달라진 상태다.
+  interpretation_rules: 수신 누락과 실제 통행 감소를 구분한다.
+  impact_target: Logistics
+  price_direction: UP_RISK
+  unit_range: '% of 30-day average'
+  alert_criteria: <60% of 30-day avg
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P102,GH-P104
+  status: active
+  owner_agent: P1-06
+logistics_and_supply_chain:
+- term_id: TERM-085
+  canonical: Baltic Dry Index
+  canonical_ko: 발틱운임지수
+  class: LogisticsIndicator
+  category: 물류·공급망
+  subcategory: 운임지수
+  abbr: BDI
+  synonyms:
+  - Baltic Dry
+  definition: 건화물 벌크선 운임 수준을 나타내는 지수다.
+  interpretation_rules: 대두유 액체화물의 직접 운임이 아니라 글로벌 해운비용 대용치임을 명시한다.
+  impact_target: Freight
+  price_direction: UP
+  unit_range: index
+  alert_criteria: '>2σ above 90-day mean'
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-086
+  canonical: Shanghai Containerized Freight Index
+  canonical_ko: 상하이컨테이너운임지수
+  class: LogisticsIndicator
+  category: 물류·공급망
+  subcategory: 운임지수
+  abbr: SCFI
+  synonyms:
+  - Shanghai freight index
+  definition: 상하이발 주요 항로의 컨테이너 운임지수다.
+  interpretation_rules: 벌크·탱커 운임과 동일시하지 않고 간접 물류 스트레스 지표로 사용한다.
+  impact_target: Freight
+  price_direction: UP
+  unit_range: index
+  alert_criteria: '>2σ above 90-day mean'
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-087
+  canonical: Freight Rate
+  canonical_ko: 운임
+  class: LogisticsMetric
+  category: 물류·공급망
+  subcategory: 운임지수
+  abbr: ''
+  synonyms:
+  - ocean freight
+  - shipping cost
+  definition: 화물을 운송하는 데 부과되는 비용이다.
+  interpretation_rules: 운송수단·항로·단위·계약기준을 기록한다.
+  impact_target: Delivered Price
+  price_direction: UP
+  unit_range: USD/MT or USD/container
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-088
+  canonical: War-Risk Insurance Premium
+  canonical_ko: 전쟁위험 보험료
+  class: InsuranceMetric
+  category: 물류·공급망
+  subcategory: 운임지수
+  abbr: AWRP
+  synonyms:
+  - additional war risk premium
+  definition: 분쟁지역 운항 시 추가되는 보험료다.
+  interpretation_rules: 배수와 절대 보험료를 구분하고 baseline을 기록한다.
+  impact_target: Delivered Price
+  price_direction: UP
+  unit_range: rate or multiple
+  alert_criteria: Hormuz >3x; Black Sea >5x
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-089
+  canonical: Port Congestion
+  canonical_ko: 항만 혼잡
+  class: LogisticsEvent
+  category: 물류·공급망
+  subcategory: 항만·운송
+  abbr: ''
+  synonyms:
+  - terminal congestion
+  definition: 항만 처리능력 대비 선박·화물 적체가 발생한 상태다.
+  interpretation_rules: 혼잡 지표·대기일·처리량을 구분한다.
+  impact_target: Lead Time/Freight
+  price_direction: UP
+  unit_range: days/index
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-090
+  canonical: Port Strike
+  canonical_ko: 항만 파업
+  class: LaborEvent
+  category: 물류·공급망
+  subcategory: 항만·운송
+  abbr: ''
+  synonyms:
+  - dockworker strike
+  definition: 항만 노동중단으로 선적·하역이 지연되는 사건이다.
+  interpretation_rules: 예고·실행·종료와 영향 항만을 구분한다.
+  impact_target: Lead Time/Supply
+  price_direction: UP_RISK
+  unit_range: event/days
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-091
+  canonical: Chokepoint Wait Time
+  canonical_ko: 병목구간 대기시간
+  class: LogisticsMetric
+  category: 물류·공급망
+  subcategory: 항만·운송
+  abbr: ''
+  synonyms:
+  - queue time
+  - transit wait
+  definition: 해협·운하·항만에서 통과 전 대기하는 평균 시간이다.
+  interpretation_rules: 예상과 실적, 평균과 최대를 구분한다.
+  impact_target: Lead Time
+  price_direction: UP
+  unit_range: days
+  alert_criteria: '>5 days average'
+  priority: A
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-092
+  canonical: Route Diversion
+  canonical_ko: 항로 우회
+  class: LogisticsEvent
+  category: 물류·공급망
+  subcategory: 항만·운송
+  abbr: ''
+  synonyms:
+  - rerouting
+  - detour
+  definition: 위험·봉쇄·혼잡을 피하기 위해 기존 항로를 변경하는 행위다.
+  interpretation_rules: 추가 거리·일수·비용을 가능한 경우 정량화한다.
+  impact_target: Lead Time/Freight
+  price_direction: UP
+  unit_range: days/nautical miles
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 중
+  relations: ROUTED_VIA
+  source_code: GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-093
+  canonical: Shipping Capacity
+  canonical_ko: 선복량
+  class: LogisticsMetric
+  category: 물류·공급망
+  subcategory: 항만·운송
+  abbr: ''
+  synonyms:
+  - vessel capacity
+  - available slots
+  definition: 시장에 제공되는 운송 가능 용량이다.
+  interpretation_rules: 선박 수와 적재능력, 컨테이너 슬롯을 구분한다.
+  impact_target: Freight
+  price_direction: DOWN_IF_UP
+  unit_range: DWT/TEU
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-094
+  canonical: Weekly Export Inspections
+  canonical_ko: 주간 수출검사
+  class: TradeMetric
+  category: 물류·공급망
+  subcategory: 항만·운송
+  abbr: ''
+  synonyms:
+  - USDA export inspections
+  definition: 선적 전 검사를 통과한 농산물 수출 물량 지표다.
+  interpretation_rules: 판매계약·실제 선적·수출통관과 구분한다.
+  impact_target: Export Flow
+  price_direction: CONTEXT
+  unit_range: MT
+  alert_criteria: weekly
+  priority: B
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-095
+  canonical: Free on Board
+  canonical_ko: 본선인도조건
+  class: TradeTerm
+  category: 물류·공급망
+  subcategory: 계약·리드타임
+  abbr: FOB
+  synonyms:
+  - free on board
+  definition: 매도인이 선적항 본선 적재까지 비용·책임을 부담하는 조건이다.
+  interpretation_rules: CFR/CIF와 운임·보험 포함 범위를 구분한다.
+  impact_target: Price Basis
+  price_direction: CONTEXT
+  unit_range: Incoterm
+  alert_criteria: 계약별
+  priority: A
+  ambiguity_risk: 상
+  relations: APPLIES_TO
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-096
+  canonical: Cost and Freight
+  canonical_ko: 운임포함조건
+  class: TradeTerm
+  category: 물류·공급망
+  subcategory: 계약·리드타임
+  abbr: CFR
+  synonyms:
+  - C&F
+  - cost freight
+  definition: 매도인이 목적항까지 비용과 운임을 부담하지만 위험은 선적 시 이전되는 조건이다.
+  interpretation_rules: README의 프로젝트 기본 계약조건이며 위험 이전과 비용 부담을 혼동하지 않는다.
+  impact_target: Delivered Price
+  price_direction: CONTEXT
+  unit_range: Incoterm
+  alert_criteria: project default
+  priority: A
+  ambiguity_risk: 상
+  relations: APPLIES_TO
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-097
+  canonical: Cost, Insurance and Freight
+  canonical_ko: 운임·보험료 포함조건
+  class: TradeTerm
+  category: 물류·공급망
+  subcategory: 계약·리드타임
+  abbr: CIF
+  synonyms:
+  - cost insurance freight
+  definition: 매도인이 목적항까지 비용·보험·운임을 부담하는 조건이다.
+  interpretation_rules: CFR과 달리 보험이 포함되지만 위험 이전 시점은 별도 확인한다.
+  impact_target: Delivered Price
+  price_direction: CONTEXT
+  unit_range: Incoterm
+  alert_criteria: 계약별
+  priority: A
+  ambiguity_risk: 상
+  relations: APPLIES_TO
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-098
+  canonical: End-to-End Lead Time
+  canonical_ko: 총 조달 리드타임
+  class: LeadTimeMetric
+  category: 물류·공급망
+  subcategory: 계약·리드타임
+  abbr: ''
+  synonyms:
+  - order-to-arrival lead time
+  definition: 발주부터 선적·통관·입고까지의 전체 기간이다.
+  interpretation_rules: README의 약 3개월과 해상운송 40~50일을 동일 값으로 보지 않는다.
+  impact_target: Procurement Risk
+  price_direction: UP_RISK
+  unit_range: days
+  alert_criteria: ~3 months project typical
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-099
+  canonical: Ocean Transit Time
+  canonical_ko: 해상운송기간
+  class: LeadTimeMetric
+  category: 물류·공급망
+  subcategory: 계약·리드타임
+  abbr: ''
+  synonyms:
+  - sailing time
+  definition: 선적항 출항부터 목적항 도착까지의 해상 구간 기간이다.
+  interpretation_rules: 총 조달 리드타임에서 주문·통관 구간을 제외한다.
+  impact_target: Lead Time
+  price_direction: CONTEXT
+  unit_range: days
+  alert_criteria: US Gulf 45-50; BR/AR 40-45
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-100
+  canonical: US Gulf
+  canonical_ko: 미국 걸프항
+  class: PortRegion
+  category: 물류·공급망
+  subcategory: 계약·리드타임
+  abbr: ''
+  synonyms:
+  - US Gulf ports
+  definition: 미국산 대두유의 대표 원산지 항만권역이다.
+  interpretation_rules: 개별 항만과 권역을 구분한다.
+  impact_target: Route
+  price_direction: CONTEXT
+  unit_range: location
+  alert_criteria: 45-50 day ocean lead
+  priority: B
+  ambiguity_risk: 중
+  relations: ORIGIN_OF
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-101
+  canonical: Santos/Paranaguá
+  canonical_ko: 산투스·파라나과 항
+  class: Port
+  category: 물류·공급망
+  subcategory: 계약·리드타임
+  abbr: ''
+  synonyms:
+  - Brazil export ports
+  definition: 브라질 주요 농산물 수출항이다.
+  interpretation_rules: 두 항만을 하나로 합치지 않고 혼잡·운임을 별도 기록할 수 있게 한다.
+  impact_target: Route
+  price_direction: CONTEXT
+  unit_range: location
+  alert_criteria: 40-45 day ocean lead
+  priority: B
+  ambiguity_risk: 중
+  relations: ORIGIN_OF
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-102
+  canonical: Rosario
+  canonical_ko: 로사리오 항만권
+  class: PortRegion
+  category: 물류·공급망
+  subcategory: 계약·리드타임
+  abbr: ''
+  synonyms:
+  - Argentina Rosario hub
+  definition: 아르헨티나 대두 가공·수출 중심 항만권역이다.
+  interpretation_rules: 도시·항만권·개별 터미널을 구분한다.
+  impact_target: Route
+  price_direction: CONTEXT
+  unit_range: location
+  alert_criteria: 40-45 day ocean lead
+  priority: B
+  ambiguity_risk: 중
+  relations: ORIGIN_OF
+  source_code: GH-README,GH-P104
+  status: active
+  owner_agent: P1-06
+diplomacy,_policy_and_regulation:
+- term_id: TERM-103
+  canonical: Import Tariff
+  canonical_ko: 수입관세
+  class: PolicyInstrument
+  category: 외교·정책·규제
+  subcategory: 무역정책 수단
+  abbr: ''
+  synonyms:
+  - import duty
+  - customs duty
+  definition: 수입품에 부과하는 세금이다.
+  interpretation_rules: 세율 인상은 수입국 내 가격 상방일 수 있으나 수출국 가격에는 반대효과가 가능하다.
+  impact_target: Trade/Price
+  price_direction: CONTEXT
+  unit_range: '% or currency/unit'
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: REGULATES
+  source_code: GH-P102,GH-P105,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-104
+  canonical: Export Tax
+  canonical_ko: 수출세
+  class: PolicyInstrument
+  category: 외교·정책·규제
+  subcategory: 무역정책 수단
+  abbr: ''
+  synonyms:
+  - export duty
+  - retenciones
+  definition: 수출 시 부과되어 수출가능물량·국내외 가격차에 영향을 주는 세금이다.
+  interpretation_rules: 세율 상승은 국제 공급 축소를 통해 가격 상방 가능성이 있으나 생산자 가격은 하방일 수 있다.
+  impact_target: Export Supply/Price
+  price_direction: UP_RISK
+  unit_range: '%'
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: REGULATES
+  source_code: GH-P102,GH-P105,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-105
+  canonical: Retenciones
+  canonical_ko: 아르헨티나 수출세
+  class: PolicyInstrument
+  category: 외교·정책·규제
+  subcategory: 무역정책 수단
+  abbr: ''
+  synonyms:
+  - Argentine export duties
+  definition: 아르헨티나 농산물·유지류에 적용되는 수출세의 현지 정책 용어다.
+  interpretation_rules: 일반 세금이 아닌 품목별 수출세율과 적용일을 확인한다.
+  impact_target: Export Supply/Price
+  price_direction: UP_RISK
+  unit_range: '%'
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: REGULATES
+  source_code: GH-P102,GH-P105,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-106
+  canonical: Import Quota
+  canonical_ko: 수입쿼터
+  class: PolicyInstrument
+  category: 외교·정책·규제
+  subcategory: 무역정책 수단
+  abbr: ''
+  synonyms:
+  - tariff-rate quota
+  - import cap
+  definition: 수입 가능한 물량을 제한하거나 구간별 관세를 적용하는 제도다.
+  interpretation_rules: 절대 쿼터와 TRQ를 구분한다.
+  impact_target: Import Demand
+  price_direction: CONTEXT
+  unit_range: MT/%
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: RESTRICTS
+  source_code: GH-P102,GH-P105,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-107
+  canonical: Export Ban
+  canonical_ko: 수출금지
+  class: PolicyInstrument
+  category: 외교·정책·규제
+  subcategory: 무역정책 수단
+  abbr: ''
+  synonyms:
+  - export prohibition
+  definition: 특정 품목의 수출을 전면 또는 부분 금지하는 조치다.
+  interpretation_rules: 일시·부분·허가제 예외를 확인한다.
+  impact_target: Export Supply
+  price_direction: UP
+  unit_range: policy
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: RESTRICTS
+  source_code: GH-P102,GH-P105,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-108
+  canonical: Subsidy
+  canonical_ko: 보조금
+  class: PolicyInstrument
+  category: 외교·정책·규제
+  subcategory: 무역정책 수단
+  abbr: ''
+  synonyms:
+  - producer support
+  - tax credit
+  definition: 생산·소비·수출 비용을 정부가 지원하는 제도다.
+  interpretation_rules: 수혜자와 지급 기준에 따라 공급·수요 효과가 달라진다.
+  impact_target: Supply/Demand
+  price_direction: CONTEXT
+  unit_range: currency/%
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 상
+  relations: SUPPORTS
+  source_code: GH-P102,GH-P105,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-109
+  canonical: Retaliatory Tariff
+  canonical_ko: 보복관세
+  class: PolicyInstrument
+  category: 외교·정책·규제
+  subcategory: 무역정책 수단
+  abbr: ''
+  synonyms:
+  - counter-tariff
+  definition: 상대국 조치에 대응하여 부과하는 관세다.
+  interpretation_rules: 최초 관세와 보복조치를 별도 이벤트로 연결한다.
+  impact_target: Trade
+  price_direction: CONTEXT
+  unit_range: '%'
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 중
+  relations: RESPONDS_TO
+  source_code: GH-P102,GH-P105,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-110
+  canonical: Agricultural Exemption
+  canonical_ko: 농산물 관세 예외
+  class: PolicyInstrument
+  category: 외교·정책·규제
+  subcategory: 무역정책 수단
+  abbr: ''
+  synonyms:
+  - tariff exemption
+  - waiver
+  definition: 특정 농산물·국가·기간에 관세 적용을 면제하는 조치다.
+  interpretation_rules: 권고·제안·발효된 예외를 구분한다.
+  impact_target: Trade
+  price_direction: DOWN_RISK
+  unit_range: policy
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 상
+  relations: EXEMPTS
+  source_code: GH-P102,GH-P105,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-111
+  canonical: Decree
+  canonical_ko: 시행령·법령
+  class: PolicyDocument
+  category: 외교·정책·규제
+  subcategory: 규정·정책상태
+  abbr: ''
+  synonyms:
+  - government decree
+  definition: 정부가 공표한 법적·행정적 규정 문서다.
+  interpretation_rules: 문서번호·공표일·발효일·개정상태를 별도 필드로 저장한다.
+  impact_target: Policy
+  price_direction: CONTEXT
+  unit_range: document
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 상
+  relations: ESTABLISHES
+  source_code: GH-README,GH-P102,GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-112
+  canonical: Policy Pivot
+  canonical_ko: 정책 전환
+  class: PolicyEvent
+  category: 외교·정책·규제
+  subcategory: 규정·정책상태
+  abbr: ''
+  synonyms:
+  - policy shift
+  - reversal
+  definition: 기존 정책 방향이 유의하게 변경되는 사건이다.
+  interpretation_rules: 발언·제안과 실제 법적 변경을 구분한다.
+  impact_target: Supply/Demand/Trade
+  price_direction: CONTEXT
+  unit_range: event
+  alert_criteria: 문서별
+  priority: A
+  ambiguity_risk: 상
+  relations: CHANGES
+  source_code: GH-README,GH-P102,GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-113
+  canonical: Policy Flag
+  canonical_ko: 정책 이벤트 플래그
+  class: ModelFeature
+  category: 외교·정책·규제
+  subcategory: 규정·정책상태
+  abbr: ''
+  synonyms:
+  - policy event indicator
+  definition: 정책 사건의 존재 여부를 0/1로 표현한 모델 입력값이다.
+  interpretation_rules: 사건의 강도·방향과 별개이며 근거문장을 요구한다.
+  impact_target: Model Feature
+  price_direction: CONTEXT
+  unit_range: 0/1
+  alert_criteria: P1-05 schema
+  priority: A
+  ambiguity_risk: 상
+  relations: DERIVED_FROM
+  source_code: GH-README,GH-P102,GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-114
+  canonical: Effective Date
+  canonical_ko: 정책 발효일
+  class: TemporalAttribute
+  category: 외교·정책·규제
+  subcategory: 규정·정책상태
+  abbr: ''
+  synonyms:
+  - implementation date
+  definition: 정책이 법적·실무적으로 적용되기 시작하는 날짜다.
+  interpretation_rules: 발표일·공표일과 분리한다.
+  impact_target: Time
+  price_direction: CONTEXT
+  unit_range: date
+  alert_criteria: 필수
+  priority: A
+  ambiguity_risk: 상
+  relations: VALID_FROM
+  source_code: GH-README,GH-P102,GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-115
+  canonical: EU Deforestation Regulation
+  canonical_ko: EU 산림전용 방지 규정
+  class: Regulation
+  category: 외교·정책·규제
+  subcategory: 규정·정책상태
+  abbr: EUDR
+  synonyms:
+  - EU deforestation-free regulation
+  definition: 산림전용과 관련된 상품의 추적성·실사 요건을 부과하는 EU 규정이다.
+  interpretation_rules: 브라질 원산지 공급자 추적성 영향을 별도 평가하고 적용일을 확인한다.
+  impact_target: Compliance/Supply
+  price_direction: UP_RISK
+  unit_range: regulation
+  alert_criteria: assessment pending
+  priority: B
+  ambiguity_risk: 상
+  relations: REGULATES
+  source_code: GH-README,GH-P102,GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-116
+  canonical: Strategic Grain Reserve
+  canonical_ko: 곡물 전략비축
+  class: Policy
+  category: 외교·정책·규제
+  subcategory: 규정·정책상태
+  abbr: ''
+  synonyms:
+  - government reserve policy
+  definition: 정부가 식량안보를 위해 곡물·원료 재고를 보유·방출하는 정책이다.
+  interpretation_rules: 비축 매입은 수요, 방출은 공급 효과로 분리한다.
+  impact_target: Supply/Demand
+  price_direction: CONTEXT
+  unit_range: MT
+  alert_criteria: 문서별
+  priority: B
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: GH-README,GH-P102,GH-P104,GH-P105
+  status: active
+  owner_agent: P1-06
+data,_semantics_and_quality:
+- term_id: TERM-117
+  canonical: Source Document
+  canonical_ko: 원천문서
+  class: SourceDocument
+  category: 데이터·시맨틱·품질
+  subcategory: 문서·근거
+  abbr: ''
+  synonyms:
+  - report
+  - PDF
+  - bulletin
+  definition: 추출·분석의 원본이 되는 식별 가능한 파일 또는 보고서다.
+  interpretation_rules: 제목·발행기관·발행일·해시·URL을 보존한다.
+  impact_target: Provenance
+  price_direction: CONTEXT
+  unit_range: document
+  alert_criteria: 필수
+  priority: A
+  ambiguity_risk: 중
+  relations: PROVIDES
+  source_code: GH-C04,GH-P105,GH-P106,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-118
+  canonical: Document Chunk
+  canonical_ko: 문서 청크
+  class: DocumentChunk
+  category: 데이터·시맨틱·품질
+  subcategory: 문서·근거
+  abbr: ''
+  synonyms:
+  - layout block
+  - text chunk
+  definition: 레이아웃과 의미 경계를 보존한 문서의 처리 단위다.
+  interpretation_rules: 임의 글자수 분할보다 표·정책절·요약절 구조를 우선한다.
+  impact_target: Extraction
+  price_direction: CONTEXT
+  unit_range: text
+  alert_criteria: page required
+  priority: A
+  ambiguity_risk: 상
+  relations: PART_OF
+  source_code: GH-C04,GH-P105,GH-P106,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-119
+  canonical: Evidence Snippet
+  canonical_ko: 근거 발췌문
+  class: EvidenceSpan
+  category: 데이터·시맨틱·품질
+  subcategory: 문서·근거
+  abbr: ''
+  synonyms:
+  - evidence_text
+  - exact quote
+  definition: 주장·점수·관계를 직접 뒷받침하는 최소한의 원문 구절이다.
+  interpretation_rules: 요약문이 아니라 원문 그대로 저장하고 페이지를 연결한다.
+  impact_target: Audit
+  price_direction: CONTEXT
+  unit_range: text
+  alert_criteria: 모든 핵심 주장 필수
+  priority: A
+  ambiguity_risk: 상
+  relations: SUPPORTED_BY
+  source_code: GH-C04,GH-P105,GH-P106,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-120
+  canonical: Page Reference
+  canonical_ko: 페이지 참조
+  class: PageReference
+  category: 데이터·시맨틱·품질
+  subcategory: 문서·근거
+  abbr: ''
+  synonyms:
+  - page_number
+  - p.
+  definition: 근거가 위치한 PDF 페이지 식별자다.
+  interpretation_rules: 인쇄 페이지와 파일 페이지가 다르면 둘 다 보존한다.
+  impact_target: Audit
+  price_direction: CONTEXT
+  unit_range: integer/string
+  alert_criteria: 필수
+  priority: A
+  ambiguity_risk: 상
+  relations: LOCATED_AT
+  source_code: GH-C04,GH-P105,GH-P106,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-121
+  canonical: Bounding Box
+  canonical_ko: 경계상자
+  class: BoundingBox
+  category: 데이터·시맨틱·품질
+  subcategory: 문서·근거
+  abbr: BBox
+  synonyms:
+  - coordinates
+  - layout bbox
+  definition: 페이지 내 근거 영역의 좌표다.
+  interpretation_rules: 좌표계·페이지 크기·단위를 함께 관리한다.
+  impact_target: Audit
+  price_direction: CONTEXT
+  unit_range: '[x1,y1,x2,y2]'
+  alert_criteria: C-04 필수
+  priority: B
+  ambiguity_risk: 상
+  relations: LOCATED_AT
+  source_code: GH-C04,GH-P105,GH-P106,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-122
+  canonical: Provenance
+  canonical_ko: 출처 추적정보
+  class: ProvenanceRecord
+  category: 데이터·시맨틱·품질
+  subcategory: 문서·근거
+  abbr: ''
+  synonyms:
+  - lineage
+  - source attribution
+  definition: 데이터·주장·관계가 어떤 문서·위치·실행에서 생성되었는지 나타내는 계보 정보다.
+  interpretation_rules: 엔터티·별칭·인과관계 모두 문서 ID·페이지·원문을 보존한다.
+  impact_target: Audit
+  price_direction: CONTEXT
+  unit_range: metadata
+  alert_criteria: 필수
+  priority: A
+  ambiguity_risk: 상
+  relations: DERIVED_FROM
+  source_code: GH-C04,GH-P105,GH-P106,GH-TEMPLATE
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-123
+  canonical: Canonical Entity
+  canonical_ko: 표준 엔터티
+  class: CanonicalEntity
+  category: 데이터·시맨틱·품질
+  subcategory: 시맨틱 정규화
+  abbr: ''
+  synonyms:
+  - canonical concept
+  definition: 여러 언어·표기의 용어가 매핑되는 단일 표준 개념이다.
+  interpretation_rules: 엔터티 ID는 불변으로 두고 이름 변경은 버전 이력으로 관리한다.
+  impact_target: Semantic Layer
+  price_direction: CONTEXT
+  unit_range: entity
+  alert_criteria: 필수
+  priority: A
+  ambiguity_risk: 상
+  relations: MENTION_OF
+  source_code: GH-P106,GH-ESA,CS-BREWSTER23,CS-KIOUKIS25
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-124
+  canonical: Entity Alias
+  canonical_ko: 엔터티 별칭
+  class: EntityAlias
+  category: 데이터·시맨틱·품질
+  subcategory: 시맨틱 정규화
+  abbr: ''
+  synonyms:
+  - synonym
+  - alternative label
+  definition: 표준 엔터티를 지칭하는 언어별·지역별·상업적 변형이다.
+  interpretation_rules: 언어·대소문자·유효기간·출처를 함께 저장한다.
+  impact_target: Semantic Layer
+  price_direction: CONTEXT
+  unit_range: text
+  alert_criteria: 검증 필요
+  priority: A
+  ambiguity_risk: 상
+  relations: ALIAS_OF
+  source_code: GH-P106,GH-ESA,CS-BREWSTER23,CS-KIOUKIS25
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-125
+  canonical: Entity Mention
+  canonical_ko: 엔터티 언급
+  class: EntityMention
+  category: 데이터·시맨틱·품질
+  subcategory: 시맨틱 정규화
+  abbr: ''
+  synonyms:
+  - surface form
+  - mention
+  definition: 특정 근거 구절에 실제 나타난 문자열과 위치다.
+  interpretation_rules: 별칭 사전 항목과 개별 문서 언급을 구분한다.
+  impact_target: Extraction
+  price_direction: CONTEXT
+  unit_range: text span
+  alert_criteria: offset/page required
+  priority: A
+  ambiguity_risk: 상
+  relations: MENTION_OF
+  source_code: GH-P106,GH-ESA,CS-BREWSTER23,CS-KIOUKIS25
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-126
+  canonical: Semantic Layer
+  canonical_ko: 시맨틱 레이어
+  class: SemanticLayer
+  category: 데이터·시맨틱·품질
+  subcategory: 시맨틱 정규화
+  abbr: ''
+  synonyms:
+  - business semantic layer
+  definition: 원천 표현을 표준 엔터티·지표·단위·관계로 변환해 분석과 질의에 제공하는 계층이다.
+  interpretation_rules: 온톨로지 규칙과 지식그래프 사실을 모두 사용하지만 둘과 동일하지 않다.
+  impact_target: Architecture
+  price_direction: CONTEXT
+  unit_range: layer
+  alert_criteria: MVP
+  priority: A
+  ambiguity_risk: 상
+  relations: NORMALIZES
+  source_code: GH-P106,GH-ESA,CS-BREWSTER23,CS-KIOUKIS25
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-127
+  canonical: Ontology
+  canonical_ko: 온톨로지
+  class: Ontology
+  category: 데이터·시맨틱·품질
+  subcategory: 시맨틱 정규화
+  abbr: ''
+  synonyms:
+  - domain ontology
+  definition: 클래스·속성·관계·제약조건을 정의하는 재사용 가능한 구조 규칙이다.
+  interpretation_rules: 실제 사건·수치 인스턴스 집합인 지식그래프와 구분한다.
+  impact_target: Knowledge Model
+  price_direction: CONTEXT
+  unit_range: schema
+  alert_criteria: DAG constraint
+  priority: A
+  ambiguity_risk: 상
+  relations: GOVERNS
+  source_code: GH-P106,GH-ESA,CS-BREWSTER23,CS-KIOUKIS25
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-128
+  canonical: Knowledge Graph
+  canonical_ko: 지식그래프
+  class: KnowledgeGraph
+  category: 데이터·시맨틱·품질
+  subcategory: 시맨틱 정규화
+  abbr: KG
+  synonyms:
+  - semantic graph
+  definition: 온톨로지에 따라 구체 국가·사건·품목·수치를 노드와 관계로 실체화한 그래프다.
+  interpretation_rules: 온톨로지와 동일어로 사용하지 않는다.
+  impact_target: Knowledge Store
+  price_direction: CONTEXT
+  unit_range: graph
+  alert_criteria: validated facts only
+  priority: A
+  ambiguity_risk: 상
+  relations: INSTANTIATES
+  source_code: GH-P106,GH-ESA,CS-BREWSTER23,CS-KIOUKIS25
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-129
+  canonical: Minimum Viable Ontology
+  canonical_ko: 최소 실행 온톨로지
+  class: DesignPrinciple
+  category: 데이터·시맨틱·품질
+  subcategory: 시맨틱 정규화
+  abbr: MVO
+  synonyms:
+  - minimum viable semantic model
+  definition: 대두유 단일 파이프라인의 핵심 질의를 지원하는 최소 클래스·관계로 시작하는 원칙이다.
+  interpretation_rules: 전수 도메인을 한 번에 설계하지 않고 competency question을 기준으로 확장한다.
+  impact_target: Architecture
+  price_direction: CONTEXT
+  unit_range: principle
+  alert_criteria: MVP
+  priority: A
+  ambiguity_risk: 중
+  relations: GOVERNS
+  source_code: GH-P106,GH-ESA,CS-BREWSTER23,CS-KIOUKIS25
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-130
+  canonical: QUDT
+  canonical_ko: 수량·단위 온톨로지
+  class: SemanticStandard
+  category: 데이터·시맨틱·품질
+  subcategory: 시맨틱 정규화
+  abbr: QUDT
+  synonyms:
+  - Quantities Units Dimensions and Data Types
+  definition: 수량종류와 단위를 표준 URI로 표현하는 체계다.
+  interpretation_rules: 원문 단위와 정규화 단위, 환산계수를 함께 보존한다.
+  impact_target: Measurement
+  price_direction: CONTEXT
+  unit_range: URI
+  alert_criteria: 필수 권장
+  priority: A
+  ambiguity_risk: 상
+  relations: STANDARDIZES
+  source_code: GH-P106,GH-ESA,CS-BREWSTER23,CS-KIOUKIS25
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-131
+  canonical: JSON-LD
+  canonical_ko: JSON 연결데이터
+  class: SerializationFormat
+  category: 데이터·시맨틱·품질
+  subcategory: 시맨틱 정규화
+  abbr: JSON-LD
+  synonyms:
+  - JSON for Linked Data
+  definition: JSON 문서에 의미론적 컨텍스트와 URI를 부여하는 직렬화 형식이다.
+  interpretation_rules: 운영 JSON과 그래프 교환용 JSON-LD를 구분한다.
+  impact_target: Interoperability
+  price_direction: CONTEXT
+  unit_range: format
+  alert_criteria: 선택
+  priority: B
+  ambiguity_risk: 상
+  relations: SERIALIZES
+  source_code: GH-P106,GH-ESA,CS-BREWSTER23,CS-KIOUKIS25
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-132
+  canonical: Cause
+  canonical_ko: 원인
+  class: CauseNode
+  category: 데이터·시맨틱·품질
+  subcategory: 인과·감성
+  abbr: ''
+  synonyms:
+  - external driver
+  definition: 기후·정책·지정학 등 외생적 사건 또는 변화다.
+  interpretation_rules: 가격과 직접 연결하지 않고 시장 메커니즘을 거친다.
+  impact_target: Causal Graph
+  price_direction: CONTEXT
+  unit_range: node role
+  alert_criteria: direct-to-price prohibited
+  priority: A
+  ambiguity_risk: 상
+  relations: CAUSES_MECHANISM
+  source_code: GH-P105,GH-P106,GH-ESA,CS-WYREMBEK24
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-133
+  canonical: Market Mechanism
+  canonical_ko: 시장 메커니즘
+  class: MechanismNode
+  category: 데이터·시맨틱·품질
+  subcategory: 인과·감성
+  abbr: ''
+  synonyms:
+  - intermediate mechanism
+  definition: 원인이 수율·생산·재고·교역·운임·수요를 변화시키는 중간 경로다.
+  interpretation_rules: 물리·경제적 전달경로를 명시하며 추상어만 사용하지 않는다.
+  impact_target: Causal Graph
+  price_direction: CONTEXT
+  unit_range: node role
+  alert_criteria: required
+  priority: A
+  ambiguity_risk: 상
+  relations: MECHANISM_AFFECTS_OUTCOME
+  source_code: GH-P105,GH-P106,GH-ESA,CS-WYREMBEK24
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-134
+  canonical: Outcome
+  canonical_ko: 결과
+  class: OutcomeNode
+  category: 데이터·시맨틱·품질
+  subcategory: 인과·감성
+  abbr: ''
+  synonyms:
+  - price impact
+  - supply-demand outcome
+  definition: 인과경로의 최종 관측 또는 전망 대상이다.
+  interpretation_rules: 가격·공급·수요 중 어떤 대상인지 명시한다.
+  impact_target: Causal Graph
+  price_direction: CONTEXT
+  unit_range: node role
+  alert_criteria: required
+  priority: A
+  ambiguity_risk: 상
+  relations: RESULTS_IN
+  source_code: GH-P105,GH-P106,GH-ESA,CS-WYREMBEK24
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-135
+  canonical: Causal Claim
+  canonical_ko: 인과 주장
+  class: CausalClaim
+  category: 데이터·시맨틱·품질
+  subcategory: 인과·감성
+  abbr: ''
+  synonyms:
+  - cause-mechanism-outcome claim
+  definition: 근거 구절이 지지하는 원인·메커니즘·결과의 하나의 검증 가능 주장이다.
+  interpretation_rules: 문서 명시와 분석자 추론을 구분하고 신뢰도·근거를 저장한다.
+  impact_target: Causal Graph
+  price_direction: CONTEXT
+  unit_range: record
+  alert_criteria: evidence required
+  priority: A
+  ambiguity_risk: 상
+  relations: SUPPORTED_BY
+  source_code: GH-P105,GH-P106,GH-ESA,CS-WYREMBEK24
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-136
+  canonical: Causal Edge
+  canonical_ko: 인과 엣지
+  class: CausalEdge
+  category: 데이터·시맨틱·품질
+  subcategory: 인과·감성
+  abbr: ''
+  synonyms:
+  - directed causal relation
+  definition: 인과 그래프에서 두 노드 사이의 방향성 관계다.
+  interpretation_rules: Cause→Price 직접 엣지는 금지하고 DAG 순환 여부를 검증한다.
+  impact_target: Causal Graph
+  price_direction: CONTEXT
+  unit_range: edge
+  alert_criteria: DAG only
+  priority: A
+  ambiguity_risk: 상
+  relations: CONNECTS
+  source_code: GH-P105,GH-P106,GH-ESA,CS-WYREMBEK24
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-137
+  canonical: Aspect
+  canonical_ko: 관점·속성 단위
+  class: Aspect
+  category: 데이터·시맨틱·품질
+  subcategory: 인과·감성
+  abbr: ''
+  synonyms:
+  - sentiment aspect
+  - domain aspect
+  definition: Tax·Tariff·Mandate·Logistics처럼 감성·영향을 분리 평가하는 대상 차원이다.
+  interpretation_rules: 문서 전체 감성 대신 aspect별 방향을 기록한다.
+  impact_target: Sentiment
+  price_direction: CONTEXT
+  unit_range: category
+  alert_criteria: tracked list
+  priority: A
+  ambiguity_risk: 상
+  relations: CLASSIFIES
+  source_code: GH-P105,GH-P106,GH-ESA,CS-WYREMBEK24
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-138
+  canonical: Aspect-Based Sentiment Analysis
+  canonical_ko: 관점 기반 감성분석
+  class: AnalysisMethod
+  category: 데이터·시맨틱·품질
+  subcategory: 인과·감성
+  abbr: ABSA
+  synonyms:
+  - aspect sentiment
+  definition: 문서에서 대상 관점별 극성과 강도를 추출하는 방법이다.
+  interpretation_rules: 같은 문서의 상충 신호를 평균해 중립으로 지우지 않는다.
+  impact_target: Sentiment
+  price_direction: CONTEXT
+  unit_range: method
+  alert_criteria: P1-05 pipeline
+  priority: A
+  ambiguity_risk: 상
+  relations: GENERATES
+  source_code: GH-P105,GH-P106,GH-ESA,CS-WYREMBEK24
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-139
+  canonical: Sentiment Score
+  canonical_ko: 가격방향 감성점수
+  class: SentimentMetric
+  category: 데이터·시맨틱·품질
+  subcategory: 인과·감성
+  abbr: S
+  synonyms:
+  - polarity score
+  definition: P1-05가 aspect별 대두유 가격 방향과 강도를 -1~+1로 나타낸 값이다.
+  interpretation_rules: +1은 가격 상방, -1은 가격 하방이다. 공급에 대한 긍정/부정과 다르다.
+  impact_target: Price
+  price_direction: CONTEXT
+  unit_range: '[-1,1]'
+  alert_criteria: clamp required
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P105,GH-P106,GH-ESA,CS-WYREMBEK24
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-140
+  canonical: Confidence Score
+  canonical_ko: 신뢰도 점수
+  class: ConfidenceMetric
+  category: 데이터·시맨틱·품질
+  subcategory: 인과·감성
+  abbr: C
+  synonyms:
+  - confidence
+  definition: 출처 신뢰도·명시성·시의성을 종합한 0~1 점수다.
+  interpretation_rules: 모델 확률과 동일하다고 가정하지 않고 산정 기준을 버전 관리한다.
+  impact_target: Quality
+  price_direction: CONTEXT
+  unit_range: '[0,1]'
+  alert_criteria: required
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-P105,GH-P106,GH-ESA,CS-WYREMBEK24
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-141
+  canonical: Structured Outputs
+  canonical_ko: 구조화 출력
+  class: ExtractionCapability
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: ''
+  synonyms:
+  - schema-constrained output
+  definition: 모델 출력을 정의된 JSON Schema에 맞도록 제한하는 방식이다.
+  interpretation_rules: 스키마 적합성은 의미 정확성을 보장하지 않으므로 별도 eval과 근거 검증이 필요하다.
+  impact_target: Extraction
+  price_direction: CONTEXT
+  unit_range: JSON
+  alert_criteria: schema required
+  priority: A
+  ambiguity_risk: 상
+  relations: CONFORMS_TO
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-142
+  canonical: JSON Schema
+  canonical_ko: JSON 스키마
+  class: Schema
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: ''
+  synonyms:
+  - structured output schema
+  definition: 필드·자료형·필수값·열거형 제약을 정의하는 스키마다.
+  interpretation_rules: 버전과 required/enum 범위를 고정하고 변경 시 schema drift를 기록한다.
+  impact_target: Validation
+  price_direction: CONTEXT
+  unit_range: schema
+  alert_criteria: versioned
+  priority: A
+  ambiguity_risk: 상
+  relations: VALIDATES
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-143
+  canonical: Evaluation
+  canonical_ko: 평가
+  class: Evaluation
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: Eval
+  synonyms:
+  - model eval
+  - extraction eval
+  definition: 대표 테스트 데이터와 판정 기준으로 추출·분류 성능을 검증하는 절차다.
+  interpretation_rules: 스키마 유효성 외에 엔터티·관계·방향·근거 페이지 정확도를 인간 정답과 비교한다.
+  impact_target: Quality
+  price_direction: CONTEXT
+  unit_range: score
+  alert_criteria: representative test set
+  priority: A
+  ambiguity_risk: 중
+  relations: VALIDATES
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-144
+  canonical: Ground Truth
+  canonical_ko: 정답 라벨
+  class: GroundTruth
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: ''
+  synonyms:
+  - human-labeled reference
+  definition: 평가에서 모델 출력과 비교하는 인간 검증 기준이다.
+  interpretation_rules: 문서·페이지·판정자·버전을 보존한다.
+  impact_target: Quality
+  price_direction: CONTEXT
+  unit_range: label
+  alert_criteria: required for eval
+  priority: A
+  ambiguity_risk: 중
+  relations: VALIDATES
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-145
+  canonical: Extraction Confidence
+  canonical_ko: 추출 신뢰도
+  class: ConfidenceMetric
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: ''
+  synonyms:
+  - OCR confidence
+  - table confidence
+  definition: 텍스트·표·레이아웃 추출의 기술적 신뢰도다.
+  interpretation_rules: 의미 해석 신뢰도와 구분한다.
+  impact_target: Extraction
+  price_direction: CONTEXT
+  unit_range: '[0,1]'
+  alert_criteria: table <0.85 fallback
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-146
+  canonical: Data Quality Score
+  canonical_ko: 데이터 품질점수
+  class: QualityMetric
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: DQ Score
+  synonyms:
+  - DQSOps score
+  definition: 정확성·완전성·일관성·시의성·왜도를 가중합한 품질점수다.
+  interpretation_rules: 추출 의미 정확도와 동일하지 않으며 차원별 점수를 함께 본다.
+  impact_target: Quality
+  price_direction: CONTEXT
+  unit_range: '[0,1]'
+  alert_criteria: PASS ≥0.70; WARNING 0.50-0.69; REJECT <0.50
+  priority: A
+  ambiguity_risk: 중
+  relations: MEASURED_BY
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-147
+  canonical: Schema Drift
+  canonical_ko: 스키마 드리프트
+  class: QualityAlert
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: ''
+  synonyms:
+  - missing/renamed/type-changed field
+  definition: 필수 필드·자료형·이름이 기준 스키마와 달라진 상태다.
+  interpretation_rules: 자동 보정하지 않고 적재를 차단하거나 경고한다.
+  impact_target: Quality
+  price_direction: CONTEXT
+  unit_range: alert
+  alert_criteria: block on required-field breach
+  priority: A
+  ambiguity_risk: 중
+  relations: DETECTS
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-148
+  canonical: Stale Data
+  canonical_ko: 오래된 데이터
+  class: QualityAlert
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: STALE
+  synonyms:
+  - freshness breach
+  definition: 수집 시점이 허용 지연을 초과한 데이터다.
+  interpretation_rules: 발행일과 수집일을 구분하고 최신값처럼 사용하지 않는다.
+  impact_target: Quality
+  price_direction: CONTEXT
+  unit_range: business days
+  alert_criteria: '>5 business days'
+  priority: A
+  ambiguity_risk: 중
+  relations: DETECTS
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-149
+  canonical: Deduplication Group
+  canonical_ko: 중복제거 그룹
+  class: DeduplicationGroup
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: ''
+  synonyms:
+  - duplicate cluster
+  definition: 동일 사건·수치·인과경로의 반복 언급을 하나로 묶는 식별자다.
+  interpretation_rules: 문서 반복 인용을 지표 수로 중복 집계하지 않는다.
+  impact_target: Quality
+  price_direction: CONTEXT
+  unit_range: group id
+  alert_criteria: required for signal count
+  priority: A
+  ambiguity_risk: 상
+  relations: GROUPS
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-150
+  canonical: Human in the Loop
+  canonical_ko: 인간 검토 게이트
+  class: ReviewProcess
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: HITL
+  synonyms:
+  - human review
+  definition: AI 제안 후 도메인 전문가가 승인·수정·반려하는 통제 절차다.
+  interpretation_rules: Buy/Hold와 신규 인과 엣지는 승인 전 확정 상태로 표시하지 않는다.
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: status
+  alert_criteria: required
+  priority: A
+  ambiguity_risk: 중
+  relations: VALIDATED_BY
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-151
+  canonical: Decision D-021
+  canonical_ko: 내부데이터 제외 결정
+  class: GovernanceRule
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: D-021
+  synonyms:
+  - external-data-only rule
+  definition: 내부 ERP·S&OP·조달원가를 학습·검증·피처에서 제외하는 프로젝트 결정이다.
+  interpretation_rules: 문서에 내부 도메인 예시가 있어도 분석 입력으로 사용하지 않는다.
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: rule
+  alert_criteria: mandatory
+  priority: A
+  ambiguity_risk: 상
+  relations: GOVERNS
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06
+- term_id: TERM-152
+  canonical: Structural Break
+  canonical_ko: 구조적 변화
+  class: AnalyticalConcept
+  category: 데이터·시맨틱·품질
+  subcategory: 추출·검증
+  abbr: ''
+  synonyms:
+  - regime shift
+  - break point
+  definition: 시계열의 평균·분산·관계가 갑자기 지속적으로 달라지는 변화다.
+  interpretation_rules: 일시적 이상치와 구분하고 발생일·검정법·영향 변수를 저장한다.
+  impact_target: Model/Risk
+  price_direction: UP_RISK
+  unit_range: date/test statistic
+  alert_criteria: model-specific
+  priority: A
+  ambiguity_risk: 상
+  relations: DETECTED_BY
+  source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
+  status: active
+  owner_agent: P1-06

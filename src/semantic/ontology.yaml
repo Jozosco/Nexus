@@ -1,0 +1,146 @@
+version: '2.0'
+erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md
+dag_rule: Cause → MarketMechanism → PriceOutcome 3단 강제 — Cause→Price 직접 엣지 금지 (ERD §6 인과 제약)
+forbidden_relations:
+- Cause→PriceOutcome (직접)
+- 미검증 인과 엣지의 자동 승인 (S1 — P1-01~04 도메인 검증 필수)
+relation_types:
+- code: MENTION_OF
+  definition: 언급이 표준 엔터티를 지칭
+  domain: EntityMention
+  range: CanonicalEntity
+  symmetric: false
+  constraints_example: SBO mention MENTION_OF Soybean Oil
+- code: ALIAS_OF
+  definition: 별칭이 표준 엔터티에 속함
+  domain: EntityAlias
+  range: CanonicalEntity
+  symmetric: false
+  constraints_example: 대두유 ALIAS_OF Soybean Oil
+- code: CLASSIFIED_AS
+  definition: 엔터티가 분류에 속함
+  domain: CanonicalEntity
+  range: TaxonomyCategory
+  symmetric: false
+  constraints_example: Soybean Oil CLASSIFIED_AS Vegetable Oil
+- code: SUPPORTED_BY
+  definition: 주장·관계가 근거로 지지됨
+  domain: Claim/Edge
+  range: EvidenceSpan
+  symmetric: false
+  constraints_example: CausalClaim SUPPORTED_BY p.8 quote
+- code: DERIVED_FROM
+  definition: 레코드가 원천에서 파생됨
+  domain: Record
+  range: SourceDocument/Chunk
+  symmetric: false
+  constraints_example: Observation DERIVED_FROM WASDE
+- code: OCCURS_IN
+  definition: 사건이 지리에서 발생
+  domain: Event
+  range: GeoEntity
+  symmetric: false
+  constraints_example: Drought OCCURS_IN Córdoba
+- code: AFFECTS
+  definition: 한 엔터티가 다른 대상에 영향
+  domain: Entity/Event
+  range: Entity/Metric
+  symmetric: false
+  constraints_example: Port Strike AFFECTS Lead Time
+- code: CAUSES_MECHANISM
+  definition: 원인이 시장 메커니즘을 촉발
+  domain: CauseNode
+  range: MechanismNode
+  symmetric: false
+  constraints_example: La Niña CAUSES_MECHANISM Yield Deficit
+- code: MECHANISM_AFFECTS_OUTCOME
+  definition: 메커니즘이 수급·가격 결과에 영향
+  domain: MechanismNode
+  range: OutcomeNode
+  symmetric: false
+  constraints_example: Yield Deficit MECHANISM_AFFECTS_OUTCOME SBO Price
+- code: INCREASES
+  definition: 대상 값을 증가시킴
+  domain: Entity/Event
+  range: Metric
+  symmetric: false
+  constraints_example: Freight Shock INCREASES CFR Price
+- code: DECREASES
+  definition: 대상 값을 감소시킴
+  domain: Entity/Event
+  range: Metric
+  symmetric: false
+  constraints_example: Bumper Crop DECREASES Price
+- code: PRODUCES
+  definition: 원료·공정이 산출물을 생산
+  domain: Commodity/Process
+  range: Commodity
+  symmetric: false
+  constraints_example: Soybean Crush PRODUCES Soybean Oil
+- code: EXPORTS_TO
+  definition: 국가·주체가 목적지로 수출
+  domain: Country/Actor
+  range: Country/Market
+  symmetric: false
+  constraints_example: Brazil EXPORTS_TO Korea
+- code: IMPORTS_FROM
+  definition: 국가·주체가 원산지에서 수입
+  domain: Country/Actor
+  range: Country/Market
+  symmetric: false
+  constraints_example: Korea IMPORTS_FROM Argentina
+- code: ROUTED_VIA
+  definition: 교역·운송이 경로·항만을 경유
+  domain: TradeFlow/Shipment
+  range: Route/Port
+  symmetric: false
+  constraints_example: TradeFlow ROUTED_VIA Santos
+- code: REGULATES
+  definition: 정책이 품목·행위·시장을 규제
+  domain: Policy
+  range: Commodity/TradeFlow
+  symmetric: false
+  constraints_example: Export Tax REGULATES SBO Export
+- code: SUBSTITUTES_FOR
+  definition: 품목이 다른 품목을 대체
+  domain: Commodity
+  range: Commodity
+  symmetric: true
+  constraints_example: Palm Oil SUBSTITUTES_FOR Soybean Oil
+- code: MEASURED_BY
+  definition: 개념·현상이 지표로 측정
+  domain: Entity/Condition
+  range: Indicator
+  symmetric: false
+  constraints_example: ENSO MEASURED_BY ONI
+- code: FORECASTS
+  definition: 전망이 대상 지표를 예측
+  domain: Forecast
+  range: Metric
+  symmetric: false
+  constraints_example: WASDE Forecast FORECASTS Production
+- code: HAS_KOREA_IMPACT
+  definition: 사건·전망이 한국 영향 평가를 가짐
+  domain: Event/Forecast
+  range: KoreaImpact
+  symmetric: false
+  constraints_example: Route Disruption HAS_KOREA_IMPACT CIF Up
+- code: VALIDATED_BY
+  definition: 레코드가 검토·평가로 검증
+  domain: Record/Edge
+  range: Review/Eval
+  symmetric: false
+  constraints_example: CausalEdge VALIDATED_BY P1-03
+- code: CONTRADICTS
+  definition: 주장들이 서로 상충
+  domain: Claim
+  range: Claim
+  symmetric: true
+  constraints_example: Forecast A CONTRADICTS Forecast B
+- code: DIRECT_CAUSE_TO_PRICE
+  definition: '금지 관계: 외생 원인에서 가격으로 직접 연결'
+  domain: CauseNode
+  range: PriceOutcome
+  symmetric: false
+  constraints_example: 금지 — 반드시 Market Mechanism 경유
+causal_chains_ref: src/semantic/causal_chains.md (18 체인)
