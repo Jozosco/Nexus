@@ -62,6 +62,21 @@ def _parse_filename(stem: str) -> Optional[tuple[int, int, str, str]]:
     return (year, month, country, title)
 
 
+def _is_real_pdf(path: Path) -> tuple[bool, str]:
+    """매직바이트 판정 (A-085). GAIN 코퍼스 72건이 '<DOCUMENT SAFER...>' 사내 문서보안(DRM)
+    래퍼로 저장돼 있어 어떤 파서도 해독 불가 — WASDE 17~23년(A-051)과 동일 사례.
+    pypdf의 'No /Root object!'는 이 DRM 래퍼의 증상이며 파서 결함이 아니다."""
+    try:
+        head = open(path, "rb").read(16)
+    except OSError as e:
+        return False, f"읽기 실패({e})"
+    if head[:4] == b"%PDF":
+        return True, ""
+    if b"DOCUMENT" in head or b"SAFER" in head:
+        return False, "문서보안(DRM) 래퍼 — 평문 재저장 필요"
+    return False, f"미상 매직({head[:4]!r})"
+
+
 def _extract_text(pdf_path: Path) -> str:
     """PDF 텍스트 추출 — pdfplumber 우선, fallback pypdf."""
     try:
@@ -138,6 +153,15 @@ def parse_gain_pdf(pdf_path: Path, category: str) -> Optional[dict]:
         print(f"  [건너뜀] 파일명 규칙 불일치: {pdf_path.name}")
         return None
     year, month, country, title = parsed
+
+    real, why = _is_real_pdf(pdf_path)
+    if not real:
+        print(f"  [건너뜀-DRM] {pdf_path.name}: {why}")
+        return {"price_date": date(year, month, 1), "country": country,
+                "category": category, "title": title, "n_pages": 0, "n_chars": 0,
+                "readable": False, "signal_tags": "", "source_name": "USDA_FAS_GAIN_PDF",
+                "note": f"{pdf_path.name} [DRM 차단]",
+                "ingested_at": pd.Timestamp.now("UTC")}
 
     try:
         text = _extract_text(pdf_path)

@@ -20,7 +20,7 @@ Databento CBOT 대두유 선물(ZL / BO=F) 15개년 수집 (WBS 1.1.52 · A-081)
 from __future__ import annotations
 
 import os
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -32,7 +32,9 @@ OUT_DIR = Path("data/raw/Databento") / DATASET
 PARQUET = Path("data/raw/databento_bo_historical.parquet")
 
 START = os.environ.get("DATABENTO_START", "2010-06-06")   # GLBX.MDP3 히스토리 개시
-END   = os.environ.get("DATABENTO_END", date.today().isoformat())
+# A-085: 422 dataset_unavailable_range — 라이선스 미포함 구간(실시간 근접) 요청 시 발생.
+# CME 히스토리는 통상 T-1일까지만 무구독 접근 가능 → 종료일을 어제로 클램프(무료 범위 최대화).
+END   = os.environ.get("DATABENTO_END") or (date.today() - timedelta(days=1)).isoformat()
 
 # Databento 가격 필드는 1e-9 고정소수 정수
 _PX_SCALE = 1e-9
@@ -58,8 +60,25 @@ def run() -> None:
         )
         df = data.to_df()
     except Exception as e:
-        print(f"[오류] Databento 수집 실패: {e}")
-        return
+        msg = str(e)
+        if "dataset_unavailable_range" in msg or "422" in msg:
+            # 응답 메시지의 권장 종료시각을 파싱해 자동 재시도 (수동 개입 없이 최대 범위 확보)
+            import re as _re
+            m = _re.search(r"before (\d{4}-\d{2}-\d{2})", msg)
+            safe_end = m.group(1) if m else (date.today() - timedelta(days=2)).isoformat()
+            print(f"[정보] 라이선스 범위 초과 — 종료일 {safe_end}로 축소 재시도")
+            try:
+                data = client.timeseries.get_range(
+                    dataset=DATASET, symbols=[SYMBOL], schema=SCHEMA,
+                    stype_in="continuous", start=START, end=safe_end,
+                )
+                df = data.to_df()
+            except Exception as e2:
+                print(f"[오류] Databento 재시도 실패: {e2}")
+                return
+        else:
+            print(f"[오류] Databento 수집 실패: {msg}")
+            return
 
     if df.empty:
         print("[경고] 수신 데이터 없음 — 심볼·기간 확인")

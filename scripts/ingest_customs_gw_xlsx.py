@@ -26,6 +26,9 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import httpx
+
+# A-085: 한국 공공기관 호스트에서 러너 IPv6 경로 블랙홀 → IPv4 강제 트랜스포트
+_KR_TRANSPORT = httpx.HTTPTransport(local_address="0.0.0.0", retries=2)
 import pandas as pd
 
 BASE_URL = "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList"
@@ -69,7 +72,7 @@ def _fetch_year(hs: str, cnty: str, year: int, max_retries: int = 4) -> list[dic
     delay = 2
     for attempt in range(max_retries):
         try:
-            r = httpx.get(BASE_URL, params=params, timeout=40)
+            r = httpx.Client(transport=_KR_TRANSPORT, timeout=60).get(BASE_URL, params=params)
             r.raise_for_status()
             root = ET.fromstring(r.text)
             code = root.findtext(".//resultCode")
@@ -107,7 +110,10 @@ def _write_gw_xlsx(rows: list[dict], out_path: Path) -> None:
     df = pd.DataFrame(rows)
     with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
         for year, g in df.groupby("year"):
-            sheet = g.set_index("month").reindex(range(1, 13))[_COL_ORDER]
+            # A-085: 동일 (연,월)이 복수 HS·응답행으로 중복 → set_index 후 reindex가
+            #        "duplicate labels" ValueError. 월 단위로 먼저 합산해 유일화한다.
+            g = g.groupby("month", as_index=True)[_COL_ORDER].sum(min_count=1)
+            sheet = g.reindex(range(1, 13))[_COL_ORDER]
             sheet.index = [f"{m}월" for m in sheet.index]
             sheet.index.name = None
             sheet.to_excel(writer, sheet_name=f"{int(year)}년")

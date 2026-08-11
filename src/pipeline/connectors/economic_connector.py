@@ -12,6 +12,9 @@ from datetime import date
 from typing import Any, Callable
 
 import httpx
+
+# A-085: 한국 공공기관 호스트에서 러너 IPv6 경로 블랙홀 → IPv4 강제 트랜스포트
+_KR_TRANSPORT = httpx.HTTPTransport(local_address="0.0.0.0", retries=2)
 import pandas as pd
 
 # ── 상수 ──────────────────────────────────────────────────────────────────────
@@ -28,7 +31,7 @@ def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
     delay = 2
     for attempt in range(max_retries):
         try:
-            r = httpx.get(url, params=params, timeout=30)
+            r = httpx.Client(transport=_KR_TRANSPORT, timeout=60).get(url, params=params)
             if r.status_code == 400:
                 base = url.split("?")[0]
                 print(f"[경고] API 400 응답 ({base}): 시리즈 미존재 또는 파라미터 오류. 건너뜀.")
