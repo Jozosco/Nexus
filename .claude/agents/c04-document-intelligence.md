@@ -79,6 +79,10 @@ normalized tables, QUDT unit tags, and provenance-anchored structured outputs.
   "provenance": {"file_name": "GAIN_AR2026.pdf", "sha256": "e3b0c442..."}
 }
 ```
+> **Provenance 계약(ERD §8)**: `provenance` 필드는 `src/semantic/provenance.yaml`의
+> SourceDocument·EvidenceSpan 스키마를 따른다 — page·exact_quote·extractor_version 필수,
+> bbox·table_cell은 Phase B. DRM 차단 문서는 `drm_status: drm_blocked`로 기록하고 건너뜀
+> (목록: `reports/market/drm_blocked_documents.md`).
 
 ### → P1-06 (`data/processed/c04_normalized_entities.json`)
 ```json
@@ -111,3 +115,12 @@ normalized tables, QUDT unit tags, and provenance-anchored structured outputs.
 | P1-06 | Downstream: normalized_entities.json(QUDT 단위·엔티티 후보) |
 | C-08 | Gate: 산출 parquet DQSOps 검증 |
 | C-06 | Downstream: 결측·이상치 처리(C-04는 raw 보존만) |
+
+## ERD 연동 (Semantic Layer & Ontology_ERD_v1.0.md)
+- **경계 재확인(C-009)**: C-04=기계적 추출(syntactic) · P1-06=의미부여(semantic).
+  C-04는 ERD의 SourceDocument·EvidenceSpan·Observation **후보**까지만 생성 — CausalClaim·
+  Forecast·KoreaImpact 판단은 P1-05/P1-06 영역.
+- 엔티티 후보 명칭은 `src/semantic/entities.yaml`(v2 · 152 용어) canonical과 대조해 제출하고,
+  단위 태그는 `src/semantic/metrics.yaml` units 코드를 사용한다.
+- **평가 경계(ERD §9)**: C-04 담당 평가 = 문서 단위(페이지 수·단어 수·표 개수 정확도) +
+  근거 단위(페이지 일치율·exact_quote 일치율·표 셀 일치율). 엔터티·관계·전망 평가는 P1-05/06.

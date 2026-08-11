@@ -1,0 +1,51 @@
+# src/semantic/provenance.yaml — 문서·청크·근거 메타데이터 계약 (시맨틱 레이어 ⑤ · 신규)
+# ERD 매핑(§8): SourceDocument · EvidenceSpan — 보완 항목: 페이지, bbox, 해시, 추출 버전
+# 원칙(ERD §13 · S5): 모든 핵심 판단은 문서·페이지·정확 인용으로 역추적 가능해야 한다.
+# 관리: C-04 (기계적 추출) · P1-06 (스키마 소유)
+version: '1.0'
+updated: 2026-08-11
+erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md §8
+
+# ── SourceDocument — 원본 문서 메타데이터 ────────────────────────────────────
+source_document:
+  required:
+    - document_id        # 예 - GAIN_AR2026_0012 · FAO_AMIS_2022_03 · WASDE_2026_05
+    - source_name        # USDA_GAIN / FAO_AMIS / USDA_WASDE / KoreaCustoms_GW ...
+    - file_path          # repo 상대 경로 (data/raw/...)
+    - file_sha256        # 원본 무결성 해시 — 재추출 시 변경 감지
+    - publish_date       # 문서 발행일 (수집일 아님)
+    - ingested_at        # 수집 시각 (UTC)
+  optional:
+    - title
+    - country            # ISO alpha-2
+    - language           # ko / en / es ...
+    - page_count
+    - drm_status         # clean / drm_blocked (reports/market/drm_blocked_documents.md 참조)
+    - marketing_year     # USDA 마케팅연도 (해당 시)
+
+# ── EvidenceSpan — 근거 발췌 (모든 추출 신호에 필수 첨부) ─────────────────────
+evidence_span:
+  required:
+    - document_id        # SourceDocument FK
+    - page               # 1-기준 페이지 번호
+    - exact_quote        # 원문 verbatim 인용 — 의역·요약 금지
+    - extractor_version  # 추출 파이프라인 버전 (예 - summarize_pdfs.py@v2)
+  optional:
+    - bbox               # [x0, y0, x1, y1] — pdfplumber 좌표계 (Phase B)
+    - table_cell         # {table_index, row, col} — 표 셀 근거일 때
+    - char_offset        # 페이지 내 문자 오프셋
+  validation:
+    - exact_quote는 원문 문자열과 100% 일치해야 함 (근거 일치율 평가 대상 — ERD §9)
+    - page 없는 EvidenceSpan은 C-08 DQSOps가 반려
+    - 하나의 CausalClaim/Observation은 최소 1개의 EvidenceSpan을 가져야 함
+
+# ── 추출 버전 이력 ────────────────────────────────────────────────────────────
+extractor_registry:
+  - id: summarize_pdfs.py@v2
+    date: 2026-08-03
+    engine: pdfplumber (pypdf fallback)
+    note: Summary 폴더 스킴 v2 · 템플릿 정합 자동화 서브셋
+  - id: ingest_gain_pdf.py@v3
+    date: 2026-08-11
+    engine: pdfplumber (pypdf fallback) + DRM magic-byte 사전 판정
+    note: rglob 재귀 탐색 · <DOCUMENT SAFER> DRM 건너뜀

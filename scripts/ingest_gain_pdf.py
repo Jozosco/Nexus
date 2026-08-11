@@ -9,8 +9,8 @@ USDA FAS GAIN 보고서 PDF 수집·판독·요약 스크립트 (WBS 1.1.43)
 출력:
   1) data/raw/gain_historical.parquet
        PDF별 메타 + 판독 결과 + 대두유 신호 태그 (기계 판독용 / G1 보조 신호)
-  2) data/processed/gain_summaries/{YYYY}/{MM}/{Country}/{stem}.md
-       연·월·국가별로 정리된 요약 문서 (사용자 열람용)
+  ※ 열람용 요약 md는 본 스크립트가 아니라 summarize_pdfs.py(요약 스킴 v2 —
+    PDF 옆 Summary/ 폴더)가 전담. 구 gain_summaries/ 이중 생성 제거(Session 44).
 
 파일명 규칙 (A-046/A-057):
   {YY}.{MM}_{Country}_{Title}.pdf
@@ -32,7 +32,6 @@ import pandas as pd
 
 GAIN_DIR     = Path("data/raw/USDA/FAS/GAIN")
 OUTPUT_DIR   = Path("data/raw")
-SUMMARY_ROOT = Path("data/processed/gain_summaries")
 
 _FNAME_RE = re.compile(r"^(\d{2})\.(\d{2})_")
 
@@ -110,42 +109,6 @@ def _detect_signals(text: str) -> list[str]:
     return sorted(set(tags))
 
 
-def _clean_excerpt(text: str, limit: int = 1200) -> str:
-    """요약 발췌용 텍스트 정리 (과도한 공백 제거, 길이 제한)."""
-    collapsed = re.sub(r"[ \t]+", " ", text)
-    collapsed = re.sub(r"\n{3,}", "\n\n", collapsed).strip()
-    return collapsed[:limit]
-
-
-def _write_summary(
-    year: int, month: int, country: str, title: str, category: str,
-    n_pages: int, n_chars: int, readable: bool, signals: list[str],
-    excerpt: str, stem: str,
-) -> Path:
-    """연/월/국가 폴더에 요약 마크다운 저장."""
-    safe_country = re.sub(r"[^\w\s-]", "", country).strip() or "Unknown"
-    out_dir = SUMMARY_ROOT / f"{year:04d}" / f"{month:02d}" / safe_country
-    out_dir.mkdir(parents=True, exist_ok=True)
-    status = "✅ 판독 정상" if readable else "🚨 판독 실패(빈 텍스트)"
-    sig = ", ".join(signals) if signals else "—"
-    lines = [
-        f"# {title}",
-        "",
-        f"- 카테고리: {category}",
-        f"- 국가: {country}",
-        f"- 발행: {year}년 {month:02d}월",
-        f"- 페이지: {n_pages} · 추출 문자수: {n_chars:,} · {status}",
-        f"- 대두유 관련 신호: {sig}",
-        "",
-        "## 요약 발췌",
-        "",
-        excerpt if excerpt else "_(텍스트 추출 실패 — 스캔본/이미지 PDF 가능성)_",
-    ]
-    out_path = out_dir / f"{stem}.md"
-    out_path.write_text("\n".join(lines), encoding="utf-8")
-    return out_path
-
-
 def parse_gain_pdf(pdf_path: Path, category: str) -> Optional[dict]:
     """단일 GAIN PDF → 메타·판독·신호 레코드. 파일명 파싱 실패 시 None."""
     parsed = _parse_filename(pdf_path.stem)
@@ -172,10 +135,6 @@ def parse_gain_pdf(pdf_path: Path, category: str) -> Optional[dict]:
     n_chars  = len(text.strip())
     readable = n_chars > 50
     signals  = _detect_signals(text) if readable else []
-    excerpt  = _clean_excerpt(text) if readable else ""
-
-    _write_summary(year, month, country, title, category,
-                   n_pages, n_chars, readable, signals, excerpt, pdf_path.stem)
 
     return {
         "price_date":     date(year, month, 1),
@@ -234,7 +193,7 @@ def run(gain_dir: Path = GAIN_DIR, output_dir: Path = OUTPUT_DIR) -> None:
     print(f"  총 {total}건 | 판독 정상 {ok} · 판독 실패 {failed} · 건너뜀 {skipped}")
     print(f"  기간: {df['price_date'].min()} ~ {df['price_date'].max()}")
     print(f"  국가 수: {df['country'].nunique()} · 카테고리: {sorted(df['category'].unique())}")
-    print(f"  요약 문서: {SUMMARY_ROOT}/{{YYYY}}/{{MM}}/{{Country}}/*.md")
+    print("  열람용 요약 md: summarize_pdfs.py gain (PDF 옆 Summary/ 폴더 — 요약 스킴 v2)")
     if failed:
         bad = df[~df["readable"]]["note"].tolist()
         print(f"  [주의] 판독 실패 {failed}건 (스캔본/이미지 PDF 가능성): {bad[:5]}"

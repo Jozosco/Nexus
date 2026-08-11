@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nexus/semantic/event_schema.json",
+  "title": "Nexus 비정형 이벤트 스키마 — 사건·교역·정책·인과·전망 (ERD §8 신규)",
+  "description": "ERD v1.0 MarketEvent/CausalClaim/TradeFlow/Forecast/KoreaImpact 매핑. 시간·지역·근거·신뢰도 필수화. 관리: P1-06 (생산: P1-05·C-04)",
+  "type": "object",
+  "required": ["event_id", "event_type", "event_date", "region", "evidence", "confidence"],
+  "properties": {
+    "event_id": { "type": "string", "description": "예: EVT-2026-0811-001" },
+    "event_type": {
+      "type": "string",
+      "enum": ["MarketEvent", "PolicyEvent", "TradeFlow", "CausalClaim", "Forecast", "KoreaImpact"]
+    },
+    "event_date": { "type": "string", "format": "date", "description": "사건 발생일(발행일 아님)" },
+    "period_end": { "type": "string", "format": "date", "description": "기간 사건의 종료일(선택)" },
+    "region": { "type": "string", "description": "ISO alpha-2 또는 GEO_ENTITY canonical (예: AR, Hormuz_Strait)" },
+    "severity": { "type": "integer", "minimum": 1, "maximum": 3, "description": "1=주의 2=경계 3=심각" },
+    "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+    "entities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "entities.yaml term_id 또는 canonical 참조"
+    },
+    "causal_claim": {
+      "type": "object",
+      "description": "CausalClaim일 때 필수. DAG 규칙: Cause→MarketMechanism→PriceOutcome (직접 가격 엣지 금지 — ontology.yaml dag_rule)",
+      "required": ["cause", "mechanism", "outcome", "direction"],
+      "properties": {
+        "cause": { "type": "string" },
+        "mechanism": { "type": "string" },
+        "outcome": { "type": "string" },
+        "direction": { "type": "string", "enum": ["UP", "DOWN", "CONTEXT"] },
+        "relation_codes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "ontology.yaml 관계 코드 (예: CAUSES, TRANSMITS_TO)"
+        }
+      }
+    },
+    "trade_flow": {
+      "type": "object",
+      "description": "TradeFlow일 때 필수. CFR/CIF/FOB 조건과 기간 명시(ERD CQ-4)",
+      "required": ["commodity", "origin", "destination", "incoterm"],
+      "properties": {
+        "commodity": { "type": "string", "description": "HS/HTS 코드 병기 권장 (예: Crude SBO 1507.10)" },
+        "origin": { "type": "string" },
+        "destination": { "type": "string" },
+        "incoterm": { "type": "string", "enum": ["CFR", "CIF", "FOB", "UNKNOWN"] },
+        "quantity": { "type": "number" },
+        "quantity_unit": { "type": "string", "description": "metrics.yaml units 코드 (MT/KG)" },
+        "price": { "type": "number" },
+        "price_unit": { "type": "string", "description": "USD_PER_MT / USC_PER_LB" }
+      }
+    },
+    "forecast": {
+      "type": "object",
+      "description": "Forecast일 때 필수. 과거 관측값과 전망 문장 분리(ERD CQ-5) — 관측값은 Observation으로 저장",
+      "required": ["as_of_date", "target_date", "direction"],
+      "properties": {
+        "as_of_date": { "type": "string", "format": "date", "description": "전망 기준일 — 시계열 누수 방지 키" },
+        "target_date": { "type": "string", "format": "date" },
+        "direction": { "type": "string", "enum": ["UP", "DOWN", "FLAT", "RANGE"] },
+        "value_low": { "type": "number" },
+        "value_high": { "type": "number" },
+        "value_unit": { "type": "string" },
+        "scenario": { "type": "string", "description": "base / bull / bear 등" }
+      }
+    },
+    "korea_impact": {
+      "type": "object",
+      "description": "KoreaImpact일 때 필수. 한국 관점 해석 근거 명시(ERD CQ-6)",
+      "properties": {
+        "import_cost_direction": { "type": "string", "enum": ["UP", "DOWN", "FLAT", "UNKNOWN"] },
+        "lead_time_impact": { "type": "string" },
+        "procurement_implication": { "type": "string", "description": "정보성 서술만 — 직접 매매 지시 금지(HITL)" }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "description": "provenance.yaml EvidenceSpan 계약 준수 — 근거 없는 이벤트 저장 금지",
+      "items": {
+        "type": "object",
+        "required": ["document_id", "page", "exact_quote"],
+        "properties": {
+          "document_id": { "type": "string" },
+          "page": { "type": "integer", "minimum": 1 },
+          "exact_quote": { "type": "string" },
+          "source_url": { "type": "string" }
+        }
+      }
+    },
+    "review_status": {
+      "type": "string",
+      "enum": ["extracted", "validated", "rejected"],
+      "default": "extracted",
+      "description": "S1: 인과 엣지는 도메인 검증(P1-01~04) 후 validated로 승격 — validated만 지식그래프 투영"
+    },
+    "extractor_version": { "type": "string" },
+    "ingested_at": { "type": "string", "format": "date-time" }
+  }
+}
