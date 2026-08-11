@@ -54,6 +54,9 @@ def _parse_filename(stem: str) -> Optional[tuple[int, int, str, str]]:
         return None
     year, month = 2000 + int(m.group(1)), int(m.group(2))
     if not (1 <= month <= 12):
+        # A-092: 원본 파일명이 US 형식(MM.DD)으로 붙은 사례 — 월 자리에 일(日)이 들어와
+        # 규칙 위반. 추정 변환하지 않고 건너뜀 → 재정리 시 YY.MM 규칙으로 개명 필요.
+        print(f"  [경고] 월 범위 초과({month}) — 파일명이 MM.DD 형식일 가능성: {stem}")
         return None
     parts = stem.split("_", 2)
     country = parts[1].strip() if len(parts) > 1 else "Unknown"
