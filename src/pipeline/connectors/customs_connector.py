@@ -51,6 +51,12 @@ import json as _json
 import httpx
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[3]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 OUTPUT_DIR = "data/raw"
 
 # API 1: 품목별 수출입실적 (국가 구분 없음)
@@ -419,6 +425,8 @@ def run() -> None:
         return
 
     out = f"{OUTPUT_DIR}/customs_import_{today_str}.parquet"
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    df = attach_asof(df, source="CUSTOMS_")
     df.to_parquet(out, index=False)
     print(f"[완료] 대두유 수입통계 {len(df)}건 저장 → {out}")
 

@@ -17,6 +17,12 @@ import httpx
 _KR_TRANSPORT = httpx.HTTPTransport(local_address="0.0.0.0", retries=2)
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[3]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 # ── 상수 ──────────────────────────────────────────────────────────────────────
 FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 EIA_BASE  = "https://api.eia.gov/v2/petroleum/pri/spt/data/"
@@ -289,6 +295,8 @@ def run(start_date: str | None = None, end_date: str | None = None) -> None:
     combined["unit"] = ""
 
     out = f"{OUTPUT_DIR}/economic_indicators_{today}.parquet"
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    combined = attach_asof(combined, source="ECONOMIC")
     combined.to_parquet(out, index=False)
     print(f"[완료] 경제 지표 {len(combined)}건 저장 → {out}")
 

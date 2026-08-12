@@ -527,6 +527,13 @@ jobs:
         with:
           path: data/raw/
           merge-multiple: true
+      - name: as-of 시점 정합성 게이트 (D-023) — 위반 시 모델 진입 차단
+        # available_at 없는 피처는 CLAUDE.md §1에 따라 모델 투입 금지.
+        # 이행기에는 ASOF_EXEMPT로 미적용 산출물을 면제할 수 있다(적용 완료 시 제거).
+        env:
+          ASOF_EXEMPT: ${{ vars.ASOF_EXEMPT }}
+        run: python scripts/validate_asof.py --warn
+
       - name: Rebuild unstructured signal time series (통합 분석 입력 — Session 44)
         # 커밋된 비정형 인덱스 CSV에서 UNSTR_* parquet 재생성 → 정형+비정형 통합 분석
         run: python scripts/build_unstructured_timeseries.py || true

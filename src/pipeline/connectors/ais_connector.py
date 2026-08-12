@@ -41,6 +41,12 @@ from typing import Any
 
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[3]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 OUTPUT_DIR = "data/raw"
 
 # 주요 해협 좌표 (Hormuz Monitor 참조)
@@ -280,6 +286,8 @@ def run() -> None:
     df["price_date"] = pd.to_datetime(df["price_date"])
     df["ingested_at"] = pd.Timestamp.utcnow()
     out = f"{OUTPUT_DIR}/ais_strait_risk_{today}.parquet"
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    df = attach_asof(df, source="AISSTREAM")
     df.to_parquet(out, index=False)
     print(f"[완료] AIS 해협 탱커 데이터 {len(df)}건 저장 → {out}")
 

@@ -1,8 +1,17 @@
-# Azure ML · Snowflake 데이터 이관 계획 (이관 대상·경로 확정)
+# Azure Storage 우선 데이터 이관 계획 (이관 대상·경로 확정)
 
-**작성일**: 2026-08-12 · **주도**: C-04 · **협의**: C-01 · C-03
+**작성일**: 2026-08-12 · **개정**: 2026-08-12(팀장 지시 반영) · **주도**: C-04 · **협의**: C-01 · C-03
 **전제(조정자 확인)**: Azure ML Studio **Compute 인스턴스 보유** · Snowflake **계정 보유**.
 따라서 **프로비저닝 리드타임이 없다** — 남은 문제는 오직 **경로(path)**다.
+
+> ## 📌 2026-08-12 개정 — **Azure Storage 우선**, Snowflake 후순위
+> 팀장 지시: *"데이터 마이그레이션은 Azure Storage로 먼저 진행"*.
+> 이에 따라 **경로 우선순위를 B안(Azure Blob 직행) → 1순위**로 교체하고,
+> Snowflake 적재(구 A안)는 **11월 EDP 통합 시점으로 이연**한다.
+> 아래 §2의 A/B 판정은 이 지시에 맞춰 갱신했다(원 판단 근거는 이력으로 보존).
+>
+> **판단이 바뀌어도 유효한 것**: 이관 대상 3계층(§1)·as-of 필드 선행(§3 M1)·
+> 수집 계층을 GitHub Actions에 남기는 구조(§5)는 목적지와 무관하게 그대로다.
 
 ---
 
@@ -14,24 +23,27 @@
 |---|---|---|
 | 사내(Azure ML) → **외부 API**(USDA·FRED·관세청…) | 🔴 **차단** | 조정자 확인 사항. 이것이 "API 연동이 어렵다"의 실체 |
 | GitHub Actions → **외부 API** | 🟢 가능 | 현행 파이프라인이 이미 이렇게 동작 중 |
-| GitHub Actions → **Snowflake** | 🟢 가능(예상) | Snowflake는 SaaS 공개 엔드포인트 |
-| Azure ML Compute → **Snowflake** | 🟢 가능(예상) | 사내에서 이미 내부 데이터가 Snowflake로 유입 중 = 방화벽 허용 기존재 |
+| GitHub Actions → **Azure Blob** | 🟡 **확인 필요** | Storage 계정의 public network access 설정에 달림(§4-①) — **B안의 유일한 관문** |
+| Azure ML Compute → **Azure Blob** | 🟢 가능 | 동일 구독·VNet 내부 경로 |
+| GitHub Actions → **Snowflake** | 🟢 가능(예상) | SaaS 공개 엔드포인트 — 대안 경로로 보존 |
 
 > **결론**: 외부 API를 사내에서 직접 부를 필요가 **없다**. 수집은 지금처럼 Actions가 하고,
-> **Snowflake를 중립 접점(neutral meeting point)** 으로 삼으면 양쪽이 만난다.
-> Snowflake는 이미 승인된 사내 인프라이므로 신규 방화벽 심의가 최소화된다.
+> **Actions가 Azure Storage로 밀어 넣으면(push)** 사내는 받기만 하면 된다.
+> 막힌 방향(사내→외부 API)을 쓰지 않는 설계이므로 방화벽과 충돌하지 않는다.
 
 ```text
 [외부 API 30여종]
-      │  (Actions만 egress 보유)
+      │  (Actions만 egress 보유 — 사내에서는 호출 불가)
       ▼
-[GitHub Actions]  ── 수집·파싱·품질검증 ──▶ parquet
-      │  PUT + COPY INTO
+[GitHub Actions]  ── 수집·파싱·품질검증·as-of 부여 ──▶ parquet
+      │  push (azure-storage-blob, SAS/AAD)
       ▼
-[Snowflake NEXUS_EXT]  ◀── 중립 접점: 양쪽이 접근 가능
-      │  snowflake-connector / Snowpark
+[Azure Blob  nexus-ext/{tier}/{dataset}/{snapshot_date}/]
+      │  Data Asset 마운트
       ▼
 [Azure ML Compute]  ── 학습·평가·모델 등록 (외부 API 불요)
+
+      ※ Snowflake 적재는 11월 EDP 통합 시 동일 parquet에서 분기(경로 A)
 ```
 
 ---
@@ -70,15 +82,40 @@
 
 | 안 | 경로 | 장점 | 단점 | 판정 |
 |---|---|---|---|---|
-| **A. Snowflake 경유** | Actions → Snowflake stage(PUT) → COPY INTO → Azure ML이 connector로 읽기 | 양쪽 모두 접근 가능 · **기존 승인 인프라** · loader 코드 이미 존재 | Snowflake 컴퓨트 비용(소액) | 🟢 **채택** |
-| B. Azure Blob 직행 | Actions → Blob(SAS) → Azure ML Data Asset | Azure ML 네이티브 데이터 평면 | **Storage 계정이 private endpoint면 Actions 인바운드 차단**(§4 확인 필요) | 🟡 조건부 |
+| **B. Azure Blob 직행** | Actions → Blob(SAS/AAD) → Azure ML Data Asset | **Azure ML 네이티브 데이터 평면** · 학습 잡이 마운트로 직접 읽음 · 중간 계층 없음 | Storage 계정이 private endpoint면 Actions 인바운드 차단(§4-①) | 🟢 **채택(팀장 지시)** |
+| A. Snowflake 경유 | Actions → Snowflake stage(PUT) → COPY INTO → Azure ML이 connector로 읽기 | 양쪽 접근 가능 · 기존 승인 인프라 · loader 코드 존재 | 학습 데이터 평면으로는 Blob보다 한 단계 우회 | 🟡 **11월 EDP 통합 시 재개** |
 | C. 수동 전송 | 로컬 다운로드 → 업로드 | 방화벽 무관 | 재현 불가 · 자동화 불가 · 인계 시 단절 | 🔴 최후 수단 |
 
-**A안 채택 근거**: 내부 데이터가 이미 Snowflake로 흐르고 있다는 것은 **사내→Snowflake 경로가
-이미 방화벽 승인돼 있다**는 뜻이다. 신규 심의 대상은 Actions→Snowflake 한 방향뿐이며,
-이는 Snowflake 측 네트워크 정책(IP allowlist) 설정으로 해결된다.
+**B안이 학습 관점에서 더 자연스러운 이유**: Azure ML의 Data Asset은 Blob을 **네이티브 데이터
+평면**으로 삼는다. `command()` 잡이 데이터셋을 마운트/다운로드로 직접 받으므로 커넥터 인증·
+드라이버가 불필요하고, 스냅샷 버저닝(Data Asset version)이 재현성 요건과 1:1로 맞는다.
+Snowflake 경유는 학습 때마다 쿼리→pandas 변환이 끼어들어 대용량에서 병목이 된다.
 
-### 2.1 A안 구현 (기존 자산 재활용)
+**단, B안의 유일한 관문은 §4-①**이다. Storage 계정이 `public network access: Disabled`
+(private endpoint 전용)이면 GitHub Actions에서 직접 쓸 수 없다. 이 경우의 대안은 §4에 정리했다.
+
+### 2.1 B안 구현 — Azure Blob 적재
+
+```python
+# scripts/upload_to_azure_blob.py (신설 예정)
+# 인증: AZURE_STORAGE_CONNECTION_STRING 또는 SAS 토큰 (GitHub Secrets)
+from azure.storage.blob import BlobServiceClient
+import os, pathlib
+
+svc = BlobServiceClient.from_connection_string(os.environ["AZURE_STORAGE_CONNECTION_STRING"])
+container = svc.get_container_client("nexus-ext")
+# 경로 규약: {tier}/{dataset}/{snapshot_date}/{file}.parquet — Data Asset 버저닝과 정합
+for p in pathlib.Path("data/raw").glob("*.parquet"):
+    blob = f"tier1/{p.stem}/{SNAPSHOT_DATE}/{p.name}"
+    container.upload_blob(name=blob, data=p.read_bytes(), overwrite=False)  # 스냅샷 불변
+```
+
+**핵심 규약 2가지**
+1. **`overwrite=False`** — 스냅샷은 불변(immutable). 재현성의 전제이며 개정치 덮어쓰기를
+   물리적으로 차단한다(as-of 규칙 D-023과 동일 사상).
+2. **경로에 `snapshot_date` 포함** — Azure ML Data Asset의 version과 1:1 대응시킨다.
+
+### 2.2 A안 구현 (Snowflake — 11월 EDP 통합 시 재개, 기존 자산 재활용)
 
 이미 있는 것: `src/pipeline/snowflake_loader.py` · `src/pipeline/sql/create_raw_tables.sql`
 (작성 완료·휴면 상태 — **이관 자산 중 준비도 최상**)
@@ -95,16 +132,18 @@
    ```
 2. **`available_at` 등 as-of 5필드를 DDL에 반영** (수집 측 보강과 동시 진행)
 
-### 2.2 Azure ML 측
+### 2.3 Azure ML 측
 
 ```python
-# Azure ML Compute에서 실행 — 외부 API 호출 없음
-import snowflake.connector, os
-conn = snowflake.connector.connect(
-    account=os.environ["SNOWFLAKE_ACCOUNT"], user=os.environ["SNOWFLAKE_USER"],
-    password=os.environ["SNOWFLAKE_PASSWORD"], warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
-    database="NEXUS_EXT", schema="MART")
-df = conn.cursor().execute("SELECT * FROM FEATURE_MART").fetch_pandas_all()
+# Azure ML Compute에서 실행 — 외부 API 호출 없음 (B안: Blob Data Asset)
+from azure.ai.ml import MLClient
+from azure.ai.ml.entities import Data
+from azure.ai.ml.constants import AssetTypes
+# 등록된 Data Asset을 학습 잡에 마운트 → 커넥터·드라이버 불요
+# az ml data create --name nexus-feature-mart --version 2026-08-28 \
+#     --path azureml://.../nexus-ext/tier1/feature_mart/2026-08-28/ --type uri_folder
+import pandas as pd
+df = pd.read_parquet("${{inputs.feature_mart}}/feature_mart.parquet")   # 잡 입력으로 주입
 ```
 학습 산출은 `mlflow.log_model()`로 Azure ML Model Registry에 등록(pickle 금지).
 
@@ -114,14 +153,15 @@ df = conn.cursor().execute("SELECT * FROM FEATURE_MART").fetch_pandas_all()
 
 | 단계 | 내용 | 선행조건 | 산출 |
 |---|---|---|---|
-| M0 | **연결성 검증**(§4 3건) — 실제 데이터 이관 전 | 없음 | 가부 확정 |
-| M1 | as-of 5필드 보강(수집 측) + DDL 반영 | — | 스키마 8종 개정 |
-| M2 | `NEXUS_EXT` DB·스키마 생성(ODS/SILVER/MART) | Snowflake 롤 | DDL 적용 |
-| M3 | **Tier 1 적재** — Actions에 `snowflake-load` 잡 추가 | M1·M2 | 목표변수·핵심피처 |
-| M4 | Azure ML에서 Tier 1 읽기 검증 | M3 | 학습 가능 확인 |
+| M0 | **연결성 검증**(§4) — 실제 이관 전 | Storage 인증정보 | 경로 가부 확정 |
+| M1 | **as-of 5필드 보강**(수집 측) | — | 스키마 8종 개정 · `asof.py` |
+| M2 | Blob 컨테이너 `nexus-ext` + 경로 규약 확정 | Storage 접근 | 경로 스킴 |
+| M3 | **Tier 1 적재** — Actions에 `azure-blob-upload` 잡 추가 | M0·M1·M2 | 목표변수·핵심피처 |
+| M4 | Azure ML **Data Asset 등록** + 읽기 검증 | M3 | 학습 가능 확인 |
 | M5 | **Tier 2 적재** | M3 | 전체 정형 |
 | M6 | G2 학습을 Azure ML `command()` 잡으로 실행 | M4 | 모델 등록 |
-| M7 | Tier 3(비정형) — 오브젝트 스토리지 + 카탈로그 | 후순위 | 보류 |
+| M7 | Tier 3(비정형) 이관 | 후순위 | 보류 |
+| M8 | Snowflake 적재(경로 A) — **11월 EDP 통합 시** | 별건 | 이연 |
 
 ---
 
@@ -131,12 +171,20 @@ df = conn.cursor().execute("SELECT * FROM FEATURE_MART").fetch_pandas_all()
 
 | # | 확인 사항 | 방법 | 실패 시 대안 |
 |---|---|---|---|
-| 1 | **Snowflake가 GitHub Actions IP를 허용하는가** | Actions에서 `snowflake.connector.connect()` 스모크 잡 1회 실행 | Snowflake 네트워크 정책에 Actions IP 레인지 추가(GitHub meta API 제공) |
-| 2 | **Azure ML Compute가 Snowflake에 접근 가능한가** | Compute 노트북에서 동일 connect 시도 | 사내 방화벽에 Snowflake 엔드포인트 허용 신청 |
-| 3 | **Azure Storage 계정이 public network access를 허용하는가** | Portal → Storage account → Networking 확인 | B안 폐기하고 A안(Snowflake 경유) 단독 진행 |
+| **①** | **Storage 계정의 public network access** — 최우선 | Portal → Storage account → **Networking** → `Enabled from all networks` / `Enabled from selected networks` / `Disabled` 중 무엇인지 | ↓ 아래 분기표 |
+| ② | 쓰기 인증 수단 | 계정 키 · **SAS 토큰**(권장, 컨테이너 한정·만료 지정) · AAD 서비스주체 중 발급 가능한 것 | SAS가 가장 간단 |
+| ③ | Azure ML Compute → Blob 읽기 | Compute 노트북에서 컨테이너 list 시도 | 동일 구독이면 대개 문제없음 |
 
-> 3번이 `Disabled`(private endpoint 전용)면 **B안은 불가**이고 A안만 남는다.
-> A안을 1순위로 둔 이유가 이것이다 — 3번 결과와 무관하게 성립한다.
+**①의 분기 — 여기서 경로가 갈립니다**
+
+| Networking 설정 | Actions → Blob | 조치 |
+|---|---|---|
+| `Enabled from all networks` | 🟢 가능 | SAS 발급만으로 즉시 진행 |
+| `Enabled from selected networks` | 🟡 조건부 | GitHub Actions IP 레인지를 방화벽 규칙에 추가(`https://api.github.com/meta`의 `actions` 배열 — 다만 목록이 크고 변동됨) |
+| `Disabled`(private endpoint 전용) | 🔴 불가 | **경로 A(Snowflake 경유)로 전환** 또는 **self-hosted runner**(사내 네트워크 내부에 두되, 외부 API 수집은 계속 GitHub-hosted가 담당하는 2단 구성) |
+
+> **조정자께 요청**: ①만 확인해 주시면 나머지는 제가 진행합니다.
+> `Disabled`인 경우에도 막다른 길은 아닙니다 — 경로 A를 이미 설계해 뒀습니다(§2.2).
 
 ---
 
@@ -147,7 +195,8 @@ df = conn.cursor().execute("SELECT * FROM FEATURE_MART").fetch_pandas_all()
 | 계층 | 이관 후 위치 | 이유 |
 |---|---|---|
 | 외부 API 수집 | **GitHub Actions 유지** | 사내에서 외부 API 호출이 방화벽으로 막혀 있음 — 대체 불가 |
-| 저장·서빙 | Snowflake `NEXUS_EXT` | 전사 EDP 단일화 목표 |
+| 저장(학습 데이터) | **Azure Blob `nexus-ext`** | 팀장 지시 — Azure ML 네이티브 데이터 평면 |
+| 저장·서빙(분석) | Snowflake `NEXUS_EXT` | 11월 전사 EDP 단일화 시점 |
 | 학습·평가 | Azure ML Compute | 외부 데이터 AI 컴퓨트 지정 |
 
 11월 Control Tower 통합 시 수집 계층이 Apache Hop ETL로 옮겨가려면 **그 ETL 서버가

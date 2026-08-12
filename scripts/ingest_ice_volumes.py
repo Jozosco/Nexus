@@ -23,6 +23,12 @@ from pathlib import Path
 
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 ICE_ROOT = Path("data/raw/ICE/Reports/Monthly Volumes")
 OUT_PATH = Path("data/raw/ice_monthly_volumes.parquet")
 
@@ -132,6 +138,8 @@ def run() -> None:
     combined = pd.concat(frames, ignore_index=True).sort_values(
         ["market", "contract_type", "price_date", "product"]).reset_index(drop=True)
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    combined = attach_asof(combined, source="ICE_")
     combined.to_parquet(OUT_PATH, index=False)
 
     print(f"\n[완료] → {OUT_PATH}")
