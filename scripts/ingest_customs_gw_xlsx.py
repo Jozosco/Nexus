@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -36,10 +37,13 @@ _KR_TRANSPORT = httpx.HTTPTransport(local_address="0.0.0.0", retries=2)
 # 타임아웃 분리: connect 10s(연결 안 되는 호스트를 60초 기다려도 결과 동일) / read 30s.
 _TIMEOUT = httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)
 _CLIENT = httpx.Client(transport=_KR_TRANSPORT, timeout=_TIMEOUT,
-                       limits=httpx.Limits(max_connections=8, max_keepalive_connections=4))
+                       limits=httpx.Limits(max_connections=12, max_keepalive_connections=8))
 
 MAX_RETRIES   = int(os.environ.get("CUSTOMS_MAX_RETRIES", "3"))
-CALL_INTERVAL = float(os.environ.get("CUSTOMS_CALL_INTERVAL", "1.0"))   # 레이트리밋 회피 페이싱
+CALL_INTERVAL = float(os.environ.get("CUSTOMS_CALL_INTERVAL", "0.5"))   # (HS·국가) 쌍 간 페이싱
+# A-101: 다년 범위 불가 확정 → 연 단위 1,530회를 **동시 실행**으로 흡수한다.
+#        레이트리밋 유발을 피하려고 과도하게 올리지 않는다(기본 5).
+MAX_WORKERS   = int(os.environ.get("CUSTOMS_MAX_WORKERS", "5"))
 # 잡 전체 예산(초) — 초과 시 수집분을 저장하고 정상 종료(6시간 강제 취소 방지)
 TIME_BUDGET_S = float(os.environ.get("CUSTOMS_TIME_BUDGET_S", "10800"))  # 기본 3시간
 
@@ -114,6 +118,8 @@ def _request(params: dict, label: str, max_retries: int = MAX_RETRIES) -> list[d
             root = ET.fromstring(r.text)
             code = root.findtext(".//resultCode")
             if code not in ("00", None):
+                # A-101: 업무 오류(99 등)는 재시도해도 동일하다. 다만 빈 리스트로 반환하면
+                # 호출부가 "데이터 없음"으로 오탐하므로 사유를 명확히 남긴다.
                 print(f"    [경고] {label}: resultCode={code} {root.findtext('.//resultMsg')}")
                 return []
             return _parse_items(root, params.get("hsSgn", ""), params.get("cntyCd", ""))
@@ -125,30 +131,30 @@ def _request(params: dict, label: str, max_retries: int = MAX_RETRIES) -> list[d
 
 
 def fetch_range(hs: str, cnty: str, start_year: int, end_year: int) -> list[dict]:
-    """(HS·국가)의 전 기간을 **단일 호출**로 조회 — 실패 시에만 연도별 분할 폴백.
+    """(HS·국가)의 전 기간을 **연 단위로 병렬 조회**.
 
-    A-094 근본 개선: API가 strtYymm~endYymm 다월 범위를 지원하므로 연도 루프가 불필요했다.
-    1,530회 → 90회(17배 감소)로 호출량을 줄여 레이트리밋·타임아웃 노출을 함께 낮춘다.
+    A-101: 다년 범위 호출은 API가 거부한다 —
+      `resultCode=99 시작과 종료의 조회기간은 1년이내 기간만 가능합니다`.
+    A-094의 "1,530→90회" 최적화는 **불가능**했음이 실측으로 확정됐다. 연 단위로 되돌리되,
+    6시간 초과를 막기 위해 **동시성**으로 벽시계 시간을 줄인다(순차 1,530회 → 동시 N).
+    조회 기간을 1년 이내로 유지하기 위해 각 요청은 `{YYYY}01~{YYYY}12`(=12개월)로 고정한다.
     """
     key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
     if not key:
         raise RuntimeError("[오류] DATA_GO_KR_SERVICE_KEY 미등록 — GitHub Secrets 등록 필요")
     base = {"serviceKey": key, "hsSgn": hs, "cntyCd": cnty}
-    rows = _request({**base, "strtYymm": f"{start_year}01", "endYymm": f"{end_year}12"},
-                    f"{hs}/{cnty}/{start_year}~{end_year}")
-    if rows:
-        return rows
-    if rows is None:   # 범위 조회 자체가 실패 → 연도 분할 폴백(응답 크기 제한 대비)
-        print(f"    [정보] {hs}/{cnty}: 범위 조회 실패 — 연도별 분할 재시도")
-        out: list[dict] = []
-        for year in range(start_year, end_year + 1):
-            r = _request({**base, "strtYymm": f"{year}01", "endYymm": f"{year}12"},
-                         f"{hs}/{cnty}/{year}")
-            if r:
-                out.extend(r)
-            time.sleep(CALL_INTERVAL)
-        return out
-    return []
+    years = list(range(start_year, end_year + 1))
+
+    def _one(year: int) -> list[dict]:
+        r = _request({**base, "strtYymm": f"{year}01", "endYymm": f"{year}12"},
+                     f"{hs}/{cnty}/{year}")
+        return r or []
+
+    out: list[dict] = []
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        for rows in pool.map(_one, years):
+            out.extend(rows)
+    return out
 
 
 def _write_gw_xlsx(rows: list[dict], out_path: Path) -> None:

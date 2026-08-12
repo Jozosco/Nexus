@@ -138,6 +138,45 @@ def fetch_openmeteo_regional_climate(
 
     all_rows: list[dict] = []
     ingested_at = pd.Timestamp.utcnow()
+    ok_regions: list[str] = []
+    fail_regions: list[str] = []
+    # A-107: Open-Meteo는 daily 집계로 지원되지 않는 변수가 **하나라도** 섞이면 HTTP 400을
+    # 반환한다. 전체 변수를 한 번에 요청하는 구조에서는 그 한 개 때문에 **12개 지역 전부**가
+    # 실패한다("수집된 데이터 없음"의 잠재 원인). 유효 변수 집합을 1회 자동 확정해 재사용한다.
+    active_vars = list(OPEN_METEO_VARS)
+
+    def _probe_vars(lat: float, lon: float) -> list[str]:
+        """짧은 구간으로 변수별 지원 여부를 확인해 유효 집합을 반환."""
+        probe = {"latitude": lat, "longitude": lon,
+                 "start_date": "2024-01-01", "end_date": "2024-01-03", "timezone": "auto"}
+        try:
+            r = httpx.get(OPEN_METEO_BASE, params={**probe, "daily": ",".join(OPEN_METEO_VARS)},
+                          timeout=60)
+            if r.status_code == 200:
+                return list(OPEN_METEO_VARS)
+            print(f"[정보] 전체 변수 요청 거부(HTTP {r.status_code}) — 변수별 개별 확인")
+        except Exception as e:
+            print(f"[경고] 변수 프로브 실패: {e}")
+            return list(OPEN_METEO_VARS)
+        good: list[str] = []
+        for v in OPEN_METEO_VARS:
+            try:
+                rr = httpx.get(OPEN_METEO_BASE, params={**probe, "daily": v}, timeout=30)
+                (good.append(v) if rr.status_code == 200
+                 else print(f"[경고] daily 미지원 변수 제외: {v} (HTTP {rr.status_code})"))
+            except Exception:
+                print(f"[경고] 변수 확인 실패로 제외: {v}")
+            time.sleep(0.2)
+        return good
+
+    _first = next(iter(PRODUCTION_REGIONS.values()))
+    active_vars = _probe_vars(_first["lat"], _first["lon"])
+    if not active_vars:
+        print("[오류] 유효한 daily 변수가 없음 — Open-Meteo 사양 변경 확인 필요")
+        return pd.DataFrame()
+    if len(active_vars) < len(OPEN_METEO_VARS):
+        dropped = sorted(set(OPEN_METEO_VARS) - set(active_vars))
+        print(f"[정보] 유효 변수 {len(active_vars)}/{len(OPEN_METEO_VARS)} — 제외: {dropped}")
 
     for region_code, info in PRODUCTION_REGIONS.items():
         params = {
@@ -145,7 +184,7 @@ def fetch_openmeteo_regional_climate(
             "longitude": info["lon"],
             "start_date": start_date,
             "end_date":   end_date,
-            "daily": ",".join(OPEN_METEO_VARS),
+            "daily": ",".join(active_vars),
             "timezone": "auto",
         }
         try:
@@ -155,9 +194,10 @@ def fetch_openmeteo_regional_climate(
             times = daily.get("time", [])
             if not times:
                 print(f"[경고] {region_code}: Open-Meteo 응답에 'daily.time' 없음")
+                fail_regions.append(region_code)
                 continue
 
-            for var in OPEN_METEO_VARS:
+            for var in active_vars:
                 values = daily.get(var, [])
                 for t, v in zip(times, values):
                     if v is None:
@@ -172,10 +212,17 @@ def fetch_openmeteo_regional_climate(
                         "unit":           OPEN_METEO_UNITS.get(var, ""),
                         "ingested_at":    ingested_at,
                     })
-            print(f"[완료] {region_code} ({info['country']}): {len(times)}일 × {len(OPEN_METEO_VARS)}변수")
+            ok_regions.append(region_code)
+            print(f"[완료] {region_code} ({info['country']}): {len(times)}일 × {len(active_vars)}변수")
             time.sleep(0.3)  # 요청 간격 (API 레이트 리밋 준수)
         except Exception as e:
+            fail_regions.append(region_code)
             print(f"[경고] {region_code} 기후 수집 실패: {e}")
+
+    # A-107: 12개 지역 수집 여부를 **명시 리포트**한다 — 조용한 부분 실패 방지
+    total = len(PRODUCTION_REGIONS)
+    print(f"[집계] 지역 수집 {len(ok_regions)}/{total}"
+          + (f" · 실패: {', '.join(fail_regions)}" if fail_regions else " (전 지역 성공)"))
 
     if not all_rows:
         print("[경고] Open-Meteo 지역 기후: 수집된 데이터 없음")
@@ -184,7 +231,10 @@ def fetch_openmeteo_regional_climate(
     df = pd.DataFrame(all_rows)
     df["price_date"] = pd.to_datetime(df["price_date"])
     total_regions = df["region_code"].nunique()
-    print(f"[완료] Open-Meteo 지역 기후 총 {len(df):,}건 ({total_regions}개 지역, {start_date}~{end_date})")
+    per_region = df.groupby("region_code")["price_date"].nunique().to_dict()
+    print(f"[완료] Open-Meteo 지역 기후 총 {len(df):,}건 ({total_regions}/{total}개 지역, "
+          f"{start_date}~{end_date})")
+    print(f"[커버리지] 지역별 일수: {per_region}")
     return df
 
 
@@ -262,7 +312,12 @@ def fetch_ecmwf_era5() -> pd.DataFrame:
     return df
 
 
-def run(start_year: int = 2017) -> None:
+def run(start_year: int | None = None) -> None:
+    # A-107: 기본값이 2017로 하드코딩돼 분석창(2010~, M-008)과 불일치했다.
+    #        HISTORICAL_START_YEAR를 읽어 백필 워크플로우 지정 연도를 따르게 한다.
+    if start_year is None:
+        start_year = int(os.environ.get("HISTORICAL_START_YEAR", "2010"))
+    print(f"[C-03] 기후 수집 시작 연도: {start_year}")
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
     frames = []

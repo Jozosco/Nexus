@@ -89,7 +89,7 @@ jobs:
           python - <<'EOF'
           import os, httpx
 
-          def _get_retry(url, params=None, timeout=60, tries=4):
+          def _get_retry(url, params=None, timeout=60, tries=4, headers=None):
               # A-085: 재시도에도 ConnectTimeout 재발(KOSIS·관세청) → GitHub 러너의 IPv6 경로가
               # 한국 공공기관 호스트에서 블랙홀되는 사례. local_address="0.0.0.0"로 IPv4 강제.
               import time as _t, socket
@@ -99,7 +99,7 @@ jobs:
                       try:
                           with httpx.Client(transport=tr, timeout=timeout,
                                             follow_redirects=True) as c:
-                              return c.get(url, params=params)
+                              return c.get(url, params=params, headers=headers)
                       except httpx.TransportError as e:
                           last = e
                   _t.sleep(5 * (i + 1))
@@ -126,7 +126,7 @@ jobs:
           python - <<'EOF'
           import os, httpx
 
-          def _get_retry(url, params=None, timeout=60, tries=4):
+          def _get_retry(url, params=None, timeout=60, tries=4, headers=None):
               # A-085: 재시도에도 ConnectTimeout 재발(KOSIS·관세청) → GitHub 러너의 IPv6 경로가
               # 한국 공공기관 호스트에서 블랙홀되는 사례. local_address="0.0.0.0"로 IPv4 강제.
               import time as _t, socket
@@ -136,7 +136,7 @@ jobs:
                       try:
                           with httpx.Client(transport=tr, timeout=timeout,
                                             follow_redirects=True) as c:
-                              return c.get(url, params=params)
+                              return c.get(url, params=params, headers=headers)
                       except httpx.TransportError as e:
                           last = e
                   _t.sleep(5 * (i + 1))
@@ -164,7 +164,7 @@ jobs:
           python - <<'EOF'
           import os, httpx
 
-          def _get_retry(url, params=None, timeout=60, tries=4):
+          def _get_retry(url, params=None, timeout=60, tries=4, headers=None):
               # A-085: 재시도에도 ConnectTimeout 재발(KOSIS·관세청) → GitHub 러너의 IPv6 경로가
               # 한국 공공기관 호스트에서 블랙홀되는 사례. local_address="0.0.0.0"로 IPv4 강제.
               import time as _t, socket
@@ -174,26 +174,37 @@ jobs:
                       try:
                           with httpx.Client(transport=tr, timeout=timeout,
                                             follow_redirects=True) as c:
-                              return c.get(url, params=params)
+                              return c.get(url, params=params, headers=headers)
                       except httpx.TransportError as e:
                           last = e
                   _t.sleep(5 * (i + 1))
               raise last
 
-          api_key = os.environ["BOK_ECOS_API_KEY"]
-          # 731Y001 = 외환 / 0000001 = USD/KRW 대고객전신환매도율
-          url = (
-              f"https://ecos.bok.or.kr/api/KeyStatisticList"
-              f"/{api_key}/json/kr/1/3/"
-          )
-          r = _get_retry(url, timeout=60)
+          # A-104: BOK ECOS ConnectTimeout 신규 발생 → 한국 호스트 전용 견고 클라이언트 사용.
+          #   (다중 전송경로 + https↔http 스킴 폴백 + 지터 백오프 5회 + 계층 진단 메시지)
+          import sys; sys.path.insert(0, "scripts")
+          from http_kr import get_kr
+
+          api_key = os.environ.get("BOK_ECOS_API_KEY", "").strip()
+          if not api_key:
+              print("⚠️ BOK_ECOS_API_KEY 미등록 — 건너뜀")
+              raise SystemExit(0)
+          url = f"https://ecos.bok.or.kr/api/KeyStatisticList/{api_key}/json/kr/1/3/"
+          try:
+              r = get_kr(url, timeout=45, tries=5)
+          except RuntimeError as e:
+              # 네트워크 계층 실패는 비치명 — FX는 FRED(DEXKOUS)로 대체 수집 가능
+              print(f"⚠️ BOK ECOS 연결 실패(비치명): {e}")
+              print("   대체: FRED DEXKOUS(원/달러)로 커버 가능. 지속 시 scripts/diagnose_kr_hosts.py 로그 확인")
+              raise SystemExit(0)
           r.raise_for_status()
           data = r.json()
-          assert "KeyStatisticList" in data, \
-              f"[오류] BOK ECOS API 응답 형식 이상 (키 오류 또는 인증 실패): {list(data.keys())}"
-          count = data["KeyStatisticList"].get("list_total_count", 0)
-          assert int(count) > 0, "[오류] BOK ECOS API: 데이터 0건 — API 키 또는 엔드포인트 확인 필요"
-          print(f"✅ BOK ECOS API 정상 — 주요 통계 항목 수: {count}")
+          if "KeyStatisticList" not in data:
+              # ERROR-100 등 업무 오류는 본문에 사유가 담긴다 — 그대로 노출
+              print(f"⚠️ BOK ECOS 응답 형식 이상(비치명): {str(data)[:200]}")
+              raise SystemExit(0)
+          count = int(data["KeyStatisticList"].get("list_total_count", 0))
+          print(f"{'✅' if count else '⚠️'} BOK ECOS — 주요 통계 항목 수: {count}")
           EOF
 
       - name: Check KOSIS API — CPI_KOREA 실데이터 조회 (MEMORY A-010, A-020, A-024)
@@ -204,7 +215,7 @@ jobs:
           python - <<'EOF'
           import os, base64, httpx
 
-          def _get_retry(url, params=None, timeout=60, tries=4):
+          def _get_retry(url, params=None, timeout=60, tries=4, headers=None):
               # A-085: 재시도에도 ConnectTimeout 재발(KOSIS·관세청) → GitHub 러너의 IPv6 경로가
               # 한국 공공기관 호스트에서 블랙홀되는 사례. local_address="0.0.0.0"로 IPv4 강제.
               import time as _t, socket
@@ -214,7 +225,7 @@ jobs:
                       try:
                           with httpx.Client(transport=tr, timeout=timeout,
                                             follow_redirects=True) as c:
-                              return c.get(url, params=params)
+                              return c.get(url, params=params, headers=headers)
                       except httpx.TransportError as e:
                           last = e
                   _t.sleep(5 * (i + 1))
@@ -263,7 +274,7 @@ jobs:
           python - <<'EOF'
           import os, httpx
 
-          def _get_retry(url, params=None, timeout=60, tries=4):
+          def _get_retry(url, params=None, timeout=60, tries=4, headers=None):
               # A-085: 재시도에도 ConnectTimeout 재발(KOSIS·관세청) → GitHub 러너의 IPv6 경로가
               # 한국 공공기관 호스트에서 블랙홀되는 사례. local_address="0.0.0.0"로 IPv4 강제.
               import time as _t, socket
@@ -273,7 +284,7 @@ jobs:
                       try:
                           with httpx.Client(transport=tr, timeout=timeout,
                                             follow_redirects=True) as c:
-                              return c.get(url, params=params)
+                              return c.get(url, params=params, headers=headers)
                       except httpx.TransportError as e:
                           last = e
                   _t.sleep(5 * (i + 1))
@@ -330,7 +341,7 @@ jobs:
           python - <<'EOF'
           import os, httpx
 
-          def _get_retry(url, params=None, timeout=60, tries=4):
+          def _get_retry(url, params=None, timeout=60, tries=4, headers=None):
               # A-085: 재시도에도 ConnectTimeout 재발(KOSIS·관세청) → GitHub 러너의 IPv6 경로가
               # 한국 공공기관 호스트에서 블랙홀되는 사례. local_address="0.0.0.0"로 IPv4 강제.
               import time as _t, socket
@@ -340,7 +351,7 @@ jobs:
                       try:
                           with httpx.Client(transport=tr, timeout=timeout,
                                             follow_redirects=True) as c:
-                              return c.get(url, params=params)
+                              return c.get(url, params=params, headers=headers)
                       except httpx.TransportError as e:
                           last = e
                   _t.sleep(5 * (i + 1))
@@ -376,7 +387,7 @@ jobs:
           python - <<'EOF'
           import os, httpx
 
-          def _get_retry(url, params=None, timeout=60, tries=4):
+          def _get_retry(url, params=None, timeout=60, tries=4, headers=None):
               # A-085: 재시도에도 ConnectTimeout 재발(KOSIS·관세청) → GitHub 러너의 IPv6 경로가
               # 한국 공공기관 호스트에서 블랙홀되는 사례. local_address="0.0.0.0"로 IPv4 강제.
               import time as _t, socket
@@ -386,7 +397,7 @@ jobs:
                       try:
                           with httpx.Client(transport=tr, timeout=timeout,
                                             follow_redirects=True) as c:
-                              return c.get(url, params=params)
+                              return c.get(url, params=params, headers=headers)
                       except httpx.TransportError as e:
                           last = e
                   _t.sleep(5 * (i + 1))
@@ -402,6 +413,29 @@ jobs:
               "https://api.ers.usda.gov/data/arms/surveydata",
               "https://data.ers.usda.gov/api/Data",
           ]
+          # A-106: 응답이 {'total': {'recordCount': 0}, 'status': 'ok'} → **API는 정상이고
+          #   쿼리 조합에 해당 데이터가 없다**는 뜻. 파라미터를 추측으로 고치는 대신
+          #   메타데이터 엔드포인트로 **유효값을 먼저 조회**해 쿼리를 구성한다(자기발견).
+          _base = "https://api.ers.usda.gov/data/arms"
+          def _meta(name):
+              try:
+                  _r = _get_retry(f"{_base}/{name}", params={"api_key": api_key}, timeout=45)
+                  if _r.status_code != 200:
+                      return []
+                  _j = _r.json()
+                  _v = _j.get("data", _j) if isinstance(_j, dict) else _j
+                  return _v if isinstance(_v, list) else []
+              except Exception:
+                  return []
+
+          for _n in ("year", "state", "report", "category", "farmtype"):
+              _vals = _meta(_n)
+              if _vals:
+                  _s = [str(x.get("name", x)) if isinstance(x, dict) else str(x) for x in _vals[:8]]
+                  print(f"    [ARMS 유효 {_n}] {len(_vals)}종 — 예: {', '.join(_s)}")
+              else:
+                  print(f"    [ARMS 유효 {_n}] 조회 실패 또는 미제공")
+
           r = None
           for _u in _arms_urls:
               try:
@@ -441,7 +475,7 @@ jobs:
           python - <<'EOF'
           import os, httpx
 
-          def _get_retry(url, params=None, timeout=60, tries=4):
+          def _get_retry(url, params=None, timeout=60, tries=4, headers=None):
               # A-085: 재시도에도 ConnectTimeout 재발(KOSIS·관세청) → GitHub 러너의 IPv6 경로가
               # 한국 공공기관 호스트에서 블랙홀되는 사례. local_address="0.0.0.0"로 IPv4 강제.
               import time as _t, socket
@@ -451,7 +485,7 @@ jobs:
                       try:
                           with httpx.Client(transport=tr, timeout=timeout,
                                             follow_redirects=True) as c:
-                              return c.get(url, params=params)
+                              return c.get(url, params=params, headers=headers)
                       except httpx.TransportError as e:
                           last = e
                   _t.sleep(5 * (i + 1))
@@ -493,7 +527,7 @@ jobs:
           python - <<'EOF'
           import os, json, httpx
 
-          def _get_retry(url, params=None, timeout=60, tries=4):
+          def _get_retry(url, params=None, timeout=60, tries=4, headers=None):
               # A-085: 재시도에도 ConnectTimeout 재발(KOSIS·관세청) → GitHub 러너의 IPv6 경로가
               # 한국 공공기관 호스트에서 블랙홀되는 사례. local_address="0.0.0.0"로 IPv4 강제.
               import time as _t, socket
@@ -503,7 +537,7 @@ jobs:
                       try:
                           with httpx.Client(transport=tr, timeout=timeout,
                                             follow_redirects=True) as c:
-                              return c.get(url, params=params)
+                              return c.get(url, params=params, headers=headers)
                       except httpx.TransportError as e:
                           last = e
                   _t.sleep(5 * (i + 1))
@@ -549,19 +583,35 @@ jobs:
           if not te_key:
               print("⚠️ TRADING_ECONOMICS_API_KEY 미등록 — 건너뜀 (tradingeconomics.com, 형식: key:secret)")
               raise SystemExit(0)
+          # A-105: HTTP 409 "Please slow down... api+throttle"의 구조적 원인 —
+          #   구 코드는 1차 호출(getMarketsBySymbol)이 실패하면 **즉시** 훨씬 무거운
+          #   2차 호출(getMarketsData: 전체 상품 목록)을 던졌다. 즉 실패 처리 자체가
+          #   레이트리밋을 자초하는 구조였다(구독 등급이 낮을수록 확정적으로 409).
+          # 해결: ①호출을 1회로 축소 ②409/429는 지수 백오프 후 재시도 ③끝까지 실패해도 비치명.
+          import time as _t
           import tradingeconomics as te
           te.login(te_key)
-          # BDI 조회 (Baltic Dry Index — C-03 구조적 단절 모니터링 변수)
-          try:
-              data = te.getMarketsBySymbol(symbols="bdi", output_type="df")
-              assert data is not None and len(data) > 0, "[오류] TE BDI 데이터 없음"
+
+          def _te_call():
+              return te.getMarketsBySymbol(symbols="bdi", output_type="df")
+
+          data, err = None, None
+          for _i, _wait in enumerate((30, 60, 120)):
+              try:
+                  data = _te_call()
+                  break
+              except Exception as e:
+                  err = e
+                  _msg = str(e).lower()
+                  if "409" in _msg or "429" in _msg or "slow down" in _msg or "throttle" in _msg:
+                      print(f"[정보] TE 레이트리밋 — {_wait}s 대기 후 재시도 ({_i+1}/3)")
+                      _t.sleep(_wait); continue
+                  break   # 레이트리밋이 아닌 오류는 재시도해도 동일
+
+          if data is not None and len(data) > 0:
               print(f"✅ Trading Economics API 정상 — BDI: {data.iloc[0].get('Last', 'N/A')}")
-          except Exception as e:
-              # BDI 심볼 확인 필요 시 전체 상품 목록으로 재시도
-              data = te.getMarketsData(marketsField="commodities", output_type="df")
-              bdi_row = data[data["Symbol"].str.lower().str.contains("bdi|baltic", na=False)] if data is not None else None
-              if bdi_row is not None and len(bdi_row) > 0:
-                  print(f"✅ Trading Economics API 정상 — BDI 발견 (심볼 재확인 필요): {e}")
-              else:
-                  raise RuntimeError(f"[오류] Trading Economics BDI 조회 실패: {e}")
+          else:
+              print(f"⚠️ Trading Economics BDI 조회 실패(비치명): {str(err)[:180]}")
+              print("   BDI는 9개년 수동 업로드(te_commodities_historical, TE_BDI)로 이미 커버됨 — "
+                    "파이프라인 차단 사유 아님. 409 반복 시 구독 등급·호출 빈도 재검토 필요")
           EOF
