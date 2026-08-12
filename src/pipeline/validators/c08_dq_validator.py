@@ -354,16 +354,27 @@ def main() -> None:
     parquet_files = glob.glob(os.path.join(RAW_DIR, "**", "*.parquet"), recursive=True)
 
     if not parquet_files:
-        print("[경고] data/raw/ 디렉토리에서 parquet 파일을 찾을 수 없습니다.")
+        # A-108: 이것은 fail-open이었다 — "검증할 것이 없음"을 WARNING으로 통과시키면
+        # 아티팩트 다운로드 실패·경로 오류 시에도 품질 게이트가 **통과한 것처럼** 보인다.
+        # 검증 대상 부재는 정상 상태가 아니라 파이프라인 결함이므로 REJECTED로 차단한다.
+        # (의도적으로 빈 실행을 허용해야 하면 DQ_ALLOW_EMPTY=true)
+        allow_empty = os.environ.get("DQ_ALLOW_EMPTY", "").lower() == "true"
+        status = "WARNING" if allow_empty else "REJECTED"
+        print(f"[{'경고' if allow_empty else '오류'}] data/raw/ 에서 parquet 파일을 찾을 수 없습니다 "
+              f"— 검증 대상 부재(상태: {status})")
+        if not allow_empty:
+            print("       원인 후보: 아티팩트 다운로드 실패 · 경로 불일치 · 선행 수집 잡 실패")
         report: dict[str, Any] = {
             "run_date": str(date.today()),
-            "overall_status": "WARNING",
+            "overall_status": status,
             "overall_dq_score": 0.0,
             "connectors": [],
             "message": "검증할 parquet 파일이 없습니다.",
         }
         _write_report(report)
-        _set_github_output("WARNING")
+        _set_github_output(status)
+        if status == "REJECTED":
+            sys.exit(1)
         return
 
     results: list[dict[str, Any]] = [_validate_connector(f) for f in sorted(parquet_files)]
@@ -471,6 +482,15 @@ def _set_github_output(overall_status: str) -> None:
     else:
         # 로컬 실행 시 환경 변수가 없을 수 있으므로 경고만 출력
         print(f"[정보] GITHUB_OUTPUT 미설정 — overall_status={overall_status}")
+
+    # A-108(이식성): 게이트 결과를 Actions 전용 채널에만 싣지 않는다.
+    # Apache Hop·Snowflake 등 다른 오케스트레이터도 읽을 수 있게 파일로도 남긴다.
+    try:
+        Path(REPORT_DIR).mkdir(parents=True, exist_ok=True)
+        (Path(REPORT_DIR) / "dq_overall_status.txt").write_text(
+            overall_status, encoding="utf-8")
+    except OSError as e:
+        print(f"[경고] 상태 파일 기록 실패: {e}")
 
 
 if __name__ == "__main__":
