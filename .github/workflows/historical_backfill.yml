@@ -340,6 +340,9 @@ jobs:
   customs-gw-extended:
     name: "1.1.48 | Korea Customs GW Extended (대체·보완재 HS × 원산지)"
     runs-on: ubuntu-latest
+    # A-094: 6시간 강제 취소로 수집분 전량 유실 → 잡 상한을 240분으로 낮추고,
+    # 스크립트 내부 예산(CUSTOMS_TIME_BUDGET_S)이 그보다 먼저 만료돼 저장 후 정상 종료하게 함.
+    timeout-minutes: 240
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs-gw' }}
     steps:
       - uses: actions/checkout@v4
@@ -350,11 +353,17 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         run: pip install httpx pandas pyarrow openpyxl
+      - name: Preflight — data.go.kr 연결 진단 (DNS·TCP·HTTP 분리)
+        env:
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+        continue-on-error: true
+        run: python scripts/diagnose_kr_hosts.py
       - name: Run Korea Customs GW extended ingest
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
           HISTORICAL_START_YEAR:  ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:    ${{ github.event.inputs.end_year }}
+          CUSTOMS_TIME_BUDGET_S:  "10800"   # 3시간 — 잡 상한(240분)보다 먼저 만료
         run: python scripts/ingest_customs_gw_xlsx.py
       - name: Upload customs GW outputs
         uses: actions/upload-artifact@v4

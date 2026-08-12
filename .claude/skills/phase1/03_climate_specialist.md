@@ -1,6 +1,6 @@
 # P1-03: Senior Agrometeorologist & Climate Specialist
 > **Type**: Phase 1 Specialist — Climate Risk, Anticipatory Actions, Agromet Intelligence
-> **Model**: Claude Opus 4.7
+> **Model**: Claude Sonnet 5 (M-006)
 > **Invoke**: `/p1-03` · `/climate` · `/agromet` · `/aa-protocol`
 > **Secondary LLM**: Perplexity Pro (real-time weather events) via `LLMRouter(TaskType.REAL_TIME_RESEARCH)`
 > **WBS Tasks**: 1.4.3 (기후·작황 리스크 평가) · 1.1.5 (ENSO/기상이상 데이터 파이프라인 감독)

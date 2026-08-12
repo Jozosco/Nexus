@@ -18,15 +18,21 @@
 
 **Objective**: Identify which macro/micro factors most drive soybean oil price movements.
 
-### Method Stack `[M]`
+### Method Stack (2026-08-12 조사 패키지 반영)
 | Step | Method | Library | Output |
 |---|---|---|---|
-| Feature selection | LASSO regression | `statsmodels` | Reduced variable set |
-| Importance ranking | XGBoost + SHAP | `xgboost`, `shap` | SHAP bar chart + importance table |
-| Importance ranking (alt) | Random Forest MDI | `scikit-learn` | Mean Decrease in Impurity |
-| Causal validation | Granger causality test | `statsmodels` | Lead-lag relationships with p-values |
-| Qualitative signals | LDA topic modeling | `sklearn.decomposition` | Topic clusters from news corpus |
-| Event detection | NLP keyword trigger | `transformers` (FinBERT) | Binary event flag per article |
+| Feature selection | **Elastic Net** (안정성 선택) | `scikit-learn` | 공선성 제어된 변수 집합 |
+| Importance ranking | LightGBM/XGBoost + SHAP | `lightgbm`·`xgboost`·`shap` | 기여도 순위 |
+| Importance (교차검증) | Permutation importance | `scikit-learn` | SHAP 삼각검증 |
+| Lead-lag | Granger (Bonferroni α/m) | `statsmodels` | 시차·p값 |
+| 충격 반응 | **국소투영(Local Projections)** | `statsmodels` | 시차별 반응 크기·지속기간 |
+| Event signals | P1-05 ABSA (evidence 필수) | — | 게이트 통과 사건만 피처화 |
+
+> LASSO 단독은 다중공선성 하에서 동행 변수 중 하나만 남겨 중요도를 불안정하게 만든다(M-005).
+> **Elastic Net + 트리 모델 양쪽에서 반복 선택된 변수만 핵심 동인으로 승격**한다.
+
+### 중요도 산출 단위
+전체 기간 하나가 아니라 **horizon(1·5·20·60일) × 레짐(Bear/Neutral/Bull) × 원산지별**로 산출한다.
 
 ### Alert Trigger Logic
 - Define threshold per variable (e.g., BDI > 2σ from 90-day rolling mean → alert)
@@ -37,12 +43,12 @@
 
 ## G2 — Price Band Forecasting (Futures Price Volatility)
 
-**Objective**: Produce a probability-bounded daily price range for soybean oil futures.
-**Output contract**: Upper band · Point estimate · Lower band · Confidence level (%)
+**Objective**: horizon별 **확률 가격밴드** 산출.
+**Output contract**: P10/P25/P50/P75/P90 · 50/80/95% 구간 · 상승확률 · 임계가격 초과확률 ·
+레짐별 empirical coverage. (구 "상단/점추정/하단/신뢰수준" 4종은 분위수 계약으로 대체)
 
-> **Phase A Data Constraint (MEMORY D-006)**: Internal S&OP data (daily inventory, shipment volume)
-> unavailable — monthly aggregates only. G2 is built **exclusively on external pipeline data**.
-> Internal monthly stock/unit-price data may be used as a post-hoc validation signal in Phase B only.
+> **데이터 제약**: 상단 §Data Constraint(**D-021**) 참조 — 내부 데이터는 사후 검증에도
+> 사용하지 않는다. 구 D-006의 "Phase B 내부검증" 단서는 폐기됨.
 
 > **Compute Environment**: G2 is developed and trained in **Azure ML Studio**.
 > All training jobs must use Azure ML `ScriptRunConfig` or `Command` job objects.
@@ -60,15 +66,26 @@
 | ENSO/Climate | NOAA CPC ONI | `climate_connector.py` | `ENSO_ONI` |
 | Crop Supply | USDA FAS PSD | `wasde_connector.py` | `WASDE_SBO_PRODUCTION` |
 
-### Method Stack `[M]`
+### Method Stack — Champion (2026-08-12 조사 패키지 반영)
 | Step | Method | Library | Notes |
 |---|---|---|---|
-| Pre-processing | VMD decomposition | `vmdpy` | Separate trend/cyclical/noise components |
-| Volatility modeling | GARCH / EGARCH | `arch` (Python), `rugarch` (R) | σ² = α₀ + Σαᵢεᵢ² + Σβⱼσⱼ² |
-| Sequence modeling | LSTM or GRU | `torch` | Captures long-range dependencies |
-| Multi-horizon forecast | TFT | `pytorch-forecasting` | Integrates static + time-varying covariates |
-| Prediction interval | CQR | `mapie` | Distribution-free confidence bounds |
-| Sentiment layer | FinBERT | `transformers` | Score news sentiment → exogenous input |
+| 평균 경로 | SARIMAX / Dynamic Regression | `statsmodels` | 외생변수 효과, 소표본에 강함 |
+| 비선형 분위수 | Quantile LightGBM | `lightgbm` | P10/P25/P50/P75/P90 직접 예측 |
+| 변동성 | EGARCH-X | `arch` (Python), `rugarch` (R) | 변동성 군집·비대칭·꼬리 |
+| 구간 보정 | **EnCQR** (Ensemble Conformalized QR) | `mapie` | 분포 무가정, 레짐별 coverage 보고 |
+| 사건 신호 | P1-05 ABSA + evidence 게이트 | — | 게이트 통과분만 외생 입력 |
+
+### Challenger (동일 fold에서 비교 후 승격)
+GRU/LSTM (`torch`) · N-BEATSx/N-HiTS · TFT (`pytorch-forecasting`) · PatchTST · Chronos.
+승격 조건은 `.claude/agents/c03-data-scientist.md` §4를 따른다.
+
+> ⚠️ **VMD/EMD 분해는 기본 구성에서 제외**(2026-08-12 결정). 전체 시계열을 한 번에 분해하면
+> 미래 정보가 과거 fold로 유입된다. 사용 시 각 fold 학습 창 안에서 one-sided/rolling로만
+> 재적합해야 한다. 구 `vmdpy` 전처리 단계는 이 근거로 폐기.
+
+### 예측 지평 (직접 예측)
+**1 · 5 · 20 · 60 거래일**. 60일을 약 3개월 조달 의사결정 지평으로 사용한다.
+재귀 예측은 보조 실험으로만 둔다.
 
 ### Azure ML Studio Workflow
 ```
@@ -81,12 +98,18 @@
 ```
 
 ### Validation Protocol
-1. Walk-forward cross-validation (never random split — see MEMORY M-001)
-2. Metrics: MAPE, RMSE, MAE, directional accuracy (% correct Bear/Bull direction)
-3. **Baseline required**: compare every model against seasonal naive (last-year same-week)
-4. Report as markdown table: `model × metric × validation window`
-5. Minimum data requirement: 24 months (see MEMORY M-004); fall back to ETS if insufficient
-6. G2 gate: must have C-08 DQSOps PASS on all 8 external data sources before first training run
+1. Walk-forward(expanding 또는 sliding) 전용 — random split 금지(M-001)
+2. 지표: 점(MAE·RMSE·sMAPE·MASE) · 방향(accuracy·MCC·Brier) ·
+   확률구간(pinball·CRPS·empirical coverage·interval width·calibration error)
+3. **Baseline 필수**: last value · seasonal naive · ETS. 이를 못 이기면 승격 없음
+4. `model × metric × horizon × 레짐 × stress slice` 표로 보고 — 평균 단일 점수 금지
+5. **표본 요건**: 고정 "24개월"은 통계 모델 fallback 기준일 뿐 딥러닝의 충분조건이 아니다
+   (2026-08-12 개정). 복잡 모델은 유효 시계열 길이·독립 충격 수·피처 대비 표본 수·
+   레짐별 사례 수로 판단한다(구 M-004 단독 기준 폐기)
+6. G2 gate: 8개 외부 소스 C-08 DQSOps PASS + `available_at` 100% 존재
+7. **Stress slice 별도 보고**: 2012 가뭄 · 2018 미중 · 2020 팬데믹 · 2022 러우 · 2025 ·
+   2026(미완결 → shadow slice). 사건 구간을 이상치로 제거하지 않는다
+8. 최신 완전 기간은 **lockbox test**로 보존한다
 
 ---
 
@@ -113,9 +136,24 @@
 
 ## Cross-Goal Rules
 
+### as-of 시점 정합성 (2026-08-12 신설 — 최우선 제약)
+```text
+모델의 t일 입력값 = available_at ≤ t 를 만족하는 가장 최근 값
+```
+- 모든 피처에 `event_time` · `period_end` · `release_time` · `available_at` ·
+  `source_vintage` · `ingested_at`을 분리 저장한다. 하나라도 없으면 **모델 투입 금지**.
+- WASDE는 대상월이 아니라 **실제 발표일 이후**에만 사용한다. PSD 연간값도 공개·개정일 기준.
+- 정책은 **발표일과 시행일을 분리**한다.
+- 월·연간 자료의 일별 변환은 기간초 forward-fill이 아니라 **발표일 이후 as-of fill**.
+- 개정값은 덮어쓰지 않고 **vintage별로 적재**한다(관세청·USDA 공통).
+
 ### Time Series Non-Negotiables
 - **Never** shuffle or randomly split time series data. Use `TimeSeriesSplit` (sklearn).
-- Always apply outlier capping (IQR method) before fitting ARIMA/GARCH (see MEMORY M-003).
+- 모든 전처리(scaling·imputation·변수선택·분해·calibration)는 **fold 내부에서 재적합**한다.
+- **IQR 캡핑은 데이터 오류와 정상 노이즈에만** 적용한다(2026-08-12 개정).
+  2020·2022 같은 검증된 시장 충격을 일괄 캡핑하면 G2/G3가 가장 중요한 꼬리위험을 학습하지
+  못한다. 원본·robust 변환·캡핑 버전을 모두 실험하고 **사건 검증 결과로 선택**한다.
+  (구 규칙 "ARIMA/GARCH 적합 전 항상 IQR 캡핑"은 이 근거로 폐기 — M-003, D6와 정합)
 - FX rate: use T+2 settlement convention. Document date offset in all pipeline schemas (see MEMORY M-002).
 - Log-transform soybean oil prices before fitting unless the model explicitly handles non-stationarity.
 

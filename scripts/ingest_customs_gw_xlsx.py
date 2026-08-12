@@ -26,10 +26,22 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import httpx
+import pandas as pd
 
 # A-085: 한국 공공기관 호스트에서 러너 IPv6 경로 블랙홀 → IPv4 강제 트랜스포트
 _KR_TRANSPORT = httpx.HTTPTransport(local_address="0.0.0.0", retries=2)
-import pandas as pd
+
+# A-094: 호출마다 Client를 새로 만들면 TCP·TLS 핸드셰이크가 매번 반복되고 소켓이 닫히지
+# 않아 고갈된다. 커넥션 풀을 재사용하는 단일 클라이언트로 교체.
+# 타임아웃 분리: connect 10s(연결 안 되는 호스트를 60초 기다려도 결과 동일) / read 30s.
+_TIMEOUT = httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)
+_CLIENT = httpx.Client(transport=_KR_TRANSPORT, timeout=_TIMEOUT,
+                       limits=httpx.Limits(max_connections=8, max_keepalive_connections=4))
+
+MAX_RETRIES   = int(os.environ.get("CUSTOMS_MAX_RETRIES", "3"))
+CALL_INTERVAL = float(os.environ.get("CUSTOMS_CALL_INTERVAL", "1.0"))   # 레이트리밋 회피 페이싱
+# 잡 전체 예산(초) — 초과 시 수집분을 저장하고 정상 종료(6시간 강제 취소 방지)
+TIME_BUDGET_S = float(os.environ.get("CUSTOMS_TIME_BUDGET_S", "10800"))  # 기본 3시간
 
 BASE_URL = "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList"
 GW_ROOT  = Path("data/raw/관세청/Import Export Performance by Commodity and Country(GW)")
@@ -62,44 +74,81 @@ COUNTRIES: dict[str, str] = {
 _COL_ORDER = ["무역수지(달러)", "수출액(달러)", "수출량(kg)", "수입액(달러)", "수입량(kg)"]
 
 
-def _fetch_year(hs: str, cnty: str, year: int, max_retries: int = 4) -> list[dict]:
-    """단일 (HS·국가·연도) 월별 실적 조회 — 지수 백오프 재시도."""
-    key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
-    if not key:
-        raise RuntimeError("[오류] DATA_GO_KR_SERVICE_KEY 미등록 — GitHub Secrets 등록 필요")
-    params = {"serviceKey": key, "strtYymm": f"{year}01",
-              "endYymm": f"{year}12", "hsSgn": hs, "cntyCd": cnty}
+def _parse_items(root: ET.Element, hs: str, cnty: str) -> list[dict]:
+    """응답 XML → 월별 레코드. 연 총계 행(`year`에 '총계' 또는 월 구분 없음)은 제외."""
+    rows: list[dict] = []
+    for it in root.findall(".//item"):
+        yr = (it.findtext("year") or "").strip()
+        if "총계" in yr or "." not in yr:
+            continue
+        try:
+            y_str, m_str = yr.split(".")[:2]
+            year, month = int(y_str), int(m_str)
+        except ValueError:
+            continue
+        if not (1 <= month <= 12):
+            continue
+        rows.append({
+            "year": year, "month": month,
+            "무역수지(달러)": pd.to_numeric(it.findtext("balPayments"), errors="coerce"),
+            "수출액(달러)":  pd.to_numeric(it.findtext("expDlr"), errors="coerce"),
+            "수출량(kg)":    pd.to_numeric(it.findtext("expWgt"), errors="coerce"),
+            "수입액(달러)":  pd.to_numeric(it.findtext("impDlr"), errors="coerce"),
+            "수입량(kg)":    pd.to_numeric(it.findtext("impWgt"), errors="coerce"),
+        })
+    return rows
+
+
+def _request(params: dict, label: str, max_retries: int = MAX_RETRIES) -> list[dict] | None:
+    """단일 HTTP 조회 — 공유 클라이언트·짧은 connect 타임아웃·지수 백오프.
+
+    A-094: 실패 1건당 최악 254초(4×60s + 백오프)였던 구조가 6시간 초과의 직접 원인.
+    connect 10s / read 30s로 분리해 지연 손실을 1/6로 줄인다(연결 안 되는 호스트를
+    60초 기다려도 결과는 같음). 반환 None = 재시도 소진(호출부에서 실패 집계).
+    """
     delay = 2
     for attempt in range(max_retries):
         try:
-            r = httpx.Client(transport=_KR_TRANSPORT, timeout=60).get(BASE_URL, params=params)
+            r = _CLIENT.get(BASE_URL, params=params)
             r.raise_for_status()
             root = ET.fromstring(r.text)
             code = root.findtext(".//resultCode")
             if code not in ("00", None):
-                print(f"    [경고] {hs}/{cnty}/{year}: resultCode={code} "
-                      f"{root.findtext('.//resultMsg')}")
+                print(f"    [경고] {label}: resultCode={code} {root.findtext('.//resultMsg')}")
                 return []
-            rows = []
-            for it in root.findall(".//item"):
-                yr = (it.findtext("year") or "").strip()
-                if "총계" in yr or "." not in yr:
-                    continue                      # 연 총계 행 제외 — 월별만
-                month = int(yr.split(".")[1])
-                rows.append({
-                    "year": year, "month": month,
-                    "무역수지(달러)": pd.to_numeric(it.findtext("balPayments"), errors="coerce"),
-                    "수출액(달러)":  pd.to_numeric(it.findtext("expDlr"), errors="coerce"),
-                    "수출량(kg)":    pd.to_numeric(it.findtext("expWgt"), errors="coerce"),
-                    "수입액(달러)":  pd.to_numeric(it.findtext("impDlr"), errors="coerce"),
-                    "수입량(kg)":    pd.to_numeric(it.findtext("impWgt"), errors="coerce"),
-                })
-            return rows
+            return _parse_items(root, params.get("hsSgn", ""), params.get("cntyCd", ""))
         except Exception as e:
             if attempt < max_retries - 1:
                 time.sleep(delay); delay *= 2; continue
-            print(f"    [경고] {hs}/{cnty}/{year} 수집 실패: {e}")
-            return []
+            print(f"    [경고] {label} 수집 실패: {type(e).__name__}: {str(e)[:80]}")
+            return None
+
+
+def fetch_range(hs: str, cnty: str, start_year: int, end_year: int) -> list[dict]:
+    """(HS·국가)의 전 기간을 **단일 호출**로 조회 — 실패 시에만 연도별 분할 폴백.
+
+    A-094 근본 개선: API가 strtYymm~endYymm 다월 범위를 지원하므로 연도 루프가 불필요했다.
+    1,530회 → 90회(17배 감소)로 호출량을 줄여 레이트리밋·타임아웃 노출을 함께 낮춘다.
+    """
+    key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
+    if not key:
+        raise RuntimeError("[오류] DATA_GO_KR_SERVICE_KEY 미등록 — GitHub Secrets 등록 필요")
+    base = {"serviceKey": key, "hsSgn": hs, "cntyCd": cnty}
+    rows = _request({**base, "strtYymm": f"{start_year}01", "endYymm": f"{end_year}12"},
+                    f"{hs}/{cnty}/{start_year}~{end_year}")
+    if rows:
+        return rows
+    if rows is None:   # 범위 조회 자체가 실패 → 연도 분할 폴백(응답 크기 제한 대비)
+        print(f"    [정보] {hs}/{cnty}: 범위 조회 실패 — 연도별 분할 재시도")
+        out: list[dict] = []
+        for year in range(start_year, end_year + 1):
+            r = _request({**base, "strtYymm": f"{year}01", "endYymm": f"{year}12"},
+                         f"{hs}/{cnty}/{year}")
+            if r:
+                out.extend(r)
+            time.sleep(CALL_INTERVAL)
+        return out
+    return []
 
 
 def _write_gw_xlsx(rows: list[dict], out_path: Path) -> None:
@@ -120,14 +169,22 @@ def _write_gw_xlsx(rows: list[dict], out_path: Path) -> None:
 
 
 def run() -> None:
+    """전 품목·국가 수집. 시간 예산 초과 시 수집분을 저장하고 정상 종료."""
+    started = time.monotonic()
     all_records: list[dict] = []
+    done = skipped = 0
+    total_pairs = len(COMMODITIES) * len(COUNTRIES)
+
     for folder, hs in COMMODITIES:
         print(f"[C-03] {folder} (HS {hs}) 수집...")
         for cnty_code, cnty_name in COUNTRIES.items():
-            rows: list[dict] = []
-            for year in range(START_YEAR, END_YEAR + 1):
-                rows.extend(_fetch_year(hs, cnty_code, year))
-                time.sleep(0.3)
+            elapsed = time.monotonic() - started
+            if elapsed > TIME_BUDGET_S:
+                skipped += 1
+                continue
+            rows = fetch_range(hs, cnty_code, START_YEAR, END_YEAR)
+            done += 1
+            time.sleep(CALL_INTERVAL)
             if not rows:
                 print(f"  [정보] {folder}/{cnty_name}: 데이터 없음")
                 continue
@@ -141,11 +198,16 @@ def run() -> None:
                                                                month=r["month"], day=1),
                                     "source_name": "KoreaCustoms_GW",
                                     "ingested_at": pd.Timestamp.now("UTC")})
+
+    mins = (time.monotonic() - started) / 60
+    if skipped:
+        print(f"\n[경고] 시간 예산({TIME_BUDGET_S/3600:.1f}h) 초과 — {skipped}/{total_pairs}쌍 미수집. "
+              f"다음 실행에서 이어서 수집됨(수집분은 저장 완료)")
     if all_records:
         pd.DataFrame(all_records).to_parquet(PARQUET, index=False)
-        print(f"\n[완료] → {PARQUET} ({len(all_records):,}행)")
+        print(f"\n[완료] → {PARQUET} ({len(all_records):,}행 · {done}/{total_pairs}쌍 · {mins:.1f}분)")
     else:
-        print("\n[경고] 수집 데이터 없음 — 키·네트워크 확인(Actions에서 실행 필요)")
+        print(f"\n[경고] 수집 데이터 없음 ({mins:.1f}분) — 키·네트워크 확인(Actions에서 실행 필요)")
 
 
 if __name__ == "__main__":

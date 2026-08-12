@@ -32,10 +32,22 @@ transformers >= 4.38    # G2: FinBERT sentiment scoring
 sentence-transformers >= 2.5  # embedding-based document similarity
 
 # Signal Processing
-vmdpy >= 0.1            # G2: Variational Mode Decomposition (VMD) pre-processing
+# ⚠️ vmdpy — 2026-08-12 기본 구성에서 제외. 전체 시계열 일괄 분해는 미래 정보 누수를 일으킴.
+#    사용 시 각 fold 학습 창 내 one-sided/rolling 재적합 필수 (modeling.md G2 참조).
 
 # Uncertainty Quantification
-mapie >= 0.8            # G2: Conformal Quantile Regression (CQR) / prediction intervals
+mapie >= 0.8            # G2: EnCQR(Ensemble Conformalized QR) 구간 보정 — 2026-08-12 용도 갱신
+
+# Feature Mart / as-of Join (2026-08-12 신규)
+duckdb >= 1.0           # ASOF JOIN 기반 시점 정합 feature view — 서버 불필요, parquet 직접 질의
+
+# Challenger 딥러닝 (해당 실험 단계에서만 설치)
+darts >= 0.30           # N-BEATSx · N-HiTS · TFT 통합 인터페이스
+neuralforecast >= 1.7   # Nixtla 계열 (PatchTST 포함)
+
+# 외부 저장소 클라이언트 (조정자 계정 발급 후 사용)
+supabase >= 2.0         # 사건·근거 관계형 적재 (SUPABASE_URL / SUPABASE_SERVICE_KEY)
+neo4j >= 5.0            # 지식그래프 투영 — validated 엣지만 (도입 시점: 조사 §5 게이트 이후)
 
 # Optimization (G3 procurement optimizer)
 pulp >= 2.7             # linear/mixed-integer programming

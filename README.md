@@ -24,7 +24,7 @@
 | ID | Goal | Primary Output |
 |---|---|---|
 | **G1** | Identify and rank price-driving variables | Feature importance rankings + automated risk alerts |
-| **G2** | Forecast futures price volatility band in real time | Daily price band with confidence intervals |
+| **G2** | Forecast futures price volatility band in real time | 1·5·20·60일 확률 가격밴드 (P10/P50/P90 + 상승확률) |
 | **G3** | Generate scenario-based Bear/Bull/Hold signals | Regime label + P&L impact estimate per scenario |
 
 ---
@@ -53,10 +53,15 @@ An F&B manufacturer importing soybean oil faces three structural procurement fai
 Identify which macro/micro factors most influence soybean oil prices and build automated alert triggers when those factors breach thresholds.
 
 ### G2 — Price Band Forecasting `[M]`
-Forecast a probability-bounded price range for soybean oil futures on a rolling daily basis. Output must include upper/lower bands, not just a point estimate.
+1·5·20·60 거래일 지평의 **확률 가격밴드**를 산출한다. 출력은 점추정이 아니라
+P10/P25/P50/P75/P90 · 50/80/95% 구간 · 상승확률 · 임계가격 초과확률이며,
+구간의 실측 coverage를 레짐별로 함께 보고한다.
 
 ### G3 — Bear/Bull/Hold Regime Signal `[M]`
-Classify the current market into Bear (하락장) / Bull (상승장) / Neutral regimes and translate into a Buy or Hold procurement recommendation with estimated P&L impact.
+시장을 Bear/Neutral/Bull로 분류하되 **하드 라벨이 아닌 레짐 확률**로 출력하고,
+G2 예측분포와 결합해 Buy/Hold를 제안한다.
+> **D-021 경계**: 내부 구매량·재고·마진이 없으므로 실제 회사 P&L 최적화를 주장하지 않는다.
+> 공개 시장가 기준 **market-cost proxy와 regret**로 대체한다.
 
 ---
 
@@ -94,26 +99,44 @@ Classify the current market into Bear (하락장) / Bull (상승장) / Neutral r
 
 ### 4.1 Methods by Goal
 
-| Goal | Quantitative Methods | Qualitative Methods |
-|---|---|---|
-| **G1** | XGBoost + SHAP, Random Forest MDI, LASSO regression, Granger causality test | LDA topic modeling, NLP event detection, GPR index encoding |
-| **G2** | VMD-LSTM / GRU, Conformal Quantile Regression (CQR), GARCH volatility, Quantile Regression | FinBERT sentiment scoring, TF-IDF real-time keyword extraction, automated event dummy generation |
-| **G3** | SARIMAX, Markov Regime Switching (RS), Temporal Fusion Transformer (TFT), Monte Carlo simulation | Scenario analysis, ENSO phase encoding, Human-in-the-Loop review gate |
+> 2026-08-12 개정 — 근거: `docs/research_desk/2026-08/model_strategy_2026_08_12/`.
+> 단일 모델을 미리 확정하지 않고 **Champion–Challenger**로 운영한다.
+
+| Goal | Champion (현행) | Challenger (게이트 통과 후 비교) | 정성 계층 |
+|---|---|---|---|
+| **G1** | Elastic Net + LightGBM/XGBoost + SHAP·Permutation + Granger·국소투영 | — | P1-05 ABSA 사건 신호(evidence 필수) |
+| **G2** | SARIMAX + Quantile LightGBM + EGARCH-X → **EnCQR** 구간 보정 | GRU/LSTM · N-BEATSx/N-HiTS · TFT · PatchTST · Chronos | 사건 더미(중복 병합·vintage 보존) |
+| **G3** | Markov Switching/HMM 레짐 확률 + G2 분포 결합 | — | 시나리오 분석 · HITL 게이트 |
+
+**예측 지평**: 1 · 5 · 20 · 60 거래일 **직접 예측**(재귀는 보조 실험).
+**Baseline 필수**: last value · seasonal naive · ETS — 이를 못 이기면 승격 없음.
 
 ### 4.2 Methodology Taxonomy
 
 ```
 Analysis Framework
 ├── A. Quantitative                              ← Automate first (pipeline-native)
-│   ├── A-1. Statistical time series   ARIMA · SARIMA · SARIMAX · Markov RS
-│   ├── A-2. Machine learning          XGBoost · Random Forest · LASSO
-│   ├── A-3. Deep learning             LSTM · GRU · TFT
-│   └── A-4. Uncertainty quantification CQR · GARCH · Monte Carlo
+│   ├── A-1. Statistical time series   SARIMAX · Markov RS · EGARCH-X
+│   ├── A-2. Machine learning          Elastic Net · LightGBM/XGBoost · Quantile GBM
+│   ├── A-3. Deep learning (challenger) N-BEATSx/N-HiTS · GRU/LSTM · TFT · PatchTST
+│   └── A-4. Uncertainty quantification EnCQR · GARCH · Monte Carlo
 └── B. Qualitative                               ← Phased automation; manual override retained
-    ├── B-1. NLP / text analysis       FinBERT · TF-IDF · LDA
+    ├── B-1. NLP / text analysis       ABSA(P1-05) · FinBERT · LDA
     ├── B-2. Event encoding            Geopolitical dummies · ENSO phase
     └── B-3. Expert judgment layer     Human-in-the-Loop · scenario definition
 ```
+
+> ⚠️ **VMD/EMD 제외**(2026-08-12): 전체 시계열 일괄 분해는 미래 정보를 과거 fold로 유입시킨다.
+
+### 4.3 시점 정합성(as-of) — 모든 모델 공통 하드 제약
+
+```text
+모델의 t일 입력값 = available_at ≤ t 를 만족하는 가장 최근 값
+```
+
+모든 피처에 `event_time` · `release_time` · `available_at` · `source_vintage`를 둔다.
+WASDE·PSD 등 월·연간 자료는 **기간 말이 아니라 실제 발표일 이후에만** 모델이 볼 수 있다.
+개정치는 덮어쓰지 않고 vintage별로 적재한다. 상세: `.claude/rules/modeling.md`.
 
 ---
 
@@ -162,7 +185,7 @@ Analysis Framework
 | **RFS** | Renewable Fuel Standard — US EPA policy mandating biofuel blend ratios; increases soybean oil demand |
 | **WASDE** | World Agricultural Supply and Demand Estimates — USDA monthly global crop report |
 | **PaR** | Price-at-Risk — VaR equivalent for commodity price exposure |
-| **VMD** | Variational Mode Decomposition — signal decomposition method for non-stationary price series |
+| **VMD** | Variational Mode Decomposition — 비정상 시계열 분해법. **2026-08-12 기본 구성 제외**(전체 일괄 분해 시 미래 정보 누수) |
 | **CQR** | Conformal Quantile Regression — distribution-free prediction interval method |
 | **TFT** | Temporal Fusion Transformer — attention-based multi-horizon time series model |
 | **FinBERT** | BERT variant fine-tuned on financial text; used for news/report sentiment scoring |

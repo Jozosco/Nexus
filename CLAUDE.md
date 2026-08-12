@@ -20,8 +20,11 @@
 |---|---|
 | **Commodity** | Soybean oil (대두유) — crude + refined. Scope is fixed; do not extend without explicit instruction. |
 | **Decision output** | Daily Buy / Hold procurement signal. AI recommends; human approves. Never execute autonomously. |
-| **Goals** | G1: variable importance + alerts · G2: price band forecast · G3: Bear/Bull/Hold regime signal |
-| **Data scope (Phase A)** | External pipeline data only (MEMORY D-006). Internal S&OP unavailable. G2 trains in Azure ML Studio. |
+| **Goals** | G1: 동인 순위(horizon×레짐별) · G2: 확률 가격밴드(P10/P50/P90) · G3: Bear/Neutral/Bull 레짐 + Buy/Hold |
+| **Horizons** | 1 · 5 · 20 · 60 거래일 직접 예측. 60일 = 약 3개월 조달 의사결정 지평 |
+| **Model policy** | 단일 거대 모델 확정 금지 — **Champion–Challenger 포트폴리오**. 승격은 사전 등록된 규칙으로만 (→ `docs/research_desk/2026-08/model_strategy_2026_08_12/`) |
+| **Data scope** | 외부 파이프라인 데이터 **전용**(MEMORY **D-021**이 D-006을 대체 — 내부 S&OP/ERP는 학습·검증·피처·proxy 어디에도 투입 금지). G2 학습은 Azure ML Studio |
+| **as-of rule** | 모델의 t일 입력 = `available_at ≤ t`인 최근값. `available_at` 없는 피처는 투입 금지 |
 | **Environment** | No CLI inside corporate firewall. Cloud-native only: Azure ML · Snowflake · GitHub Actions. |
 
 ---
