@@ -22,8 +22,10 @@ from __future__ import annotations
 
 import os
 import time
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import NamedTuple
 from xml.etree import ElementTree as ET
 
 import httpx
@@ -46,6 +48,11 @@ CALL_INTERVAL = float(os.environ.get("CUSTOMS_CALL_INTERVAL", "0.5"))   # (HS·�
 MAX_WORKERS   = int(os.environ.get("CUSTOMS_MAX_WORKERS", "5"))
 # 잡 전체 예산(초) — 초과 시 수집분을 저장하고 정상 종료(6시간 강제 취소 방지)
 TIME_BUDGET_S = float(os.environ.get("CUSTOMS_TIME_BUDGET_S", "10800"))  # 기본 3시간
+
+# 실패 집계(A-109 F1) — 하나라도 있으면 종료코드 1로 파이프라인을 차단한다
+_FAILURES: list[str] = []
+# 프로브로 확정되는 조회 폭(개월). 리스트로 둬 스레드에서 읽기만 한다.
+_WINDOW_MONTHS: list[int] = [12]
 
 BASE_URL = "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList"
 GW_ROOT  = Path("data/raw/관세청/Import Export Performance by Commodity and Country(GW)")
@@ -103,13 +110,24 @@ def _parse_items(root: ET.Element, hs: str, cnty: str) -> list[dict]:
     return rows
 
 
-def _request(params: dict, label: str, max_retries: int = MAX_RETRIES) -> list[dict] | None:
-    """단일 HTTP 조회 — 공유 클라이언트·짧은 connect 타임아웃·지수 백오프.
+class Outcome(NamedTuple):
+    """조회 결과 3상태 — A-109.
 
-    A-094: 실패 1건당 최악 254초(4×60s + 백오프)였던 구조가 6시간 초과의 직접 원인.
-    connect 10s / read 30s로 분리해 지연 손실을 1/6로 줄인다(연결 안 되는 호스트를
-    60초 기다려도 결과는 같음). 반환 None = 재시도 소진(호출부에서 실패 집계).
+    이전 구조는 `[]`가 "데이터 없음"과 "요청 거부"를 동시에 뜻해, 서비스키 만료 같은
+    전면 실패가 `[정보] 데이터 없음` 로그와 exit 0으로 위장됐다(세션 45·46 반복 증상).
+    성공/무데이터/실패를 **타입 수준에서 분리**한다.
     """
+    rows: list[dict]
+    status: str          # "ok" | "empty" | "rejected" | "error"
+    detail: str = ""
+
+    @property
+    def failed(self) -> bool:
+        return self.status in ("rejected", "error")
+
+
+def _request(params: dict, label: str, max_retries: int = MAX_RETRIES) -> Outcome:
+    """단일 HTTP 조회 — 공유 클라이언트·짧은 connect 타임아웃·지수 백오프."""
     delay = 2
     for attempt in range(max_retries):
         try:
@@ -117,17 +135,46 @@ def _request(params: dict, label: str, max_retries: int = MAX_RETRIES) -> list[d
             r.raise_for_status()
             root = ET.fromstring(r.text)
             code = root.findtext(".//resultCode")
+            msg = root.findtext(".//resultMsg") or ""
             if code not in ("00", None):
-                # A-101: 업무 오류(99 등)는 재시도해도 동일하다. 다만 빈 리스트로 반환하면
-                # 호출부가 "데이터 없음"으로 오탐하므로 사유를 명확히 남긴다.
-                print(f"    [경고] {label}: resultCode={code} {root.findtext('.//resultMsg')}")
-                return []
-            return _parse_items(root, params.get("hsSgn", ""), params.get("cntyCd", ""))
+                # 업무 오류는 재시도해도 동일 — 즉시 rejected로 확정해 상위가 구분하게 한다
+                print(f"    [경고] {label}: resultCode={code} {msg}")
+                return Outcome([], "rejected", f"{code}: {msg}")
+            rows = _parse_items(root, params.get("hsSgn", ""), params.get("cntyCd", ""))
+            return Outcome(rows, "ok" if rows else "empty")
         except Exception as e:
             if attempt < max_retries - 1:
                 time.sleep(delay); delay *= 2; continue
             print(f"    [경고] {label} 수집 실패: {type(e).__name__}: {str(e)[:80]}")
-            return None
+            return Outcome([], "error", f"{type(e).__name__}: {e}")
+    return Outcome([], "error", "재시도 소진")
+
+
+def _period_windows(year: int, months: int) -> list[tuple[str, str]]:
+    """연도를 `months` 폭으로 분할한 (strtYymm, endYymm) 목록."""
+    out = []
+    for m0 in range(1, 13, months):
+        m1 = min(m0 + months - 1, 12)
+        out.append((f"{year}{m0:02d}", f"{year}{m1:02d}"))
+    return out
+
+
+def _probe_window_months(base: dict, year: int) -> int:
+    """A-109(F2): '1년 이내'의 경계 해석이 불확실하다(12개월 inclusive가 거부될 수 있음).
+
+    첫 조합 1건으로 12 → 6 → 3개월 폭을 시험해 **통과하는 최대 폭**을 확정하고
+    전체에 적용한다. 경계가 어긋나 1,530회를 통째로 낭비하는 사태를 막는다.
+    """
+    for months in (12, 6, 3):
+        s, e = _period_windows(year, months)[0]
+        res = _request({**base, "strtYymm": s, "endYymm": e}, f"프로브 {s}~{e}")
+        if not res.failed:
+            print(f"[프로브] 조회 폭 {months}개월 확정 (요청당 {12 // months}회/연)")
+            return months
+        if "1년" not in res.detail and res.status == "error":
+            break      # 네트워크 오류면 폭 문제 아님 — 기본값으로 진행
+    print("[경고] 프로브 실패 — 기본 12개월 폭으로 진행(실패 시 로그 확인)")
+    return 12
 
 
 def fetch_range(hs: str, cnty: str, start_year: int, end_year: int) -> list[dict]:
@@ -144,25 +191,47 @@ def fetch_range(hs: str, cnty: str, start_year: int, end_year: int) -> list[dict
         raise RuntimeError("[오류] DATA_GO_KR_SERVICE_KEY 미등록 — GitHub Secrets 등록 필요")
     base = {"serviceKey": key, "hsSgn": hs, "cntyCd": cnty}
     years = list(range(start_year, end_year + 1))
+    months = _WINDOW_MONTHS[0]
 
-    def _one(year: int) -> list[dict]:
-        r = _request({**base, "strtYymm": f"{year}01", "endYymm": f"{year}12"},
-                     f"{hs}/{cnty}/{year}")
-        return r or []
+    def _one(year: int) -> tuple[list[dict], list[str]]:
+        rows: list[dict] = []
+        fails: list[str] = []
+        for s, e in _period_windows(year, months):
+            res = _request({**base, "strtYymm": s, "endYymm": e}, f"{hs}/{cnty}/{s}~{e}")
+            if res.failed:
+                fails.append(f"{s}~{e}({res.detail[:40]})")
+            rows.extend(res.rows)
+        return rows, fails
 
     out: list[dict] = []
+    failed: list[str] = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        for rows in pool.map(_one, years):
+        for rows, fails in pool.map(_one, years):
             out.extend(rows)
+            failed.extend(fails)
+    if failed:
+        # A-109(F1): 실패를 삼키지 않고 상위로 올린다
+        _FAILURES.append(f"{hs}/{cnty}: {len(failed)}구간 실패 — {failed[0]}")
     return out
 
 
-def _write_gw_xlsx(rows: list[dict], out_path: Path) -> None:
-    """업로드본과 동일 포맷으로 저장: 연도별 시트 × 월행 × 5지표열."""
+def _write_gw_xlsx(rows: list[dict], out_path: Path,
+                   expected_years: int | None = None) -> None:
+    """업로드본과 동일 포맷으로 저장: 연도별 시트 × 월행 × 5지표열.
+
+    A-109(F10): 전량 덮어쓰기이므로 **부분 수집이 직전의 완전한 산출물을 파괴**할 수 있다
+    (17시트 파일이 3시트로 축소되어도 경고가 없었다). 기대 연도 수에 못 미치면
+    기존 파일을 `.partial.xlsx`로 분리 저장해 원본을 보존한다.
+    """
     if not rows:
         return
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(rows)
+    got_years = df["year"].nunique()
+    if expected_years and got_years < expected_years and out_path.exists():
+        out_path = out_path.with_suffix(".partial.xlsx")
+        print(f"    [보호] 연도 {got_years}/{expected_years}만 수집 — 기존 파일 보존, "
+              f"{out_path.name}에 저장")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
         for year, g in df.groupby("year"):
             # A-085: 동일 (연,월)이 복수 HS·응답행으로 중복 → set_index 후 reindex가
@@ -174,28 +243,39 @@ def _write_gw_xlsx(rows: list[dict], out_path: Path) -> None:
             sheet.to_excel(writer, sheet_name=f"{int(year)}년")
 
 
-def run() -> None:
-    """전 품목·국가 수집. 시간 예산 초과 시 수집분을 저장하고 정상 종료."""
+def run() -> int:
+    """전 품목·국가 수집. 반환값 = 프로세스 종료코드(0 정상 / 1 실패 존재)."""
     started = time.monotonic()
     all_records: list[dict] = []
-    done = skipped = 0
+    done = skipped = empty = 0
     total_pairs = len(COMMODITIES) * len(COUNTRIES)
+    expected_years = END_YEAR - START_YEAR + 1
+
+    # A-109(F2): 조회 폭을 선행 프로브로 확정 — 경계 오판으로 1,530회를 낭비하지 않는다
+    key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
+    if not key:
+        print("[오류] DATA_GO_KR_SERVICE_KEY 미등록 — GitHub Secrets 등록 필요")
+        return 1
+    probe_base = {"serviceKey": key, "hsSgn": COMMODITIES[0][1],
+                  "cntyCd": next(iter(COUNTRIES))}
+    _WINDOW_MONTHS[0] = _probe_window_months(probe_base, START_YEAR)
 
     for folder, hs in COMMODITIES:
         print(f"[C-03] {folder} (HS {hs}) 수집...")
         for cnty_code, cnty_name in COUNTRIES.items():
-            elapsed = time.monotonic() - started
-            if elapsed > TIME_BUDGET_S:
+            if time.monotonic() - started > TIME_BUDGET_S:
                 skipped += 1
                 continue
             rows = fetch_range(hs, cnty_code, START_YEAR, END_YEAR)
             done += 1
             time.sleep(CALL_INTERVAL)
             if not rows:
-                print(f"  [정보] {folder}/{cnty_name}: 데이터 없음")
+                # A-109(F1): '무데이터'와 '실패'는 _FAILURES로 구분된다 — 여기서는 사실만 기록
+                empty += 1
+                print(f"  [정보] {folder}/{cnty_name}: 반환 행 없음")
                 continue
             out = GW_ROOT / folder / f"{cnty_name}.xlsx"
-            _write_gw_xlsx(rows, out)
+            _write_gw_xlsx(rows, out, expected_years=expected_years)
             print(f"  [xlsx] {folder}/{cnty_name}.xlsx ({len(rows)}개월)")
             for r in rows:
                 all_records.append({**r, "commodity": folder, "hs_code": hs,
@@ -207,14 +287,31 @@ def run() -> None:
 
     mins = (time.monotonic() - started) / 60
     if skipped:
+        # A-109(F10): 재개 상태를 저장하지 않으므로 "이어서 수집"은 사실이 아니다.
+        # 매 실행이 같은 순서로 돌아 같은 지점에서 소진된다 — 정확히 알린다.
         print(f"\n[경고] 시간 예산({TIME_BUDGET_S/3600:.1f}h) 초과 — {skipped}/{total_pairs}쌍 미수집. "
-              f"다음 실행에서 이어서 수집됨(수집분은 저장 완료)")
+              f"⚠️ 재개 기능 없음: 다음 실행도 동일 순서로 시작하므로 뒤쪽 품목은 계속 누락된다. "
+              f"CUSTOMS_TIME_BUDGET_S 상향 또는 COMMODITIES 분할 실행 필요")
+
     if all_records:
         pd.DataFrame(all_records).to_parquet(PARQUET, index=False)
-        print(f"\n[완료] → {PARQUET} ({len(all_records):,}행 · {done}/{total_pairs}쌍 · {mins:.1f}분)")
+        print(f"\n[완료] → {PARQUET} ({len(all_records):,}행 · 수집 {done}/{total_pairs}쌍 · "
+              f"무데이터 {empty} · {mins:.1f}분)")
     else:
-        print(f"\n[경고] 수집 데이터 없음 ({mins:.1f}분) — 키·네트워크 확인(Actions에서 실행 필요)")
+        print(f"\n[경고] 수집 데이터 없음 ({mins:.1f}분)")
+
+    # ── A-109(F1) 실패 집계 → 종료코드로 파이프라인 차단 ──────────────────────
+    if _FAILURES:
+        print(f"\n[오류] 요청 실패 {len(_FAILURES)}건 — 아래는 최대 10건:")
+        for f in _FAILURES[:10]:
+            print(f"    · {f}")
+        print("  ⚠️ 실패가 '데이터 없음'으로 위장되지 않도록 종료코드 1로 차단합니다.")
+        return 1
+    if not all_records:
+        print("  ⚠️ 성공 요청이 하나도 없음 — 키·네트워크 확인 필요(종료코드 1)")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    run()
+    sys.exit(run())
