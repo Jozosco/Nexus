@@ -22,6 +22,7 @@ USDA FAS GAIN 보고서 PDF 수집·판독·요약 스크립트 (WBS 1.1.43)
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 from datetime import date
@@ -85,17 +86,39 @@ def _is_real_pdf(path: Path) -> tuple[bool, str]:
     return False, f"미상 매직({head[:4]!r})"
 
 
+# A-117: pdfplumber는 페이지 객체를 내부 캐시에 쌓아 대량 처리 시 메모리가 단조 증가한다
+# (2,090건 판독 중 RSS 3GB 관측, 34분 경과). Actions 러너에서는 OOM·타임아웃 위험.
+# 대응 2가지: ①페이지마다 flush_cache()로 즉시 해제 ②페이지 상한(신호는 보고서 앞부분
+# 하이라이트·요약에 집중되므로 상한이 신호 품질을 실질적으로 낮추지 않음).
+MAX_PAGES = int(os.environ.get("GAIN_MAX_PAGES", "60"))
+
+
 def _extract_text(pdf_path: Path) -> str:
-    """PDF 텍스트 추출 — pdfplumber 우선, fallback pypdf."""
+    """PDF 텍스트 추출 — pdfplumber 우선, fallback pypdf. 페이지 상한·캐시 해제 적용."""
     try:
         import pdfplumber
+        chunks: list[str] = []
         with pdfplumber.open(pdf_path) as pdf:
-            return "\n".join(p.extract_text() or "" for p in pdf.pages)
+            n = len(pdf.pages)
+            for i, page in enumerate(pdf.pages):
+                if i >= MAX_PAGES:
+                    print(f"    [정보] {pdf_path.name}: {n}쪽 중 {MAX_PAGES}쪽까지만 판독"
+                          f"(GAIN_MAX_PAGES)")
+                    break
+                try:
+                    chunks.append(page.extract_text() or "")
+                finally:
+                    # pdfplumber 공식 권장 — 페이지 캐시 즉시 해제(메모리 단조 증가 차단)
+                    try:
+                        page.flush_cache()
+                    except Exception:
+                        pass
+        return "\n".join(chunks)
     except ImportError:
         pass
     from pypdf import PdfReader  # pdfplumber 부재 시
     reader = PdfReader(str(pdf_path))
-    return "\n".join(p.extract_text() or "" for p in reader.pages)
+    return "\n".join(p.extract_text() or "" for p in reader.pages[:MAX_PAGES])
 
 
 def _page_count(pdf_path: Path) -> int:
