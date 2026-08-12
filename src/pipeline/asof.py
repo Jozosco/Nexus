@@ -86,6 +86,26 @@ class ReleaseRule:
     # same_month=True가 ①이다.
 
 
+
+# ── 장중 확정 시각 원리 (M-012 ③) ────────────────────────────────────────────
+# G2의 예측 대상은 **CBOT ZL 일봉 종가**이며, 정규장 마감은 **14:20 ET**다.
+# 어떤 지표가 그보다 **늦게 확정**되면, 같은 price_date로 join하는 순간
+# "t일 종가를 예측하는 데 t일 종가보다 늦게 정해진 값"을 쓰게 된다 — 장중 누수다.
+# 일 단위 as-of(available_at <= t)로는 같은 날짜끼리 통과하므로 **잡히지 않는다**.
+# 따라서 마감 이후 확정 지표에는 lag_days=1을 명시해 하루 뒤부터 보이게 한다.
+#
+#   지표            확정 시각(ET)   ZL 마감(14:20) 대비   조치
+#   VIXCLS          16:15          늦음                  lag_days=1
+#   DEX* (H.10)     16:15 공표     늦음                  lag_days=1 (기적용)
+#   GDELT/USGS/기타 수집 시점 의존  늦음(아래 참조)       lag_days=1
+#   BDI             ~08:00         이름                  즉시 유지
+#   CPO(Bursa)      ~06:00         이름                  즉시 유지
+#
+# 실시간 수집물(GDELT·USGS·FIRMS·NOAA 경보)이 늦은 이유: 파이프라인이 KST 05:30에 도는데
+# 이는 UTC 20:30 = ET 15:30으로 **직전 거래일 마감 이후**다. 즉 `date.today()`로 찍힌
+# price_date의 스냅샷은 그날 마감 뒤 정보를 포함한다.
+TARGET_MARKET_CLOSE_ET = "14:20"   # CBOT ZL 정규장 마감 — 위 판정의 기준선
+
 # ── 소스·지표별 발표 규칙 레지스트리 ─────────────────────────────────────────
 # 키는 indicator_code **접두사**(긴 것 우선 매칭) 또는 source_name.
 # ⚠️ 확인되지 않은 값은 보수적(늦은) 추정이며 note에 근거·검증 필요 여부를 남긴다.
@@ -96,7 +116,9 @@ RELEASE_RULES: dict[str, ReleaseRule] = {
     "BDI":       ReleaseRule("immediate", note="Baltic Exchange 일별 발표(런던 시간)"),
     "BCAA":      ReleaseRule("immediate"),
     "CPO":       ReleaseRule("immediate"),
-    "VIXCLS":    ReleaseRule("immediate"),
+    "VIXCLS":    ReleaseRule("immediate", lag_days=1,
+                             note="**마감 이후 확정**: VIX 산출 종료 16:15 ET > ZL 마감 14:20 ET. "
+                                  "같은 날짜로 join하면 장중 누수 → 1일 지연 필수(M-012 ③)"),
 
     # ── FRED 계열: 시리즈별로 지연이 다르다 ────────────────────────────────
     "DEX":       ReleaseRule("immediate", lag_days=1,
@@ -155,8 +177,15 @@ RELEASE_RULES: dict[str, ReleaseRule] = {
     # ── 지정학 ─────────────────────────────────────────────────────────────
     "GPR":       ReleaseRule("monthly_on_day", day=5, revises=True,
                              note="Caldara & Iacoviello 월간 지수 — 익월 초 갱신"),
-    "GDELT_":    ReleaseRule("immediate", note="GDELT는 15분 단위 갱신 — 사실상 즉시"),
-    "SEISMIC_":  ReleaseRule("immediate", note="USGS 실시간"),
+    "GDELT_":    ReleaseRule("immediate", lag_days=1,
+                             note="15분 단위 갱신이나 수집이 KST 05:30(=ET 15:30, 마감 후)이라 "
+                                  "당일 스냅샷에 마감 뒤 정보가 섞인다 → 1일 지연"),
+    "SEISMIC_":  ReleaseRule("immediate", lag_days=1,
+                             note="USGS 실시간 — GDELT와 동일 사유(마감 후 수집) → 1일 지연"),
+    "GEOINTEL_": ReleaseRule("immediate", lag_days=1,
+                             note="복합 위험 지수(USGS·NOAA·GDELT·FIRMS 합성) — 구성 요소가 "
+                                  "마감 후 수집분을 포함 → 1일 지연"),
+    "FIRMS_":    ReleaseRule("immediate", lag_days=1, note="NASA FIRMS — 동일 사유"),
 
     # ── 비정형 파생: 문서 발행일이 곧 이용 가능 시점 ────────────────────────
     "UNSTR_":    ReleaseRule("monthly_on_day", day=20,
