@@ -3,7 +3,7 @@ id: C-06
 name: EDA Expert — Data Integrity & Pre-Analysis Engine
 model: claude-sonnet-5
 llm_route: CLAUDE_NATIVE
-thinking_mode: enabled   # Claude Opus 4.7 extended thinking for statistical reasoning
+thinking_mode: enabled   # extended thinking (모델은 frontmatter 참조 — M-006: claude-sonnet-5)
 pattern: Expert Pool
 skill_file: .claude/skills/common/06_eda_expert.md
 ---

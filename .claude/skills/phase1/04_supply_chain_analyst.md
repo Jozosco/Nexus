@@ -1,6 +1,6 @@
 # P1-04: Supply Chain & Logistics Analyst
 > **Type**: Phase 1 Specialist — Logistics Intelligence, CFR Optimization, Value Chain Monitoring
-> **Model**: Claude Opus 4.7
+> **Model**: Claude Sonnet 5 (M-006)
 > **Invoke**: `/p1-04` · `/supply-chain` · `/logistics` · `/scl-brief`
 > **Secondary LLM**: Perplexity Pro (real-time freight/port news) via `LLMRouter(TaskType.REAL_TIME_RESEARCH)`
 > **WBS Tasks**: 1.4.4 (공급망·물류 리스크 평가)

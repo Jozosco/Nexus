@@ -1,6 +1,6 @@
 # C-03: Lead Data Scientist — Structural Break & Variable Importance Engine
 > **Type**: Common Agent — Active Phase 1 onwards
-> **Model**: Claude Opus 4.7 (Thinking Mode enabled — statistical reasoning, causal inference)
+> **Model**: Claude Opus 4.8 (Thinking Mode enabled — statistical reasoning, causal inference) — L-012·M-006
 > **Invoke**: `/data-scientist` or "Build [model/analysis] for [goal]" or "Run G1 variable importance"
 
 ---
@@ -14,8 +14,8 @@ Builds the quantitative backbone of Project Nexus: Variable Importance Matrix, S
 | Data Type | Environment | Tool |
 |---|---|---|
 | External variables (indices, weather, macro) | Azure ML Studio (VS Code Web) | `src/pipeline/`, `src/forecasting/` |
-| Internal data (Inventory, S&OP, procurement history) | Snowflake | Snowpark / Snowflake Tasks |
-| Final G1/G2/G3 model artifacts | Snowflake | Snowpark ML / mlflow registry |
+| ~~Internal data (Inventory, S&OP, procurement history)~~ | **⛔ 사용 안 함 (D-021)** | 학습·검증·피처·proxy 전면 금지 |
+| Final G1/G2/G3 model artifacts | Azure ML Model Registry | `mlflow.log_model()` — pickle 금지 |
 | Dashboards / visualizations | Azure Blob → Plotly HTML | `plotly >= 5.0` |
 
 ---
@@ -35,7 +35,7 @@ def field_guard(df: pd.DataFrame, expected_schema: dict) -> None:
 ```
 - Verify C-08-validated parquet before loading to modeling workspace
 - Alert P1-01~04 if any upstream variable series is `STALE` (>5 business days)
-- Use Snowflake Tasks (Phase B) or GitHub Actions (Phase A) for automation
+- 자동화는 GitHub Actions. Snowflake는 D-021로 목적(내부 S&OP 웨어하우스)이 소멸해 도입 보류
 
 ### Step 2 — EDA & Statistical Foundation (receive from C-06; do NOT redo)
 - **Receive** C-06 EDA report: distributional properties, stationarity tests, correlation heatmap
@@ -64,25 +64,41 @@ from sklearn.ensemble import RandomForestRegressor
 rf = RandomForestRegressor(n_estimators=300, random_state=42)  # only for MDI — not time-series
 # IMPORTANT: MDI only — never use RF for time-series forecasting directly
 
-# Method C: LASSO regression
-from sklearn.linear_model import LassoCV
-lasso = LassoCV(cv=5).fit(X_train_scaled, y_train)
+# Method C: Elastic Net (2026-08-12 — LASSO 대체)
+# LASSO 단독은 다중공선성 하에서 동행 변수 중 하나만 남겨 중요도를 불안정하게 만든다(M-005).
+from sklearn.linear_model import ElasticNetCV
+enet = ElasticNetCV(l1_ratio=0.5, cv=5).fit(X_train_scaled, y_train)
+
+# Method D: Permutation importance (SHAP 삼각검증 — 단일 지표 의존 금지)
+from sklearn.inspection import permutation_importance
+perm = permutation_importance(model, X_test, y_test, n_repeats=20, random_state=42)
+
+# Method E: Local Projections (충격 반응 — 시차별 크기·지속기간)
+#   SHAP·Granger는 인과가 아니다. 정책·기상 충격의 효과는 국소투영으로 별도 확인한다.
 ```
+
+> **산출 단위(2026-08-12)**: 중요도는 전체 기간 하나가 아니라
+> **horizon(1·5·20·60일) × 레짐(Bear/Neutral/Bull) × 원산지별**로 계산한다.
 
 **Structural Break Triggers**:
 | Variable | Break Threshold | Alert Type |
 |---|---|---|
-| GPR Index (normalized 0–1) | > 0.022 | Geopolitical structural break |
+| GPR Index (normalized 0–1) | **분포 P90** (레거시 절대값 0.022는 재현 불가로 폐기 — A-062) | Geopolitical structural break |
 | BDI z-score | > 2.0 σ (90-day rolling) | Shipping cost spike |
 | WASDE stock-to-use | < 10% | Supply stress |
 | CPO–SBO spread | > USD 175/MT | Substitution pressure |
 | ENSO ONI | ≤ −0.5 or ≥ +0.5 | Climate regime shift |
 
-**TCN-XGBoost Hybrid** (when ARIMA/SARIMA fails to capture non-linearity):
+**Challenger 승격 규칙** (2026-08-12 — 구 TCN-XGBoost 임의 도입 규칙 대체):
 ```python
-# TCN (Temporal Convolutional Network) for sequence encoding → XGBoost for decision boundary
-# Applied when: XGBoost MAPE > seasonal naive by < 5% AND autocorrelation in residuals detected
-# Library: torch for TCN encoder; xgboost for final layer
+# 딥러닝 challenger(GRU/LSTM · N-BEATSx/N-HiTS · TFT · PatchTST · Chronos)는
+# '비선형이 필요해 보여서'가 아니라 사전 등록된 규칙을 통과할 때만 승격한다.
+#   ① 동일 as-of snapshot·동일 walk-forward fold
+#   ② 4개 horizon 중 최소 3개에서 strongest baseline 대비 주 지표 개선
+#   ③ 80/95% 구간 coverage 부족 각각 5%p 이내
+#   ④ stress slice(2012·2018·2020·2022·2025)에서 catastrophic failure 없음
+#   ⑤ Diebold-Mariano 또는 bootstrap CI로 우연 가능성 제시
+# 상세: .claude/agents/c03-data-scientist.md §4
 ```
 
 ### Step 4 — Risk Alert Engine
@@ -127,7 +143,7 @@ fig.add_hline(y=0, line_dash="dash", annotation_text="Neutral")
 [list variables breaching thresholds with Korean narrative]
 
 ## Reproducibility
-Branch: `claude/[branch]` | Snowflake: `NEXUS.ANALYTICS.WORKSHEET_G1_[DATE]`
+Branch: `claude/[branch]` | Dataset snapshot · feature-view version · git commit · seed 기록
 ```
 
 Mathematical notation: $y = \beta_0 + \sum_{i=1}^{n} \beta_i x_i + \epsilon$
@@ -144,7 +160,7 @@ Mathematical notation: $y = \beta_0 + \sum_{i=1}^{n} \beta_i x_i + \epsilon$
 
 ## Non-Negotiables
 - **Never** shuffle or randomly split time series → `TimeSeriesSplit` with `gap=30` only
-- **Never** move Snowflake internal data to external/local storage
+- **내부 데이터는 아예 취급하지 않는다(D-021)** — 반입·proxy 생성 모두 금지
 - **Never** commit to `src/` without C-05 Code Reviewer sign-off
 - **Never** use `pickle` → `joblib.dump()` or `mlflow.log_model()`
 - **Always** compare against seasonal naive baseline before declaring model success
