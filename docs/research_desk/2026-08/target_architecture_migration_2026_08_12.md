@@ -184,6 +184,64 @@ Databento·TE·Perplexity·OpenAI는 *데이터 원재료비·컴퓨트비*입�
 
 ---
 
+
+---
+
+## 7. 통합 판단 보강 (독립 검증 3개 렌즈 + 적대적 검증 반영)
+
+### 7.1 쟁점 판정 (의견이 갈린 항목만)
+
+| # | 쟁점 | 판정 | 근거 |
+|---|---|---|---|
+| J-3 | Azure ML 생성 시점 | **트리거 방식 + 하드 데드라인** | 정형 parquet 실측 4.3MB — Champion에 GPU 불요. 그러나 11월 Actions 정지가 확정되면 실행 표면이 반드시 필요 → **T3 = Actions 종료 −30일(10월 초)** 신설. T1(GPU 필요)·T2(6시간 초과)·T3 중 **최초 도달 시** 생성 |
+| J-4 | 이관 착수 시점 | **변경 성격으로 분리** | *산출 수치를 바꾸는 변경*(모델·컴퓨트·LLM 백엔드)은 **9/10까지 동결**. *실행 위치·경로 추상화*(egress 신청·as-of 컬럼·경로 env화)는 **즉시 착수** — 둘은 충돌하지 않는다 |
+| J-7 | C-08 게이트 상태 | **부분 해소** | A-108로 0건→REJECTED는 해결. 그러나 **기대 커넥터 매니페스트 부재**는 미해소였음 → A-113으로 추가 차단(§7.3) |
+
+### 7.2 Actions 종속 9종 — 신규 생성 금지 목록
+
+이관 시 전량 재작성이 필요한 패턴이다. **지금부터 새로 만들지 않는다.**
+
+| # | 종속 | 대체 |
+|---|---|---|
+| R-1 | `git push`를 데이터 저장소로 사용(`contents: write`) | S3 write + `OPS.ARTIFACT_MANIFEST` |
+| R-2 | `GITHUB_OUTPUT` 단일 게이트 채널 | 종료코드 + `OPS.DQ_RUN_RESULT` (**A-108로 파일 기록 추가 완료**) |
+| R-3 | 러너 자유 아웃바운드 | `docs/infra/egress_allowlist.yaml` (**본 세션 신규 작성**) |
+| R-4 | `retention-days`를 아카이브로 사용(44회) | S3/Snowflake 착지 후 artifact는 디버깅 사본 |
+| R-5 | `GITHUB_STEP_SUMMARY`를 리포트 화면으로(13회) | S3 리포트 버킷 + `OPS.REPORT_INDEX` |
+| R-6 | `GITHUB_RUN_ID`를 계보 식별자로(3개소) | `NEXUS_RUN_ID` 도입, 기존 값은 폴백 |
+| R-7 | 시크릿 28종을 GitHub Secrets에만 보관 | AWS Secrets Manager 단일 소스 |
+| R-8 | `ubuntu-latest` 암묵 시스템 의존(weasyprint·curl_cffi·pdfplumber) | 고정 컨테이너 이미지 + 버전 핀 |
+| R-9 | `concurrency` 그룹을 상호배제로 사용 | `OPS.INGEST_LOCK` + 워터마크 |
+
+### 7.3 즉시 착수 항목 (S0 — 비용 0, 이관 여부와 무관)
+
+| # | 항목 | 상태 |
+|---|---|---|
+| 1 | **egress allowlist 약 34종 작성·제출** | ✅ `docs/infra/egress_allowlist.yaml` 작성 — **제출 목표 8/29** |
+| 2 | `data/schemas` 8종에 as-of 5필드 추가 | ⏳ **최우선 미착수** (§5-1) |
+| 3 | C-08 fail-closed + 기대 산출물 매니페스트 | ✅ A-108·A-113 완료 |
+| 4 | `NEXUS_RUN_ID` 도입 | ⏳ |
+| 5 | `provenance.yaml`에 `llm_backend`·`prompt_hash` | ⏳ |
+| 6 | `llm_router` 백엔드 축(Foundry 전환 대비) | ⏳ |
+
+### 7.4 이관 수용 기준 (병행 운전 시 전승 조건)
+
+| ID | 기준 | 임계값 |
+|---|---|---|
+| R1 | 스냅샷 동등성 | 불일치 **0건** |
+| R2 | 피처뷰 동등성(Snowflake vs DuckDB) | 상대차 **< 1e-9** |
+| R3 | 모델 지표 동등성 | 상대차 **< 0.5%** |
+| R4 | 비정형 추출 품질 | entity/relation F1 **≥ 0.85**, 방향 정확도 **≥ 0.90** |
+| R5 | as-of 무결성 | 위반 **0건** |
+
+### 7.5 재현성 3중 동결 (컴퓨트 이관 후 필수)
+
+| 층 | 식별자 |
+|---|---|
+| 데이터 스냅샷 | `snapshot_id` — CTAS로 물리 고정(**Time Travel 의존 금지**) |
+| 피처 뷰 | `feature_view_id = fv_{snapshot_id}_{code_hash}_{asof_ver}` |
+| 사건 동결 | `event_freeze_id` — **모델은 LLM을 실시간 호출하지 않고 동결본만 읽는다**(LLM은 temperature=0에서도 결정론이 아님) |
+
 ## 6. 조정자 확인 요청
 
 | # | 확인 사항 | 이유 |
