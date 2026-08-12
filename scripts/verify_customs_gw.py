@@ -94,7 +94,11 @@ def run() -> None:
     cov = cf.groupby("year")["수입량"].apply(lambda s: (s > 0).mean() * 100)
     print("   " + " · ".join(f"{int(y)}:{v:.0f}%" for y, v in cov.items()))
 
-    out = Path("data/raw/customs_gw_verification.parquet")
+    # D-027: 이것은 **QA 검증 산출물**이지 모델 입력이 아니다.
+    # data/raw에 두면 as-of 게이트가 모델 피처로 오인해 위반으로 잡는다 →
+    # 품질 리포트 디렉터리로 분리해 성격을 경로로 드러낸다.
+    out = Path("reports/data_quality/customs_gw_verification.parquet")
+    out.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out, index=False)
     print(f"\n[완료] 셀 단위 진단 → {out}")
 

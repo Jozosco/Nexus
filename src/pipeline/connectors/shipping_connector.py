@@ -65,6 +65,24 @@ def fetch_bcaa() -> pd.DataFrame:
     rows = []
     today = date.today().isoformat()
 
+    # D-027(파생 발견): 구 코드는 price_date를 **수집일**로 고정했다. available_at 관점에서는
+    # 옳지만(오늘 알게 된 것은 사실이다) event_time이 부정확해진다 — 응답이 며칠 전 평가치를
+    # 담고 있어도 오늘 관측된 것처럼 기록된다. 응답에서 평가일을 찾아 event_time을 교정한다.
+    # 누수 위험은 없다(available_at은 여전히 수집일 = 늦은 쪽).
+    _dm = re.search(r"(20\d{2})[-/.\s]+(\d{1,2})[-/.\s]+(\d{1,2})", text)
+    assessed = today
+    if _dm:
+        try:
+            _y, _mo, _d = (int(g) for g in _dm.groups())
+            _cand = date(_y, _mo, _d)
+            # 미래이거나 30일 이상 과거면 오탐으로 보고 수집일 유지
+            if 0 <= (date.today() - _cand).days <= 30:
+                assessed = _cand.isoformat()
+        except ValueError:
+            pass
+    if assessed != today:
+        print(f"[정보] BCAA 평가일 추출: {assessed} (수집일 {today})")
+
     # BCAA: 다양한 응답 형식 대응 ("BCAA: 1234", "BCAA index is 1,234", "BCAA stood at 1234.5")
     bcaa_match = re.search(
         r"BCAA[^0-9\n]{0,40}?(\d[\d,\.]*)",
@@ -72,7 +90,7 @@ def fetch_bcaa() -> pd.DataFrame:
     )
     if bcaa_match:
         rows.append({
-            "price_date":     today,
+            "price_date":     assessed,
             "source_name":    "Perplexity/BalticExchange",
             "indicator_code": "BCAA",
             "value":          float(bcaa_match.group(1).replace(",", "")),

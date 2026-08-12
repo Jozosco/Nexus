@@ -101,10 +101,15 @@ RELEASE_RULES: dict[str, ReleaseRule] = {
     # ── FRED 계열: 시리즈별로 지연이 다르다 ────────────────────────────────
     "DEX":       ReleaseRule("immediate", lag_days=1,
                              note="FRED 일별 환율 — 익영업일 공개. T+2 결제 규약은 별개(M-002)"),
-    "FEDFUNDS":  ReleaseRule("monthly_on_day", day=1, lag_days=0,
-                             note="월평균 실효연방기금금리 — 익월 초 공개"),
-    "CPIAUCSL":  ReleaseRule("monthly_on_day", day=13, revises=True,
-                             note="美 CPI — 대상월 익월 중순(통상 10~15일). 계절조정 연간 개정 있음"),
+    "FEDFUNDS":  ReleaseRule("monthly_on_day", day=8,
+                             note="월평균 실효연방기금금리 — H.15 익월 초 16:15 ET. "
+                                  "보수적으로 익월 8일(월말+5영업일)"),
+    "CPIAUCSL":  ReleaseRule("monthly_on_day", day=16, revises=True,
+                             note="美 CPI — BLS는 익월 10~15일 08:30 ET 발표. 보수적으로 16일 채택. "
+                                  "매년 2월 계절조정계수 재산정으로 최근 5년 소급개정 → vintage 필수"),
+    "CPI_KOREA": ReleaseRule("monthly_on_day", day=10, revises=True,
+                             note="통계청 소비자물가동향 — 익월 초 08:00 KST 발표 + KOSIS DB "
+                                  "반영 1~2영업일 → 익월 10일. 5년 주기 기준연도 개편 시 소급 재계산"),
     "PPOILUSDM": ReleaseRule("monthly_on_day", day=15,
                              note="World Bank Pink Sheet 계열 — 익월 중순"),
 

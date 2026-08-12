@@ -30,6 +30,12 @@ from typing import Optional
 
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 GAIN_DIR     = Path("data/raw/USDA/FAS/GAIN")
 OUTPUT_DIR   = Path("data/raw")
 
@@ -190,6 +196,8 @@ def run(gain_dir: Path = GAIN_DIR, output_dir: Path = OUTPUT_DIR) -> None:
         ["category", "price_date", "country"]).reset_index(drop=True)
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / "gain_historical.parquet"
+    # D-023: GAIN 보고서는 발행일에 즉시 공개 — price_date가 곧 이용 가능 시점
+    df = attach_asof(df, source="USDA_FAS_GAIN_PDF")
     df.to_parquet(out_path, index=False)
 
     print(f"\n[완료] GAIN 판독 집계 → {out_path}")
