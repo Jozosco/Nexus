@@ -18,9 +18,19 @@
 """
 from __future__ import annotations
 
+import logging
 import re
 import sys
+import warnings
 from pathlib import Path
+
+# A-097: "Could not get FontBBox from font descriptor because None cannot be parsed as
+# 4 floats"는 pdfminer.six(pdfplumber 백엔드)가 **FontBBox 항목이 없는 임베디드 폰트**를
+# 만났을 때 내는 경고다. 폰트 경계상자는 글리프 배치 보정에만 쓰이고 문자 추출 자체와
+# 무관하므로 텍스트 손실이 없다(FAO 137건 전량 판독 성공으로 실증). 로그 노이즈만 제거한다.
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
+logging.getLogger("pdfplumber").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", category=UserWarning, module="pdfminer")
 
 FAO_DIR  = Path("data/raw/FAO/AMIS")
 GAIN_DIR = Path("data/raw/USDA/FAS/GAIN")

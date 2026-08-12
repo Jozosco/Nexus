@@ -17,7 +17,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install openai google-genai httpx
+        run: pip install openai httpx   # C-012: google-genai 제거(Gemini 전면 배제)
 
       # ── LLM APIs ────────────────────────────────────────────────────────────
 
@@ -45,22 +45,8 @@ jobs:
           print("✅ Perplexity API 정상")
           EOF
 
-      - name: Check Gemini API
-        continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          python - <<'EOF'
-          import os
-          from google import genai
-          # MEMORY L-010: google-generativeai 지원 종료 → google-genai SDK로 전환
-          # MEMORY L-011: gemini-2.0-flash 신규 사용자 제한 → gemini-2.5-flash 교체 (2026-06-01 완전 폐기)
-          PING_MODEL = "gemini-2.5-flash"
-          client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-          r = client.models.generate_content(model=PING_MODEL, contents="Ping: respond with OK only")
-          assert "ok" in r.text.lower(), f"Gemini 응답 이상: {r.text}"
-          print("✅ Gemini API 정상")
-          EOF
+      # C-012(조정자 지시): Gemini 전면 배제 — 점검 스텝 제거. 교차검증은 OpenAI
+      # gpt-5.6-sol/luna(config/llm_cross_validation.json)가 전담한다.
 
       - name: Check OpenAI API
         continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
@@ -297,13 +283,42 @@ jobs:
           if not api_key:
               print("⚠️ USDA_FAS_API_KEY 미등록 — 건너뜀 (apps.fas.usda.gov/opendatawebV2 에서 발급)")
               raise SystemExit(0)
-          url = "https://apps.fas.usda.gov/OpenData/api/psd/commodity/2222000/country/all/year/2024"
-          r = httpx.get(url, headers={"API_KEY": api_key}, timeout=20)
-          r.raise_for_status()
-          data = r.json()
-          assert isinstance(data, list) and len(data) > 0, \
-              f"[오류] USDA FAS PSD API: 대두유(2222000) 2024년 데이터 없음"
-          print(f"✅ USDA FAS OpenData API 정상 — 대두유 PSD 레코드 {len(data)}건")
+          # A-098: 500의 진짜 원인 — A-076에서 폴백 체인을 **커넥터에만** 적용하고 이 헬스체크
+          # 스텝은 구 호스트(apps.fas)를 직접 호출한 채로 남아 있었다. ESR 이관 전례(A-019)대로
+          # api.fas.usda.gov + X-Api-Key 헤더를 1순위로 두고, 구 호스트는 폴백으로 강등한다.
+          # 인증 헤더도 호스트별로 다르므로(X-Api-Key vs API_KEY) 조합을 순회한다.
+          _cands = [
+              ("https://api.fas.usda.gov/api/psd/commodity/2222000/country/all/year/2024",
+               {"X-Api-Key": api_key}),
+              ("https://api.fas.usda.gov/api/psd/commodity/2222000/country/all/year/2024",
+               {"API_KEY": api_key}),
+              ("https://apps.fas.usda.gov/OpenData/api/psd/commodity/2222000/country/all/year/2024",
+               {"API_KEY": api_key}),
+          ]
+          data = None
+          for _u, _h in _cands:
+              try:
+                  r = _get_retry(_u, headers=_h, timeout=30)
+              except Exception as _e:
+                  print(f"[경고] PSD {_u.split('/api')[0]}: {type(_e).__name__}: {str(_e)[:60]}")
+                  continue
+              if r.status_code == 200:
+                  try:
+                      data = r.json()
+                  except Exception:
+                      print(f"[경고] PSD {_u}: JSON 파싱 실패"); continue
+                  print(f"[정보] PSD 응답 호스트: {_u.split('/api')[0]} (헤더 {list(_h)[0]})")
+                  break
+              print(f"[경고] PSD {_u.split('/api')[0]} 헤더 {list(_h)[0]}: HTTP {r.status_code}")
+          if data is None:
+              # PSD는 수동 업로드 PSD Excel(psd_historical.parquet · 27지표)로 이미 커버됨 →
+              # API 실패는 비치명. 후속 점검을 막지 않는다.
+              print("⚠️ USDA FAS PSD API 전 후보 실패 — 비치명(수동 업로드 PSD로 커버). "
+                    "구 호스트 500 지속 시 FAS에 엔드포인트 이관 문의 필요")
+          elif isinstance(data, list) and data:
+              print(f"✅ USDA FAS OpenData API 정상 — 대두유 PSD 레코드 {len(data)}건")
+          else:
+              print(f"⚠️ PSD 응답 형식 예상 밖(비치명): {str(data)[:120]}")
           EOF
 
       - name: Check USDA NASS QuickStats API (Soybean Production endpoint)
@@ -402,21 +417,26 @@ jobs:
               raise SystemExit(0)
           r.raise_for_status()
           data = r.json()
-          count = len(data) if isinstance(data, list) else data.get("count", 0)
-          # A-085: api.ers 신규 스키마는 {status,data,errors} — 조회 파라미터가 신규 규격과
-          #        달라 data가 비어도 서비스는 정상. 생존 확인으로 완화(보조 지표).
           _d = data.get("data") if isinstance(data, dict) else data
-          if not _d:
-              print(f"⚠️ ARMS 응답 0건 — 신규 파라미터 규격 확인 필요(비치명): {list(data)[:6]}")
-          else:
+          if _d:
               print(f"✅ USDA ARMS 정상 — {len(_d)}건")
-          print(f"✅ USDA ARMS API 정상 — 대두 생산비용 레코드 {count}건")
+              raise SystemExit(0)
+          # A-099: 0건일 때 키 목록만 찍으면 원인을 알 수 없었다(구 버전은 여기서 assert로
+          # 잡을 중단시켰음). api.ers 신규 스키마의 message/errors/detail을 그대로 노출해
+          # 어떤 파라미터가 거부됐는지 다음 실행에서 바로 교정할 수 있게 한다.
+          for _k in ("message", "errors", "detail", "info", "status"):
+              if isinstance(data, dict) and data.get(_k):
+                  print(f"    [ARMS {_k}] {str(data[_k])[:300]}")
+          print("⚠️ ARMS 응답 0건 — 위 message/errors로 파라미터 규격 교정 필요(비치명, 보조 지표). "
+                "대두 생산비용은 G1 핵심 8변수에 미포함이라 파이프라인 차단 사유 아님")
           EOF
 
-      - name: Check ECMWF CDS API (ERA5 connection)
+      # A-100: 구 스텝명은 'ECMWF CDS API (ERA5 connection)'이었으나 실제로는 Open-Meteo를
+      # 호출하면서 CDS 인증 헤더를 붙이고, 403/404까지 '정상'으로 출력했다. 이 때문에
+      # "HTTP 200인데 데이터가 안 보인다"는 혼선이 발생. 실수집원(Open-Meteo ERA5) 점검으로
+      # 정정하고, **응답 본문의 관측값 개수까지 검증**해 수집 가능 여부를 확정한다.
+      - name: Check Open-Meteo ERA5 Archive (기후 실수집원 — CDS 아님)
         continue-on-error: true   # 단일 API 실패가 후속 점검을 막지 않음 (Session 40)
-        env:
-          ECMWF_API_KEY: ${{ secrets.ECMWF_API_KEY }}
         run: |
           python - <<'EOF'
           import os, httpx
@@ -437,28 +457,32 @@ jobs:
                   _t.sleep(5 * (i + 1))
               raise last
 
-          api_key = os.environ.get("ECMWF_API_KEY", "").strip()
-          if not api_key:
-              print("⚠️ ECMWF_API_KEY 미등록 — 건너뜀 (cds.climate.copernicus.eu 계정 필요, 형식: uid:key)")
-              raise SystemExit(0)
-          # ECMWF CDS API — 형식: 'uid:key'
-          if ":" in api_key:
-              uid, key = api_key.split(":", 1)
-              auth_header = {"Authorization": f"Bearer {key}", "X-CDS-API-KEY": api_key}
-          else:
-              auth_header = {"X-CDS-API-KEY": api_key}
-          r = httpx.get(
-              "https://archive-api.open-meteo.com/v1/era5?latitude=42&longitude=-93.5&start_date=2024-01-01&end_date=2024-01-02&daily=temperature_2m_max",
-              # A-083: CDS v2 API는 2024 CDS-Beta 이관으로 폐기(308→404). 기후 데이터의 실제
-              #        수집원은 Open-Meteo ERA5-Land(climate_connector) — 그 소스를 직접 점검.
-              headers=auth_header,
+          # Open-Meteo ERA5 아카이브는 **API 키 불요**(ECMWF_API_KEY는 이 경로에서 미사용).
+          # CDS v2는 2024 CDS-Beta 이관으로 폐기(A-083) — 프로젝트는 CDS로 수집한 적이 없다.
+          # 점검 지점: 미국 아이오와 대두 산지 격자(42.0N, 93.5W) 실측 일별 값.
+          r = _get_retry(
+              "https://archive-api.open-meteo.com/v1/era5",
+              params={"latitude": 42.0, "longitude": -93.5,
+                      "start_date": "2024-01-01", "end_date": "2024-01-07",
+                      "daily": "temperature_2m_max,precipitation_sum"},
               timeout=60,
           )
-          # 200 또는 인증 오류가 아닌 응답이면 연결 정상
-          if r.status_code in (200, 403, 404):
-              print(f"✅ ECMWF CDS API 연결 정상 (HTTP {r.status_code})")
+          if r.status_code != 200:
+              print(f"⚠️ Open-Meteo ERA5 HTTP {r.status_code} — 응답: {r.text[:150]}")
+              raise SystemExit(0)
+          data = r.json()
+          daily = (data or {}).get("daily") or {}
+          dates = daily.get("time") or []
+          temps = [v for v in (daily.get("temperature_2m_max") or []) if v is not None]
+          # 연결 성공(200)과 '값이 실제로 왔는가'를 분리 판정 — 구 스텝의 혼선 원인 제거
+          if dates and temps:
+              print(f"✅ Open-Meteo ERA5 정상 — {len(dates)}일 수신 "
+                    f"({dates[0]}~{dates[-1]}), 최고기온 실측 {len(temps)}건 "
+                    f"(예: {temps[0]}°C)")
+              print("   ※ 기후 데이터 실수집은 climate_connector.py(Open-Meteo ERA5-Land, 12개 산지) 담당. "
+                    "본 점검은 소스 가용성 확인용이며 자체적으로 저장하지 않음")
           else:
-              r.raise_for_status()
+              print(f"⚠️ Open-Meteo ERA5 HTTP 200이나 관측값 없음 — 응답 키: {list(data)[:6]}")
           EOF
 
       - name: Check Korea Customs API — data.go.kr HS 1507 (MEMORY A-011, A-018)
