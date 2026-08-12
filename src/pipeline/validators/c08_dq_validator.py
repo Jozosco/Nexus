@@ -26,6 +26,30 @@ import pandas as pd
 
 REPORT_DIR = "reports/data_quality"
 RAW_DIR = "data/raw"
+
+# A-113(J-7): glob 기반 검증의 사각지대 — **파일이 아예 없는 커넥터는 검증 대상에서
+# 조용히 이탈**한다. 수집이 실패해 parquet이 생성되지 않으면 "검증할 게 없으니 통과"가
+# 되어, 게이트가 존재 자체를 보증하지 못했다(A-108의 0건 차단으로도 미해소).
+# 기대 산출물 매니페스트를 명시해 **누락을 검출 가능한 사건**으로 만든다.
+# 접두사 기준(파일명은 날짜 접미사를 가짐). 선택 항목은 optional=True.
+EXPECTED_ARTIFACTS: list[tuple[str, bool]] = [
+    # (파일명 접두사, optional)
+    ("economic_indicators", False),
+    ("commodity_data", False),
+    ("climate_data", False),
+    ("shipping_indices", False),
+    ("geopolitical_indices", False),
+    ("production_data", False),
+    ("wasde_historical", False),
+    ("psd_historical", False),
+    ("gats_quantity_historical", False),
+    ("te_commodities_historical", False),
+    ("customs_gw_historical", True),      # API 키 상태에 따라 결번 가능
+    ("databento_bo_historical", True),    # 유료 종량제 — 회차별 선택 실행
+    ("nasa_power_agroclimatology_historical", True),
+    ("ice_monthly_volumes", True),
+    ("unstructured_signals_historical", True),
+]
 STALE_BDAYS = 5
 DQ_THRESHOLD = 0.70  # PASS 기준 (0.0~1.0)
 DQ_WARN = 0.50       # WARNING 기준
@@ -354,19 +378,50 @@ def main() -> None:
     parquet_files = glob.glob(os.path.join(RAW_DIR, "**", "*.parquet"), recursive=True)
 
     if not parquet_files:
-        print("[경고] data/raw/ 디렉토리에서 parquet 파일을 찾을 수 없습니다.")
+        # A-108: 이것은 fail-open이었다 — "검증할 것이 없음"을 WARNING으로 통과시키면
+        # 아티팩트 다운로드 실패·경로 오류 시에도 품질 게이트가 **통과한 것처럼** 보인다.
+        # 검증 대상 부재는 정상 상태가 아니라 파이프라인 결함이므로 REJECTED로 차단한다.
+        # (의도적으로 빈 실행을 허용해야 하면 DQ_ALLOW_EMPTY=true)
+        allow_empty = os.environ.get("DQ_ALLOW_EMPTY", "").lower() == "true"
+        status = "WARNING" if allow_empty else "REJECTED"
+        print(f"[{'경고' if allow_empty else '오류'}] data/raw/ 에서 parquet 파일을 찾을 수 없습니다 "
+              f"— 검증 대상 부재(상태: {status})")
+        if not allow_empty:
+            print("       원인 후보: 아티팩트 다운로드 실패 · 경로 불일치 · 선행 수집 잡 실패")
         report: dict[str, Any] = {
             "run_date": str(date.today()),
-            "overall_status": "WARNING",
+            "overall_status": status,
             "overall_dq_score": 0.0,
             "connectors": [],
             "message": "검증할 parquet 파일이 없습니다.",
         }
         _write_report(report)
-        _set_github_output("WARNING")
+        _set_github_output(status)
+        if status == "REJECTED":
+            sys.exit(1)
         return
 
     results: list[dict[str, Any]] = [_validate_connector(f) for f in sorted(parquet_files)]
+
+    # ── A-113(J-7): 기대 산출물 누락 검출 — glob 사각지대 차단 ────────────────
+    present = {os.path.basename(f) for f in parquet_files}
+    missing_required, missing_optional = [], []
+    for prefix, optional in EXPECTED_ARTIFACTS:
+        if not any(name.startswith(prefix) for name in present):
+            (missing_optional if optional else missing_required).append(prefix)
+    if missing_optional:
+        print(f"[정보] 선택 산출물 미생성 {len(missing_optional)}건: {', '.join(missing_optional)}")
+    if missing_required:
+        print(f"[오류] **필수 산출물 누락 {len(missing_required)}건** — 수집 실패가 "
+              f"'검증 대상 없음'으로 위장되지 않도록 REJECTED 처리:")
+        for p in missing_required:
+            print(f"    · {p}*.parquet 없음")
+        results.append({
+            "connector": "EXPECTED_ARTIFACTS",
+            "status": "REJECTED",
+            "dq_score": 0.0,
+            "message": f"필수 산출물 누락: {', '.join(missing_required)}",
+        })
 
     # ── 종합 상태 및 평균 DQ 점수 계산 ────────────────────────────────────────
     status_priority = {"REJECTED": 0, "READ_ERROR": 0, "WARNING": 1, "PASS": 2}
@@ -471,6 +526,15 @@ def _set_github_output(overall_status: str) -> None:
     else:
         # 로컬 실행 시 환경 변수가 없을 수 있으므로 경고만 출력
         print(f"[정보] GITHUB_OUTPUT 미설정 — overall_status={overall_status}")
+
+    # A-108(이식성): 게이트 결과를 Actions 전용 채널에만 싣지 않는다.
+    # Apache Hop·Snowflake 등 다른 오케스트레이터도 읽을 수 있게 파일로도 남긴다.
+    try:
+        Path(REPORT_DIR).mkdir(parents=True, exist_ok=True)
+        (Path(REPORT_DIR) / "dq_overall_status.txt").write_text(
+            overall_status, encoding="utf-8")
+    except OSError as e:
+        print(f"[경고] 상태 파일 기록 실패: {e}")
 
 
 if __name__ == "__main__":

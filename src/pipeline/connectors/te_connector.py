@@ -84,6 +84,37 @@ def _df_from_te_result(result: object, indicator_code: str, source: str, unit: s
     return out.dropna(subset=["price_date", "value"])
 
 
+
+# A-112(F6): 헬스체크만 고치고 **수집기는 방치**했던 것을 교정한다(A-105 불완전).
+# 구 패턴은 심볼 4종을 무백오프로 연타하고 409를 삼킨 뒤 곧바로 전체 상품 목록(무거운 호출)을
+# 던졌다 — 실행 1회당 최대 9회 무제어 호출로 레이트리밋을 자초하는 구조였다.
+_TE_THROTTLE_TOKENS = ("409", "429", "slow down", "throttle", "too many")
+
+
+def _is_throttled(err: Exception) -> bool:
+    msg = str(err).lower()
+    return any(tok in msg for tok in _TE_THROTTLE_TOKENS)
+
+
+def _te_try(fn, label: str, backoffs: tuple[int, ...] = (30, 60, 120)):
+    """TE 호출 1건 — 레이트리밋만 지수 백오프 재시도, 그 외 오류는 즉시 포기.
+
+    반환: (결과, 스로틀 여부). 스로틀이 확인되면 호출부는 **추가 호출을 중단**해야 한다.
+    """
+    import time as _t
+    for i, wait in enumerate((0,) + backoffs):
+        if wait:
+            print(f"[정보] TE 레이트리밋 — {wait}s 대기 후 재시도 ({i}/{len(backoffs)}): {label}")
+            _t.sleep(wait)
+        try:
+            return fn(), False
+        except Exception as e:
+            if not _is_throttled(e):
+                return None, False
+    print(f"[경고] TE 레이트리밋 지속 — {label} 포기(추가 호출 중단)")
+    return None, True
+
+
 def fetch_bdi() -> pd.DataFrame:
     """BDI (Baltic Dry Index) — C-03 구조적 단절 모니터링 변수.
 
@@ -96,17 +127,22 @@ def fetch_bdi() -> pd.DataFrame:
         import tradingeconomics as te  # type: ignore
         # 심볼 우선 시도 — TE 심볼은 버전에 따라 달라질 수 있음
         for symbol in ("bdi", "baltic", "BADI:COM", ".BADI"):
-            try:
-                result = te.getMarketsBySymbol(symbols=symbol, output_type="df")
-                if result is not None and len(result) > 0:
-                    df = _df_from_te_result(result, "BDI", "TradingEconomics/BalticExchange", "points")
-                    if not df.empty:
-                        print(f"[정보] TE BDI 수집 완료 (심볼: {symbol}): {len(df)}건")
-                        return df
-            except Exception:
-                continue
-        # 전체 상품 목록 폴백
-        all_comm = te.getMarketsData(marketsField="commodities", output_type="df")
+            result, throttled = _te_try(
+                lambda s=symbol: te.getMarketsBySymbol(symbols=s, output_type="df"),
+                f"BDI/{symbol}")
+            if throttled:
+                return pd.DataFrame()      # 스로틀 확정 — 연타 중단(구 구조의 근본 결함)
+            if result is not None and len(result) > 0:
+                df = _df_from_te_result(result, "BDI", "TradingEconomics/BalticExchange", "points")
+                if not df.empty:
+                    print(f"[정보] TE BDI 수집 완료 (심볼: {symbol}): {len(df)}건")
+                    return df
+        # 전체 상품 목록 폴백 — 가장 무거운 호출이므로 백오프를 반드시 거친다
+        all_comm, throttled = _te_try(
+            lambda: te.getMarketsData(marketsField="commodities", output_type="df"),
+            "commodities 전체")
+        if throttled:
+            return pd.DataFrame()
         if all_comm is not None:
             bdi_row = all_comm[
                 all_comm.get("Symbol", pd.Series(dtype=str))
@@ -137,7 +173,11 @@ def fetch_cpo() -> pd.DataFrame:
         import tradingeconomics as te  # type: ignore
         for symbol in ("cpo", "palm-oil", "palm oil", "FCPO:COM"):
             try:
-                result = te.getMarketsBySymbol(symbols=symbol, output_type="df")
+                result, _thr = _te_try(
+                    lambda s=symbol: te.getMarketsBySymbol(symbols=s, output_type="df"),
+                    f"CPO/{symbol}")
+                if _thr:
+                    return pd.DataFrame()
                 if result is not None and len(result) > 0:
                     df = _df_from_te_result(result, "CPO_USD_MT", "TradingEconomics/BursaMalaysia", "USD/MT")
                     if not df.empty:

@@ -10,6 +10,23 @@
 > **[B] 키/계정만 수동**: 조정자가 가입·키 발급 후 GitHub Secrets 등록. 이후 자동.
 > **[C] 완전 수동**: 조정자가 콘솔·설치 작업 수행. 유료/무료를 명시.
 
+
+> ## ⛔ 2026-08-12 개정 — Supabase·Neo4j 도입 **철회**, Snowflake 보류 **해제**
+>
+> 조정자가 공유한 **회사 목표 아키텍처**(11월 Control Tower AWS 통합 · Apache Hop ETL ·
+> PostgreSQL+ADLS Gen2 → **Snowflake EDP 단일화**)가 본 문서의 전제를 바꿨다.
+> 상세 판단: `docs/research_desk/2026-08/target_architecture_migration_2026_08_12.md`
+>
+> | 항목 | 본 문서 최초 판단(8/12 오전) | **개정 판단(8/12 확정)** |
+> |---|---|---|
+> | Supabase | [B] 도입 권고(무료 티어) | 🔴 **철회** — 회사가 걷어내는 PostgreSQL을, 사외 3rd-party에, 이관 3개월 전에 신설하는 3중 역행 |
+> | Neo4j AuraDB | [B] 조건부 도입(4~6주 후) | 🔴 **무기한 보류** — 목표 아키텍처에 그래프 DB 카테고리 자체가 없음 |
+> | Snowflake | 보류(D-021로 목적 소멸) | 🟢 **보류 해제** — 전사 EDP 단일화 목표로 전제 무효화. Nexus는 `NEXUS_EXT` 전용 스키마 |
+> | DuckDB | 1순위 도입 | 🟢 **유지** — 파일 임베디드라 이식성 100%, 어디로 이관해도 동행 |
+>
+> **§2(Supabase 절차)·§3(Neo4j 절차)은 이력 보존용이며 현재 실행 대상이 아니다.**
+> 조정자의 계정 생성 작업은 **불필요**하다.
+
 ---
 
 ## 0. 도입 우선순위 요약
@@ -20,8 +37,8 @@
 | 2 | MAPIE (EnCQR) | **[A]** | 무료 | 즉시 | G2 구간 보정 |
 | 3 | DuckDB | **[A]** | 무료 | 즉시 | as-of join·feature mart(추가 인프라 0) |
 | 4 | great_expectations | **[A]** | 무료 | 1~2주 | 모델 진입 게이트 자동화 |
-| 5 | **Supabase** | **[B]** | 무료 티어 | 2~3주 | 사건·근거 테이블 + 대시보드 백엔드 |
-| 6 | **Neo4j AuraDB** | **[B]** | 무료 티어 | 4~6주 | 지식그래프(KG) — 검증된 엣지 축적 후 |
+| ~~5~~ | ~~Supabase~~ | — | — | **철회** | 상단 개정 배너 참조 |
+| ~~6~~ | ~~Neo4j AuraDB~~ | — | — | **무기한 보류** | 상단 개정 배너 참조 |
 | 7 | Azure ML Workspace | **[C]** | 유료 | G2 학습 착수 시 | 학습·모델 레지스트리 |
 | 8 | Darts / NeuralForecast | **[A]** | 무료 | Challenger 단계 | N-BEATSx·N-HiTS·PatchTST |
 | 9 | Chronos (foundation) | **[A]** | 무료 | Challenger 단계 | zero-shot baseline |
@@ -176,7 +193,7 @@ ASOF LEFT JOIN read_parquet('data/raw/wasde_historical.parquet') w
 
 | 후보 | 판단 | 근거 |
 |---|---|---|
-| Snowflake | **보류** | D-021로 내부 데이터가 제외되면서 원래 목적(내부 S&OP 웨어하우스)이 사라졌다. 외부 parquet은 DuckDB로 충분하며, 유료 웨어하우스 비용을 정당화할 사용처가 없다 |
+| ~~Snowflake~~ | **보류 해제(2026-08-12)** | 구 근거(내부 웨어하우스 목적 소멸)가 회사 목표 아키텍처로 무효화됨 — Snowflake EDP는 내부 전용이 아니라 **전사 단일 저장 계층**이다. Nexus의 정착지 |
 | GNN (PyG 등) | **보류** | 조사 패키지: "KG 먼저, GNN 나중". 검증된 엣지가 부족한 상태의 GNN은 노이즈 학습 |
 | vmdpy | **제외** | 전체 시계열 일괄 분해 → 미래 정보 누수(2026-08-12 결정) |
 | google-genai | **제거 완료** | Gemini 전면 배제(C-012·C-013) |

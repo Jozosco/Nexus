@@ -53,15 +53,26 @@ def _dataset_end(client) -> str:
     """데이터셋의 실제 이용 가능 종료일 조회 — 422 방지의 정공법."""
     try:
         rng = client.metadata.get_dataset_range(dataset=DATASET)
-        # SDK 버전에 따라 키가 end / end_date, 값이 ISO 문자열 또는 datetime
-        raw = rng.get("end") or rng.get("end_date") or ""
-        end = str(raw)[:10]
+        # A-111(F12): SDK가 dict가 아닌 객체를 돌려주면 .get에서 AttributeError가 나고
+        # 조용히 T-1 추정으로 회귀한다 — 그 T-1이 바로 422의 원인이었다. 양쪽을 모두 처리.
+        def _pick(obj, *names):
+            for n in names:
+                v = obj.get(n) if isinstance(obj, dict) else getattr(obj, n, None)
+                if v:
+                    return str(v)[:10]
+            return ""
+        end = _pick(rng, "end", "end_date")
+        start = _pick(rng, "start", "start_date")
         if end:
-            print(f"[정보] 데이터셋 이용 가능 구간: {str(rng.get('start') or '')[:10]} ~ {end}")
+            print(f"[정보] 데이터셋 이용 가능 구간: {start or '?'} ~ {end}")
             return end
+        print(f"[경고] get_dataset_range 응답에 종료일 없음: {str(rng)[:120]}")
     except Exception as e:
-        print(f"[경고] get_dataset_range 실패({type(e).__name__}) — T-1로 대체: {e}")
-    return (date.today() - timedelta(days=1)).isoformat()
+        print(f"[경고] get_dataset_range 실패({type(e).__name__}): {e}")
+    fallback = (date.today() - timedelta(days=1)).isoformat()
+    print(f"[경고] T-1 추정({fallback})으로 대체 — 422 발생 시 이 경로가 원인 "
+          "(DATABENTO_END 환경변수로 명시 지정 가능)")
+    return fallback
 
 
 def _log_condition(client, start: str, end: str) -> None:
@@ -105,15 +116,56 @@ def _fetch_chunk(client, start: str, end: str) -> pd.DataFrame | None:
     return None
 
 
+def _to_price_date(part: pd.DataFrame, label: str) -> pd.DataFrame:
+    """청크 1건의 시각 인덱스를 **명시적으로** price_date 컬럼으로 승격.
+
+    A-102: 이 함수가 없어서 price_date가 전부 1970-01-01이 됐다.
+      기존 경로: `pd.concat(parts, ignore_index=True)` → **DatetimeIndex(ts_event)를 폐기** →
+      이어지는 `reset_index()`가 RangeIndex(0,1,2…)를 'index' 컬럼으로 만들고
+      `pd.to_datetime(0,1,2…)`가 이를 **에폭 나노초**로 해석 → 1970-01-01 + n ns.
+      (증상 일치: min·max 모두 1970-01-01인데 nunique는 행 수와 같음)
+    따라서 concat **이전에** 청크별로 시각을 컬럼화한다.
+    """
+    # ① DatetimeIndex면 그것이 진실 — 이름이 없어도 사용한다.
+    if isinstance(part.index, pd.DatetimeIndex):
+        out = part.copy()
+        out["price_date"] = part.index
+        return out.reset_index(drop=True)
+    # ② 아니면 알려진 시각 컬럼을 찾는다(RangeIndex 폴백 금지 — 1970 버그의 원인).
+    reset = part.reset_index()
+    for cand in ("ts_event", "ts_recv", "date", "time"):
+        if cand in reset.columns:
+            reset["price_date"] = pd.to_datetime(reset[cand], utc=True, errors="coerce")
+            return reset
+    raise ValueError(
+        f"[오류] {label}: 시각 컬럼을 찾지 못함(컬럼={list(reset.columns)[:8]}). "
+        "임의 컬럼으로 추정하지 않고 중단 — 1970-01-01 오염 방지")
+
+
 def _normalize(df: pd.DataFrame) -> pd.DataFrame:
-    """인덱스 → price_date 컬럼, 정수 가격 → USc/lb 변환."""
-    df = df.reset_index()
-    date_col = next((c for c in ("ts_event", "index", "date") if c in df.columns), df.columns[0])
-    df["price_date"] = pd.to_datetime(df[date_col], utc=True, errors="coerce").dt.tz_localize(None)
+    """tz 제거 + 일자 단위 정규화 + 정수 가격 → USc/lb 변환."""
+    ts = pd.to_datetime(df["price_date"], utc=True, errors="coerce")
+    # ohlcv-1d는 일봉이므로 시각 성분을 버리고 **날짜(yyyy-mm-dd)**로 저장한다(조정자 요청).
+    df["price_date"] = ts.dt.tz_localize(None).dt.normalize()
     for col in ("open", "high", "low", "close"):
         if col in df.columns and pd.api.types.is_integer_dtype(df[col]):
             df[col] = df[col] * _PX_SCALE
     return df
+
+
+def _assert_date_range(df: pd.DataFrame, start: str, end: str) -> None:
+    """수집 결과가 요청 구간 안에 있는지 검증 — 조용한 오염을 즉시 실패로 전환."""
+    bad = df["price_date"].isna().sum()
+    if bad:
+        raise ValueError(f"[오류] price_date 파싱 실패 {bad:,}건 — 저장 중단")
+    lo, hi = df["price_date"].min(), df["price_date"].max()
+    lo_ok = pd.Timestamp(start) - pd.Timedelta(days=7)
+    hi_ok = pd.Timestamp(end) + pd.Timedelta(days=7)
+    if lo < lo_ok or hi > hi_ok:
+        raise ValueError(
+            f"[오류] 수집 기간이 요청 범위를 벗어남: {lo.date()}~{hi.date()} "
+            f"(요청 {start}~{end}). 시각 파싱 오류 가능성 — 저장 중단")
+    print(f"[검증] 기간 정합 OK: {lo.date()} ~ {hi.date()}")
 
 
 def run() -> None:
@@ -137,14 +189,20 @@ def run() -> None:
     failed: list[str] = []
     for year in range(start_year, end_year + 1):
         c_start = START if year == start_year else f"{year}-01-01"
-        c_end   = end   if year == end_year   else f"{year}-12-31"
+        # A-111(F7): Databento `end`는 **배타적**이다. `{year}-12-31`을 쓰면 매년
+        # 12월 31일이 누락돼 16년 × 약 11거래일이 조용히 사라진다(커버리지 임계 200일에
+        # 걸리지 않아 영구 미검출). 다음 해 1월 1일을 배타 종료로 준다.
+        c_end   = end   if year == end_year   else f"{year + 1}-01-01"
         got = _fetch_chunk(client, c_start, c_end)
         if got is None:
             failed.append(str(year))
             continue
         if not got.empty:
-            parts.append(got)
-            print(f"  [{year}] {len(got):,}행")
+            # A-102: concat 전에 시각을 컬럼으로 승격해야 한다(ignore_index가 인덱스를 버림)
+            named = _to_price_date(got, f"{year}")
+            parts.append(named)
+            span = f"{named['price_date'].min()} ~ {named['price_date'].max()}"
+            print(f"  [{year}] {len(named):,}행 · {span}")
 
     if not parts:
         print("[오류] 전 구간 수집 실패 — 키·구독 범위·네트워크 확인")
@@ -154,14 +212,55 @@ def run() -> None:
         print(f"[경고] 미수집 연도: {', '.join(failed)} — 수집분만 저장하고 재실행 시 보완")
 
     df = _normalize(pd.concat(parts, ignore_index=True))
-    df = df.drop_duplicates(subset=["price_date"]).sort_values("price_date")
+
+    # A-111(F8): ZL.c.0 연속 심볼은 롤 시점에 같은 날짜로 만기·신규 계약 2행이 올 수 있다.
+    # 무조건 drop_duplicates하면 **가격이 다른 두 계약 중 하나를 근거 없이 선택**하게 되고,
+    # 그 임의 선택이 G2 타깃 시계열에 계약 전환 점프로 주입된다(연 12회 × 16년 ≈ 190회).
+    dup = df["price_date"].duplicated(keep=False)
+    if dup.any():
+        n_days = df.loc[dup, "price_date"].nunique()
+        spread = (df[dup].groupby("price_date")["close"].agg(lambda s: s.max() - s.min())
+                  if "close" in df.columns else None)
+        worst = float(spread.max()) if spread is not None and len(spread) else 0.0
+        print(f"[경고] 롤 중복 {int(dup.sum())}행 / {n_days}일 — 종가 최대 격차 {worst:.4f} USc/lb")
+        # 동일 날짜는 거래량이 큰 계약(주력 계약)을 채택 — 규칙을 명시하고 기록한다
+        if "volume" in df.columns:
+            df = df.sort_values(["price_date", "volume"])
+            print("       채택 규칙: 동일 날짜는 **거래량 최대** 계약(주력물) 우선")
+        df = df.drop_duplicates(subset=["price_date"], keep="last")
+    df = df.sort_values("price_date")
+    _assert_date_range(df, START, end)
+
+    # A-111(F11): 날짜만 검증하고 값은 방치하면 같은 종류의 조용한 오염이 가격에서 재발한다.
+    # SDK 버전에 따라 가격이 이미 float이면 _PX_SCALE이 미적용되어 1e9배 차이가 무경고로 난다.
+    if "close" in df.columns:
+        lo, hi = float(df["close"].min()), float(df["close"].max())
+        if not (5.0 <= lo <= 200.0 and 5.0 <= hi <= 200.0):
+            raise ValueError(
+                f"[오류] ZL 종가가 합리 범위(5~200 USc/lb)를 벗어남: {lo:.4f}~{hi:.4f}. "
+                "가격 스케일(1e-9) 적용 여부 확인 필요 — 저장 중단")
+        print(f"[검증] 종가 범위 OK: {lo:.2f} ~ {hi:.2f} USc/lb")
+
+    # 연도별 커버리지 리포트 — '누락 데이터'를 눈으로 확인 가능하게(조정자 지적)
+    by_year = df.groupby(df["price_date"].dt.year).size()
+    thin = [f"{y}({n}일)" for y, n in by_year.items() if n < 200]
+    print(f"[커버리지] 연도별 거래일: {dict(by_year)}")
+    if thin:
+        print(f"[경고] 거래일 200일 미만 연도(누락 의심): {', '.join(thin)}")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     csv_path = OUT_DIR / f"ZL_{SCHEMA}_{START}_{end}.csv"
-    df.to_csv(csv_path, index=False)
+    # 조정자 요청: CSV·XLSX의 price_date는 시각 없이 **yyyy-mm-dd**로 기록
+    csv_df = df.copy()
+    csv_df["price_date"] = csv_df["price_date"].dt.strftime("%Y-%m-%d")
+    # tz-aware 컬럼은 엑셀 비호환 → 제거(A-064 동일 규약)
+    for c in csv_df.columns:
+        if pd.api.types.is_datetime64tz_dtype(csv_df[c]):
+            csv_df[c] = csv_df[c].dt.tz_localize(None)
+    csv_df.to_csv(csv_path, index=False)
 
     keep = ["price_date"] + [c for c in ("open", "high", "low", "close", "volume") if c in df.columns]
-    df[keep].to_excel(OUT_DIR / f"ZL_{SCHEMA}.xlsx", index=False)
+    csv_df[keep].to_excel(OUT_DIR / f"ZL_{SCHEMA}.xlsx", index=False)
 
     # 롱포맷 parquet (기존 지표코드 규약 준수)
     recs = []
