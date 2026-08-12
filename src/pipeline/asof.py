@@ -262,13 +262,24 @@ def attach_asof(
     out["period_end"] = [
         _period_end_for(e, rules[c]) for e, c in zip(ev, codes)
     ]
+    # 우선순위: ①명시 전달 release_series ②**원천이 이미 제공한 release_time**(FRED ALFRED
+    # 등 실측 게시일 — 추정 규칙보다 항상 우선) ③접두사 규칙 추정
+    estimated = pd.Series([_release_for(e, rules[c]) for e, c in zip(ev, codes)], index=out.index)
     if release_series is not None:
         rel = pd.to_datetime(release_series, errors="coerce")
         if hasattr(rel.dtype, "tz") and rel.dt.tz is not None:
             rel = rel.dt.tz_localize(None)
-        out["release_time"] = rel.values
+        out["release_time"] = pd.Series(rel.values, index=out.index).fillna(estimated)
+    elif "release_time" in df.columns:
+        existing = pd.to_datetime(out["release_time"], errors="coerce")
+        if hasattr(existing.dtype, "tz") and existing.dt.tz is not None:
+            existing = existing.dt.tz_localize(None)
+        n_kept = int(existing.notna().sum())
+        if n_kept:
+            print(f"[as-of] 원천 제공 발표일 {n_kept:,}건 보존(추정 규칙 미적용)")
+        out["release_time"] = existing.fillna(estimated)
     else:
-        out["release_time"] = [_release_for(e, rules[c]) for e, c in zip(ev, codes)]
+        out["release_time"] = estimated
 
     # available_at = release_time + 수집 지연. 누수 방지를 위해 event_time보다 이르지 않게 강제
     avail = pd.to_datetime(out["release_time"]) + pd.Timedelta(days=ingest_lag_days)
@@ -276,6 +287,8 @@ def attach_asof(
 
     if vintage is not None:
         out["source_vintage"] = str(vintage)
+    elif "source_vintage" in df.columns and out["source_vintage"].notna().any():
+        pass          # 원천이 준 vintage(ALFRED realtime_start 등)를 그대로 둔다
     else:
         revises = {c for c, r in rules.items() if r.revises}
         today = date.today().isoformat()

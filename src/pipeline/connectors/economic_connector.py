@@ -57,14 +57,29 @@ def fetch_fred_series(series_id: str, start: str, end: str) -> pd.DataFrame:
     api_key = os.environ.get("FRED_API_KEY")
     if not api_key:
         raise EnvironmentError("[오류] FRED_API_KEY 환경변수가 설정되지 않았습니다.")
-    data = _fetch(FRED_BASE, {
+    # D-027: FRED(ALFRED)는 관측치마다 **최초 게시일(realtime_start)** 을 제공한다.
+    #   이것이 available_at의 직접 근거이자 vintage 식별자다 — 발표일을 추정할 필요가 없다.
+    #   `output_type=4`(최초 발표본만)로 요청하면 개정 전 원본 vintage를 얻는다.
+    #   개정이 잦은 월간 지표(CPI·FEDFUNDS)는 이 값이 특히 중요하다
+    #   (美 CPI는 매년 2월 계절조정 재산정으로 최근 5년이 소급 개정된다).
+    params = {
         "series_id": series_id,
         "api_key": api_key,
         "file_type": "json",
         "observation_start": start,
         "observation_end": end,
-    })
+        "realtime_start": "1776-07-04",   # ALFRED 전 구간 — 최초 게시일 확보
+        "realtime_end": "9999-12-31",
+        "output_type": "4",               # 4 = initial release only
+    }
+    data = _fetch(FRED_BASE, params)
     obs = data.get("observations", [])
+    if not obs:
+        # ALFRED 파라미터를 지원하지 않는 응답이면 표준 요청으로 폴백
+        print(f"[정보] FRED {series_id}: ALFRED 응답 없음 — 표준 요청으로 재시도")
+        data = _fetch(FRED_BASE, {k: v for k, v in params.items()
+                                  if k not in ("realtime_start", "realtime_end", "output_type")})
+        obs = data.get("observations", [])
     if not obs:
         print(f"[경고] FRED {series_id}: 기간 {start}~{end} 데이터 없음")
         return pd.DataFrame()
@@ -73,12 +88,21 @@ def fetch_fred_series(series_id: str, start: str, end: str) -> pd.DataFrame:
     if missing:
         print(f"[경고] FRED {series_id} 컬럼 누락: {missing}")
         return pd.DataFrame()
-    df = df[["date", "value"]].copy()
-    df.columns = ["price_date", "value"]
+
+    keep = ["date", "value"] + [c for c in ("realtime_start",) if c in df.columns]
+    df = df[keep].copy()
+    df = df.rename(columns={"date": "price_date"})
     df["price_date"] = pd.to_datetime(df["price_date"])
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
     df["source_name"] = "FRED"
     df["indicator_code"] = series_id
+    if "realtime_start" in df.columns:
+        # 실측 게시일 → release_time. as-of 부여 시 추정 규칙보다 우선한다.
+        df["release_time"] = pd.to_datetime(df["realtime_start"], errors="coerce")
+        df["source_vintage"] = df["realtime_start"]
+        df = df.drop(columns=["realtime_start"])
+        n = int(df["release_time"].notna().sum())
+        print(f"[정보] FRED {series_id}: 실측 게시일 {n:,}/{len(df):,}건 확보(추정 불요)")
     return df.dropna(subset=["value"])
 
 
@@ -227,14 +251,26 @@ def fetch_kosis_cpi_korea(start_yyyymm: str = "201001") -> pd.DataFrame:
             for rec in records:
                 period = rec.get("PRD_DE", rec.get("prd_de", ""))
                 value  = rec.get("DT", rec.get("dt", None))
-                if period and value is not None:
-                    all_rows.append({
-                        "price_date":     pd.to_datetime(period, format="%Y%m", errors="coerce"),
-                        "indicator_code": tbl["label"],
-                        "value":          pd.to_numeric(str(value).replace(",", ""), errors="coerce"),
-                        "source_name":    "KOSIS/국가데이터처",
-                        "tbl_id":         tbl["tblId"],
-                    })
+                if not (period and value is not None):
+                    continue
+                # D-027: objL1="ALL"은 품목성질별 **여러 분류**를 반환하는데 구 코드는
+                #   indicator_code에 테이블 라벨 하나만 넣었다 → 동일 (price_date,
+                #   indicator_code)에 수십 행이 중복되어 **as-of join이 임의 행을 선택**한다.
+                #   분류 코드를 접미해 키를 유일화한다(OUTPUT_FIELDS로 이미 요청 중이나 미사용).
+                cls = next((str(rec[k]).strip() for k in
+                            ("C1", "ITM_ID", "itm_id", "OBJ_ID", "obj_id")
+                            if rec.get(k)), "")
+                code = f"{tbl['label']}_{cls}" if (cls and tbl["objL1"] == "ALL") else tbl["label"]
+                cls_name = next((str(rec[k]).strip() for k in
+                                 ("C1_NM", "OBJ_NM_ENG", "ITM_NM_ENG") if rec.get(k)), "")
+                all_rows.append({
+                    "price_date":     pd.to_datetime(period, format="%Y%m", errors="coerce"),
+                    "indicator_code": code,
+                    "value":          pd.to_numeric(str(value).replace(",", ""), errors="coerce"),
+                    "source_name":    "KOSIS/국가데이터처",
+                    "tbl_id":         tbl["tblId"],
+                    "class_name":     cls_name,
+                })
             print(f"[정보] KOSIS {tbl['tblId']} ({tbl['label']}): {len(records)}건")
         except Exception as e:
             print(f"[경고] KOSIS {tbl['tblId']} 수집 실패: {e}")
