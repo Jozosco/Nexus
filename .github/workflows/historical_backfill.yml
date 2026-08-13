@@ -895,6 +895,24 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: python src/forecasting/variable_importance_g1.py 1825
+      - name: GPT 교차검증 (조정자 지시 2026-08-13 — 분석 산출물 외부 모델 검증)
+        # 실패해도 파이프라인을 막지 않는다 — 외부 서비스 장애가 우리 장애가 되지 않게.
+        # 검증 결과는 아티팩트로 남겨 사람이 리포트와 대조한다.
+        continue-on-error: true
+        env:
+          OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
+          GPT_XVERIFY_MODEL:  ${{ vars.GPT_XVERIFY_MODEL || 'gpt-5.6' }}
+          GPT_XVERIFY_EFFORT: "max"
+        run: |
+          pip install openai
+          python scripts/cross_verify_gpt.py "reports/pipeline/variable_importance_*.md" "reports/market/feature_mart_*.md"
+      - name: Upload cross-verify report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpt-xverify-${{ github.run_id }}
+          path: reports/cross_verify/
+          retention-days: 90
+          if-no-files-found: warn
       # NOTE(A-056): generate_research_pdf.py 를 reports/pipeline 에 돌리던 단계 제거.
       # 해당 스크립트는 g1_*_ko.md(구형 "TOP 10" 요약)를 ko.html/ko.pdf 로 재렌더링해
       # variable_importance_g1.py 가 만든 '상위 5개 핵심 변수' 리치 KO 리포트를 덮어썼음.
