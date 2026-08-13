@@ -324,6 +324,40 @@ jobs:
           retention-days: 7
 
   # ── WBS 1.4.1: GPR × SBO 상관관계 분석 (일별 갱신) ────────────────────────────
+  # ── 일별 비정형 신호 다이제스트 (A-163 · 조정자 지시 8/14) ────────────────────
+  # Perplexity 실시간 프록시(지정학·정책뉴스·해협·운임·기상특보)를 매일 요약.
+  # 산출: Step Summary(즉시 열람) + 아티팩트 md (커밋하지 않음 — E4 원칙)
+  daily-unstructured-digest:
+    name: "일별 비정형 다이제스트 (Perplexity 수집분 요약)"
+    runs-on: ubuntu-latest
+    needs: [geopolitical-risk, geointel, shipping-indices, climate-enso]
+    if: always() && (github.event_name == 'schedule' || github.event.inputs.connector == 'all')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Build daily digest
+        run: python scripts/daily_unstructured_digest.py >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-unstructured-digest-${{ github.run_id }}
+          path: reports/market/daily_unstructured_digest_*.md
+          retention-days: 90
+          if-no-files-found: warn
+
   gpr-sbo-correlation:
     name: "1.4.1 | GPR × SBO Correlation Analysis (Rolling 7d/30d/90d)"
     runs-on: ubuntu-latest
