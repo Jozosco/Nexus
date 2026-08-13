@@ -80,11 +80,17 @@ def _month_from_index_row(target: str, path_str: str, file_name: str) -> pd.Time
         m = _FAO_DATE.search(file_name)
         if not m:
             return None
-        return pd.Timestamp(year=2000 + int(m.group(1)), month=int(m.group(2)), day=1)
+        mo = int(m.group(2))
+        if not 1 <= mo <= 12:      # A-159: 파일명 오기가 month must be in 1..12 크래시 유발
+            return None
+        return pd.Timestamp(year=2000 + int(m.group(1)), month=mo, day=1)
     m = re.search(r"/(\d{4})/(\d{2})/", path_str.replace("\\", "/"))
     if not m:
         return None
-    return pd.Timestamp(year=int(m.group(1)), month=int(m.group(2)), day=1)
+    mo = int(m.group(2))
+    if not 1 <= mo <= 12:          # A-159: 동일 방어 — 잘못된 행은 결측으로
+        return None
+    return pd.Timestamp(year=int(m.group(1)), month=mo, day=1)
 
 
 def _records_from_index(target: str, idx_path: Path, source_name: str) -> list[dict]:

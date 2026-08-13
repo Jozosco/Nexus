@@ -751,11 +751,14 @@ jobs:
           if-no-files-found: warn
 
   # ── C-08 DQSOps 데이터 품질 검증 (backfill-summary 후 1차 게이트) ───────────────
+  # A-160: if에 상태함수가 없으면 GitHub이 암묵 success()를 전치 — 관세청 잡 1건
+  #   실패로 분석 체인 4개 잡(C-08→C-06→Readiness→G1)이 전부 skip된 원인.
+  #   always()로 커넥터 부분 실패와 분석 진행을 분리한다(필수 산출물은 DQ_EXPECTED가 관장).
   c08-dq-validation:
     name: "C-08 | DQSOps Data Quality Validation Gate"
     runs-on: ubuntu-latest
     needs: [backfill-summary]
-    if: needs.backfill-summary.result == 'success' && github.event.inputs.skip_analysis != 'true'
+    if: always() && needs.backfill-summary.result == 'success' && github.event.inputs.skip_analysis != 'true'
     outputs:
       overall_status: ${{ steps.dq.outputs.overall_status || steps.dq_skip.outputs.overall_status }}
     steps:

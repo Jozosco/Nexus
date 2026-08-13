@@ -281,6 +281,17 @@ def _normalize_customs_df(all_rows: list[dict], source_tag: str) -> pd.DataFrame
         "exAmt":     "export_fob_usd",
         "expAmt":    "export_fob_usd",
         "hsSgn":     "hs_code",
+        # A-158: XML 응답의 실제 태그 — A-152로 파싱은 성공했으나(11,165행 수집) 여기서
+        #   유실됨. 구 JSON 필드명만 매핑해 price_date 파생 불가 → attach_asof ValueError
+        #   → 통합 런 관세청 잡 exit 1의 직접 원인.
+        "year":        "stat_year",
+        "statKor":     "country_name",
+        "hsCode":      "hs_code",
+        "impDlr":      "import_cif_usd",
+        "impWgt":      "import_weight_kg",
+        "expDlr":      "export_fob_usd",
+        "expWgt":      "export_weight_kg",
+        "balPayments": "trade_balance_usd",
     }
     df.rename(columns={k: v for k, v in col_map.items() if k in df.columns}, inplace=True)
 
@@ -288,6 +299,10 @@ def _normalize_customs_df(all_rows: list[dict], source_tag: str) -> pd.DataFrame
         df["price_date"] = pd.to_datetime(df["period_start"], format="%Y%m", errors="coerce")
     elif "strtYymm" in df.columns:
         df["price_date"] = pd.to_datetime(df["strtYymm"], format="%Y%m", errors="coerce")
+    elif "stat_year" in df.columns:
+        # A-158: XML 경로는 연 단위 행(year 태그) — 연초 기점 파생 + 집계 단위 note 명시
+        df["price_date"] = pd.to_datetime(df["stat_year"].astype(str), format="%Y", errors="coerce")
+        df["note"] = "연간 집계(XML 응답)"
 
     # A-152(c): XML items에는 hsCd='-'인 집계 행(HS코드 합계)이 올 수 있다.
     #           삭제하지 않고 유지하되 note에 '집계행'을 표기해 상세 행과 구분한다.
