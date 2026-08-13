@@ -105,7 +105,11 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pandas pyarrow
+        run: pip install pandas pyarrow pyyaml
+      - name: Validate semantic layer (v3 게이트 — warn 모드 기본)
+        # DAG 순환·엔티티-지표 매핑·evidence 필수 필드·provenance 계약 검증.
+        # warn 모드는 위반을 리포트만 하고 차단하지 않음 — 차단 전환 시 --strict 부여.
+        run: python scripts/validate_semantic_layer.py | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Build unstructured signal time series
         # parquet은 커밋하지 않음(.gitignore) — 아티팩트 + 각 파이프라인이 인덱스 CSV로 재생성
         run: python scripts/build_unstructured_timeseries.py

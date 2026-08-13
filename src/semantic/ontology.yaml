@@ -1,10 +1,100 @@
-version: '2.0'
+# src/semantic/ontology.yaml — 관계·인과 온톨로지 (시맨틱 레이어 ③ · v3)
+# ERD 매핑(§8): RELATION_TYPE · MARKET_MECHANISM · CAUSAL_EDGE · INDICATOR_BINDING
+# v3 변경(2026-08-13 · semantica 조사 + 전수 감사 반영):
+#   ① 관계 유형 23종 → 58종 (entities.yaml 실사용 35종 정식 등록 — 감사 갭 2)
+#   ② 엔티티 유형(클래스 계보) 명문화 — entities.yaml class 값의 단일 기준
+#   ③ indicator_bindings 신설 — 엔티티(term_id) ↔ indicator_code 연결 (감사 갭 4 일부)
+#   ④ signal_tag_mapping 신설 — 한글 태그 ↔ UNSTR_* ↔ P1-05 aspect 공식 매핑 (감사 갭 3)
+#   ⑤ causal_edges 신설 — causal_chains.md 18체인 + 도메인 메커니즘 노트 3경로를
+#      validated/evidence/direction/lag 필드로 정형화 (감사 갭 6 · S-1 · S-5)
+#   ⑥ direction_vocab 신설 — 방향 어휘 3계통 변환 규칙 (감사 갭 8)
+# 게이트: scripts/validate_semantic_layer.py (DAG 순환·매핑 존재·evidence 필수 필드 검증)
+# 관리: P1-06 (인과엣지 검증: P1-01~04 · 기계적 추출: C-04 · 신호 생산: P1-05)
+version: '3.0'
+updated: 2026-08-13
 erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md
-dag_rule: Cause → MarketMechanism → PriceOutcome 3단 강제 — Cause→Price 직접 엣지 금지 (ERD §6 인과 제약)
-forbidden_relations:
-- Cause→PriceOutcome (직접)
-- 미검증 인과 엣지의 자동 승인 (S1 — P1-01~04 도메인 검증 필수)
+managed_by: 'P1-06 (검증: P1-01~04 · 게이트: scripts/validate_semantic_layer.py)'
+refs:
+  entities: src/semantic/entities.yaml
+  metrics: src/semantic/metrics.yaml
+  provenance: src/semantic/provenance.yaml
+  event_schema: src/semantic/event_schema.json
+  causal_chains_view: src/semantic/causal_chains.md
+  domain_mechanisms: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+
+# ── DAG 제약 (ERD §6 · S-1) ──────────────────────────────────────────────────
+dag_constraints:
+  rule: Cause → MarketMechanism → PriceOutcome 3단 강제 — Cause→Price 직접 엣지 금지
+  node_classes: [CauseNode, MechanismNode, OutcomeNode]
+  acyclic: true                    # validate_semantic_layer.py가 전역 순환 검사
+  min_mechanism_nodes: 1           # 엣지마다 메커니즘 노드 최소 1개
+  edge_lifecycle: [candidate, validated, rejected]   # event_schema review_status와 동일 어휘
+  promotion_rule: candidate → validated 승격은 도메인 검증(P1-01~04) 서명 + evidence 첨부 필수(S-1).
+    validated 엣지만 지식그래프·G1 인과 서술에 투영. rejected는 삭제하지 않고 보존(S-5).
+  forbidden_relations:
+  - DIRECT_CAUSE_TO_PRICE (외생 원인 → 가격 직접 연결)
+  - 미검증(candidate) 엣지의 자동 승인·그래프 투영 (S-1)
+
+# ── 방향 어휘 변환 규칙 (감사 갭 8 — 3계통 통일) ─────────────────────────────
+direction_vocab:
+  edge_direction: [UP, DOWN, CONTEXT]        # 인과엣지·event_schema causal_claim 공통
+  chain_legend:                              # causal_chains.md 열람용 표기 ↔ 엣지 방향
+    '📈 상승': UP
+    '📉 하락': DOWN
+  entity_price_direction_to_edge:            # entities.yaml price_direction(8값) → 엣지 3값
+    UP: UP
+    DOWN: DOWN
+    UP_RISK: UP                              # 위험 발생 시 상방 — 엣지 방향은 UP
+    DOWN_RISK: DOWN
+    UP_IF_DOWN: CONTEXT                      # 조건부 — 트리거 방향과 결합해 UP/DOWN 판정
+    DOWN_IF_UP: CONTEXT
+    FLAT: CONTEXT
+    CONTEXT: CONTEXT
+
+# ── 엔티티 유형 (entities.yaml class 값의 단일 기준 — 계보별 그룹) ────────────
+entity_types:
+  registry_source: src/semantic/entities.yaml   # 용어별 class 부여는 사전이 담당
+  families:
+  - family: market_dag
+    label_ko: 인과 DAG 노드·구성물
+    classes: [CauseNode, MechanismNode, OutcomeNode, MarketMechanism, CausalClaim, CausalEdge]
+  - family: commodity
+    label_ko: 품목·품목분류
+    classes: [Commodity, CommodityClass, CommodityCode, CommodityForm, CommodityRole,
+              EnergyCommodity]
+  - family: economy_fx
+    label_ko: 거시경제·환율·위험
+    classes: [EconomicIndicator, EconomicCondition, ExchangeRate, RiskIndicator]
+  - family: agriculture_climate
+    label_ko: 농업·작황·기상
+    classes: [AgriculturalEvent, AgriculturalMetric, ClimateIndicator, ClimatePattern,
+              CropStage, WeatherEvent, SupplyMetric, SupplyDemandIndicator, StockMetric,
+              ProcessingMetric, ForecastMetric, ForecastSignal]
+  - family: trade_policy
+    label_ko: 무역·정책·규제
+    classes: [TradeMetric, TradeRegion, TradeTerm, Policy, PolicyDocument, PolicyEvent,
+              PolicyInstrument, PolicyLevel, PolicyMetric, BiofuelPolicy, Regulation]
+  - family: geopolitics_logistics
+    label_ko: 지정학·물류·해운
+    classes: [GeopoliticalEvent, LogisticsEvent, LogisticsIndicator, LogisticsMetric,
+              LeadTimeMetric, Chokepoint, Port, PortRegion, LaborEvent, InsuranceMetric]
+  - family: market_price_decision
+    label_ko: 시장·가격·의사결정·분석
+    classes: [PriceMetric, SpreadIndicator, MarketRegime, DecisionSignal, ModelFeature,
+              SentimentMetric, ConfidenceMetric, EventType, TimePeriod, TemporalAttribute,
+              Aspect, AnalysisMethod, AnalyticalConcept]
+  - family: data_semantic_quality
+    label_ko: 데이터·시맨틱·품질
+    classes: [BoundingBox, BusinessRule, CanonicalEntity, DataSource, DeduplicationGroup,
+              DesignPrinciple, DocumentChunk, EntityAlias, EntityMention, Evaluation,
+              EvidenceSpan, ExtractionCapability, GovernanceRule, GroundTruth,
+              KnowledgeGraph, Ontology, PageReference, ProvenanceRecord, QualityAlert,
+              QualityMetric, ReviewProcess, Schema, SemanticLayer, SemanticStandard,
+              SerializationFormat, SourceDocument]
+
+# ── 관계 유형 58종 (v2 23종 + entities.yaml 실사용 35종 정식 등록) ────────────
 relation_types:
+# — 식별·정규화 —
 - code: MENTION_OF
   definition: 언급이 표준 엔터티를 지칭
   domain: EntityMention
@@ -23,30 +113,165 @@ relation_types:
   range: TaxonomyCategory
   symmetric: false
   constraints_example: Soybean Oil CLASSIFIED_AS Vegetable Oil
+- code: CLASSIFIES
+  definition: 분류 체계·코드가 대상을 분류 (CLASSIFIED_AS 역방향)
+  domain: Taxonomy/Code
+  range: Entity
+  symmetric: false
+  constraints_example: HS 1507 CLASSIFIES Soybean Oil
+- code: IDENTIFIES
+  definition: 코드·키가 대상을 유일하게 식별
+  domain: Code/Key
+  range: Entity/Record
+  symmetric: false
+  constraints_example: document_id IDENTIFIES SourceDocument
+- code: GROUPS
+  definition: 그룹이 원소를 묶음
+  domain: Group
+  range: Member
+  symmetric: false
+  constraints_example: DeduplicationGroup GROUPS duplicate mentions
+- code: IS_FORM_OF
+  definition: 품목이 상위 품목의 가공 형태임
+  domain: CommodityForm
+  range: Commodity
+  symmetric: false
+  constraints_example: Crude Soybean Oil IS_FORM_OF Soybean Oil
+- code: IS_LEVEL_OF
+  definition: 값·등급이 척도의 수준임
+  domain: Value/Grade
+  range: Scale
+  symmetric: false
+  constraints_example: B40 IS_LEVEL_OF Biodiesel Blend Mandate
+- code: PART_OF
+  definition: 부분이 전체에 속함
+  domain: Component
+  range: Whole
+  symmetric: false
+  constraints_example: Rosario PART_OF Argentina export corridor
+- code: COMPOSED_OF
+  definition: 전체가 부분으로 구성됨 (PART_OF 역방향)
+  domain: Whole
+  range: Component
+  symmetric: false
+  constraints_example: Semantic Layer COMPOSED_OF entities/metrics/ontology
+# — 근거·출처·검증 —
 - code: SUPPORTED_BY
   definition: 주장·관계가 근거로 지지됨
   domain: Claim/Edge
   range: EvidenceSpan
   symmetric: false
   constraints_example: CausalClaim SUPPORTED_BY p.8 quote
+- code: SUPPORTS
+  definition: 근거·데이터가 판단을 지지함 (SUPPORTED_BY 역방향)
+  domain: Evidence/Data
+  range: Claim
+  symmetric: false
+  constraints_example: EvidenceSpan SUPPORTS CausalClaim
 - code: DERIVED_FROM
   definition: 레코드가 원천에서 파생됨
   domain: Record
   range: SourceDocument/Chunk
   symmetric: false
   constraints_example: Observation DERIVED_FROM WASDE
-- code: OCCURS_IN
-  definition: 사건이 지리에서 발생
-  domain: Event
-  range: GeoEntity
+- code: VALIDATED_BY
+  definition: 레코드가 검토·평가로 검증됨
+  domain: Record/Edge
+  range: Review/Eval
   symmetric: false
-  constraints_example: Drought OCCURS_IN Córdoba
-- code: AFFECTS
-  definition: 한 엔터티가 다른 대상에 영향
-  domain: Entity/Event
-  range: Entity/Metric
+  constraints_example: CausalEdge VALIDATED_BY P1-03
+- code: VALIDATES
+  definition: 절차·에이전트가 대상을 검증함 (VALIDATED_BY 역방향)
+  domain: Process/Agent
+  range: Record/Edge
   symmetric: false
-  constraints_example: Port Strike AFFECTS Lead Time
+  constraints_example: C-08 DQSOps VALIDATES sentiment bounds
+- code: CONTRADICTS
+  definition: 주장들이 서로 상충
+  domain: Claim
+  range: Claim
+  symmetric: true
+  constraints_example: Forecast A CONTRADICTS Forecast B
+- code: CONFORMS_TO
+  definition: 레코드가 스키마·표준을 준수함
+  domain: Record
+  range: Schema/Standard
+  symmetric: false
+  constraints_example: Event JSON CONFORMS_TO event_schema.json
+- code: PROVIDES
+  definition: 출처·기관이 데이터·서비스를 제공
+  domain: Source/Actor
+  range: Data/Service
+  symmetric: false
+  constraints_example: USDA PROVIDES WASDE report
+- code: GENERATES
+  definition: 프로세스가 산출물을 생성
+  domain: Process
+  range: Artifact
+  symmetric: false
+  constraints_example: summarize_pdfs.py GENERATES corpus index
+- code: SERIALIZES
+  definition: 형식이 데이터를 직렬화
+  domain: Format
+  range: Record
+  symmetric: false
+  constraints_example: JSON-LD SERIALIZES provenance export
+- code: NORMALIZES
+  definition: 절차가 표기·단위를 정규화
+  domain: Process
+  range: Term/Unit
+  symmetric: false
+  constraints_example: P1-06 NORMALIZES multilingual synonyms
+- code: STANDARDIZES
+  definition: 표준이 대상을 표준화
+  domain: Standard
+  range: Entity/Unit
+  symmetric: false
+  constraints_example: QUDT STANDARDIZES unit codes
+- code: INSTANTIATES
+  definition: 인스턴스가 클래스·온톨로지를 실체화
+  domain: Instance/KG
+  range: Ontology/Class
+  symmetric: false
+  constraints_example: Knowledge Graph INSTANTIATES Ontology
+- code: DETECTS
+  definition: 시스템·지표가 현상을 탐지
+  domain: Detector/Indicator
+  range: Event/Anomaly
+  symmetric: false
+  constraints_example: AIS anomaly monitor DETECTS route diversion
+- code: DETECTED_BY
+  definition: 현상이 시스템·지표로 탐지됨 (DETECTS 역방향)
+  domain: Event/Anomaly
+  range: Detector/Indicator
+  symmetric: false
+  constraints_example: Structural Break DETECTED_BY z-score threshold
+- code: RECOMMENDS
+  definition: 신호·에이전트가 행동을 권고 (HITL — 권고만, 자동 실행 금지)
+  domain: Signal/Agent
+  range: Action
+  symmetric: false
+  constraints_example: G3 regime signal RECOMMENDS Hold (human gate)
+# — 측정·예측 —
+- code: MEASURED_BY
+  definition: 개념·현상이 지표로 측정
+  domain: Entity/Condition
+  range: Indicator
+  symmetric: false
+  constraints_example: ENSO MEASURED_BY ONI
+- code: FORECASTS
+  definition: 전망이 대상 지표를 예측
+  domain: Forecast
+  range: Metric
+  symmetric: false
+  constraints_example: WASDE Forecast FORECASTS Production
+- code: RESPONDS_TO
+  definition: 지표·주체가 자극에 반응
+  domain: Metric/Actor
+  range: Event/Signal
+  symmetric: false
+  constraints_example: Freight Rate RESPONDS_TO chokepoint crisis
+# — 인과 DAG (Cause → Mechanism → Outcome) —
 - code: CAUSES_MECHANISM
   definition: 원인이 시장 메커니즘을 촉발
   domain: CauseNode
@@ -59,6 +284,24 @@ relation_types:
   range: OutcomeNode
   symmetric: false
   constraints_example: Yield Deficit MECHANISM_AFFECTS_OUTCOME SBO Price
+- code: PROPAGATES_TO
+  definition: 충격·위험이 다음 메커니즘·영역으로 전파 (메커니즘 체인 내부 연결)
+  domain: MechanismNode/Shock
+  range: MechanismNode/Domain
+  symmetric: false
+  constraints_example: Freight Spike PROPAGATES_TO CIF Cost
+- code: RESULTS_IN
+  definition: 사건·조치가 결과 상태를 낳음 (인과 축약 — 신규 인과엣지는 3단 체인 사용)
+  domain: Event/Action
+  range: Outcome/State
+  symmetric: false
+  constraints_example: Export Ban RESULTS_IN supply shortfall
+- code: AFFECTS
+  definition: 한 엔터티가 다른 대상에 영향
+  domain: Entity/Event
+  range: Entity/Metric
+  symmetric: false
+  constraints_example: Port Strike AFFECTS Lead Time
 - code: INCREASES
   definition: 대상 값을 증가시킴
   domain: Entity/Event
@@ -71,12 +314,31 @@ relation_types:
   range: Metric
   symmetric: false
   constraints_example: Bumper Crop DECREASES Price
+- code: CHANGES
+  definition: 사건·정책이 대상 상태를 변경 (증감 미확정)
+  domain: Event/Policy
+  range: State/Metric
+  symmetric: false
+  constraints_example: Policy Pivot CHANGES trade flow pattern
+# — 생산·교역·물류 —
 - code: PRODUCES
   definition: 원료·공정이 산출물을 생산
   domain: Commodity/Process
   range: Commodity
   symmetric: false
   constraints_example: Soybean Crush PRODUCES Soybean Oil
+- code: USED_AS
+  definition: 품목이 특정 용도로 사용됨
+  domain: Commodity
+  range: Role
+  symmetric: false
+  constraints_example: Soybean Oil USED_AS Biodiesel Feedstock
+- code: SUBSTITUTES_FOR
+  definition: 품목이 다른 품목을 대체
+  domain: Commodity
+  range: Commodity
+  symmetric: true
+  constraints_example: Palm Oil SUBSTITUTES_FOR Soybean Oil
 - code: EXPORTS_TO
   definition: 국가·주체가 목적지로 수출
   domain: Country/Actor
@@ -95,52 +357,684 @@ relation_types:
   range: Route/Port
   symmetric: false
   constraints_example: TradeFlow ROUTED_VIA Santos
+- code: CONNECTS
+  definition: 경로·해협이 지역·시장을 연결
+  domain: Route/Chokepoint
+  range: GeoEntity
+  symmetric: false
+  constraints_example: Panama Canal CONNECTS Atlantic-Pacific
+- code: LOCATED_AT
+  definition: 엔터티가 위치에 존재
+  domain: Entity
+  range: GeoEntity
+  symmetric: false
+  constraints_example: Rosario crushing hub LOCATED_AT Argentina
+- code: ORIGIN_OF
+  definition: 지역이 물동량·상품의 원산지임
+  domain: GeoEntity
+  range: Commodity/TradeFlow
+  symmetric: false
+  constraints_example: US Gulf ORIGIN_OF SBO export cargo
+- code: OCCURS_IN
+  definition: 사건이 지리에서 발생
+  domain: Event
+  range: GeoEntity
+  symmetric: false
+  constraints_example: Drought OCCURS_IN Córdoba
+- code: OCCURS_DURING
+  definition: 사건이 기간·계절 중 발생
+  domain: Event
+  range: Period/Season
+  symmetric: false
+  constraints_example: Pollination Window OCCURS_DURING Jan-Feb
+# — 정책·규제·거버넌스 —
 - code: REGULATES
   definition: 정책이 품목·행위·시장을 규제
   domain: Policy
   range: Commodity/TradeFlow
   symmetric: false
   constraints_example: Export Tax REGULATES SBO Export
-- code: SUBSTITUTES_FOR
-  definition: 품목이 다른 품목을 대체
-  domain: Commodity
-  range: Commodity
-  symmetric: true
-  constraints_example: Palm Oil SUBSTITUTES_FOR Soybean Oil
-- code: MEASURED_BY
-  definition: 개념·현상이 지표로 측정
-  domain: Entity/Condition
-  range: Indicator
+- code: GOVERNS
+  definition: 규정·기관이 대상 절차·영역을 관할
+  domain: Policy/Institution
+  range: Entity/Process
   symmetric: false
-  constraints_example: ENSO MEASURED_BY ONI
-- code: FORECASTS
-  definition: 전망이 대상 지표를 예측
-  domain: Forecast
-  range: Metric
+  constraints_example: D-021 GOVERNS data scope
+- code: RESTRICTS
+  definition: 정책이 행위·물량을 제한
+  domain: Policy
+  range: TradeFlow/Activity
   symmetric: false
-  constraints_example: WASDE Forecast FORECASTS Production
+  constraints_example: EUDR RESTRICTS palm oil market access
+- code: EXEMPTS
+  definition: 정책이 대상을 예외 처리
+  domain: Policy
+  range: Entity/TradeFlow
+  symmetric: false
+  constraints_example: Agricultural Exemption EXEMPTS soybean tariff
+- code: ESTABLISHES
+  definition: 법령·기관이 제도·기준을 설립
+  domain: Policy/Actor
+  range: Institution/Rule
+  symmetric: false
+  constraints_example: Decree ESTABLISHES new export quota regime
+- code: APPLIES_TO
+  definition: 규칙·단위·조건이 대상에 적용됨
+  domain: Rule/Term
+  range: Entity
+  symmetric: false
+  constraints_example: T+2 FX Settlement APPLIES_TO import invoice
+- code: VALID_FROM
+  definition: 효력이 특정 시점부터 개시됨
+  domain: Policy/Record
+  range: Date
+  symmetric: false
+  constraints_example: Tariff cut VALID_FROM effective date
+- code: VALID_DURING
+  definition: 사실·효력이 특정 기간 동안 유효함
+  domain: Fact/Policy
+  range: Period
+  symmetric: false
+  constraints_example: Marketing Year price VALID_DURING Oct-Sep
+# — 한국 영향 —
 - code: HAS_KOREA_IMPACT
   definition: 사건·전망이 한국 영향 평가를 가짐
   domain: Event/Forecast
   range: KoreaImpact
   symmetric: false
   constraints_example: Route Disruption HAS_KOREA_IMPACT CIF Up
-- code: VALIDATED_BY
-  definition: 레코드가 검토·평가로 검증
-  domain: Record/Edge
-  range: Review/Eval
-  symmetric: false
-  constraints_example: CausalEdge VALIDATED_BY P1-03
-- code: CONTRADICTS
-  definition: 주장들이 서로 상충
-  domain: Claim
-  range: Claim
-  symmetric: true
-  constraints_example: Forecast A CONTRADICTS Forecast B
+# — 금지 관계 —
 - code: DIRECT_CAUSE_TO_PRICE
   definition: '금지 관계: 외생 원인에서 가격으로 직접 연결'
   domain: CauseNode
   range: PriceOutcome
   symmetric: false
   constraints_example: 금지 — 반드시 Market Mechanism 경유
-causal_chains_ref: src/semantic/causal_chains.md (18 체인)
+
+# ── 지표 바인딩 — 엔티티(term_id) ↔ indicator_code 연결 ──────────────────────
+# 목적: G1/G2 해석·P1-05 산출 정규화·검증 게이트의 단일 매핑 기준.
+# 정형 지표의 정의(단위·출처)는 data/schemas/ + FILE_PATTERNS가 담당 — 여기서는 참조만.
+indicator_bindings:
+  unstructured:                     # metrics.yaml INDICATOR_DEFINITION (P1-05 ABSA 7종 + 파생 1종)
+  - indicator: SBO_NEWS_SENTIMENT
+    defined_in: src/semantic/metrics.yaml
+    entities: [TERM-042]
+  - indicator: ARG_EXPORT_TAX_SENTIMENT
+    defined_in: src/semantic/metrics.yaml
+    entities: [TERM-104, TERM-105]
+  - indicator: INDIA_DUTY_SENTIMENT
+    defined_in: src/semantic/metrics.yaml
+    entities: [TERM-103]
+  - indicator: BIODIESEL_POLICY_SENTIMENT
+    defined_in: src/semantic/metrics.yaml
+    entities: [TERM-066, TERM-067, TERM-068, TERM-070, TERM-071]
+  - indicator: US_CN_TARIFF_SENTIMENT
+    defined_in: src/semantic/metrics.yaml
+    entities: [TERM-079, TERM-109]
+  - indicator: WASDE_CONSENSUS_SCORE
+    defined_in: src/semantic/metrics.yaml
+    entities: [TERM-035, TERM-036, TERM-039]
+  - indicator: LOGISTICS_DISRUPTION_FLAG
+    defined_in: src/semantic/metrics.yaml
+    entities: [TERM-081, TERM-083, TERM-087, TERM-089]
+  - indicator: NEWS_POLICY_FLAG
+    defined_in: src/semantic/metrics.yaml
+    entities: [TERM-113]
+  structured:                       # 핵심 8 피처(D-015) + GPR — 정의는 data/schemas/ 참조
+  - indicator: CBOT_SBO_FUTURES
+    defined_in: data/schemas/
+    entities: [TERM-042, TERM-051]
+  - indicator: CPO_SBO_SPREAD
+    defined_in: data/schemas/
+    entities: [TERM-053, TERM-055]
+  - indicator: WASDE_SBO_STU
+    defined_in: data/schemas/
+    entities: [TERM-036, TERM-039]
+  - indicator: BDI
+    defined_in: data/schemas/
+    entities: [TERM-085]
+  - indicator: FX_BRL_USD
+    defined_in: data/schemas/
+    entities: [TERM-007]
+  - indicator: ENSO_ONI
+    defined_in: data/schemas/
+    entities: [TERM-016, TERM-017]
+  - indicator: PSD_SOY_CRUSH
+    defined_in: data/schemas/
+    entities: [TERM-033]
+  - indicator: GATS_US_SBO_EXPORT_KOREA
+    defined_in: data/schemas/
+    entities: [TERM-013, TERM-015]
+  - indicator: GPR
+    defined_in: data/schemas/
+    entities: [TERM-073]
+  unstructured_derived:             # UNSTR_* 코퍼스 신호 시계열 (감사 갭 4 — 임시 등록)
+    pattern: "UNSTR_{GAIN|FAO}_{한글태그}"
+    source_script: scripts/build_unstructured_timeseries.py
+    unit_doc_count: 월별 태그 문서 수 (무차원)
+    unit_tone: (bull-bear)/(bull+bear) ∈ [-1, 1]
+    note: metrics.yaml INDICATOR_DEFINITION 정식 이관과 한글 접미사 영문화는 잔여 갭 —
+      이관 전까지 본 레지스트리가 존재 계약을 담당
+    codes:
+    - UNSTR_GAIN_수출규제
+    - UNSTR_GAIN_수입관세
+    - UNSTR_GAIN_바이오연료수요
+    - UNSTR_GAIN_기상이변
+    - UNSTR_GAIN_압착
+    - UNSTR_GAIN_재고
+    - UNSTR_GAIN_생산변동
+    - UNSTR_GAIN_물류충격
+    - UNSTR_GAIN_TONE
+    - UNSTR_FAO_수출규제
+    - UNSTR_FAO_수입관세
+    - UNSTR_FAO_바이오연료수요
+    - UNSTR_FAO_기상이변
+    - UNSTR_FAO_압착
+    - UNSTR_FAO_재고
+    - UNSTR_FAO_생산변동
+    - UNSTR_FAO_물류충격
+    - UNSTR_FAO_TONE
+
+# ── 신호 태그 공식 매핑 (감사 갭 3 — 태그 3원화 해소) ────────────────────────
+signal_tag_mapping:
+  note: 한글 신호 태그(코퍼스 스크립트) ↔ UNSTR_* 시계열 ↔ P1-05 aspect 지표의 단일 기준.
+    스크립트·에이전트는 이 표를 준수하며 새 태그 추가 시 이 표를 먼저 갱신한다.
+  known_discrepancy: scripts/ingest_gain_pdf.py는 태그 7종(물류충격 누락)·정규식 상이 —
+    summarize_pdfs.py 8종 기준으로 정렬 필요 (잔여 갭 · 스크립트 수정은 본 개정 범위 외)
+  tags:
+  - tag_ko: 수출규제
+    unstr_codes: [UNSTR_GAIN_수출규제, UNSTR_FAO_수출규제]
+    absa_indicator: ARG_EXPORT_TAX_SENTIMENT
+    entities: [TERM-104, TERM-105, TERM-107]
+  - tag_ko: 수입관세
+    unstr_codes: [UNSTR_GAIN_수입관세, UNSTR_FAO_수입관세]
+    absa_indicator: INDIA_DUTY_SENTIMENT
+    entities: [TERM-103]
+  - tag_ko: 바이오연료수요
+    unstr_codes: [UNSTR_GAIN_바이오연료수요, UNSTR_FAO_바이오연료수요]
+    absa_indicator: BIODIESEL_POLICY_SENTIMENT
+    entities: [TERM-066, TERM-067, TERM-068]
+  - tag_ko: 기상이변
+    unstr_codes: [UNSTR_GAIN_기상이변, UNSTR_FAO_기상이변]
+    absa_indicator: null                 # 기상은 정형 ENSO_ONI·기상 커넥터 담당 — ABSA aspect 후보(Phase B)
+    entities: [TERM-019, TERM-024, TERM-027]
+  - tag_ko: 압착
+    unstr_codes: [UNSTR_GAIN_압착, UNSTR_FAO_압착]
+    absa_indicator: SBO_NEWS_SENTIMENT   # crusher margins는 SBO General Trade aspect 키워드
+    entities: [TERM-033, TERM-034]
+  - tag_ko: 재고
+    unstr_codes: [UNSTR_GAIN_재고, UNSTR_FAO_재고]
+    absa_indicator: WASDE_CONSENSUS_SCORE
+    entities: [TERM-035, TERM-036]
+  - tag_ko: 생산변동
+    unstr_codes: [UNSTR_GAIN_생산변동, UNSTR_FAO_생산변동]
+    absa_indicator: WASDE_CONSENSUS_SCORE
+    entities: [TERM-032, TERM-040]
+  - tag_ko: 물류충격
+    unstr_codes: [UNSTR_GAIN_물류충격, UNSTR_FAO_물류충격]
+    absa_indicator: LOGISTICS_DISRUPTION_FLAG
+    entities: [TERM-081, TERM-083, TERM-087, TERM-089]
+  - tag_ko: TONE
+    unstr_codes: [UNSTR_GAIN_TONE, UNSTR_FAO_TONE]
+    absa_indicator: SBO_NEWS_SENTIMENT   # 키워드 톤은 LLM 정밀 ABSA의 Phase A 프록시
+    entities: [TERM-139]
+
+# ── 인과엣지 원장 (감사 갭 6 — causal_chains.md 18체인 정형화 + 도메인 노트 3경로) ──
+# 규칙:
+#   · mechanisms[i].relation = 직전 노드 → 해당 노드의 관계 (첫 항목은 CAUSES_MECHANISM)
+#   · outcome.relation = MECHANISM_AFFECTS_OUTCOME (고정)
+#   · status=validated ⇒ validated_by(P1-01~04) + evidence 필수 (S-1 · S-5)
+#   · lag_trading_days = 원인 발생 → 가격 반영까지 추정 거래일 (도메인 근거 기반 — 통계 검증 전 추정치)
+#   · 열람용 표는 causal_chains.md — 본 원장이 단일 원천(single source of truth)
+causal_edges_meta:
+  count: 21
+  validated: 10
+  candidate: 11
+  outcome_nodes: [SBO_INTL_PRICE, KR_IMPORT_CIF]
+  evidence_source_types: [research_doc, pdf_span]   # pdf_span은 provenance.yaml EvidenceSpan 계약 준수
+causal_edges:
+# — 정책·규제 —
+- edge_id: CE-001
+  label_ko: 45Z 세액공제 시행 → 미국 바이오디젤 SBO 수요 증가 → 수출 여력 감소 → 국제가 상승
+  category: 정책·규제
+  cause: {node: US_45Z_CLEAN_FUEL_CREDIT, entity_terms: [TERM-065, TERM-066]}
+  mechanisms:
+  - {node: US_BIODIESEL_SBO_DEMAND_UP, relation: CAUSES_MECHANISM}
+  - {node: US_EXPORT_AVAILABILITY_DOWN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 20, max: 60}
+  lag_basis: 정책 시행 → 산업 수요 반영까지 약 1~3개월
+  indicators: [BIODIESEL_POLICY_SENTIMENT, WASDE_SBO_STU]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§2 바이오디젤 연계'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§2'
+    note: 의무혼합·세액공제가 가격 비탄력적 수요를 형성 — 꼬리위험 확대
+- edge_id: CE-002
+  label_ko: 인도네시아 B40 의무 확대 → CPO 내수 증가·수출 감소 → 스프레드 축소 → SBO 대체 수요 감소
+  category: 정책·규제
+  cause: {node: ID_B40_MANDATE, entity_terms: [TERM-071]}
+  mechanisms:
+  - {node: CPO_DOMESTIC_USE_UP, relation: CAUSES_MECHANISM}
+  - {node: CPO_EXPORT_DOWN, relation: PROPAGATES_TO}
+  - {node: CPO_SBO_SPREAD_NARROW, relation: PROPAGATES_TO}
+  - {node: SBO_SUBSTITUTION_DEMAND_DOWN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: DOWN
+  lag_trading_days: {min: 20, max: 90}
+  lag_basis: 의무 시행 → CPO 수출 물량 반영까지 1~4개월
+  indicators: [BIODIESEL_POLICY_SENTIMENT, CPO_SBO_SPREAD]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: null
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 정책·규제
+    note: CPO 대체 경로 — P1-01 도메인 검증 대기
+- edge_id: CE-003
+  label_ko: 아르헨티나 수출세 인상 → 수출 채산성 악화 → 글로벌 공급 감소 → 국제가 상승
+  category: 정책·규제
+  cause: {node: AR_EXPORT_TAX_HIKE, entity_terms: [TERM-104, TERM-105]}
+  mechanisms:
+  - {node: AR_EXPORT_MARGIN_DOWN, relation: CAUSES_MECHANISM}
+  - {node: GLOBAL_SBO_SUPPLY_DOWN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 5, max: 40}
+  lag_basis: 세율 발표 → 수출 계약·선적 반영까지 1~8주
+  indicators: [ARG_EXPORT_TAX_SENTIMENT]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§5 환율 경로 (수출세가 실질 신호)'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§5'
+    note: 아르헨티나는 수출세(현행 ~26%)가 공식 환율보다 실질 신호 — 최대 수출국 공급 전가
+- edge_id: CE-004
+  label_ko: EUDR 팜유 규제 강화 → EU 팜유 접근 차단 → EU 내 SBO 대체 수요 증가 → 국제가 상승
+  category: 정책·규제
+  cause: {node: EU_EUDR_PALM_RESTRICTION, entity_terms: [TERM-115]}
+  mechanisms:
+  - {node: EU_PALM_ACCESS_DOWN, relation: CAUSES_MECHANISM}
+  - {node: EU_SBO_SUBSTITUTION_DEMAND_UP, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 20, max: 120}
+  lag_basis: 규정 발효 → 조달 전환까지 1~6개월
+  indicators: [SBO_NEWS_SENTIMENT, CPO_SBO_SPREAD]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: null
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 정책·규제
+    note: P1-01 도메인 검증 대기
+- edge_id: CE-005
+  label_ko: 인도 식용유 수입관세 인하 → 인도 수입 증가 → 글로벌 SBO 수요 증가 → 국제가 상승
+  category: 정책·규제
+  cause: {node: IN_IMPORT_DUTY_CUT, entity_terms: [TERM-103]}
+  mechanisms:
+  - {node: IN_EDIBLE_OIL_IMPORT_UP, relation: CAUSES_MECHANISM}
+  - {node: GLOBAL_SBO_DEMAND_UP, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 5, max: 60}
+  lag_basis: 관세 고시 → 수입 계약 반영까지 1주~3개월
+  indicators: [INDIA_DUTY_SENTIMENT]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: null
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 정책·규제
+    note: 세계 최대 식용유 수입국 수요 경로 — P1-01 도메인 검증 대기
+# — 기후·작황 —
+- edge_id: CE-006
+  label_ko: ENSO 라니냐 → 남미 강우 부족 → 대두 감산 → 아르헨 압착 감소 → 수출 가용분 축소 → 국제가 상승
+  category: 기후·작황
+  cause: {node: ENSO_LA_NINA, entity_terms: [TERM-017, TERM-019]}
+  mechanisms:
+  - {node: SAM_RAINFALL_DEFICIT, relation: CAUSES_MECHANISM}
+  - {node: SAM_SOY_PRODUCTION_DOWN, relation: PROPAGATES_TO}
+  - {node: AR_CRUSH_DOWN, relation: PROPAGATES_TO}
+  - {node: SBO_EXPORT_AVAILABILITY_DOWN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 60, max: 180}
+  lag_basis: ONI 신호는 파종~생육기 강수를 3~6개월 선행
+  indicators: [ENSO_ONI, PSD_SOY_CRUSH, WASDE_SBO_STU]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§4 남미 기상 → 글로벌 압착 경로'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§4'
+    note: 아르헨티나가 대두유 수출 ~40% — 생산 충격이 수출 물량에 그대로 전가 (2018·2023 실증)
+- edge_id: CE-007
+  label_ko: 브라질 파종기(9~11월) 토양 수분 부족 → 발아율 저하·면적 축소 우려 → 선물 선반영 상승
+  category: 기후·작황
+  cause: {node: BR_PLANTING_SOIL_MOISTURE_DEFICIT, entity_terms: [TERM-024, TERM-026]}
+  mechanisms:
+  - {node: BR_GERMINATION_DOWN, relation: CAUSES_MECHANISM}
+  - {node: BR_ACREAGE_CONCERN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 10, max: 60}
+  lag_basis: 파종기 관측 → 선물 선반영까지 2주~3개월
+  indicators: [ENSO_ONI, CBOT_SBO_FUTURES]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: '§4 (관련 — 계절 세부 경로는 P1-03 검증 대기)'
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 기후·작황
+    note: P1-03 도메인 검증 대기
+- edge_id: CE-008
+  label_ko: WASDE STU 하락 발표 → 공급 부족 신호 → 투기 순매수 증가 → 선물 급등
+  category: 기후·작황
+  cause: {node: WASDE_STU_DROP, entity_terms: [TERM-036, TERM-039]}
+  mechanisms:
+  - {node: GLOBAL_SUPPLY_TIGHTNESS_SIGNAL, relation: CAUSES_MECHANISM}
+  - {node: SPECULATIVE_NET_LONG_UP, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 0, max: 5}
+  lag_basis: 발표일 즉시~1주 (월간 이벤트 — 일별 보간 금지)
+  indicators: [WASDE_CONSENSUS_SCORE, WASDE_SBO_STU]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: null
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 기후·작황
+    note: STU<10% 임계 근거는 통계 검증 대기 — P1-01 검증 대기
+- edge_id: CE-009
+  label_ko: 브라질 수확기(1~3월) 이상 기후 → 수확 지연·공급 차질 → 수출 일정 지연 → 국제가 상승
+  category: 기후·작황
+  cause: {node: BR_HARVEST_WEATHER_SHOCK, entity_terms: [TERM-025, TERM-027, TERM-037]}
+  mechanisms:
+  - {node: BR_HARVEST_DELAY, relation: CAUSES_MECHANISM}
+  - {node: BR_SBO_SUPPLY_DISRUPTION, relation: PROPAGATES_TO}
+  - {node: BR_EXPORT_SCHEDULE_DELAY, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 10, max: 60}
+  lag_basis: 수확기 충격 → 선적 차질 반영까지 2주~3개월 (한국 CFR 프리미엄 확대 동반)
+  indicators: [ENSO_ONI, CBOT_SBO_FUTURES]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: '§4 (관련)'
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 기후·작황
+    note: P1-03·P1-04 도메인 검증 대기
+# — 지정학·무역 —
+- edge_id: CE-010
+  label_ko: 호르무즈·말라카 해협 위기 → 탱커 운임 급등 → CIF 비용 증가 → 한국 수입가 상승
+  category: 지정학·무역
+  cause: {node: STRAIT_CRISIS_HORMUZ_MALACCA, entity_terms: [TERM-081]}
+  mechanisms:
+  - {node: TANKER_FREIGHT_SPIKE, relation: CAUSES_MECHANISM}
+  - {node: KR_CIF_COST_UP, relation: PROPAGATES_TO}
+  outcome: {node: KR_IMPORT_CIF, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 10, max: 40}
+  lag_basis: 해협 위기 → 운임·보험료 반영까지 2~8주
+  indicators: [LOGISTICS_DISRUPTION_FLAG, BDI]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§3 해운 운임 (액체 벌크 탱커)'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§3'
+    note: 한국 CFR 수입가에 운임 직접 가산 — 올바른 대리변수는 BDI·BCAA (컨테이너 지수 아님)
+- edge_id: CE-011
+  label_ko: 미·중 관세 에스컬레이션 → 중국의 미국산 수입 급감 → 미국 수출 여력 과잉 → 단기 하락
+  category: 지정학·무역
+  cause: {node: US_CN_TARIFF_ESCALATION, entity_terms: [TERM-079, TERM-109]}
+  mechanisms:
+  - {node: CN_US_SBO_IMPORT_DOWN, relation: CAUSES_MECHANISM}
+  - {node: US_EXPORT_SURPLUS, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: DOWN
+  lag_trading_days: {min: 5, max: 60}
+  lag_basis: 관세 발효 → 수출 성약 감소 반영까지 1주~3개월 (중기 공급망 재편은 CONTEXT)
+  indicators: [US_CN_TARIFF_SENTIMENT]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: null
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 지정학·무역
+    note: 단기 하락·중기 혼조 이원 구조 — P1-02 도메인 검증 대기
+- edge_id: CE-012
+  label_ko: 중국 SBO 비축 발표 → 수입 기대 형성 → 재고 감소 우려 → 선물 단기 급등
+  category: 지정학·무역
+  cause: {node: CN_RESERVE_PURCHASE_ANNOUNCEMENT, entity_terms: [TERM-116]}
+  mechanisms:
+  - {node: IMPORT_DEMAND_EXPECTATION_UP, relation: CAUSES_MECHANISM}
+  - {node: GLOBAL_STOCK_DRAW_CONCERN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 0, max: 10}
+  lag_basis: 발표 즉시~2주 (기대 선반영)
+  indicators: [SBO_NEWS_SENTIMENT]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: null
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 지정학·무역
+    note: P1-02 도메인 검증 대기
+- edge_id: CE-013
+  label_ko: 수에즈·홍해 후티 공격 → 희망봉 우회 → 유효 선복 감소 → 운임 급등 → 한국 수입 CIF 상승
+  category: 지정학·무역
+  cause: {node: RED_SEA_HOUTHI_ATTACKS, entity_terms: [TERM-077, TERM-088]}
+  mechanisms:
+  - {node: SUEZ_TRANSIT_BLOCKED, relation: CAUSES_MECHANISM}
+  - {node: CAPE_ROUTE_DIVERSION, relation: PROPAGATES_TO}
+  - {node: EFFECTIVE_CAPACITY_DOWN, relation: PROPAGATES_TO}
+  - {node: TANKER_FREIGHT_SPIKE, relation: PROPAGATES_TO}
+  - {node: KR_CIF_COST_UP, relation: PROPAGATES_TO}
+  outcome: {node: KR_IMPORT_CIF, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 10, max: 60}
+  lag_basis: 우회 개시(+10~14일 항해) → 운임·CIF 반영까지 2주~3개월
+  indicators: [LOGISTICS_DISRUPTION_FLAG, BDI]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§3 해운 운임 (2023-12~2024 홍해 사태 실증)'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§3'
+    note: 수에즈 우회로 유효 선복 감소 — 2023-12~2024 운임 재급등 실증
+- edge_id: CE-014
+  label_ko: 우크라이나 흑해 회랑 붕괴 → 해바라기유 수출 차단 → 식물성유지 공급 부족 → SBO 대체 수요 급증
+  category: 지정학·무역
+  cause: {node: BLACK_SEA_CORRIDOR_COLLAPSE, entity_terms: [TERM-082]}
+  mechanisms:
+  - {node: UA_SUNOIL_EXPORT_BLOCKED, relation: CAUSES_MECHANISM}
+  - {node: GLOBAL_VEGOIL_SUPPLY_DOWN, relation: PROPAGATES_TO}
+  - {node: SBO_SUBSTITUTION_DEMAND_UP, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 5, max: 40}
+  lag_basis: 회랑 차단 → 대체 조달 전환까지 1~8주 (2022 러-우 실증)
+  indicators: [SBO_NEWS_SENTIMENT]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: null
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 지정학·무역
+    note: BLACKSEA_RISK_SENTIMENT 지표는 metrics.yaml 미등록(잔여 갭) — P1-02 검증 대기
+# — 시장 구조 —
+- edge_id: CE-015
+  label_ko: CPO-SBO 스프레드 확대(>$175/MT) → 팜유 대체 → SBO 수요 감소 → 하락 압력
+  category: 시장 구조
+  cause: {node: CPO_SBO_SPREAD_WIDE, entity_terms: [TERM-053]}
+  mechanisms:
+  - {node: PALM_SUBSTITUTION_UP, relation: CAUSES_MECHANISM}
+  - {node: SBO_FOOD_DEMAND_DOWN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: DOWN
+  lag_trading_days: {min: 20, max: 60}
+  lag_basis: 스프레드 지속 → 식품업계 배합 전환까지 1~3개월
+  indicators: [CPO_SBO_SPREAD]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: null
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 시장 구조
+    note: $175/MT 임계 근거는 통계 검증 대기 — P1-01 검증 대기
+- edge_id: CE-016
+  label_ko: BDI 급등 → 해운비 상승 → 남미 수출 채산성 악화 → 수출 감소 → 국제가 상승
+  category: 시장 구조
+  cause: {node: BDI_SPIKE, entity_terms: [TERM-085]}
+  mechanisms:
+  - {node: SHIPPING_COST_UP, relation: CAUSES_MECHANISM}
+  - {node: SAM_EXPORT_MARGIN_DOWN, relation: PROPAGATES_TO}
+  - {node: SAM_EXPORT_VOLUME_DOWN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 5, max: 30}
+  lag_basis: 운임 급등 → 성약·선적 반영까지 1~6주
+  indicators: [BDI]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§3 해운 운임 (BDI=곡물 겸용 건화물 대리변수)'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§3'
+    note: 운임의 인과 경로 실재 — 대리변수는 BDI·BCAA
+- edge_id: CE-017
+  label_ko: CFTC COT 투기 순매수 급증 → 선물 모멘텀 강화 → 현물·선도 가격 상승 견인
+  category: 시장 구조
+  cause: {node: COT_SPEC_NET_LONG_UP, entity_terms: [TERM-051]}
+  mechanisms:
+  - {node: FUTURES_MOMENTUM_UP, relation: CAUSES_MECHANISM}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 0, max: 10}
+  lag_basis: 포지션 보고 주기(주간) 내 반영
+  indicators: [CBOT_SBO_FUTURES]
+  status: candidate
+  validated_by: []
+  domain_mechanism_ref: null
+  evidence:
+  - source_type: research_doc
+    ref: src/semantic/causal_chains.md
+    locator: 시장 구조
+    note: COT 데이터 수집은 P0 갭(D-002) — P1-01 검증 대기
+- edge_id: CE-018
+  label_ko: 압착 마진 축소(마이너스) → 압착 가동률 감소 → SBO 생산 감소 → 공급 축소 → 상승
+  category: 시장 구조
+  cause: {node: CRUSH_MARGIN_NEGATIVE, entity_terms: [TERM-033, TERM-034]}
+  mechanisms:
+  - {node: CRUSH_UTILIZATION_DOWN, relation: CAUSES_MECHANISM}
+  - {node: SBO_OUTPUT_DOWN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 20, max: 60}
+  lag_basis: 마진 악화 → 가동률 조정 반영까지 1~3개월
+  indicators: [PSD_SOY_CRUSH]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§1 압착 경제학 (crush margin = 대두박 0.79 + 대두유 0.185 - 대두)'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§1'
+    note: 압착업자 의사결정 변수는 crush margin — 마진의 60~70%는 대두박이 결정
+# — 도메인 메커니즘 노트 신규 경로 (2026-08-13) —
+- edge_id: CE-019
+  label_ko: 대두박 수요 부진 → 압착 유인 감소 → SBO 공급 정체(결합 생산물) → 수요 견조 시 상승 증폭
+  category: 시장 구조
+  cause: {node: SOYMEAL_DEMAND_WEAK, entity_terms: [TERM-033]}
+  mechanisms:
+  - {node: CRUSH_INCENTIVE_DOWN, relation: CAUSES_MECHANISM}
+  - {node: SBO_SUPPLY_INELASTIC, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 20, max: 120}
+  lag_basis: 사료 수요 부진 → 압착 계획 반영까지 1~6개월 (수요 견조 전제의 상방 증폭 경로)
+  indicators: [PSD_SOY_CRUSH, WASDE_SBO_STU]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§1 압착 경제학 (대두유 공급은 대두유 수요에 직접 반응 불가)'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§1'
+    note: 고정 비율 결합 생산 — 가격 급등이 공급 증가로 자체 해소되지 않는 구조적 이유
+- edge_id: CE-020
+  label_ko: 원유·경유 상승 → 바이오디젤 혼합 경제성 개선 → SBO 산업수요 증가 → 식용 가용분 축소 → 상승
+  category: 시장 구조
+  cause: {node: CRUDE_OIL_DIESEL_UP, entity_terms: [TERM-063, TERM-064]}
+  mechanisms:
+  - {node: BIODIESEL_BLEND_ECONOMICS_UP, relation: CAUSES_MECHANISM}
+  - {node: SBO_INDUSTRIAL_DEMAND_UP, relation: PROPAGATES_TO}
+  - {node: FOOD_AVAILABLE_SUPPLY_DOWN, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: UP
+  lag_trading_days: {min: 10, max: 60}
+  lag_basis: 에너지 가격 → 혼합 경제성 반영까지 2주~3개월. 레짐 의존(2020 이후 연계 강화 — oil share 30%→40%+)
+  indicators: [BIODIESEL_POLICY_SENTIMENT]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§2 바이오디젤 연계 (에너지 가격이 식용유 가격을 끌고 가는 경로)'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§2'
+    note: 에너지 변수 중요도는 레짐 의존 — horizon×레짐 분해의 실물 근거
+- edge_id: CE-021
+  label_ko: 브라질 헤알 약세 → 농가 헤알 수취가 상승 → 판매·수출 가속 → 달러 표시 가격 하락 압력
+  category: 시장 구조
+  cause: {node: FX_BRL_WEAK, entity_terms: [TERM-007]}
+  mechanisms:
+  - {node: BR_FARMER_LOCAL_PRICE_UP, relation: CAUSES_MECHANISM}
+  - {node: BR_SELLING_EXPORT_ACCELERATION, relation: PROPAGATES_TO}
+  outcome: {node: SBO_INTL_PRICE, relation: MECHANISM_AFFECTS_OUTCOME}
+  direction: DOWN
+  lag_trading_days: {min: 5, max: 40}
+  lag_basis: 환율 변동 → 농가 판매 가속 반영까지 1~8주. ARS는 수출세·복수환율 왜곡 — 수출세율·블루달러 스프레드가 실질 신호
+  indicators: [FX_BRL_USD]
+  status: validated
+  validated_by: [P1-01, P1-04]
+  domain_mechanism_ref: '§5 환율 경로 (BRL은 공급 측 변수 — 가격과 역방향이 정상)'
+  evidence:
+  - source_type: research_doc
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
+    locator: '§5'
+    note: 헤알 약세가 수출 가속을 유발하는 공급 측 경로
+
+# ── 비인과 상관 (허위상관 방어 — 인과엣지 등록 금지 목록) ────────────────────
+non_causal_correlations:
+  note: 상관은 높으나 인과 경로가 없는 것으로 확정된 조합 — 인과엣지 등록 금지(S-1)
+  pairs:
+  - pair: [컨테이너 운임지수(CFI·SCFI·WCI·FBX), SBO 수입가]
+    reason: 대두유는 액체 벌크 탱커 수송 — 수송 수단 자체가 다름(A-013).
+      공통 거시충격(유가·항만 적체·홍해 우회)에 동시 반응해 상관만 높음
+    correct_proxy: [BDI, BCAA]
+    ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md §3

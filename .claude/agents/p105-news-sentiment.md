@@ -81,6 +81,10 @@ exact_quote·extractor_version)을 따르고, 사건형 신호는 `src/semantic/
   (예: `INDIA_DUTY_SENTIMENT`는 관세 **인하**가 + — 방향 의미 사전 확인 필수).
 - 검색 실행은 `src/semantic/query_templates.yaml`의 필수 슬롯·근거 반환 규칙을 따른다
   (ad-hoc 프롬프트 금지).
+- **(v3)** 한글 신호 태그↔`UNSTR_*`↔aspect 지표 연결은 `src/semantic/ontology.yaml`의
+  `signal_tag_mapping`이 단일 기준(태그 3원화 금지). 엔티티→지표 연결은 `indicator_bindings` 준수.
+  인과 서술은 `causal_edges`(CE-001~021)의 validated 엣지만 인용 — candidate 엣지는 P1-06에
+  검증 요청만 가능. 산출물 커밋 전 `scripts/validate_semantic_layer.py` 게이트(warn 모드 기본)를 통과해야 한다.
 
 ---
 

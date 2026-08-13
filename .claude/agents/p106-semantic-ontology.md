@@ -53,15 +53,20 @@ triggers so downstream commodity price forecasting models (C-03) remain **interp
 |---|---|---|
 | `entities.yaml` (v2) | CANONICAL_ENTITY·ENTITY_ALIAS·GEO_ENTITY·COMMODITY_PROFILE | 152 용어 — 표준명(EN/KO)·동의어·정의·해석규칙·가격방향·단위·경보기준·상태(`status`)·담당(`owner_agent`) |
 | `metrics.yaml` (v2) | INDICATOR_DEFINITION·UNIT_DEFINITION | 지표 방향 의미·집계 규칙·권장 출처 + QUDT-lite 단위 사전 |
-| `ontology.yaml` (v2) | RELATION_TYPE·MARKET_MECHANISM | 관계 23종(domain/range/대칭성) + DAG 규칙 + 금지 관계 |
+| `ontology.yaml` (**v3**) | RELATION_TYPE·MARKET_MECHANISM·CAUSAL_EDGE·INDICATOR_BINDING | 관계 58종 + 엔티티 유형 8계보 + DAG 제약 + **인과엣지 원장 21건**(validated/direction/lag/evidence) + 엔티티↔지표 바인딩 + 신호 태그 매핑 + 방향 어휘 변환 규칙 |
 | `query_templates.yaml` (v2) | QUERY_TEMPLATE | 필수 슬롯·출력 스키마(P1-05 §3)·근거 반환 규칙 |
 | `provenance.yaml` (신규) | SourceDocument·EvidenceSpan | 페이지·bbox·해시·추출 버전 — 역추적 계약 |
 | `event_schema.json` (신규) | MarketEvent·CausalClaim·TradeFlow·Forecast·KoreaImpact | 시간·지역·근거·신뢰도 필수화 JSON Schema |
 
-### 엔티티 수명주기 (ERD 보완 항목)
+### 엔티티·인과엣지 수명주기 (ERD 보완 항목)
 - `status: active / deprecated / candidate` — 신규 후보는 `candidate`로 등록 후 도메인 검증(P1-01~04)
   통과 시 `active` 승격. 폐기 용어는 삭제하지 않고 `deprecated`로 보존(과거 문서 매칭 유지).
 - 검증된 CausalClaim(`review_status: validated`)만 지식그래프로 투영(S1).
+- **(v3) 인과엣지 원장**: `ontology.yaml`의 `causal_edges`가 단일 원천 —
+  `causal_chains.md`는 열람용 파생 표. 엣지 수명주기 `candidate → validated → rejected`,
+  승격은 P1-01~04 서명(`validated_by`) + `evidence` 첨부 필수(S1·S5). rejected도 보존.
+- **(v3) 검증 게이트**: 시맨틱 자산 변경 시 `scripts/validate_semantic_layer.py` 실행 —
+  DAG 순환·매핑 실존·evidence 계약을 기계 검증(비정형 워크플로우 게이트 · warn 모드 기본).
 
 ---
 

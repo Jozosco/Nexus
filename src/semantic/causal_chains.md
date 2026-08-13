@@ -1,8 +1,11 @@
-# 대두유 가격 인과관계 체인 — 전체 온톨로지 (P1-06 관리)
+# 대두유 가격 인과관계 체인 — 열람용 표 (P1-06 관리)
 
-> G1 리포트 본문에는 핵심 변수 관련 체인만 수록하고(Req 1.4.4), 전체 인과 링크는 본 파일이
-> 단일 원천. 구조: Cause → Mechanism → Price (DAG — 직접 Cause→Price 금지).
-> 체인 수: 18 · 생성원: variable_importance_g1._CAUSAL_CHAINS
+> **(v3) 단일 원천 이관**: 정형화 원장은 `src/semantic/ontology.yaml`의 `causal_edges`
+> (CE-001~CE-021 · validated/direction/lag/evidence 필드 보유)이며, 본 파일은 열람용 파생 표.
+> 구조: Cause → Mechanism → Price (DAG — 직접 Cause→Price 금지).
+> 체인 수: 18(아래 표) + 도메인 메커니즘 노트 신규 3경로(CE-019~021 — 원장에만 수록).
+> 방향 표기 변환: 📈 상승=UP · 📉 하락=DOWN (`ontology.yaml direction_vocab.chain_legend`).
+> 구 생성원 `variable_importance_g1._CAUSAL_CHAINS`는 표시용 — 원장과 불일치 시 원장 우선.
 
 ## 정책·규제
 
