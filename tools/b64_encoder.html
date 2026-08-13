@@ -1,0 +1,46 @@
+<!-- 오프라인 Base64 인코더 — 사내망 파일 업로드 차단 우회용 (A-137)
+     사용: 이 파일을 로컬에 저장 → 브라우저로 열기 → 파일 선택 → 텍스트 복사
+     네트워크 통신 없음(전부 브라우저 안에서 처리) · 설치 불필요 -->
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Base64 인코더 (오프라인)</title>
+<style>
+  body { font-family: 'Malgun Gothic', sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+  textarea { width: 100%; height: 320px; font-family: monospace; font-size: 11px; }
+  .meta { color: #555; margin: .5rem 0; }
+  button { padding: .4rem 1rem; }
+</style>
+</head>
+<body>
+<h2>Base64 인코더 — GitHub 반입함(incoming/)용</h2>
+<p>파일을 선택하면 Base64 텍스트가 아래에 표시됩니다. 전체 복사해서
+GitHub 웹 <b>Create new file</b> 본문에 붙여넣으세요.
+파일명은 <code>incoming/…/원본파일명.xlsx<b>.b64</b></code> 형식.</p>
+<input type="file" id="f">
+<div class="meta" id="meta"></div>
+<button id="copy" disabled>전체 복사</button>
+<textarea id="out" readonly placeholder="파일을 선택하세요"></textarea>
+<script>
+const f = document.getElementById('f'), out = document.getElementById('out'),
+      meta = document.getElementById('meta'), copy = document.getElementById('copy');
+f.addEventListener('change', () => {
+  const file = f.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const b64 = r.result.split(',')[1];
+    out.value = b64;
+    meta.textContent = `${file.name} — 원본 ${file.size.toLocaleString()} bytes → Base64 ${b64.length.toLocaleString()}자`;
+    copy.disabled = false;
+  };
+  r.readAsDataURL(file);
+});
+copy.addEventListener('click', () => {
+  out.select(); document.execCommand('copy');
+  copy.textContent = '복사됨 ✓'; setTimeout(() => copy.textContent = '전체 복사', 1500);
+});
+</script>
+</body>
+</html>

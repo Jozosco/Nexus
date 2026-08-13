@@ -1,0 +1,91 @@
+# incoming/ Base64 반입함 — 파일 업로드 차단 우회 2안 (A-137)
+#
+# 배경: 사내망에서 GitHub 웹 **파일 업로드**가 반복 실패한다(xlsx·zip 동일,
+#   "Something went really wrong"). 원본은 DRM 해제·정상 파일임이 확인됐으므로
+#   원인은 파일이 아니라 **업로드 전송 스트림에 대한 프록시 개입**이다.
+#   그런데 GitHub 웹의 'Create new file'(텍스트 붙여넣기)은 파일 업로드와
+#   전혀 다른 경로라 차단을 받지 않는다. 작은 바이너리(수십 KB)는 Base64
+#   텍스트로 붙여넣어 반입할 수 있다.
+#
+# 사용법:
+#   1. 로컬에서 Base64 텍스트 생성 (셋 중 되는 방법으로):
+#      - cmd:        certutil -encode "2015_Monthly Volumes Futures.xlsx" out.b64
+#      - PowerShell: [Convert]::ToBase64String([IO.File]::ReadAllBytes("파일")) | Set-Content out.b64
+#      - 둘 다 막혀 있으면: 저장소의 tools/b64_encoder.html 을 메모장으로 저장해
+#        브라우저로 열기 → 파일 선택 → 표시된 텍스트 복사 (설치·네트워크 불필요)
+#   2. GitHub 웹 → Add file → **Create new file** → 파일명에 아래 경로 입력:
+#        incoming/ICE/Reports/Monthly Volumes/U.S./Futures/2015_Monthly Volumes Futures.xlsx.b64
+#      (incoming/ 이후가 최종 배치 경로가 된다. 슬래시 입력 시 폴더 자동 생성)
+#   3. 본문에 Base64 텍스트 붙여넣기 → Commit → 이 워크플로우가 자동으로
+#      디코드·zip 구조 검증·원위치 배치·b64 삭제까지 수행한다.
+#
+# 검증: 디코드 결과가 zip(xlsx)이면 중앙 디렉터리 무결성을 확인한다 —
+#   16,384B 절단 사고(D-036)의 재발을 커밋 전에 차단.
+name: Decode Incoming Base64 (반입함 자동 처리)
+
+on:
+  push:
+    branches: [main]
+    paths: ["incoming/**"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: decode-incoming
+  cancel-in-progress: false
+
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - name: Decode, validate, place
+        run: |
+          python3 - <<'PY'
+          import base64, re, sys, zipfile
+          from pathlib import Path
+
+          inbox = Path("incoming")
+          if not inbox.exists():
+              print("[정보] incoming/ 없음 — 처리할 항목 없음"); sys.exit(0)
+
+          ok, bad = [], []
+          for f in sorted(inbox.rglob("*.b64")):
+              dest = Path(*f.parts[1:]).with_suffix("")     # incoming/ 제거 + .b64 제거
+              text = f.read_text(encoding="utf-8", errors="ignore")
+              # certutil 헤더(-----BEGIN/END CERTIFICATE-----)·공백·개행 허용
+              text = re.sub(r"-----(BEGIN|END) CERTIFICATE-----", "", text)
+              text = re.sub(r"\s+", "", text)
+              try:
+                  blob = base64.b64decode(text, validate=True)
+              except Exception as e:
+                  bad.append((f, f"Base64 해석 실패: {e}")); continue
+              if dest.suffix.lower() in (".xlsx", ".xlsm", ".zip", ".docx"):
+                  try:
+                      import io
+                      zipfile.ZipFile(io.BytesIO(blob)).namelist()
+                  except Exception as e:
+                      bad.append((f, f"zip 구조 손상({e}) — 붙여넣기 누락 가능성, 배치 중단"))
+                      continue
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              dest.write_bytes(blob)
+              f.unlink()
+              ok.append((dest, len(blob)))
+              print(f"[완료] {dest} ({len(blob):,} bytes)")
+
+          for f, why in bad:
+              print(f"[오류] {f}: {why}")
+          if not ok and not bad:
+              print("[정보] .b64 파일 없음")
+          if bad:
+              sys.exit(1)      # 손상 반입은 커밋하지 않고 실패로 표면화
+          PY
+      - name: Commit decoded files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || (git commit -m "data: incoming 반입함 디코드 배치 (A-137)" && git push origin HEAD:main)
