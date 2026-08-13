@@ -98,7 +98,13 @@ def fetch_bo_futures_yfinance(days_back: int = 10) -> pd.DataFrame:
         for attempt in range(3):
             try:
                 ticker = yf.Ticker(symbol, session=session) if session else yf.Ticker(symbol)
-                df = ticker.history(period=f"{days_back}d", auto_adjust=True)
+                # A-158: 백필인데 "10d"만 수집되던 원인 — days_back 기본값이 증분용.
+                #   BACKFILL_MODE에서는 HISTORICAL_START_YEAR부터 전체 창을 요청한다.
+                if os.environ.get("BACKFILL_MODE", "").lower() == "true":
+                    _start = f"{os.environ.get('HISTORICAL_START_YEAR', '2010')}-01-01"
+                    df = ticker.history(start=_start, auto_adjust=True)
+                else:
+                    df = ticker.history(period=f"{days_back}d", auto_adjust=True)
                 if df.empty:
                     print(f"[경고] {symbol} yfinance: 데이터 없음 — 다음 심볼 시도")
                     break
@@ -368,8 +374,12 @@ def _te_discover_symbols(te_key: str, search_term: str,
             sym = item.get("Symbol") or item.get("symbol")  # 대문자 우선 (A-150)
             if sym and str(sym) not in symbols:
                 symbols.append(str(sym))
+    # A-159: 검색 결과에 기업 주가가 섞인다(실측: 'palm oil' 검색 1위가 OKOMUOIL:NL —
+    #   Okomu Oil Palm **주식**). TE 심볼 접미사가 자산 유형을 나타내므로(:COM=상품,
+    #   :IND=지수, 그 외=주식 등) 상품·지수를 앞으로 정렬해 주가 오선택을 차단한다.
+    symbols.sort(key=lambda x: (0 if x.endswith(":COM") else 1 if x.endswith(":IND") else 2))
     if symbols:
-        print(f"[정보] TE 심볼 자기발견({search_term}): {symbols}")
+        print(f"[정보] TE 심볼 자기발견({search_term}): {symbols} (:COM/:IND 우선 정렬 — A-159)")
     else:
         print(f"[정보] TE 심볼 자기발견 실패({search_term}) — 기존 추측 체인으로 폴백")
     return symbols

@@ -226,7 +226,7 @@ def _fetch_power_monthly(query: dict) -> dict | None:
     """NASA POWER monthly point 호출 — 422면 응답 본문 로그 후 None (A-143)."""
     r = httpx.get(NASA_POWER, params=query, timeout=60)
     if r.status_code == 422:
-        print(f"[경고] NASA POWER 422 — 응답 본문: {r.text[:200]}")
+        print(f"[경고] NASA POWER 422 — 요청 파라미터: {query} · 응답 본문: {r.text[:600]}")  # A-160: 원인 확정용 전문 로그
         return None
     r.raise_for_status()
     return r.json()

@@ -189,8 +189,9 @@ def _te_discover_symbols(te_key: str, search_term: str,
             sym = item.get("Symbol") or item.get("symbol")  # 대문자 우선 (A-150)
             if sym and str(sym) not in symbols:
                 symbols.append(str(sym))
+    symbols.sort(key=lambda x: (0 if x.endswith(":COM") else 1 if x.endswith(":IND") else 2))  # A-159
     if symbols:
-        print(f"[정보] TE 심볼 자기발견({search_term}): {symbols}")
+        print(f"[정보] TE 심볼 자기발견({search_term}): {symbols} (:COM/:IND 우선 — A-159)")
     else:
         print(f"[정보] TE 심볼 자기발견 실패({search_term}) — 기존 추측 체인으로 폴백")
     return symbols
