@@ -67,7 +67,10 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install openai pandas pyarrow tradingeconomics
+        # A-132: httpx 누락으로 shipping 잡이 import 단계에서 즉사했다.
+        #   shipping_connector는 TE REST(httpx 직접 호출)·stooq 폴백·Perplexity 프록시
+        #   모두 httpx를 쓴다. tradingeconomics SDK는 A-034에서 제거됐으므로 정리.
+        run: pip install httpx openai pandas pyarrow
       - name: Run shipping connector
         env:
           PERPLEXITY_API_KEY:          ${{ secrets.PERPLEXITY_API_KEY }}
@@ -123,9 +126,8 @@ jobs:
       - name: Run climate connector
         env:
           ECMWF_API_KEY: ${{ secrets.ECMWF_API_KEY }}
-          # OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
-          # ⚠️ 미등록: openweathermap.org 무료 키 등록 후 위 줄 주석 해제
-          OPENWEATHERMAP_API_KEY: ""
+          # 사용자 키 등록 완료(2026-08-13) — 기상 이상(특보) 수집 활성화
+          OPENWEATHERMAP_API_KEY: ${{ secrets.OPENWEATHERMAP_API_KEY }}
         run: python src/pipeline/connectors/climate_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4

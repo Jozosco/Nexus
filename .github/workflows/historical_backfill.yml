@@ -143,7 +143,7 @@ jobs:
       - name: Run climate connector (historical)
         env:
           ECMWF_API_KEY:              ${{ secrets.ECMWF_API_KEY }}
-          OPENWEATHERMAP_API_KEY:     ""
+          OPENWEATHERMAP_API_KEY:     ${{ secrets.OPENWEATHERMAP_API_KEY }}
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
           BACKFILL_MODE:              "true"

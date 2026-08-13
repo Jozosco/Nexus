@@ -116,11 +116,18 @@ COMTRADE_REPORTER_KOREA = "410"
 
 
 def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
-    """외부 API 호출 — 지수 백오프 재시도."""
+    """외부 API 호출 — 지수 백오프 재시도.
+
+    A-133: 마지막 재시도 실패 시 **예외를 올리지 않는다**. 이전에는 RuntimeError가
+    run()까지 전파돼 첫 timeout 하나가 잡 전체를 죽였고, 그 뒤에 있던 nitemtrade
+    수집과 UN Comtrade 폴백은 **시도조차 되지 않았다**(connector=all 2회 연속 실패의
+    직접 원인). 관세청 GW는 연 단위 조회에 30초를 넘기는 일이 잦아 timeout도 90초로
+    올린다. 빈 dict 반환 → 호출부는 그 구간만 결측 처리하고 다음으로 진행한다.
+    """
     delay = 2
     for attempt in range(max_retries):
         try:
-            r = httpx.get(url, params=params, timeout=30)
+            r = httpx.get(url, params=params, timeout=90)
             if r.status_code == 401:
                 key_hint = params.get("serviceKey", "?")
                 key_hint = (str(key_hint)[:8] + "...") if len(str(key_hint)) > 8 else str(key_hint)
@@ -144,7 +151,9 @@ def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
                 return {}
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
             if attempt == max_retries - 1:
-                raise RuntimeError(f"[오류] API 호출 실패 ({url}): {e}") from e
+                print(f"[경고] API 호출 최종 실패 ({url.split('?')[0]}): {type(e).__name__}: {e} "
+                      f"— 해당 구간 결측 처리 후 계속 진행 (A-133)")
+                return {}
             time.sleep(delay)
             delay *= 2
     return {}
@@ -441,11 +450,21 @@ def run() -> None:
           f"(대두유 {len(HS_CODES_SOYBEAN_OIL)} · 대체재 {len(HS_CODES_SUBSTITUTES)} · "
           f"보완재 {len(HS_CODES_COMPLEMENTS)})")
 
+    # A-133: 소스별 격리 — Itemtrade가 죽어도 nitemtrade·Comtrade 폴백은 계속 시도한다
+    def _safe(label: str, fn, **kw) -> pd.DataFrame:
+        try:
+            return fn(**kw)
+        except Exception as e:
+            print(f"[경고] {label} 수집 실패({type(e).__name__}: {e}) — 다음 소스로 진행")
+            return pd.DataFrame()
+
     # API 1: 품목별 전체 (Itemtrade — 국가 구분 없음)
-    df_total = fetch_customs_total_imports(start_year=start_year, end_year=end_year)
+    df_total = _safe("Itemtrade", fetch_customs_total_imports,
+                     start_year=start_year, end_year=end_year)
 
     # API 2: 품목별 국가별 (nitemtrade)
-    df_by_country = fetch_customs_sbo_imports(start_year=start_year, end_year=end_year)
+    df_by_country = _safe("nitemtrade", fetch_customs_sbo_imports,
+                          start_year=start_year, end_year=end_year)
 
     # 두 소스 병합
     frames = [f for f in [df_total, df_by_country] if not f.empty]
@@ -456,13 +475,13 @@ def run() -> None:
 
     if df.empty:
         print("[정보] 관세청 미수집 — UN Comtrade 폴백 시도")
-        df = fetch_comtrade_sbo_imports_fallback(start_year=start_year)
+        df = _safe("UN Comtrade", fetch_comtrade_sbo_imports_fallback, start_year=start_year)
 
     if df.empty:
         print("[경고] 관세청·UN Comtrade 모두 실패 — API 키 확인 필요")
         print("       DATA_GO_KR_SERVICE_KEY: data.go.kr 포털 발급")
         print("       UN_COMTRADE_API_KEY: comtradeplus.un.org 발급")
-        return
+        raise SystemExit(1)   # 전 소스 실패는 조용히 넘기지 않는다 — 잡 실패로 표면화
 
     out = f"{OUTPUT_DIR}/customs_import_{today_str}.parquet"
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
