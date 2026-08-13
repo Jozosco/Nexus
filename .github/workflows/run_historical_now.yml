@@ -62,13 +62,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "[실행] connector=${{ steps.p.outputs.connector }} · include_api=${{ steps.p.outputs.include_api }} · ${{ steps.p.outputs.start_year }}~${{ steps.p.outputs.end_year }}"
-          gh workflow run historical_backfill.yml \
-            --repo "${{ github.repository }}" --ref main \
-            -f connector="${{ steps.p.outputs.connector }}" \
-            -f include_api="${{ steps.p.outputs.include_api }}" \
-            -f start_year="${{ steps.p.outputs.start_year }}" \
-            -f end_year="${{ steps.p.outputs.end_year }}" \
-            -f skip_analysis="${{ steps.p.outputs.skip_analysis }}"
+          # A-154: connector가 쉼표 구분 목록(예: databento,economic,climate)이면
+          #        각 커넥터마다 gh workflow run을 반복 호출한다(항목별 공백 제거).
+          #        단일 값이면 기존과 동일하게 1회 dispatch.
+          CONNECTORS="${{ steps.p.outputs.connector }}"
+          IFS=',' read -ra CONNECTOR_LIST <<< "$CONNECTORS"
+          for C in "${CONNECTOR_LIST[@]}"; do
+            C="$(echo "$C" | tr -d '[:space:]')"
+            [ -z "$C" ] && continue
+            echo "[실행] connector=$C · include_api=${{ steps.p.outputs.include_api }} · ${{ steps.p.outputs.start_year }}~${{ steps.p.outputs.end_year }}"
+            gh workflow run historical_backfill.yml \
+              --repo "${{ github.repository }}" --ref main \
+              -f connector="$C" \
+              -f include_api="${{ steps.p.outputs.include_api }}" \
+              -f start_year="${{ steps.p.outputs.start_year }}" \
+              -f end_year="${{ steps.p.outputs.end_year }}" \
+              -f skip_analysis="${{ steps.p.outputs.skip_analysis }}"
+            echo "- connector=\`$C\` 실행 요청 완료" >> "$GITHUB_STEP_SUMMARY"
+          done
           echo "### Historical Analysis Pipeline 실행 요청 완료" >> "$GITHUB_STEP_SUMMARY"
           echo "connector=\`${{ steps.p.outputs.connector }}\` · include_api=\`${{ steps.p.outputs.include_api }}\` · 기간 ${{ steps.p.outputs.start_year }}~${{ steps.p.outputs.end_year }}" >> "$GITHUB_STEP_SUMMARY"

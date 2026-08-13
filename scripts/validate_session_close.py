@@ -14,9 +14,13 @@ A-145: 세션 종가 검증기 (WBS · P0) — Databento UTC 일봉 종가 vs �
   2) 정산가 표본: yfinance BO=F (실패 시 ZL=F) — curl_cffi 세션(impersonate="chrome",
      A-071 패턴). 기간: 가능한 전체(period="max", 실패 시 축소).
 
-PASS 기준 (리포트에 명시):
-  교집합 ≥ 500일 · 상대차 중앙값 ≤ 0.10% · P99 ≤ 0.60% · 최대 ≤ 2%
-  (CBOT_BO_ROLLDAY 지표가 있으면 롤일은 최대 기준에서 제외하고 분리 통계 보고)
+발행 정책 (A-156 — 첫 실행 실측으로 설계 반전):
+  구 설계는 UTC 종가를 정산가 근사로 "승격"하려 했으나, 첫 실행에서 ZL=F 정산가
+  원계열 6,565일(2000~2026)이 확보됐고 중앙값 차이 0.1003%·P99 1.34%로
+  꼬리 괴리가 실재함이 확인됐다. → **정산가 원계열을 CBOT_BO_CLOSE로 발행**하고
+  (게이트 (b) '거래소 공식 settlement' 원문 경로), Databento UTC는 보강 검증으로 사용.
+PASS 기준: 교집합 ≥ 500일 · 중앙값 ≤ 0.25%(동일 상품 확인) ·
+  괴리 2% 초과일 비율 ≤ 2%(불량 틱 상한, 롤일 제외 — 의심일은 리포트에 기록)
 
 종료 코드:
   0 = PASS (parquet 발행 + 리포트)
@@ -64,6 +68,11 @@ MIN_OVERLAP_DAYS = 500      # 교집합 최소 일수
 MAX_MEDIAN_PCT   = 0.10     # 상대차 중앙값 상한 (%)
 MAX_P99_PCT      = 0.60     # 상대차 P99 상한 (%)
 MAX_ABS_PCT      = 2.00     # 상대차 최대 상한 (%) — 롤일 제외
+
+# A-156: 정산가-원계열 발행 기준 (구 'UTC 종가 승격' 기준을 대체)
+IDENTITY_MEDIAN_PCT = 0.25   # 동일 상품 판정 — 중앙값 상대차 상한 (%)
+SUSPECT_DIFF_PCT    = 2.0    # 이 이상 괴리(롤일 제외)는 불량 틱 의심으로 기록
+MAX_SUSPECT_FRAC    = 0.02   # 의심일 비율 상한 (교집합 대비)
 
 EXIT_PASS, EXIT_FAIL, EXIT_NO_SAMPLE = 0, 1, 2
 
@@ -138,7 +147,7 @@ def _load_settle_sample() -> tuple[pd.Series, str]:
         return pd.Series(dtype=float), ""
 
     session = _yf_session()
-    for symbol in ("BO=F", "ZL=F"):
+    for symbol in ("ZL=F", "BO=F"):   # A-156: BO=F는 야후 상장폐지 — ZL=F 우선
         for period in ("max", "10y", "5y"):
             try:
                 ticker = yf.Ticker(symbol, session=session) if session else yf.Ticker(symbol)
@@ -288,27 +297,50 @@ def run() -> int:
     st_ex_roll = _stats(joined.loc[~is_roll, "diff_pct"])
     st_roll    = _stats(joined.loc[is_roll, "diff_pct"]) if roll is not None else None
 
+    # A-156: 발행 대상은 UTC 종가가 아니라 **정산가 원계열**이다. 여기서의 검증은
+    # "정산가를 믿어도 되는가"(동일 상품인가 · 야후 불량 틱이 얼마나 섞였는가)를 묻는다.
+    suspect = joined.loc[~is_roll & (joined["diff_pct"] > SUSPECT_DIFF_PCT)]
+    suspect_frac = len(suspect) / max(st_all["n"], 1)
     checks = {
-        f"교집합 ≥ {MIN_OVERLAP_DAYS}일":                st_all["n"] >= MIN_OVERLAP_DAYS,
-        f"중앙값 ≤ {MAX_MEDIAN_PCT}%":                   st_all["median"] <= MAX_MEDIAN_PCT,
-        f"P99 ≤ {MAX_P99_PCT}%":                         st_all["p99"] <= MAX_P99_PCT,
-        f"최대 ≤ {MAX_ABS_PCT}% (롤일 제외)":            st_ex_roll["max"] <= MAX_ABS_PCT,
+        f"교집합 ≥ {MIN_OVERLAP_DAYS}일 (독립 소스 대조 표본)":
+            st_all["n"] >= MIN_OVERLAP_DAYS,
+        f"중앙값 ≤ {IDENTITY_MEDIAN_PCT}% (동일 상품 확인)":
+            st_all["median"] <= IDENTITY_MEDIAN_PCT,
+        f"괴리 {SUSPECT_DIFF_PCT}% 초과일 비율 ≤ {MAX_SUSPECT_FRAC:.0%} (불량 틱 상한)":
+            suspect_frac <= MAX_SUSPECT_FRAC,
     }
     failed = [name for name, ok in checks.items() if not ok]
 
     print(f"[정보] 교차검증: 교집합 {st_all['n']:,}일 · 중앙값 {_fmt(st_all['median'])} · "
-          f"P99 {_fmt(st_all['p99'])} · 최대(롤일 제외) {_fmt(st_ex_roll['max'])}")
+          f"P99 {_fmt(st_all['p99'])} · 괴리 {SUSPECT_DIFF_PCT}% 초과 "
+          f"{len(suspect)}일({suspect_frac:.2%}, 롤일 제외)")
 
     if failed:
         worst = joined.sort_values("diff_pct", ascending=False).head(20)
         _write_report(report_path, f"FAIL — 미충족: {', '.join(failed)}", symbol,
-                      st_all, st_ex_roll, st_roll, worst)
+                      st_all, st_ex_roll, st_roll, worst,
+                      note="정산가 표본과 Databento UTC 종가가 동일 상품으로 보기 어려움 — "
+                           "발행 중단. 심볼·스케일·기간 정합 확인 필요.")
         print(f"[오류] 세션 종가 검증 FAIL — 미충족 기준: {', '.join(failed)}")
         return EXIT_FAIL
 
-    _write_report(report_path, "PASS", symbol, st_all, st_ex_roll, st_roll, None,
-                  note="전 기준 충족 — UTC 종가를 CBOT_BO_CLOSE(G2 타깃 후보)로 발행함.")
-    _publish(utc_close)
+    # 발행: 분석창(2010-01-01~) 내 정산가. 주말 제거·범위 검증은 _publish가 수행.
+    publishable = settle[settle.index >= pd.Timestamp("2010-01-01")]
+    lo, hi = float(publishable.min()), float(publishable.max())
+    if not (5.0 <= lo and hi <= 200.0):
+        print(f"[오류] 정산가 범위 이상 {lo:.2f}~{hi:.2f} USc/lb — 발행 중단")
+        return EXIT_FAIL
+
+    _write_report(
+        report_path,
+        f"PASS — 정산가 원계열({symbol}) 발행 · Databento UTC 보강 검증 통과",
+        symbol, st_all, st_ex_roll, st_roll,
+        suspect.sort_values("diff_pct", ascending=False).head(20) if len(suspect) else None,
+        note=(f"게이트 (b)경로: 거래소 공식 정산가({symbol}, {len(publishable):,}일)를 "
+              f"CBOT_BO_CLOSE로 발행. Databento UTC 종가와 중앙값 {_fmt(st_all['median'])} "
+              f"일치로 동일 상품 확인. 괴리 {SUSPECT_DIFF_PCT}% 초과 {len(suspect)}일은 "
+              f"아래 표에 기록(야후 불량 틱 의심 — 후속 검토 대상, 값은 정산가 유지)."))
+    _publish(publishable)
     return EXIT_PASS
 
 

@@ -28,12 +28,17 @@ D-017: 파이프라인 통합 방식 (2026-06-17)
 """
 from __future__ import annotations
 
+import logging
 import re
 from datetime import date
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+
+# A-153: "Could not get FontBBox..."는 pdfminer(pdfplumber 백엔드)의 손상 폰트
+#        디스크립터 경고 — 추출 자체는 진행됨, 로그 폭주만 차단.
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
 
 # as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
 import sys as _sys

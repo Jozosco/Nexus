@@ -70,8 +70,16 @@ def _yf_session():
         return None
 
 
+# A-151: BO=F는 야후에서 상장폐지(possibly delisted) 표기, ZL=F가 현행 CBOT 대두유 심볼.
+#        같은 실행에서 검증기가 ZL=F period=max 6,565일 수집 성공 → ZL=F 1순위, BO=F 폴백 강등.
+YF_SBO_SYMBOLS: tuple[str, ...] = ("ZL=F", "BO=F")
+
+
 def fetch_bo_futures_yfinance(days_back: int = 10) -> pd.DataFrame:
-    """CBOT BO=F 일간 OHLCV — yfinance + curl_cffi 세션 (A-071).
+    """CBOT 대두유 선물 일간 OHLCV — yfinance + curl_cffi 세션 (A-071).
+
+    심볼 체인(A-151): ZL=F(현행) → BO=F(구 심볼, 야후 상장폐지 표기 — 폴백만 유지).
+    지표코드는 하위 호환을 위해 CBOT_BO_* 접두를 유지한다(다운스트림 FILE_PATTERNS 불변).
 
     미수집 원인·해결(조정자 확인):
       ① 레이트리밋(429) → curl_cffi 브라우저 임퍼소네이션 세션 사용(하단 _yf_session).
@@ -81,48 +89,52 @@ def fetch_bo_futures_yfinance(days_back: int = 10) -> pd.DataFrame:
     try:
         import yfinance as yf
     except ImportError:
-        print("[경고] yfinance 미설치 — BO=F yfinance 건너뜀 (Nasdaq Data Link 폴백 사용)")
+        print("[경고] yfinance 미설치 — CBOT 대두유 yfinance 건너뜀 (Nasdaq Data Link 폴백 사용)")
         return pd.DataFrame()
 
     session = _yf_session()
-    delay = 10
-    for attempt in range(3):
-        try:
-            ticker = yf.Ticker("BO=F", session=session) if session else yf.Ticker("BO=F")
-            df = ticker.history(period=f"{days_back}d", auto_adjust=True)
-            if df.empty:
-                print("[경고] BO=F yfinance: 데이터 없음 — Nasdaq Data Link 폴백으로 전환")
-                return pd.DataFrame()
-            df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
-            df.index.name = "price_date"
-            df = df.reset_index()
-            df["price_date"] = pd.to_datetime(df["price_date"]).dt.tz_localize(None)
-            result = df.melt(id_vars=["price_date"], var_name="indicator_code", value_name="value")
-            result["source_name"] = "yfinance/CME_BO"
-            result["indicator_code"] = "CBOT_BO_" + result["indicator_code"].str.upper()
-            result["unit"] = "USc/lb"
-            result["ingested_at"] = pd.Timestamp.utcnow()
-            return result
-        except Exception as e:
-            if "429" in str(e) or "RateLimit" in str(e) or "Too Many" in str(e):
-                print(f"[경고] Yahoo Finance 레이트 리밋 (시도 {attempt + 1}/3): {e}")
-                if attempt < 2:
-                    time.sleep(delay)
-                    delay *= 2
-            else:
-                print(f"[경고] BO=F yfinance 실패: {e}")
-                break
+    for symbol in YF_SBO_SYMBOLS:                      # A-151: ZL=F 우선
+        delay = 10
+        for attempt in range(3):
+            try:
+                ticker = yf.Ticker(symbol, session=session) if session else yf.Ticker(symbol)
+                df = ticker.history(period=f"{days_back}d", auto_adjust=True)
+                if df.empty:
+                    print(f"[경고] {symbol} yfinance: 데이터 없음 — 다음 심볼 시도")
+                    break
+                df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
+                df.index.name = "price_date"
+                df = df.reset_index()
+                df["price_date"] = pd.to_datetime(df["price_date"]).dt.tz_localize(None)
+                result = df.melt(id_vars=["price_date"], var_name="indicator_code", value_name="value")
+                result["source_name"] = f"yfinance/CME_{symbol.split('=')[0]}"
+                # 지표코드 CBOT_BO_* 유지 — 심볼 교체가 다운스트림 분석 코드를 깨지 않게(A-151)
+                result["indicator_code"] = "CBOT_BO_" + result["indicator_code"].str.upper()
+                result["unit"] = "USc/lb"
+                result["ingested_at"] = pd.Timestamp.utcnow()
+                print(f"[정보] CBOT 대두유 선물 수집 성공 (심볼: {symbol}, {days_back}d)")
+                return result
+            except Exception as e:
+                if "429" in str(e) or "RateLimit" in str(e) or "Too Many" in str(e):
+                    print(f"[경고] Yahoo Finance 레이트 리밋 ({symbol} 시도 {attempt + 1}/3): {e}")
+                    if attempt < 2:
+                        time.sleep(delay)
+                        delay *= 2
+                else:
+                    print(f"[경고] {symbol} yfinance 실패: {e} — 다음 심볼 시도")
+                    break
     return pd.DataFrame()
 
 
 def fetch_cbot_soybean_oil(days_back: int = 10) -> pd.DataFrame:
     """CBOT 대두유 선물 종합 수집 — yfinance(무료, IP차단 위험).
+    심볼: ZL=F 1순위, BO=F 폴백 (A-151 — BO=F는 야후 상장폐지 표기).
     유료 대안: Databento(CME ZL 일간 $5-25/mo) · Barchart OnDemand.
     Nasdaq DataLink CHRIS/CME_BO1: 2018년 삭제 — 사용 불가.
     """
     df = fetch_bo_futures_yfinance(days_back)
     if df.empty:
-        print("[경고] BO=F 수집 실패 — 유료 대안(Databento/Barchart) 도입 검토 필요")
+        print("[경고] CBOT 대두유(ZL=F/BO=F) 수집 실패 — 유료 대안(Databento/Barchart) 도입 검토 필요")
     return df
 
 
@@ -315,14 +327,109 @@ def fetch_us_drought_stats(states: list[str] = SOY_STATES_US,
     return df
 
 
+# A-150: TE 하드코딩 심볼 추측(cpo/palm-oil 등) 실패 대응 — 검색 API로 실제 심볼 자기발견.
+#        shipping_connector._te_discover_symbols와 동일 패턴 (잡별 의존성 격리를 위해 중복 정의
+#        — shipping은 openai 의존, commodity 잡 pip에는 openai 없음).
+def _te_discover_symbols(te_key: str, search_term: str,
+                         name_keywords: tuple[str, ...]) -> list[str]:
+    """TE 심볼 자기발견 (A-150).
+
+    ① GET /markets/search/{search_term} → ② 실패 시 GET /markets/commodities 폴백.
+    이름에 name_keywords가 모두 포함된 항목의 Symbol 필드를 추출해 로그로 남긴다.
+    심볼 필드명은 'Symbol'(대문자) 우선, 소문자 'symbol' 폴백.
+    발견 실패 시 빈 리스트 반환 — 호출부는 기존 추측 체인으로 폴백한다.
+    """
+    from urllib.parse import quote
+
+    candidates: list = []
+    urls = (
+        f"https://api.tradingeconomics.com/markets/search/{quote(search_term)}",
+        "https://api.tradingeconomics.com/markets/commodities",
+    )
+    for url in urls:
+        try:
+            r = httpx.get(url, params={"c": te_key}, timeout=30)
+            if r.status_code != 200:
+                print(f"[정보] TE 심볼 검색 HTTP {r.status_code} ({url.rsplit('/', 1)[-1]}) — 다음 방식 시도")
+                continue
+            data = r.json()
+            if isinstance(data, list) and data:
+                candidates = data
+                break
+        except Exception as e:
+            print(f"[정보] TE 심볼 검색 실패 ({url.rsplit('/', 1)[-1]}): {e}")
+
+    symbols: list[str] = []
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("Name") or item.get("name") or "")
+        if all(kw.lower() in name.lower() for kw in name_keywords):
+            sym = item.get("Symbol") or item.get("symbol")  # 대문자 우선 (A-150)
+            if sym and str(sym) not in symbols:
+                symbols.append(str(sym))
+    if symbols:
+        print(f"[정보] TE 심볼 자기발견({search_term}): {symbols}")
+    else:
+        print(f"[정보] TE 심볼 자기발견 실패({search_term}) — 기존 추측 체인으로 폴백")
+    return symbols
+
+
+def _fetch_cpo_te_rest(te_key: str, start_date: str = "2017-01-01") -> pd.DataFrame:
+    """TE REST /markets/historical/{symbol} — 자기발견 심볼로 CPO 히스토리 수집 (A-150)."""
+    discovered = _te_discover_symbols(te_key, "palm oil", ("palm", "oil"))
+    _end = date.today().isoformat()
+    for symbol in discovered:
+        try:
+            r = httpx.get(
+                f"https://api.tradingeconomics.com/markets/historical/{symbol}",
+                params={"c": te_key, "d1": start_date, "d2": _end, "f": "json"},
+                timeout=30,
+            )
+            if r.status_code != 200:
+                print(f"[정보] TE CPO({symbol}) HTTP {r.status_code} — 다음 심볼 시도")
+                continue
+            data = r.json()
+            if not data or not isinstance(data, list):
+                print(f"[정보] TE CPO({symbol}): 빈 응답 — 다음 심볼 시도")
+                continue
+            df_raw = pd.DataFrame(data)
+            date_col  = next((c for c in ["Date", "DateTime", "date"] if c in df_raw.columns), None)
+            value_col = next((c for c in ["Close", "Last", "close", "Value"] if c in df_raw.columns), None)
+            if not date_col or not value_col:
+                print(f"[경고] TE CPO({symbol}): 예상 컬럼 없음 ({list(df_raw.columns)[:5]})")
+                continue
+            df = pd.DataFrame({
+                "price_date":     pd.to_datetime(df_raw[date_col], errors="coerce"),
+                "value":          pd.to_numeric(df_raw[value_col], errors="coerce"),
+                "source_name":    "TradingEconomics/BursaMalaysia",
+                "indicator_code": "CPO_USD_MT",
+                "unit":           "USD/MT",
+                "note":           f"[TE-REST: CPO 자기발견 심볼 {symbol} ({start_date}~{_end})]",
+                "ingested_at":    pd.Timestamp.utcnow(),
+            }).dropna(subset=["price_date", "value"])
+            if not df.empty:
+                print(f"[완료] TE REST CPO {len(df)}건 수집 (자기발견 심볼: {symbol})")
+                return df.sort_values("price_date").reset_index(drop=True)
+        except Exception as e:
+            print(f"[경고] TE REST CPO({symbol}) 실패: {e}")
+            continue
+    return pd.DataFrame()
+
+
 def fetch_cpo_te() -> pd.DataFrame:
     """Trading Economics CPO 현물 가격 — FRED 월별 프록시보다 갱신 빈도 높음.
 
     TRADING_ECONOMICS_API_KEY 등록 시 FRED 프록시 대신 사용.
+    A-150: 자기발견 REST 히스토리 우선 → te_connector/SDK 추측 체인 폴백.
     """
     te_key = os.environ.get("TRADING_ECONOMICS_API_KEY", "").strip()
     if not te_key:
         return pd.DataFrame()
+    # A-150: 자기발견 심볼로 REST 히스토리 우선 시도
+    rest_df = _fetch_cpo_te_rest(te_key)
+    if not rest_df.empty:
+        return rest_df
     try:
         from src.pipeline.connectors.te_connector import fetch_cpo  # type: ignore
         return fetch_cpo()

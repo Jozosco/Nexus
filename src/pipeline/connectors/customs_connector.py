@@ -115,6 +115,43 @@ COUNTRY_CODES: list[str] = ["US", "AR", "BR", "CN", "ID"]
 COMTRADE_REPORTER_KOREA = "410"
 
 
+def _parse_xml_response(text: str) -> dict:
+    """관세청 XML 응답 → JSON 유사 dict 변환 (A-152a).
+
+    1,360건 호출 0건 성공의 진짜 원인: API는 정상 데이터를 **XML**로 반환하는데
+    구 코드는 r.json()만 시도 → 파싱 실패 → 빈 dict → 3차 폴백(URL직삽) 401 연쇄.
+    resultCode/resultMsg/items·item 태그를 중첩 위치와 무관하게 탐색해
+    {response: {header: {resultCode, resultMsg}, body: {items: [{...}]}}} 구조로
+    변환한다(item의 자식 태그 → dict 키). resultCode '00' 외면 resultMsg를 로그.
+    """
+    import xml.etree.ElementTree as ET
+
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError as e:
+        print(f"[경고] XML 파싱 실패: {e} — 응답 미리보기: {text[:200]}")
+        return {}
+
+    result_code = (root.findtext(".//resultCode") or "").strip()
+    result_msg  = (root.findtext(".//resultMsg") or "").strip()
+
+    items: list[dict] = []
+    for item_el in root.iter("item"):
+        row = {child.tag: (child.text or "").strip() for child in item_el}
+        if row:
+            items.append(row)
+
+    if result_code and result_code != "00":
+        print(f"[경고] 관세청 API 비정상 응답 코드 {result_code}: {result_msg}")
+
+    return {
+        "response": {
+            "header": {"resultCode": result_code, "resultMsg": result_msg},
+            "body":   {"items": items},
+        }
+    }
+
+
 def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
     """외부 API 호출 — 지수 백오프 재시도.
 
@@ -123,14 +160,20 @@ def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
     수집과 UN Comtrade 폴백은 **시도조차 되지 않았다**(connector=all 2회 연속 실패의
     직접 원인). 관세청 GW는 연 단위 조회에 30초를 넘기는 일이 잦아 timeout도 90초로
     올린다. 빈 dict 반환 → 호출부는 그 구간만 결측 처리하고 다음으로 진행한다.
+    A-152: JSON 파싱 실패 시 XML 파싱 폴백(_parse_xml_response) — 관세청은 정상
+    데이터를 XML로 반환한다.
     """
     delay = 2
     for attempt in range(max_retries):
         try:
             r = httpx.get(url, params=params, timeout=90)
             if r.status_code == 401:
-                key_hint = params.get("serviceKey", "?")
-                key_hint = (str(key_hint)[:8] + "...") if len(str(key_hint)) > 8 else str(key_hint)
+                key_hint = str(params.get("serviceKey", ""))
+                if not key_hint and "serviceKey=" in url:
+                    # A-152(b): URL직삽 경로에서는 serviceKey가 params가 아니라 URL에 있어
+                    #           구 코드가 '?'로 표시하던 로그 버그 — URL에서 앞 8자 추출.
+                    key_hint = url.split("serviceKey=", 1)[1].split("&", 1)[0]
+                key_hint = (key_hint[:8] + "...") if len(key_hint) > 8 else (key_hint or "?")
                 print(
                     f"[오류] 관세청 API 401 인증 실패 — 서비스키 만료·미승인 가능성\n"
                     f"       사용 키 앞 8자리: {key_hint}\n"
@@ -146,8 +189,13 @@ def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
             try:
                 return r.json()
             except (_json.JSONDecodeError, ValueError):
+                # A-152(a): 관세청은 정상 응답을 XML로 반환 — JSON 실패 시 XML 파싱 시도
+                if r.text.lstrip().startswith("<"):
+                    parsed = _parse_xml_response(r.text)
+                    if parsed:
+                        return parsed
                 snippet = r.text[:300].replace("\n", " ")
-                print(f"[경고] JSON 파싱 실패 (응답 미리보기): {snippet}")
+                print(f"[경고] JSON/XML 파싱 실패 (응답 미리보기): {snippet}")
                 return {}
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
             if attempt == max_retries - 1:
@@ -240,6 +288,21 @@ def _normalize_customs_df(all_rows: list[dict], source_tag: str) -> pd.DataFrame
         df["price_date"] = pd.to_datetime(df["period_start"], format="%Y%m", errors="coerce")
     elif "strtYymm" in df.columns:
         df["price_date"] = pd.to_datetime(df["strtYymm"], format="%Y%m", errors="coerce")
+
+    # A-152(c): XML items에는 hsCd='-'인 집계 행(HS코드 합계)이 올 수 있다.
+    #           삭제하지 않고 유지하되 note에 '집계행'을 표기해 상세 행과 구분한다.
+    agg_mask = pd.Series(False, index=df.index)
+    for hs_col in ("hsCd", "hs_code"):
+        if hs_col in df.columns:
+            agg_mask |= df[hs_col].astype(str).str.strip() == "-"
+    if agg_mask.any():
+        if "note" not in df.columns:
+            df["note"] = ""
+        df.loc[agg_mask, "note"] = (
+            df.loc[agg_mask, "note"].fillna("").astype(str)
+            .apply(lambda s: f"{s} 집계행".strip() if s else "집계행")
+        )
+        print(f"[정보] 집계행(hsCd='-') {int(agg_mask.sum())}건 — note='집계행'으로 표기 후 유지")
 
     return df
 

@@ -201,7 +201,8 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install httpx openai pandas pyarrow openpyxl
+        # xlrd 필수: GPR 원본이 .xls(구형 포맷) — pd.read_excel 엔진이 xlrd를 요구 (MEMORY A-147)
+        run: pip install httpx openai pandas pyarrow openpyxl xlrd
       - name: Run GPR connector (historical — Perplexity 건너뜀)
         env:
           PERPLEXITY_API_KEY:         ${{ secrets.PERPLEXITY_API_KEY }}

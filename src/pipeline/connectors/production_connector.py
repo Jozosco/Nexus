@@ -180,7 +180,9 @@ def fetch_argentina_indec() -> pd.DataFrame:
                 except (ValueError, IndexError):
                     continue
         except Exception as e:
-            print(f"[경고] INDEC {series_id} 수집 실패: {e}")
+            # A-149: INDEC 400은 시리즈 ID 폐기 추정 — 아르헨 생산량은 PSD로 확보됨(INDEC은 보조).
+            #        치명 아님 → [경고]에서 [정보]로 강등.
+            print(f"[정보] INDEC {series_id} 수집 실패 (보조 소스 — PSD가 아르헨 생산량 커버): {e}")
     if not rows:
         return pd.DataFrame()
     df = pd.DataFrame(rows)
@@ -238,6 +240,9 @@ def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
 
     A-143: monthly point 422 원인 = end에 미완결 월(당월) 지정 추정 → 직전 완결 월로
            클램프. 잔여 422는 파라미터 조합 문제 절연을 위해 핵심 6종 축소 재시도 1회.
+    A-149: 422 진짜 원인 = monthly/annual API의 start/end는 **연도 4자리(YYYY)** 형식
+           (YYYYMMDD는 daily 전용 — power.larc.nasa.gov/docs). 기존 YYYYMM(예: 201701)
+           전달이 422 유발 → 연도 정수로 수정. A-143 축소 재시도는 유지.
     """
     end   = _last_complete_month()          # A-143: 미완결 월 제외
     start = start_date if start_date else date(2017, 1, 1)
@@ -245,8 +250,9 @@ def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
     rows = []
     for location, coord in ORIGIN_COORDS.items():
         base_query = {
-            "start":      start.strftime("%Y%m"),
-            "end":        end.strftime("%Y%m"),
+            # A-149: monthly API는 연도(YYYY)만 허용 — end는 직전 완결 월이 속한 연도
+            "start":      start.year,
+            "end":        end.year,
             "latitude":   coord["lat"],
             "longitude":  coord["lon"],
             "community":  "AG",
@@ -349,6 +355,63 @@ def fetch_perplexity_production_regions() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# A-148: ESR 403 대응 — 같은 실행에서 WASDE/PSD는 "X-Api-Key 헤더"로 성공했으나 ESR은 403.
+#        호스트·시기별 인증 헤더 이름이 혼재하므로 wasde_connector의 3방식 체인(A-141a)과
+#        동일 패턴 적용: ①X-Api-Key 헤더 ②API_KEY 헤더 ③?api_key= 쿼리. 성공 방식 1회 로그.
+_FAS_ESR_AUTH_SUCCESS_LOGGED = False
+
+
+def _fetch_fas_esr(url: str, api_key: str = "", max_retries: int = 2) -> list | dict | None:
+    """USDA FAS ESR API — 인증 3방식 시도 체인 (A-148, 패턴은 A-141a 동일).
+
+    ① 헤더 X-Api-Key (ESR 문서 방식, A-019)
+    ② 헤더 API_KEY   (구 OpenData 방식, A-007)
+    ③ 쿼리 ?api_key= (최초 방식 폴백)
+    성공한 방식은 1회 로그. 401/403이면 다음 방식으로 즉시 전환.
+    404는 None 반환(해당 연도·상품 데이터 없음 — 인증 문제 아님).
+    """
+    global _FAS_ESR_AUTH_SUCCESS_LOGGED
+    if api_key:
+        auth_styles: list[tuple[str, dict, dict]] = [
+            ("X-Api-Key 헤더", {"X-Api-Key": api_key}, {}),
+            ("API_KEY 헤더",   {"API_KEY": api_key},   {}),
+            ("api_key 쿼리",   {},                     {"api_key": api_key}),
+        ]
+    else:
+        auth_styles = [("무인증", {}, {})]
+
+    last_error: Exception | None = None
+    for style_name, headers, params in auth_styles:
+        delay = 2
+        for attempt in range(max_retries):
+            try:
+                r = httpx.get(
+                    url,
+                    headers={"accept": "application/json", **headers},
+                    params=params,
+                    timeout=30,
+                )
+                if r.status_code == 404:
+                    return None  # 해당 연도 데이터 없음 — 인증 방식 전환 불필요
+                if r.status_code in (401, 403):
+                    print(f"[정보] FAS ESR {r.status_code} ({style_name}) — 다음 인증 방식 시도")
+                    last_error = httpx.HTTPStatusError(
+                        f"{r.status_code}", request=r.request, response=r)
+                    break  # 인증 방식 전환 (재시도 무의미)
+                r.raise_for_status()
+                if not _FAS_ESR_AUTH_SUCCESS_LOGGED:
+                    print(f"[정보] FAS ESR 인증 성공 방식: {style_name}")
+                    _FAS_ESR_AUTH_SUCCESS_LOGGED = True
+                return r.json()
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                last_error = e
+                if attempt == max_retries - 1:
+                    break
+                time.sleep(delay)
+                delay *= 2
+    raise RuntimeError(f"[오류] FAS ESR API 호출 실패 (인증 3방식 모두): {last_error}")
+
+
 def fetch_fas_esr_soybean_oil(start_year: int = 2017) -> pd.DataFrame:
     """USDA FAS Export Sales Reporting (ESR) — 대두유 수출 판매량 (국가별·마케팅연도별).
 
@@ -381,19 +444,13 @@ def fetch_fas_esr_soybean_oil(start_year: int = 2017) -> pd.DataFrame:
     DEST_KOREA = "5800"
 
     rows: list[dict] = []
-    headers = {"accept": "application/json"}
-    if api_key:
-        headers["X-Api-Key"] = api_key
 
     for yr in range(start_year, date.today().year + 1):
         for cmd_code, indicator_prefix in COMMODITY_CODES.items():
             url = f"{FAS_ESR_V2_BASE}/commodityCode/{cmd_code}/countryCode/{DEST_KOREA}/marketYear/{yr}"
             try:
-                r = httpx.get(url, headers=headers, timeout=30)
-                if r.status_code == 404:
-                    continue
-                r.raise_for_status()
-                data = r.json()
+                # A-148: 단일 X-Api-Key 고정 → 인증 3방식 체인(_fetch_fas_esr)으로 교체
+                data = _fetch_fas_esr(url, api_key=api_key)
                 if not data:
                     continue
                 entries = data if isinstance(data, list) else data.get("data", [])

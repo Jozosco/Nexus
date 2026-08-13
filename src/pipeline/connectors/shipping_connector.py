@@ -149,6 +149,53 @@ def fetch_bcaa() -> pd.DataFrame:
     return df
 
 
+# A-150: 재등록 키(3개월 구독)인데 BDI/BALTDRYIDX/bdi 전부 '빈 응답'(200 + 빈 배열)
+#        — 하드코딩 심볼 추측이 전부 틀린 것. 검색 API로 실제 심볼을 자기발견한다.
+def _te_discover_symbols(te_key: str, search_term: str,
+                         name_keywords: tuple[str, ...]) -> list[str]:
+    """TE 심볼 자기발견 (A-150).
+
+    ① GET /markets/search/{search_term} → ② 실패 시 GET /markets/commodities 폴백.
+    이름에 name_keywords가 모두 포함된 항목의 Symbol 필드를 추출해 로그로 남긴다.
+    심볼 필드명은 'Symbol'(대문자) 우선, 소문자 'symbol' 폴백.
+    발견 실패 시 빈 리스트 반환 — 호출부는 기존 추측 체인으로 폴백한다.
+    """
+    from urllib.parse import quote
+
+    candidates: list = []
+    urls = (
+        f"https://api.tradingeconomics.com/markets/search/{quote(search_term)}",
+        "https://api.tradingeconomics.com/markets/commodities",
+    )
+    for url in urls:
+        try:
+            r = httpx.get(url, params={"c": te_key}, timeout=30)
+            if r.status_code != 200:
+                print(f"[정보] TE 심볼 검색 HTTP {r.status_code} ({url.rsplit('/', 1)[-1]}) — 다음 방식 시도")
+                continue
+            data = r.json()
+            if isinstance(data, list) and data:
+                candidates = data
+                break
+        except Exception as e:
+            print(f"[정보] TE 심볼 검색 실패 ({url.rsplit('/', 1)[-1]}): {e}")
+
+    symbols: list[str] = []
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("Name") or item.get("name") or "")
+        if all(kw.lower() in name.lower() for kw in name_keywords):
+            sym = item.get("Symbol") or item.get("symbol")  # 대문자 우선 (A-150)
+            if sym and str(sym) not in symbols:
+                symbols.append(str(sym))
+    if symbols:
+        print(f"[정보] TE 심볼 자기발견({search_term}): {symbols}")
+    else:
+        print(f"[정보] TE 심볼 자기발견 실패({search_term}) — 기존 추측 체인으로 폴백")
+    return symbols
+
+
 def fetch_bdi_te(start_date: str | None = None, end_date: str | None = None) -> pd.DataFrame:
     """Trading Economics REST API 직접 호출로 BDI 히스토리 수집.
 
@@ -165,7 +212,11 @@ def fetch_bdi_te(start_date: str | None = None, end_date: str | None = None) -> 
     _start = start_date or "2017-01-01"
     _end   = end_date or date.today().isoformat()
 
-    for symbol in ("BDI", "BALTDRYIDX", "bdi"):
+    # A-150: 검색으로 발견된 실제 심볼을 1순위로, 기존 추측(BDI/BALTDRYIDX/bdi)은 폴백 유지
+    discovered = _te_discover_symbols(te_key, "baltic dry", ("baltic", "dry"))
+    symbol_chain = tuple(dict.fromkeys((*discovered, "BDI", "BALTDRYIDX", "bdi")))
+
+    for symbol in symbol_chain:
         try:
             url = f"https://api.tradingeconomics.com/markets/historical/{symbol}"
             params = {"c": te_key, "d1": _start, "d2": _end, "f": "json"}
