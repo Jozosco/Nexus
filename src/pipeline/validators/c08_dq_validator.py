@@ -404,9 +404,20 @@ def main() -> None:
     results: list[dict[str, Any]] = [_validate_connector(f) for f in sorted(parquet_files)]
 
     # ── A-113(J-7): 기대 산출물 누락 검출 — glob 사각지대 차단 ────────────────
+    # A-119: 고정 목록을 전 실행에 강제하면 **실행 맥락을 모르는 오탐**이 난다.
+    #   Data Integration 파이프라인은 API 커넥터만 돌리므로 wasde_historical 등
+    #   Historical 파이프라인 산출물이 없는 게 정상인데 REJECTED가 떴다.
+    #   워크플로우가 `DQ_EXPECTED`로 이번 실행의 필수 목록을 전달하면 그것을 쓴다.
+    #   (미설정 시 기본 전체 목록 — fail-closed 성질은 유지)
+    expected = EXPECTED_ARTIFACTS
+    _env_expected = [s.strip() for s in os.environ.get("DQ_EXPECTED", "").split(",") if s.strip()]
+    if _env_expected:
+        expected = [(p, False) for p in _env_expected]
+        print(f"[정보] 이번 실행의 필수 산출물({len(expected)}종): {', '.join(_env_expected)}")
+
     present = {os.path.basename(f) for f in parquet_files}
     missing_required, missing_optional = [], []
-    for prefix, optional in EXPECTED_ARTIFACTS:
+    for prefix, optional in expected:
         if not any(name.startswith(prefix) for name in present):
             (missing_optional if optional else missing_required).append(prefix)
     if missing_optional:

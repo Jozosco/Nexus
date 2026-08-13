@@ -66,10 +66,48 @@ NITEMTRADE_BASE  = "https://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList
 
 # HS 코드 — 6단위 (2026-06-18 사용자 확인)
 # 150710: 대두유 조유 / 150790: 정제 및 기타 대두유
+# ── 수집 대상 HS 코드 (A-120 · C-01×C-03×P1-01~04 협의 확정) ────────────────
+# 관세청 hsSgn은 **6자리**를 요구한다(A-043). 4자리를 넣으면 조회가 실패하거나
+# 다른 결과가 나오므로 전 항목을 6자리로 통일한다.
+#
+# 대두유 본체 — 예측 대상
 HS_CODES_SOYBEAN_OIL: list[str] = [
     "150710",   # 대두유 조유 (Crude soybean oil)
     "150790",   # 정제 대두유 및 기타 (Refined and other soybean oil)
 ]
+
+# 대체재(Substitutes) — 한국 식용유 시장에서 대두유와 수요를 다투는 유지류.
+#   선정 기준: ①한국 수입 실적이 유의미할 것 ②용도가 겹칠 것(식용·가공·바이오연료)
+#   ③가격 전이 경로가 문헌·사전(entities.yaml)에 등재돼 있을 것
+HS_CODES_SUBSTITUTES: dict[str, str] = {
+    "151110": "팜유 조유 — 세계 최대 유지, CPO–SBO 스프레드는 G1 핵심변수(TERM-055)",
+    "151190": "팜유 정제·기타 — 한국 가공식품 주력 대체재",
+    "151211": "해바라기유 조유 — 흑해 지정학 충격의 대체 경로(TERM-057, P1-02)",
+    "151219": "해바라기유 정제·기타",
+    "151411": "유채(카놀라)유 조유 — 저에루스산, EU 바이오디젤 수요 연동(TERM-056)",
+    "151419": "유채(카놀라)유 정제·기타 — 한국 가정용 식용유 주요 대체",
+    "151321": "팜핵유 조유 — 라우르산 계열, 제과·유지가공 대체",
+    "151329": "팜핵유 정제·기타",
+    "151521": "옥수수유 조유 — 미국 에탄올 부산물, 튀김유 대체",
+    "151529": "옥수수유 정제·기타",
+    "151590": "기타 고정식물성 유지 — **포도씨유 포함**(바스켓 코드, 해석 주의)",
+}
+
+# 보완재(Complements) — 대두유 자체는 아니나 **공급·수요를 통해 가격을 움직이는** 품목
+HS_CODES_COMPLEMENTS: dict[str, str] = {
+    "120190": "대두(종자용 제외) — 압착 원료. 대두 가격이 SBO 원가를 직접 규정",
+    "230400": "대두박 — **연산품(joint product)**. 대두박 수요가 압착량을 정하고 "
+              "압착량이 SBO 공급을 정한다(P1-01 압착 마진 경로)",
+    "382600": "바이오디젤 — SBO 수요 축. 의무혼합·45Z 세액공제가 식용 수요와 경합",
+}
+
+# 전체 수집 대상 (대두유 + 대체재 + 보완재)
+HS_CODES_ALL: list[str] = (
+    HS_CODES_SOYBEAN_OIL
+    + list(HS_CODES_SUBSTITUTES)
+    + list(HS_CODES_COMPLEMENTS)
+)
+HS_NOTES: dict[str, str] = {**HS_CODES_SUBSTITUTES, **HS_CODES_COMPLEMENTS}
 
 # 한국 대두유 주요 수입 국가 (2026-06-18 사용자 확인)
 COUNTRY_CODES: list[str] = ["US", "AR", "BR", "CN", "ID"]
@@ -220,7 +258,7 @@ def fetch_customs_total_imports(
     for yr in range(start_year, end_year + 1):
         strt_ym = f"{yr:04d}01"
         end_ym  = f"{yr:04d}12" if yr < date.today().year else today_ym
-        for hs_sgn in HS_CODES_SOYBEAN_OIL:
+        for hs_sgn in HS_CODES_ALL:
             total_calls += 1
             items = _fetch_customs_range(service_key, strt_ym, end_ym, hs_sgn, use_nitemtrade=False)
             if items:
@@ -279,7 +317,7 @@ def fetch_customs_sbo_imports(
         strt_ym = f"{yr:04d}01"
         end_ym  = f"{yr:04d}12" if yr < date.today().year else today_ym
 
-        for hs_sgn in HS_CODES_SOYBEAN_OIL:
+        for hs_sgn in HS_CODES_ALL:
             for cnty_cd in country_codes:
                 total_calls += 1
                 items = _fetch_customs_range(service_key, strt_ym, end_ym, hs_sgn, cnty_cd)
@@ -399,7 +437,9 @@ def run() -> None:
     start_year = int(os.environ.get("HISTORICAL_START_YEAR", "2017"))
     end_year   = int(os.environ.get("HISTORICAL_END_YEAR",   str(date.today().year)))
 
-    print(f"[정보] 관세청 수집 범위: {start_year}년 ~ {end_year}년 / HS 코드: {HS_CODES_SOYBEAN_OIL}")
+    print(f"[정보] 관세청 수집 범위: {start_year}년 ~ {end_year}년 · HS {len(HS_CODES_ALL)}종 "
+          f"(대두유 {len(HS_CODES_SOYBEAN_OIL)} · 대체재 {len(HS_CODES_SUBSTITUTES)} · "
+          f"보완재 {len(HS_CODES_COMPLEMENTS)})")
 
     # API 1: 품목별 전체 (Itemtrade — 국가 구분 없음)
     df_total = fetch_customs_total_imports(start_year=start_year, end_year=end_year)

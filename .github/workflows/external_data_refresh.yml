@@ -391,6 +391,16 @@ jobs:
           merge-multiple: true
       - name: Run C-08 DQSOps validation
         id: dq
+        env:
+          # A-119: 이 파이프라인은 **API 커넥터만** 실행한다. 수동 업로드 파서 산출물
+          #   (wasde_historical·psd_historical·gats_*·te_commodities_*)은 Historical
+          #   파이프라인 소관이므로 여기서 없는 게 정상 — 필수 목록에서 제외한다.
+          #   특정 커넥터만 선택 실행한 경우엔 그 하나만 요구한다(오탐 방지).
+          # ⚠️ GH 표현식은 &&가 ||보다 우선한다 — 괄호가 없으면 boolean true가 들어간다.
+          DQ_EXPECTED: >-
+            ${{ (github.event.inputs.connector == 'all' || github.event.inputs.connector == '')
+            && 'economic_indicators,shipping_indices,crop_data,climate_data,geopolitical_indices,production_data,commodity_data'
+            || github.event.inputs.connector }}
         run: python src/pipeline/validators/c08_dq_validator.py
       - name: Upload C-08 DQ report
         uses: actions/upload-artifact@v4
