@@ -28,7 +28,7 @@ dag_constraints:
   node_classes: [CauseNode, MechanismNode, OutcomeNode]
   acyclic: true                    # validate_semantic_layer.py가 전역 순환 검사
   min_mechanism_nodes: 1           # 엣지마다 메커니즘 노드 최소 1개
-  edge_lifecycle: [candidate, validated, rejected]   # event_schema review_status와 동일 어휘
+  edge_lifecycle: [candidate, validated, rejected]   # 주의(A-164/H4): event_schema review_status는 [extracted, validated, rejected] — candidate≠extracted, 어휘 통일은 잔여 갭
   promotion_rule: candidate → validated 승격은 도메인 검증(P1-01~04) 서명 + evidence 첨부 필수(S-1).
     validated 엣지만 지식그래프·G1 인과 서술에 투영. rejected는 삭제하지 않고 보존(S-5).
   forbidden_relations:

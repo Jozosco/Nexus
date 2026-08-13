@@ -107,6 +107,9 @@ jobs:
       - name: Install dependencies
         run: pip install pandas pyarrow pyyaml
       - name: Validate semantic layer (v3 게이트 — warn 모드 기본)
+        # A-164(H3): 기본 셸은 pipefail 미포함 — tee 파이프가 --strict의 exit 1을
+        #   삼켜 차단 전환이 무력화됨(적대 검증 재현). shell: bash가 pipefail을 포함한다.
+        shell: bash
         # DAG 순환·엔티티-지표 매핑·evidence 필수 필드·provenance 계약 검증.
         # warn 모드는 위반을 리포트만 하고 차단하지 않음 — 차단 전환 시 --strict 부여.
         run: python scripts/validate_semantic_layer.py | tee -a "$GITHUB_STEP_SUMMARY"
