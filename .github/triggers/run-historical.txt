@@ -1,0 +1,14 @@
+# Historical Analysis Pipeline 실행 트리거 (A-146)
+# 이 파일을 수정·커밋하면 run_historical_now.yml 이 본 파이프라인을 dispatch 한다.
+# 값을 바꾸고 커밋하면 그 파라미터로 실행된다.
+
+connector=all
+include_api=true
+start_year=2010
+end_year=2026
+skip_analysis=false
+
+# 실행 이력
+# 2026-08-13 조정자 위임 실행 — A-138~A-145 수정 반영 확인 목적
+#   확인 대상: PSD 벌크 폴백(2010~2016) · GPR 원호스트 · 세션 종가 검증기 ·
+#             TE 재등록 키(409 해소 여부) · AISSTREAM 키 반영
