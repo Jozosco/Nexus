@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 from datetime import date
 from pathlib import Path
 
@@ -210,8 +211,6 @@ def convert(
         {'ko': (html_path, pdf_path), 'en': (html_path, pdf_path)}
         — pdf_path는 weasyprint 없을 시 None; 'en'은 번역 실패 시 딕셔너리에서 제외
     """
-    import time as _time  # noqa: F811
-
     src = Path(md_path)
     if not src.exists():
         raise FileNotFoundError(f"[오류] 파일 없음: {src}")
@@ -312,3 +311,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
