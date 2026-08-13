@@ -57,7 +57,7 @@
 ### Data Sources (External Only — Phase A)
 | Category | Source | Connector | Indicator |
 |---|---|---|---|
-| CBOT Futures | yfinance BO=F | `commodity_connector.py` | `CBOT_SBO_FUTURES` |
+| CBOT Futures | CME session/official settlement canonical series | canonical target pipeline | `CBOT_BO_CLOSE` |
 | Geopolitical | Caldara GPR + Perplexity | `gpr_connector.py` | `GPR`, `HORMUZ_THREAT_LEVEL` |
 | AIS Strait Risk | AISstream.io | `ais_connector.py` | `SBO_STRAIT_RISK_COMPOSITE` |
 | GeoIntel | USGS/NOAA/GDELT/FIRMS | `geointel_connector.py` | `GEOINTEL_RISK_COMPOSITE` |
@@ -89,12 +89,13 @@ GRU/LSTM (`torch`) · N-BEATSx/N-HiTS · TFT (`pytorch-forecasting`) · PatchTST
 
 ### Azure ML Studio Workflow
 ```
-1. data/raw/*.parquet → Azure Blob Storage (pipeline upload step)
-2. Azure ML Data Asset → registered dataset (versioned)
-3. ScriptRunConfig → src/forecasting/price_band_g2.py (training script)
-4. mlflow.autolog() → experiment tracking (no manual log calls needed)
-5. mlflow.log_model() → Azure ML Model Registry (never pickle)
-6. Registered model → batch inference pipeline (daily score job)
+1. strict gates → `data/gold/feature_mart.parquet` + contract
+2. immutable snapshot + SHA256 manifest → Azure Blob Storage
+3. Azure ML Data Asset → registered dataset (versioned)
+4. Command job → src/forecasting/price_band_g2.py (training script)
+5. mlflow.autolog() → experiment tracking (no manual log calls needed)
+6. mlflow.log_model() → Azure ML Model Registry (never pickle)
+7. Registered model → batch inference pipeline (daily score job)
 ```
 
 ### Validation Protocol
@@ -146,6 +147,9 @@ GRU/LSTM (`torch`) · N-BEATSx/N-HiTS · TFT (`pytorch-forecasting`) · PatchTST
 - 정책은 **발표일과 시행일을 분리**한다.
 - 월·연간 자료의 일별 변환은 기간초 forward-fill이 아니라 **발표일 이후 as-of fill**.
 - 개정값은 덮어쓰지 않고 **vintage별로 적재**한다(관세청·USDA 공통).
+- G1/G2 목표가격은 `target_eligible=true`와
+  `time_basis ∈ {CME_SESSION, EXCHANGE_SETTLEMENT}`를 모두 요구한다.
+- UTC 날짜 기준 OHLCV(`CBOT_BO_UTC_*`)는 진단 피처이며 목표가격으로 사용할 수 없다.
 
 ### Time Series Non-Negotiables
 - **Never** shuffle or randomly split time series data. Use `TimeSeriesSplit` (sklearn).

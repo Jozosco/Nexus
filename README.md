@@ -218,6 +218,7 @@ WASDE·PSD 등 월·연간 자료는 **기간 말이 아니라 실제 발표일 
 | [`AGENTS.md`](./AGENTS.md) | Root | All coding assistants | Tool-agnostic instructions valid for any AI assistant (Copilot, Gemini, etc.). |
 | [`Skills.md`](./Skills.md) | Root | On-demand (`/skill-name`) | Sub-agent definitions: PM, Data Engineer, Forecasting, Risk Analyst, Optimizer, Reporting, Code Reviewer. |
 | [`llms.txt`](./llms.txt) | Root | External LLM ingestion | Structured URL manifest for semantic discovery by external agents. |
+| [`G1/G2 Preview Release Gates`](./docs/operations/g1_g2_preview_release_gates.md) | `docs/operations/` | Operators + reviewers | Canonical target, fail-closed CI, Blob snapshot, Preview 완료 기준. |
 
 ### 8.2 Path-Scoped Rules
 

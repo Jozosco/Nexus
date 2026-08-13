@@ -18,9 +18,13 @@ A-096 근본 개선 — "Error streaming response: Response ended prematurely":
 출력(조정자 지정 경로):
   data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_{start}_{end}.csv   (원본 보존)
   data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d.xlsx                (열람용)
-  data/raw/databento_bo_historical.parquet                     (파이프라인 입력)
+  data/raw/databento_bo_utc_historical.parquet                 (UTC 버킷 진단 입력)
 
-지표코드: CBOT_BO_OPEN/HIGH/LOW/CLOSE/VOLUME (기존 commodity_connector와 동일 규약)
+중요: Databento `ohlcv-1d`는 거래소 세션이 아니라 **UTC 날짜 버킷**이다. CME 세션 종가나
+공식 정산가로 사용할 수 없으므로 `CBOT_BO_UTC_*`로만 발행하고 G1/G2 타깃에서 제외한다.
+`CBOT_BO_CLOSE`는 세션 경계로 재집계하거나 공식 settlement를 검증한 별도 파이프라인만 발행한다.
+
+지표코드: CBOT_BO_UTC_OPEN/HIGH/LOW/CLOSE/VOLUME
 단위: USc/lb (CME ZL 표준) — Databento 가격은 1e-9 스케일 정수 → 변환 필요
 
 인증: 환경변수 DATABENTO_API_KEY (GitHub Secrets) — 하드코딩 금지 (CLAUDE.md §2)
@@ -31,7 +35,6 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -46,13 +49,15 @@ DATASET = "GLBX.MDP3"
 SYMBOL  = "ZL.c.0"          # 연속 선물(front month roll)
 SCHEMA  = "ohlcv-1d"
 OUT_DIR = Path("data/raw/Databento") / DATASET
-PARQUET = Path("data/raw/databento_bo_historical.parquet")
+PARQUET = Path("data/raw/databento_bo_utc_historical.parquet")
 
 START = os.environ.get("DATABENTO_START", "2010-06-06")   # GLBX.MDP3 히스토리 개시
 END   = os.environ.get("DATABENTO_END", "")               # 비우면 데이터셋 실제 종료일 사용
 
 MAX_RETRIES = int(os.environ.get("DATABENTO_MAX_RETRIES", "3"))
 _PX_SCALE   = 1e-9          # Databento 가격 필드는 1e-9 고정소수 정수
+UTC_TIME_BASIS = "UTC_CALENDAR_DAY"
+UTC_INDICATOR_PREFIX = "CBOT_BO_UTC"
 
 
 def _dataset_end(client) -> str:
@@ -75,10 +80,9 @@ def _dataset_end(client) -> str:
         print(f"[경고] get_dataset_range 응답에 종료일 없음: {str(rng)[:120]}")
     except Exception as e:
         print(f"[경고] get_dataset_range 실패({type(e).__name__}): {e}")
-    fallback = (date.today() - timedelta(days=1)).isoformat()
-    print(f"[경고] T-1 추정({fallback})으로 대체 — 422 발생 시 이 경로가 원인 "
-          "(DATABENTO_END 환경변수로 명시 지정 가능)")
-    return fallback
+    raise RuntimeError(
+        "[오류] Databento 데이터셋 종료일을 확인하지 못했습니다. "
+        "추정 날짜로 계속하지 않습니다. DATABENTO_END를 명시하거나 메타데이터 API를 확인하세요.")
 
 
 def _log_condition(client, start: str, end: str) -> None:
@@ -149,7 +153,11 @@ def _to_price_date(part: pd.DataFrame, label: str) -> pd.DataFrame:
 
 
 def _normalize(df: pd.DataFrame) -> pd.DataFrame:
-    """tz 제거 + 일자 단위 정규화 + 정수 가격 → USc/lb 변환."""
+    """UTC 버킷 시각 정규화 + 정수 가격 → USc/lb 변환.
+
+    이 날짜는 CME 거래일이 아니다. Sunday→Monday 같은 단순 이동은 한 UTC 버킷이 거래 세션을
+    가르는 문제를 해결하지 못하므로 여기서는 원천 의미를 그대로 보존한다.
+    """
     ts = pd.to_datetime(df["price_date"], utc=True, errors="coerce")
     # ohlcv-1d는 일봉이므로 시각 성분을 버리고 **날짜(yyyy-mm-dd)**로 저장한다(조정자 요청).
     df["price_date"] = ts.dt.tz_localize(None).dt.normalize()
@@ -157,6 +165,45 @@ def _normalize(df: pd.DataFrame) -> pd.DataFrame:
         if col in df.columns and pd.api.types.is_integer_dtype(df[col]):
             df[col] = df[col] * _PX_SCALE
     return df
+
+
+def _to_long_output(df: pd.DataFrame) -> pd.DataFrame:
+    """UTC 일봉을 모델 타깃과 분리된 롱 포맷으로 변환한다."""
+    records: list[pd.DataFrame] = []
+    for col in ("open", "high", "low", "close", "volume"):
+        if col not in df.columns:
+            continue
+        sub = df[["price_date", col]].dropna().rename(columns={col: "value"})
+        sub["indicator_code"] = f"{UTC_INDICATOR_PREFIX}_{col.upper()}"
+        sub["unit"] = "USc/lb" if col != "volume" else "contracts"
+        records.append(sub)
+    if not records:
+        raise ValueError("[오류] Databento 결과에 OHLCV 값 컬럼이 없습니다.")
+    out = pd.concat(records, ignore_index=True)
+    out["time_basis"] = UTC_TIME_BASIS
+    out["target_eligible"] = False
+
+    # ZL.c.0 is an unadjusted continuous contract.  Preserve the contract
+    # transition as a diagnostic signal, but keep it outside the target
+    # namespace because the surrounding UTC bars are not exchange sessions.
+    if "instrument_id" in df.columns:
+        seq = df.sort_values("price_date")
+        roll = seq["instrument_id"].ne(seq["instrument_id"].shift())
+        if not roll.empty:
+            roll.iloc[0] = False
+        flag = pd.DataFrame(
+            {
+                "price_date": seq["price_date"],
+                "value": roll.astype(float),
+                "indicator_code": f"{UTC_INDICATOR_PREFIX}_ROLLDAY",
+                "unit": "flag",
+                "time_basis": UTC_TIME_BASIS,
+                "target_eligible": False,
+            }
+        )
+        out = pd.concat([out, flag], ignore_index=True)
+        print(f"[정보] UTC 롤일 진단 플래그: {int(roll.sum())}회")
+    return out
 
 
 def _assert_date_range(df: pd.DataFrame, start: str, end: str) -> None:
@@ -174,86 +221,74 @@ def _assert_date_range(df: pd.DataFrame, start: str, end: str) -> None:
     print(f"[검증] 기간 정합 OK: {lo.date()} ~ {hi.date()}")
 
 
-def _load_from_csv(csv_path: str) -> pd.DataFrame | None:
-    """A-128: Actions가 커밋한 CSV에서 parquet을 재생성하는 오프라인 경로.
-
-    왜 필요한가: parquet은 .gitignore 대상이라 **Actions 아티팩트로만** 존재한다.
-    반면 CSV·XLSX는 main에 커밋된다. 개발 샌드박스는 Databento API에 접근할 수 없으므로
-    (외부 프록시 차단), 커밋된 CSV가 로컬에서 목표변수를 재구성하는 유일한 경로다.
-    API 재호출(유료 종량제) 없이 같은 산출물을 만든다.
-    """
-    p = Path(csv_path)
-    if not p.exists():
-        print(f"[오류] CSV 없음: {p}")
-        return None
-    df = pd.read_csv(p)
-    df["price_date"] = pd.to_datetime(df["price_date"], errors="coerce")
-    bad = int(df["price_date"].isna().sum()) + int((df["price_date"].dt.year < 2000).sum())
-    if bad:
-        print(f"[오류] CSV 날짜 파손 {bad}행(1970 오염 등) — .BROKEN 산출물 여부 확인")
-        return None
+def _load_from_csv(csv_path: str) -> pd.DataFrame:
+    """Rebuild the diagnostic parquet from a previously captured raw CSV."""
+    path = Path(csv_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"[오류] Databento CSV 없음: {path}")
+    df = pd.read_csv(path)
+    required = {"price_date", "close"}
+    missing = required.difference(df.columns)
+    if missing:
+        raise ValueError(f"[오류] Databento CSV 필수 열 누락: {sorted(missing)}")
+    df["price_date"] = pd.to_datetime(df["price_date"], utc=True, errors="coerce")
+    bad = int(df["price_date"].isna().sum())
+    if not df.empty:
+        bad += int((df["price_date"].dt.year < 2000).sum())
+    if df.empty or bad:
+        raise ValueError(
+            f"[오류] Databento CSV가 비어 있거나 날짜가 손상됨: rows={len(df)}, bad={bad}")
+    print(f"[정보] API 재호출 없이 CSV에서 UTC 진단 산출물 재구성: {path}")
     return df
 
 
 def run() -> None:
-    # 오프라인 재구성 모드 — DATABENTO_FROM_CSV=<경로>
     from_csv = os.environ.get("DATABENTO_FROM_CSV", "").strip()
     if from_csv:
-        df = _load_from_csv(from_csv)
-        if df is None:
-            return
+        df = _normalize(_load_from_csv(from_csv))
         end = str(df["price_date"].max().date())
-        _postprocess_and_save(df, end)
-        return
+    else:
+        key = os.environ.get("DATABENTO_API_KEY", "").strip()
+        if not key:
+            raise RuntimeError("[오류] DATABENTO_API_KEY 미등록 — GitHub Secrets 확인 필요")
+        try:
+            import databento as db
+        except ImportError as exc:
+            raise RuntimeError(
+                "[오류] databento 미설치 — Actions 의존성 단계를 확인하세요") from exc
 
-    key = os.environ.get("DATABENTO_API_KEY", "").strip()
-    if not key:
-        print("[오류] DATABENTO_API_KEY 미등록 — GitHub Secrets 확인 필요")
-        return
-    try:
-        import databento as db
-    except ImportError:
-        print("[오류] databento 미설치 — pip install databento")
-        return
+        client = db.Historical(key)
+        end = END or _dataset_end(client)
+        print(
+            f"[C-04] Databento {DATASET} · {SYMBOL} · {SCHEMA} · "
+            f"{START}~{end} 수집(연 단위 분할)...")
+        _log_condition(client, START, end)
 
-    client = db.Historical(key)
-    end = END or _dataset_end(client)
-    print(f"[C-04] Databento {DATASET} · {SYMBOL} · {SCHEMA} · {START}~{end} 수집(연 단위 분할)...")
-    _log_condition(client, START, end)
+        start_year, end_year = int(START[:4]), int(end[:4])
+        parts: list[pd.DataFrame] = []
+        failed: list[str] = []
+        for year in range(start_year, end_year + 1):
+            c_start = START if year == start_year else f"{year}-01-01"
+            # Databento `end` is exclusive; use next year's first day.
+            c_end = end if year == end_year else f"{year + 1}-01-01"
+            got = _fetch_chunk(client, c_start, c_end)
+            if got is None:
+                failed.append(str(year))
+                continue
+            if not got.empty:
+                named = _to_price_date(got, f"{year}")
+                parts.append(named)
+                span = f"{named['price_date'].min()} ~ {named['price_date'].max()}"
+                print(f"  [{year}] {len(named):,}행 · {span}")
 
-    start_year, end_year = int(START[:4]), int(end[:4])
-    parts: list[pd.DataFrame] = []
-    failed: list[str] = []
-    for year in range(start_year, end_year + 1):
-        c_start = START if year == start_year else f"{year}-01-01"
-        # A-111(F7): Databento `end`는 **배타적**이다. `{year}-12-31`을 쓰면 매년
-        # 12월 31일이 누락돼 16년 × 약 11거래일이 조용히 사라진다(커버리지 임계 200일에
-        # 걸리지 않아 영구 미검출). 다음 해 1월 1일을 배타 종료로 준다.
-        c_end   = end   if year == end_year   else f"{year + 1}-01-01"
-        got = _fetch_chunk(client, c_start, c_end)
-        if got is None:
-            failed.append(str(year))
-            continue
-        if not got.empty:
-            # A-102: concat 전에 시각을 컬럼으로 승격해야 한다(ignore_index가 인덱스를 버림)
-            named = _to_price_date(got, f"{year}")
-            parts.append(named)
-            span = f"{named['price_date'].min()} ~ {named['price_date'].max()}"
-            print(f"  [{year}] {len(named):,}행 · {span}")
+        if not parts:
+            raise RuntimeError("[오류] 전 구간 수집 실패 — 키·구독 범위·네트워크 확인")
+        if failed:
+            raise RuntimeError(
+                f"[오류] 미수집 연도: {', '.join(failed)} — "
+                "불완전 자료를 정식 산출물로 발행하지 않습니다")
+        df = _normalize(pd.concat(parts, ignore_index=True))
 
-    if not parts:
-        print("[오류] 전 구간 수집 실패 — 키·구독 범위·네트워크 확인")
-        return
-    if failed:
-        # 부분 성공을 반드시 저장한다(A-096: 전량 유실 방지가 이번 수정의 핵심)
-        print(f"[경고] 미수집 연도: {', '.join(failed)} — 수집분만 저장하고 재실행 시 보완")
-
-    df = _normalize(pd.concat(parts, ignore_index=True))
-    _postprocess_and_save(df, end)
-
-
-def _postprocess_and_save(df: pd.DataFrame, end: str) -> None:
-    """검증 → 중복 해소 → CSV/XLSX/parquet 저장. API·CSV 재구성 양쪽 공용 (A-128)."""
     # A-111(F8): ZL.c.0 연속 심볼은 롤 시점에 같은 날짜로 만기·신규 계약 2행이 올 수 있다.
     # 무조건 drop_duplicates하면 **가격이 다른 두 계약 중 하나를 근거 없이 선택**하게 되고,
     # 그 임의 선택이 G2 타깃 시계열에 계약 전환 점프로 주입된다(연 12회 × 16년 ≈ 190회).
@@ -269,14 +304,6 @@ def _postprocess_and_save(df: pd.DataFrame, end: str) -> None:
             df = df.sort_values(["price_date", "volume"])
             print("       채택 규칙: 동일 날짜는 **거래량 최대** 계약(주력물) 우선")
         df = df.drop_duplicates(subset=["price_date"], keep="last")
-    # A-131: 2010~2013 Globex 초기에는 **일요일 저녁 세션이 별도 일봉**으로 온다
-    #   (96개 · 평균 거래량 816 vs 평일 22,121). 이대로 두면 2011년 '거래일'이 284일이
-    #   되는 등 달력이 부풀고, 일요일→월요일 1일 수익률이 정보 없는 잡음 표본이 된다.
-    #   일요일 저녁 세션은 관행상 월요일 거래일에 속하므로 독립 일봉으로 남기지 않는다.
-    sun = df["price_date"].dt.dayofweek == 6
-    if sun.any():
-        print(f"[정리] 일요일 저녁 세션 일봉 {int(sun.sum())}개 제거 — 달력 부풀림 방지")
-        df = df[~sun]
     df = df.sort_values("price_date")
     _assert_date_range(df, START, end)
 
@@ -311,35 +338,12 @@ def _postprocess_and_save(df: pd.DataFrame, end: str) -> None:
     keep = ["price_date"] + [c for c in ("open", "high", "low", "close", "volume") if c in df.columns]
     csv_df[keep].to_excel(OUT_DIR / f"ZL_{SCHEMA}.xlsx", index=False)
 
-    # 롱포맷 parquet (기존 지표코드 규약 준수)
-    recs = []
-    for col in ("open", "high", "low", "close", "volume"):
-        if col not in df.columns:
-            continue
-        sub = df[["price_date", col]].dropna().rename(columns={col: "value"})
-        sub["indicator_code"] = f"CBOT_BO_{col.upper()}"
-        sub["unit"] = "USc/lb" if col != "volume" else "contracts"
-        recs.append(sub)
-
-    # A-128(S4): ZL.c.0은 **무조정 연속물**이라 롤일의 전일 대비 수익률은 시장 움직임이
-    # 아니라 계약 간 스프레드다(롤 129회 · 롤일 평균 |변동| 1.96% vs 평시 1.13%).
-    # 구 parquet은 instrument_id를 버려 소비 측이 롤일을 식별할 수 없었다.
-    # 롤일 플래그를 지표로 내보내 G1/G2가 롤 구간 수익률을 분리 처리하게 한다.
-    if "instrument_id" in df.columns:
-        seq = df.sort_values("price_date")
-        roll = (seq["instrument_id"] != seq["instrument_id"].shift()).fillna(False)
-        roll.iloc[0] = False                      # 첫 행은 롤이 아니라 시계열 시작
-        flag = pd.DataFrame({"price_date": seq["price_date"],
-                             "value": roll.astype(float)})
-        flag["indicator_code"] = "CBOT_BO_ROLLDAY"
-        flag["unit"] = "flag"
-        recs.append(flag)
-        print(f"[정보] 롤일 플래그 생성: {int(roll.sum())}회 계약 전환 표시 (CBOT_BO_ROLLDAY)")
-    out = pd.concat(recs, ignore_index=True)
+    # UTC 일봉은 세션 타깃으로 승격하지 않는다.
+    out = _to_long_output(df)
     out["source_name"] = "Databento/GLBX.MDP3/ZL"
     out["ingested_at"] = pd.Timestamp.now("UTC")
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
-    out = attach_asof(out, source="CBOT_BO_")
+    out = attach_asof(out, source="CBOT_BO_UTC_")
     out.to_parquet(PARQUET, index=False)
 
     print(f"[완료] CSV → {csv_path}")

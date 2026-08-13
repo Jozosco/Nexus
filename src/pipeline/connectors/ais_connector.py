@@ -200,7 +200,7 @@ def _fetch_strait_via_aisstream(strait_key: str, api_key: str) -> list[dict]:
         return rows
 
     except ImportError:
-        print(f"[경고] websocket-client 미설치 — AISstream WebSocket 수집 건너뜀. Perplexity 폴백 사용.")
+        print("[경고] websocket-client 미설치 — AISstream WebSocket 수집 건너뜀. Perplexity 폴백 사용.")
         return []
     except Exception as e:
         print(f"[경고] AISstream {strait_key} WebSocket 수집 실패: {e}")

@@ -255,7 +255,6 @@ def run(gats_dir: Path = GATS_DIR, output_dir: Path = OUTPUT_DIR) -> None:
         for part in path.parts:
             if part.startswith(".") and part[1:].isdigit():
                 return part[1:] + "_"
-            return_ = None
         return ""
     for hs_sub, prefix in HS_PREFIX_MAP:
         files = sorted(f for f in gats_dir.rglob("*")

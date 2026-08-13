@@ -5,8 +5,8 @@
 #      정형 수집(Historical Analysis Pipeline)과 묶으면 실패 결합·대기 지연 발생.
 #   ② 재실행 주기 상이: 정형 백필=대량 1회성, 비정형 요약=신규 PDF 유입 시·추출기 버전
 #      갱신 시 반복 실행. 별도 트리거가 운영상 명확.
-#   ③ 산출 경로 상이: Summary md·인덱스·신호 시계열은 main 커밋 필요(contents: write) —
-#      쓰기 권한 범위를 비정형 파이프라인으로 격리.
+#   ③ 산출 경로 상이: Summary md·인덱스·신호 시계열은 실행 아티팩트로 전달하고,
+#      검증되지 않은 생성물을 워크플로우에서 main에 직접 커밋하지 않는다.
 #   ④ Phase B 확장 대비: LLM 정밀 요약(P1-05)·시맨틱 추출(P1-06)은 API 비용 게이트가
 #      필요 — 워크플로우 입력값으로 단계 제어.
 #
@@ -27,7 +27,7 @@ on:
         default: ""
 
 permissions:
-  contents: write   # Summary md·인덱스·시계열 parquet main 커밋 (A-083 교훈)
+  contents: read
 
 concurrency:
   group: unstructured-analysis
@@ -41,8 +41,6 @@ jobs:
     if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == 'fao' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -50,20 +48,15 @@ jobs:
         run: pip install pdfplumber pypdf pandas pyyaml
       - name: Summarize FAO AMIS PDFs
         run: python scripts/summarize_pdfs.py fao
-      - name: Commit summaries + index to main
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main || true
-          git add "data/raw/FAO" data/processed/unstructured_index_fao.csv
-          git diff --cached --quiet || (git commit -m "data: FAO AMIS Summary v2 재생성 (Unstructured Pipeline)" && git push origin HEAD:main)
-      - name: Upload index artifact
+      - name: Upload summaries and index artifact
         uses: actions/upload-artifact@v4
         with:
           name: unstructured-index-fao-${{ github.run_id }}
-          path: data/processed/unstructured_index_fao.csv
+          path: |
+            data/raw/FAO/**/Summary/**
+            data/processed/unstructured_index_fao.csv
           retention-days: 90
-          if-no-files-found: warn
+          if-no-files-found: error
 
   # ── 2 | GAIN 판독·요약 (요약 스킴 v2: {sub}/{YYYY}/{MM}/Summary/) ──────────
   gain-summarize:
@@ -72,8 +65,6 @@ jobs:
     if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == 'gain' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -83,24 +74,16 @@ jobs:
         run: python scripts/ingest_gain_pdf.py
       - name: Summarize GAIN PDFs (Summary 폴더 v2)
         run: python scripts/summarize_pdfs.py gain ${{ github.event.inputs.gain_year }}
-      - name: Commit summaries + index to main
-        # parquet은 .gitignore(data/raw/**/*.parquet) 대상 — 아티팩트로만 전달.
-        # G1 통합 분석은 커밋되는 인덱스 CSV에서 시계열을 재생성(build_unstructured_timeseries.py).
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main || true
-          git add "data/raw/USDA/FAS/GAIN" data/processed/unstructured_index_gain.csv
-          git diff --cached --quiet || (git commit -m "data: GAIN Summary v2·코퍼스 인덱스 재생성 (Unstructured Pipeline)" && git push origin HEAD:main)
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: unstructured-gain-${{ github.run_id }}
           path: |
             data/raw/gain_historical.parquet
+            data/raw/USDA/FAS/GAIN/**/Summary/**
             data/processed/unstructured_index_gain.csv
           retention-days: 90
-          if-no-files-found: warn
+          if-no-files-found: error
 
   # ── 3 | 비정형 신호 시계열화 (G1 통합 분석 입력) ────────────────────────────
   unstructured-timeseries:
@@ -111,8 +94,13 @@ jobs:
     if: ${{ !cancelled() && needs.fao-summarize.result != 'failure' && needs.gain-summarize.result != 'failure' }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        if: >-
+          needs.fao-summarize.result == 'success' ||
+          needs.gain-summarize.result == 'success'
         with:
-          ref: main   # 앞 잡의 main 커밋 반영분 수취
+          path: .
+          merge-multiple: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -127,7 +115,7 @@ jobs:
           name: unstructured-signals-${{ github.run_id }}
           path: data/raw/unstructured_signals_historical.parquet
           retention-days: 90
-          if-no-files-found: warn
+          if-no-files-found: error
       - name: Pipeline summary (DRM 현황 포함)
         # A-046 교훈: YAML 블록 내 heredoc 금지 — python -c 단일 호출로 대체
         run: |

@@ -56,7 +56,6 @@ def _login() -> bool:
 
 def _df_from_te_result(result: object, indicator_code: str, source: str, unit: str) -> pd.DataFrame:
     """TE 응답(DataFrame 또는 list)을 Nexus 표준 스키마로 변환."""
-    import tradingeconomics as te  # type: ignore
     if result is None:
         return pd.DataFrame()
     try:

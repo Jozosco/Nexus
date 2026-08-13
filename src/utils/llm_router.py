@@ -18,14 +18,11 @@ LLM 라우터 — 작업 유형에 따라 최적 LLM으로 자동 라우팅.
 
 from __future__ import annotations
 
-import os
 from enum import Enum
 from typing import Optional
 
 from src.utils.perplexity_client import (
     query_perplexity,
-    PERPLEXITY_PING_MODEL,
-    PERPLEXITY_ONLINE_MODEL,
     PERPLEXITY_LARGE_MODEL,
 )
 from src.utils.gemini_client import query_gemini, count_tokens, GEMINI_PRO_MODEL, GEMINI_FLASH_MODEL
@@ -168,3 +165,4 @@ class LLMRouter:
         if any(kw in lower for kw in ["표", "테이블", "추출", "table", "extract", "json"]):
             return TaskType.STRUCTURED_EXTRACT
         return TaskType.CLAUDE_NATIVE
+

@@ -278,16 +278,15 @@ class TestTimeSeriesIntegrity:
     """시계열 무결성 테스트 — 데이터 누출 방지."""
 
     def test_no_shuffle_leakage(self, economic_df: Optional[pd.DataFrame]) -> None:
-        """price_date가 단조 증가하거나 역방향 점프가 365일 초과하지 않음."""
+        """원래 입력 순서에서 지표별 price_date가 단조 증가함."""
         df = _skip_if_none(economic_df)
-        dates = pd.to_datetime(df["price_date"], errors="coerce").dropna().sort_values()
-        if len(dates) < 2:
-            return
-        diffs = dates.diff().dropna()
-        large_backward = (diffs < pd.Timedelta(days=-365)).sum()
-        assert large_backward == 0, (
-            f"price_date에 365일 초과 역방향 점프 {large_backward}건 — 데이터 셔플 또는 타임존 오류 의심"
-        )
+        groups = (df.groupby("indicator_code", sort=False)
+                  if "indicator_code" in df.columns else [("economic", df)])
+        backward = 0
+        for _, group in groups:
+            dates = pd.to_datetime(group["price_date"], errors="coerce").dropna()
+            backward += int((dates.diff().dropna() < pd.Timedelta(0)).sum())
+        assert backward == 0, f"price_date 역방향 이동 {backward}건 — 입력 순서 셔플 의심"
 
     def test_train_future_split(self, commodity_df: Optional[pd.DataFrame]) -> None:
         """훈련 데이터(cutoff 이전)와 예측 범위(cutoff 이후)의 명확한 분리 확인."""

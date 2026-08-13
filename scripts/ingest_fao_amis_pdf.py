@@ -195,7 +195,7 @@ def parse_amis_file(pdf_path: Path) -> pd.DataFrame:
 
     try:
         text = _extract_text(pdf_path)
-    except RuntimeError as e:
+    except RuntimeError:
         raise
     except Exception as e:
         raise RuntimeError(f"[오류] PDF 로드 실패: {pdf_path}: {e}") from e
@@ -286,7 +286,7 @@ def run(
                 all_frames.append(df)
                 print(f"    → {len(df)}건 추출")
             else:
-                print(f"    → 0건 (건너뜀)")
+                print("    → 0건 (건너뜀)")
         except Exception as e:
             print(f"    [오류] {f.name}: {e}")
 

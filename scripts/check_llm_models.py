@@ -140,7 +140,7 @@ def _build_diff_report(
         "# LLM 모델 업데이트 감지 보고서",
         "",
         f"**실행 날짜**: {run_date}  ",
-        f"**비교 기준 파일**: `config/llm_models.json`",
+        "**비교 기준 파일**: `config/llm_models.json`",
         "",
     ]
     any_new = False
@@ -209,3 +209,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -271,7 +271,7 @@ def run(wasde_dir: Path = WASDE_DIR, output_dir: Path = OUTPUT_DIR) -> None:
         print(f"  처리 중: {f.name}")
         year = _year_from_filename(f.name)
         if year is None:
-            print(f"    [경고] 연도 추출 실패 — 건너뜀")
+            print("    [경고] 연도 추출 실패 — 건너뜀")
             continue
         try:
             df = parse_wasde_tidy(f, year)

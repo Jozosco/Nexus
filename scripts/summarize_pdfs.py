@@ -159,7 +159,7 @@ def summarize_pdf(pdf: Path, entities: dict[str, list[str]]) -> bool:
         "- 경영진 요약(§2.1)·수급/가격 전망(§6)·한국 관점 해석(§7): **미확인 — 자동 단계에서는 미작성**",
         "  (LLM 정밀 요약 Phase B에서 작성 예정. 원문에 없는 값 추정 금지)",
         "",
-        f"---\n*자동 생성: scripts/summarize_pdfs.py v2 · 템플릿: .claude/agents/비정형데이터 요약본 Template.md*",
+        "---\n*자동 생성: scripts/summarize_pdfs.py v2 · 템플릿: .claude/agents/비정형데이터 요약본 Template.md*",
     ]
     out.write_text("\n".join(lines), encoding="utf-8")
     _LAST_META.clear()

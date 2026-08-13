@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 import re
 import time
-from datetime import date, timedelta
+from datetime import date
 
 import httpx
 import pandas as pd
@@ -72,7 +72,7 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
     if not api_key:
         print("[경고] USDA_NASS_QUICKSTATS_API_KEY / USDA_API_KEY 미등록 — NASS 수집 건너뜀")
         return pd.DataFrame()
-    yr = year or date.today().year
+    start_year = year or int(os.environ.get("HISTORICAL_START_YEAR", "2010"))
     try:
         r = _get(NASS_BASE, {
             "key": api_key,
@@ -80,7 +80,7 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
             "statisticcat_desc": "PRODUCTION",
             "agg_level_desc": "STATE",
             # 2010 기준선(조정자 지시) — HISTORICAL_START_YEAR 우선
-            "year__GE": int(os.environ.get("HISTORICAL_START_YEAR", "2010")),
+            "year__GE": start_year,
             "unit_desc": "BU",
             "format": "JSON",
         })
