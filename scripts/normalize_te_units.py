@@ -58,7 +58,12 @@ def _load_fx() -> pd.DataFrame:
     fx = pd.concat(frames, ignore_index=True).drop_duplicates()
     fx["price_date"] = pd.to_datetime(fx["price_date"])
     fx["ym"] = fx["price_date"].dt.to_period("M")
-    return fx.groupby(["ym", "indicator_code"])["value"].mean().reset_index()
+    # D-027(파생 발견): 월평균 환율은 **월말에야 확정**된다. 그것을 그 달 1일 가격에
+    # 적용하면 최대 30일 미래 정보가 유입된다(as-of 위반). 해당 월 값에는 **직전 달**
+    # 평균을 쓴다 — 월초 시점에 실제로 알 수 있었던 유일한 월평균이다.
+    m = fx.groupby(["ym", "indicator_code"])["value"].mean().reset_index()
+    m["ym"] = m["ym"] + 1        # 직전 달 평균을 다음 달에 적용
+    return m
 
 
 def run() -> None:

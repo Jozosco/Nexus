@@ -35,6 +35,12 @@ from typing import Optional
 
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 AMIS_DIR   = Path("data/raw/FAO/AMIS")
 OUTPUT_DIR = Path("data/raw")
 
@@ -297,6 +303,8 @@ def run(
 
     out_path = output_dir / "fao_amis_historical.parquet"
     output_dir.mkdir(parents=True, exist_ok=True)
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    combined = attach_asof(combined, source="FAO_AMIS")
     combined.to_parquet(out_path, index=False)
 
     print(f"\n[완료] {len(combined)}건 → {out_path}")

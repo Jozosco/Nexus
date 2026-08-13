@@ -36,6 +36,12 @@ from pathlib import Path
 
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 DATASET = "GLBX.MDP3"
 SYMBOL  = "ZL.c.0"          # 연속 선물(front month roll)
 SCHEMA  = "ohlcv-1d"
@@ -274,6 +280,8 @@ def run() -> None:
     out = pd.concat(recs, ignore_index=True)
     out["source_name"] = "Databento/GLBX.MDP3/ZL"
     out["ingested_at"] = pd.Timestamp.now("UTC")
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    out = attach_asof(out, source="CBOT_BO_")
     out.to_parquet(PARQUET, index=False)
 
     print(f"[완료] CSV → {csv_path}")

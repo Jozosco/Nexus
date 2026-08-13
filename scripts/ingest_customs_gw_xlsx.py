@@ -31,6 +31,11 @@ from xml.etree import ElementTree as ET
 import httpx
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 # A-085: 한국 공공기관 호스트에서 러너 IPv6 경로 블랙홀 → IPv4 강제 트랜스포트
 _KR_TRANSPORT = httpx.HTTPTransport(local_address="0.0.0.0", retries=2)
 
@@ -294,7 +299,10 @@ def run() -> int:
               f"CUSTOMS_TIME_BUDGET_S 상향 또는 COMMODITIES 분할 실행 필요")
 
     if all_records:
-        pd.DataFrame(all_records).to_parquet(PARQUET, index=False)
+        # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+        # 관세청은 확정치 개정이 있으므로 vintage(수집일)를 명시 부여한다
+        _df = attach_asof(pd.DataFrame(all_records), source="CUSTOMS_")
+        _df.to_parquet(PARQUET, index=False)
         print(f"\n[완료] → {PARQUET} ({len(all_records):,}행 · 수집 {done}/{total_pairs}쌍 · "
               f"무데이터 {empty} · {mins:.1f}분)")
     else:

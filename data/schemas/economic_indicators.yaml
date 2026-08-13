@@ -33,3 +33,31 @@ columns:
     dtype: datetime64[ns]
     nullable: false
     description: "수집 시각 (UTC)"
+
+  # ── as-of 시점 정합성 5필드 (D-023 · src/pipeline/asof.py) ──────────────────
+  # 규칙: 모델의 t일 입력 = available_at <= t 를 만족하는 가장 최근 값
+  # 부여: attach_asof(df, source=...) — 커넥터가 직접 계산하지 않는다
+  - name: event_time
+    dtype: datetime64[ns]
+    nullable: false
+    description: "측정 대상 현상이 발생한 시점(관측일). price_date와 동일한 경우가 많음"
+
+  - name: period_end
+    dtype: datetime64[ns]
+    nullable: true
+    description: "집계 기간 종료일. 월간·연간 자료에만 존재(일별은 null)"
+
+  - name: release_time
+    dtype: datetime64[ns]
+    nullable: true
+    description: "원천이 실제로 공표한 시점"
+
+  - name: available_at
+    dtype: datetime64[ns]
+    nullable: false
+    description: "우리가 최초로 사용 가능했던 시점 — **모델 필터의 기준**. 없으면 모델 투입 금지"
+
+  - name: source_vintage
+    dtype: object
+    nullable: true
+    description: "개정본 식별자. 개정 소스는 덮어쓰지 않고 vintage별로 적재"

@@ -23,6 +23,12 @@ from pathlib import Path
 
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 NASA_ROOT = Path("data/raw/NASA Power/Agroclimatology")
 RAW_ROOT  = Path("data/raw")
 OUT_PATH  = Path("data/raw/nasa_power_agroclimatology_historical.parquet")
@@ -142,6 +148,8 @@ def run() -> None:
     combined = pd.concat(frames, ignore_index=True).sort_values(
         ["country", "region", "price_date", "parameter"]).reset_index(drop=True)
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    combined = attach_asof(combined, source="NASA_POWER_")
     combined.to_parquet(OUT_PATH, index=False)
     print(f"\n[완료] → {OUT_PATH}")
     print(f"  총 {len(combined):,}행 · {combined['region'].nunique()}지역 · "

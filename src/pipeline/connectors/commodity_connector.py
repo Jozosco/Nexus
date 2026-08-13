@@ -18,6 +18,12 @@ from typing import Optional
 import httpx
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[3]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 OUTPUT_DIR = "data/raw"
 
 # ── USDM 가뭄 지수 대상 주 (미국 대두 Top-5 생산 주) ────────────────────────
@@ -314,6 +320,8 @@ def run() -> None:
 
     combined = pd.concat(frames, ignore_index=True)
     out = f"{OUTPUT_DIR}/commodity_data_{today}.parquet"
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    combined = attach_asof(combined, source="COMMODITY")
     combined.to_parquet(out, index=False)
     print(f"[완료] 상품 가격·가뭄 데이터 {len(combined)}건 저장 → {out}")
 

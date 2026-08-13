@@ -28,6 +28,12 @@ from pathlib import Path
 
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 GATS_DIR   = Path("data/raw/USDA/FAS/GATS")
 OUTPUT_DIR = Path("data/raw")
 
@@ -167,6 +173,8 @@ def run(gats_dir: Path = GATS_DIR, output_dir: Path = OUTPUT_DIR) -> None:
         qty = pd.concat(quantity_frames, ignore_index=True)
         qty = qty.sort_values(["price_date", "indicator_code"]).reset_index(drop=True)
         qpath = output_dir / "gats_quantity_historical.parquet"
+        # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+        qty = attach_asof(qty, source="GATS_")
         qty.to_parquet(qpath, index=False)
         print(f"\n[완료] 수출량 {len(qty)}건 → {qpath}")
         print(f"  기간: {qty['price_date'].min()} ~ {qty['price_date'].max()}")
@@ -196,6 +204,8 @@ def run(gats_dir: Path = GATS_DIR, output_dir: Path = OUTPUT_DIR) -> None:
         val = pd.concat(value_frames, ignore_index=True)
         val = val.sort_values(["price_date", "indicator_code"]).reset_index(drop=True)
         vpath = output_dir / "gats_value_historical.parquet"
+        # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+        val = attach_asof(val, source="GATS_")
         val.to_parquet(vpath, index=False)
         print(f"\n[완료] 수출액 {len(val)}건 → {vpath}")
         print(f"  지표: {sorted(val['indicator_code'].unique())}")

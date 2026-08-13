@@ -23,6 +23,12 @@ from pathlib import Path
 
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 ICE_ROOT = Path("data/raw/ICE/Reports/Monthly Volumes")
 OUT_PATH = Path("data/raw/ice_monthly_volumes.parquet")
 
@@ -114,7 +120,11 @@ def run() -> None:
     markets = {"U.S.": "US", "E.U.": "EU"}
     frames = []
     for folder, market in markets.items():
-        files = sorted((ICE_ROOT / folder).glob("*.xlsx"))
+        # D-027(파생 발견): 비재귀 `glob`이라 **U.S./Futures/·U.S./Options/ 34개 파일이
+        # 전량 누락**돼 있었다(EU만 수집 → 3,459행·24지표. A-063 기록 5,332행·41지표와 불일치).
+        # GAIN의 A-083과 동일한 버그 유형 — 하위 폴더가 생기면 조용히 사라진다.
+        files = sorted(p for p in (ICE_ROOT / folder).rglob("*.xlsx")
+                       if not p.name.startswith("~$"))     # 엑셀 임시파일 제외
         if not files:
             print(f"[정보] {folder} — 파일 없음.")
             continue
@@ -131,7 +141,21 @@ def run() -> None:
 
     combined = pd.concat(frames, ignore_index=True).sort_values(
         ["market", "contract_type", "price_date", "product"]).reset_index(drop=True)
+
+    # D-027(파생 발견): 원본 xlsx는 연도 전체 월 컬럼을 미리 두고 있어, **아직 오지 않은 달**이
+    # volume=0으로 들어온다. 0(거래 없음)과 미도래(데이터 없음)를 혼동시키는 D4 위반이므로
+    # 당월 이후 행은 제거한다. as-of 게이트가 걸러주긴 하지만 EDA·리포트까지 오염된다.
+    cur_month = pd.Timestamp.today().normalize().replace(day=1)
+    future = pd.to_datetime(combined["price_date"]) > cur_month
+    if future.any():
+        zeros = int((combined.loc[future, "volume"].fillna(0) == 0).sum())
+        print(f"[정리] 미도래 월 {int(future.sum())}행 제거 (그중 0값 {zeros}행) — "
+              f"'거래량 0'과 '아직 없음'의 혼동 방지")
+        combined = combined[~future].reset_index(drop=True)
+
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    combined = attach_asof(combined, source="ICE_")
     combined.to_parquet(OUT_PATH, index=False)
 
     print(f"\n[완료] → {OUT_PATH}")

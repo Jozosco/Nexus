@@ -28,6 +28,12 @@ from pathlib import Path
 
 import pandas as pd
 
+# as-of 헬퍼 로드 — 스크립트 직접 실행 시 저장소 루트를 경로에 추가
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from src.pipeline.asof import attach_asof  # noqa: E402
+
 GAIN_PARQUET = Path("data/raw/gain_historical.parquet")
 IDX_FAO      = Path("data/processed/unstructured_index_fao.csv")
 IDX_GAIN     = Path("data/processed/unstructured_index_gain.csv")
@@ -137,6 +143,8 @@ def run() -> None:
               .reset_index(drop=True))
     out["ingested_at"] = pd.Timestamp.now("UTC")
     OUT_PARQUET.parent.mkdir(parents=True, exist_ok=True)
+    # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
+    out = attach_asof(out, source="UNSTR_")
     out.to_parquet(OUT_PARQUET, index=False)
     n_ind = out["indicator_code"].nunique()
     span = f"{out['price_date'].min().date()} ~ {out['price_date'].max().date()}"
