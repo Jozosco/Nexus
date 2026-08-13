@@ -22,46 +22,114 @@ _sys.path.insert(0, str(_Path(__file__).resolve().parents[3]))
 from src.pipeline.asof import attach_asof  # noqa: E402
 
 OUTPUT_DIR = "data/raw"
-GPR_CSV_URL = "https://www.policyuncertainty.com/media/GPR_Web_latest.xlsx"
+# A-138: 구 policyuncertainty.com 미러 404 — GPR(Caldara-Iacoviello)의 원 호스트는
+#        matteoiacoviello.com이며 policyuncertainty.com은 EPU 사이트라 미러가 사라짐.
+#        → 원 호스트 우선 후보 체인으로 교체 + 성공 URL 명시 로깅.
+GPR_URL_CANDIDATES: list[tuple[str, str]] = [
+    # (URL, 지표코드) — 순서대로 시도. daily 파일은 GPR_DAILY로 별도 적재.
+    ("https://www.matteoiacoviello.com/gpr_files/data_gpr_export.xls",       "GPR"),
+    ("https://www.matteoiacoviello.com/gpr_files/data_gpr_daily_recent.xls", "GPR_DAILY"),
+    ("https://www.policyuncertainty.com/media/GPR_Web_latest.xlsx",          "GPR"),  # 최후 폴백
+]
 PERPLEXITY_MODEL = "sonar-pro"  # MEMORY L-006/L-007
 
 
-def _fetch_gpr_index() -> pd.DataFrame:
-    """Caldara & Iacoviello GPR Index 공개 엑셀 다운로드 (API 키 불필요)."""
+def _read_gpr_excel(content: bytes, url: str) -> pd.DataFrame | None:
+    """GPR 엑셀 바이트 판독 — .xls는 xlrd가 필요할 수 있어 실패 시 명시 오류 (A-138)."""
     try:
-        r = httpx.get(GPR_CSV_URL, timeout=60, follow_redirects=True)
-        r.raise_for_status()
-        df_raw = pd.read_excel(io.BytesIO(r.content))
-        # 컬럼 구조: Year, Month, GPRH (historical), GPR (점수)
-        df_raw.columns = [str(c).strip() for c in df_raw.columns]
-
-        # Year/Month 컬럼 탐지 (컬럼명이 다를 수 있음)
-        year_col  = next((c for c in df_raw.columns if "year"  in c.lower()), None)
-        month_col = next((c for c in df_raw.columns if "month" in c.lower()), None)
-        gpr_col   = next((c for c in df_raw.columns if c.upper() in ("GPR", "GPRD")), None)
-
-        if not (year_col and month_col and gpr_col):
-            print(f"[경고] GPR 엑셀 컬럼 구조 변경 감지. 실제 컬럼: {list(df_raw.columns)}")
-            return pd.DataFrame()
-
-        df = df_raw[[year_col, month_col, gpr_col]].dropna()
-        df["price_date"] = pd.to_datetime(
-            df[year_col].astype(int).astype(str) + "-" +
-            df[month_col].astype(int).astype(str).str.zfill(2) + "-01"
-        )
-        df = df[["price_date", gpr_col]].rename(columns={gpr_col: "value"})
-        df["value"] = pd.to_numeric(df["value"], errors="coerce")
-        df["source_name"]     = "Caldara_Iacoviello"
-        df["indicator_code"]  = "GPR"
-        df["unit"]            = "index (baseline≈100)"
-        df["ingested_at"]     = pd.Timestamp.utcnow()
-        df = df.dropna(subset=["value"])
-        # 수집 범위 표준화: 2020-01-01 이후 (다른 커넥터와 통일)
-        df = df[df["price_date"] >= pd.Timestamp("2017-01-01")]
-        return df
+        # engine 미지정: pandas가 콘텐츠·확장자로 추론 (.xlsx=openpyxl, .xls=xlrd)
+        return pd.read_excel(io.BytesIO(content))
+    except ImportError as e:
+        print(f"[오류] GPR 엑셀 판독 실패 — .xls 엔진(xlrd) 미설치 추정: {e} "
+              f"(pip install xlrd 필요, URL: {url})")
+        return None
     except Exception as e:
-        print(f"[경고] GPR 인덱스 다운로드 실패: {e}")
+        print(f"[경고] GPR 엑셀 판독 실패 ({url}): {e}")
+        return None
+
+
+def _parse_gpr_frame(df_raw: pd.DataFrame, indicator: str, url: str) -> pd.DataFrame:
+    """GPR 원본 프레임 → 표준 롱포맷. 컬럼명은 소스별로 달라 유연 탐지 (A-138).
+
+    날짜: Year+Month 조합 또는 date/day/month 단일 날짜 컬럼 모두 지원.
+    값:   'GPR' 포함 컬럼 자동 탐지(대소문자 무시) — 정확 일치(GPR/GPRD) 우선.
+    """
+    df_raw = df_raw.copy()
+    df_raw.columns = [str(c).strip() for c in df_raw.columns]
+    cols = list(df_raw.columns)
+
+    # ── 값 컬럼: 정확 일치 우선 → 'GPR' 포함(파생 GPRT/GPRA/GPRH 제외 우선) ──
+    gpr_col = next((c for c in cols if c.upper() in ("GPR", "GPRD")), None)
+    if gpr_col is None:
+        gpr_col = next((c for c in cols if "GPR" in c.upper()), None)
+    if gpr_col is None:
+        print(f"[경고] GPR 값 컬럼 탐지 실패 ({url}). 실제 컬럼: {cols}")
         return pd.DataFrame()
+
+    # ── 날짜: Year+Month 조합 우선, 없으면 단일 날짜형 컬럼 ──
+    year_col  = next((c for c in cols if "year"  in c.lower()), None)
+    month_col = next((c for c in cols if "month" in c.lower()), None)
+    if year_col and month_col and pd.api.types.is_numeric_dtype(df_raw[month_col]):
+        df = df_raw[[year_col, month_col, gpr_col]].dropna()
+        price_date = pd.to_datetime(
+            df[year_col].astype(int).astype(str) + "-" +
+            df[month_col].astype(int).astype(str).str.zfill(2) + "-01",
+            errors="coerce",
+        )
+    else:
+        date_col = next(
+            (c for c in cols
+             if any(k in c.lower() for k in ("date", "day", "month"))), None)
+        if date_col is None:
+            print(f"[경고] GPR 날짜 컬럼 탐지 실패 ({url}). 실제 컬럼: {cols}")
+            return pd.DataFrame()
+        df = df_raw[[date_col, gpr_col]].dropna()
+        price_date = pd.to_datetime(df[date_col], errors="coerce")
+
+    out = pd.DataFrame({
+        "price_date": price_date,
+        "value":      pd.to_numeric(df[gpr_col], errors="coerce"),
+    }).dropna()
+    out["source_name"]    = "Caldara_Iacoviello"
+    out["indicator_code"] = indicator
+    out["unit"]           = "index (baseline≈100)"
+    out["ingested_at"]    = pd.Timestamp.utcnow()
+    # 수집 범위 표준화: 2017-01-01 이후 (다른 커넥터와 통일)
+    return out[out["price_date"] >= pd.Timestamp("2017-01-01")].reset_index(drop=True)
+
+
+def _fetch_gpr_index() -> pd.DataFrame:
+    """Caldara & Iacoviello GPR Index 다운로드 — 후보 URL 체인 (A-138, API 키 불필요).
+
+    월별 지수(GPR)는 첫 성공 URL을 채택하고, 일별 파일(data_gpr_daily_recent.xls)은
+    가용하면 GPR_DAILY 지표로 **추가** 적재한다.
+    """
+    frames: list[pd.DataFrame] = []
+    monthly_done = False
+    for url, indicator in GPR_URL_CANDIDATES:
+        if indicator == "GPR" and monthly_done:
+            continue  # 월별은 첫 성공 URL만 사용 (폴백 중복 방지)
+        try:
+            r = httpx.get(url, timeout=60, follow_redirects=True)
+            r.raise_for_status()
+        except Exception as e:
+            print(f"[경고] GPR 다운로드 실패 ({url}): {e} — 다음 후보 시도")
+            continue
+        df_raw = _read_gpr_excel(r.content, url)
+        if df_raw is None or df_raw.empty:
+            continue
+        parsed = _parse_gpr_frame(df_raw, indicator, url)
+        if parsed.empty:
+            continue
+        print(f"[완료] GPR({indicator}) {len(parsed)}건 수집 — 성공 URL: {url}")
+        frames.append(parsed)
+        if indicator == "GPR":
+            monthly_done = True
+
+    if not frames:
+        print("[경고] GPR 인덱스: 전 후보 URL 실패")
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
 
 
 def _fetch_gpr_realtime() -> pd.DataFrame:
@@ -124,6 +192,36 @@ def _fetch_gpr_realtime() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# A-139: Hormuz 위협 수준 파싱 실패 — Perplexity 응답이 "VALUE: **HIGH** (…SEVERE…)"처럼
+#        마크다운 장식·비표준 어휘(SEVERE/ELEVATED)를 포함해 구형 regex가 미매칭.
+#        → 장식 제거 후 어휘 확장 매핑 + 숫자(1~3) 직접 표기 허용.
+_THREAT_LEVEL_MAP: dict[str, float] = {
+    "SEVERE": 3.0, "HIGH": 3.0,
+    "ELEVATED": 2.0, "MODERATE": 2.0, "MEDIUM": 2.0,
+    "LOW": 1.0,
+}
+
+
+def _parse_threat_level(text: str) -> tuple[float, str] | None:
+    """응답 텍스트에서 위협 수준 추출 (A-139). 실패 시 None — 행 미생성(결측 처리).
+
+    ① 마크다운 장식(**, __, `) 제거
+    ② SEVERE/HIGH/ELEVATED/MODERATE/MEDIUM/LOW 단어 탐지(대소문자 무시) → 3/3/2/2/2/1
+    ③ 'VALUE: 2' 등 숫자 1~3 직접 표기 허용
+    """
+    clean = re.sub(r"(\*\*|__|`)", "", text)
+    word_match = re.search(
+        r"\b(SEVERE|HIGH|ELEVATED|MODERATE|MEDIUM|LOW)\b", clean, re.IGNORECASE)
+    if word_match:
+        label = word_match.group(1).upper()
+        return _THREAT_LEVEL_MAP[label], label
+    num_match = re.search(r"VALUE\s*[:=]?\s*([1-3])\b", clean, re.IGNORECASE)
+    if num_match:
+        val = float(num_match.group(1))
+        return val, f"NUMERIC:{num_match.group(1)}"
+    return None
+
+
 def _fetch_hormuz_realtime() -> pd.DataFrame:
     """Perplexity 실시간 호르무즈 해협 모니터링.
 
@@ -155,24 +253,33 @@ def _fetch_hormuz_realtime() -> pd.DataFrame:
         text = r.choices[0].message.content
         rows = []
 
-        # Threat level → numeric encoding
-        threat_match = re.search(r"METRIC:[^|]*(?:threat|level)[^|]*\|[^|]*VALUE:\s*(HIGH|MEDIUM|LOW)", text, re.IGNORECASE)
-        if threat_match:
-            level_map = {"HIGH": 3.0, "MEDIUM": 2.0, "LOW": 1.0}
-            level = threat_match.group(1).upper()
+        # A-139: Threat level — 마크다운 장식 제거 + 어휘 확장(SEVERE/ELEVATED) + 숫자 허용.
+        # 위협 수준 항목(threat/level 언급 줄) 우선, 없으면 전문에서 탐지.
+        clean_text = re.sub(r"(\*\*|__|`)", "", text)
+        threat_scope = clean_text
+        scope_match = re.search(
+            r"(?:threat|level)[^\n]*", clean_text, re.IGNORECASE)
+        if scope_match:
+            threat_scope = scope_match.group(0)
+        parsed_level = _parse_threat_level(threat_scope) or _parse_threat_level(clean_text)
+        if parsed_level:
+            level_value, level_label = parsed_level
             rows.append({
                 "price_date":     today,
                 "source_name":    "Perplexity/Hormuz",
                 "indicator_code": "HORMUZ_THREAT_LEVEL",
-                "value":          level_map[level],
+                "value":          level_value,
                 "unit":           "1=Low/2=Med/3=High",
-                "note":           f"[QUALITATIVE:{level}]",
+                "note":           f"[QUALITATIVE:{level_label}]",
             })
+        else:
+            # 파싱 실패 → 원문 로그 + 결측 처리(행 미생성)
+            print(f"[경고] Hormuz 위협 수준 파싱 실패 — 결측 처리. 원문: {text[:200]}")
 
-        # AWRP multiplier
+        # AWRP multiplier (장식 제거된 텍스트 기준)
         awrp_match = re.search(
             r"METRIC:[^|]*(?:premium|AWRP|war risk)[^|]*\|[^|]*VALUE:\s*([0-9]+\.?[0-9]*)\s*[xX×]?",
-            text, re.IGNORECASE
+            clean_text, re.IGNORECASE
         )
         if awrp_match:
             rows.append({

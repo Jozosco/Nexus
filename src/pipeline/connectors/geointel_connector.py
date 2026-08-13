@@ -30,6 +30,7 @@ from __future__ import annotations
 import math
 import os
 from datetime import date
+
 import httpx
 import pandas as pd
 
@@ -178,21 +179,39 @@ def fetch_gdelt_sbo_events() -> pd.DataFrame:
 
     Shadowbroker news.py 패턴 참조 (API 키 불필요).
     """
+    import time
+
+    # A-142: GDELT 무료 API는 초당/분당 레이트리밋이 엄격 — 연속 쿼리 시 429 발생.
+    #        쿼리 사이 6초 대기 + 429 수신 시 30초 대기 후 1회 재시도로 해소.
     rows = []
-    for query in GDELT_QUERIES:
-        try:
-            r = _retry_get(GDELT_URL, params={
-                "query": query, "mode": "artlist",
-                "maxrecords": "5", "format": "json", "timespan": "1d",
-            }, timeout=20)
-            count = len(r.json().get("articles", []))
-            if count > 0:
-                rows.append(_make_row(
-                    "GDELT_SBO_EVENT_COUNT", float(count), "articles/day",
-                    f"[GEOINTEL:GDELT] '{query[:40]}' — {count}건",
-                ))
-        except RuntimeError as e:
-            print(f"[경고] GDELT '{query[:30]}' 실패: {e}")
+    for i, query in enumerate(GDELT_QUERIES):
+        if i > 0:
+            time.sleep(6)   # 쿼리 간 최소 간격 (GDELT 레이트리밋 회피)
+        params = {
+            "query": query, "mode": "artlist",
+            "maxrecords": "5", "format": "json", "timespan": "1d",
+        }
+        for attempt in range(2):
+            try:
+                r = httpx.get(GDELT_URL, params=params, timeout=20)
+                if r.status_code == 429:
+                    if attempt == 0:
+                        print(f"[정보] GDELT 429 ('{query[:30]}') — 30초 대기 후 1회 재시도")
+                        time.sleep(30)
+                        continue
+                    print(f"[경고] GDELT '{query[:30]}' 재시도 후에도 429 — 건너뜀")
+                    break
+                r.raise_for_status()
+                count = len(r.json().get("articles", []))
+                if count > 0:
+                    rows.append(_make_row(
+                        "GDELT_SBO_EVENT_COUNT", float(count), "articles/day",
+                        f"[GEOINTEL:GDELT] '{query[:40]}' — {count}건",
+                    ))
+                break
+            except (httpx.HTTPStatusError, httpx.RequestError, ValueError) as e:
+                print(f"[경고] GDELT '{query[:30]}' 실패: {e}")
+                break
     print(f"[완료] GDELT 이벤트 {len(rows)}개 쿼리")
     return _to_df(rows)
 

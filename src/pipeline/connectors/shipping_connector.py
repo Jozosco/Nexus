@@ -61,6 +61,17 @@ def fetch_bcaa() -> pd.DataFrame:
     )
     text = r.choices[0].message.content
 
+    # A-140(c): Perplexity가 "BCAA is unavailable / not included / no quote" 류로 회신하면
+    #           숫자 오추출(연도 등) 위험 — 미공표로 판정하고 우아하게 결측 처리.
+    unavailable_patterns = (
+        "unavailable", "not available", "not include", "no quote",
+        "no publicly available", "cannot find", "could not find", "does not provide",
+    )
+    lowered = text.lower()
+    if any(p in lowered for p in unavailable_patterns):
+        print("[정보] BCAA 미공표 회신 — 결측 처리 (Perplexity가 지수 미보유 응답)")
+        return pd.DataFrame()
+
     rows = []
     today = date.today().isoformat()
 
@@ -165,6 +176,12 @@ def fetch_bdi_te(start_date: str | None = None, end_date: str | None = None) -> 
             if r.status_code == 403:
                 print("[경고] TE API 403 권한 없음 — TE 구독 플랜에서 Markets Historical 포함 확인")
                 return pd.DataFrame()
+            # A-140(a): 409 = 구독 플랜이 markets/historical 미포함 추정(키는 유효).
+            #           실측: /markets/historical 호출 시 409 반환 — 코드 문제 아님.
+            if r.status_code == 409:
+                print("[정보] TE API 409 — 구독 플랜이 markets/historical 미포함 추정. "
+                      "BDI 히스토리는 수동 xlsx(te_commodities, 2010~2026-07 보유)로 커버됨(A-061)")
+                return pd.DataFrame()
             r.raise_for_status()
             data = r.json()
             if not data or not isinstance(data, list):
@@ -219,11 +236,16 @@ def fetch_bdi_stooq(start_date: str = "2017-01-01") -> pd.DataFrame:
         url = f"https://stooq.com/q/d/l/?s={symbol}&d1={d1}&d2={d2}&i=d"
         try:
             resp = httpx.get(url, timeout=30)
+            # A-140(b): stooq ^bdi 404 = 심볼 소멸(서비스 정상) — 치명 오류가 아니라 [정보] 강등.
+            #           심볼 체인은 유지(재상장 가능성 대비).
+            if resp.status_code == 404:
+                print(f"[정보] stooq {symbol}: 404 — 심볼 소멸 추정(다음 심볼 시도)")
+                continue
             resp.raise_for_status()
             text = resp.text.strip()
             # stooq는 데이터 없을 때 'No data' 또는 HTML 반환
             if not text or "No data" in text or text.lower().startswith("<"):
-                print(f"[경고] stooq {symbol}: 데이터 없음")
+                print(f"[정보] stooq {symbol}: 데이터 없음")
                 continue
             raw = pd.read_csv(io.StringIO(text))
             if "Date" not in raw.columns or "Close" not in raw.columns:
@@ -278,7 +300,10 @@ def run() -> None:
             frames.append(bdi_stooq)
 
     if not frames:
-        print("[경고] 해운 지수 수집 실패 — PERPLEXITY_API_KEY 및 TRADING_ECONOMICS_API_KEY 확인.")
+        # A-140(d): 전 소스 실패여도 exit 0 — BDI 히스토리는 수동 TE xlsx로 이미 확보(A-061).
+        #           빈 parquet은 쓰지 않음(기존 동작 유지). 잡 실패로 파이프라인 차단 금지.
+        print("[경고] 해운 실시간 수집 전 소스 실패 (TE 409/stooq 404/BCAA 미공표). "
+              "BDI 히스토리는 수동 TE xlsx로 확보 상태(A-061) — 이번 실패는 실시간 갱신분만 영향.")
         return
 
     df = pd.concat(frames, ignore_index=True)

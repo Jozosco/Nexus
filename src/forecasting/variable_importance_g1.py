@@ -361,6 +361,8 @@ FILE_PATTERNS: dict[str, str] = {
     "gain_historical":     "정책신호(USDA FAS GAIN PDF)",
     "geointel":            "지정학 인텔리전스(USGS/NOAA/GDELT/FIRMS)",
     "unstructured_signals_historical": "비정형 신호 시계열(GAIN·FAO 요약 → 월별 태그·톤)",
+    # A-145: 미등록 시 검증 통과 종가가 커버리지 보고에서 조용히 누락(A-054류)
+    "cbot_session_close":  "상품가격(교차검증 세션 종가 CBOT_BO_CLOSE)",
 }
 
 

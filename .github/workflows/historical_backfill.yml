@@ -364,7 +364,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - name: Install dependencies
-        run: pip install databento pandas pyarrow openpyxl
+        run: pip install databento pandas pyarrow openpyxl yfinance curl_cffi
       - name: Run Databento ZL ingest
         env:
           DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
@@ -377,6 +377,29 @@ jobs:
             test -n "$CSV_PATH" || { echo "Databento API key and captured CSV are both unavailable" >&2; exit 1; }
             DATABENTO_FROM_CSV="$CSV_PATH" python scripts/ingest_databento_bo.py
           fi
+      # A-145: UTC 종가 vs 정산가(yfinance) 교차검증 — PASS 시 cbot_session_close.parquet 발행
+      #        (게이트 (b)경로: 공식 정산가 표본 교차검증). exit 2 = 표본 미확보 → 잡 실패 아님.
+      - name: Validate session close (A-145)
+        run: |
+          set +e
+          python scripts/validate_session_close.py
+          rc=$?
+          set -e
+          if [ "$rc" -eq 2 ]; then
+            echo "::warning::세션 종가 검증 불가 — 정산가 표본 미확보 (CBOT_BO_CLOSE 미발행)"
+            exit 0
+          fi
+          exit $rc
+      - name: Upload session close artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbot-session-close-${{ github.run_id }}
+          path: |
+            data/raw/cbot_session_close.parquet
+            reports/market/session_close_validation_*.md
+          retention-days: 90
+          if-no-files-found: warn
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

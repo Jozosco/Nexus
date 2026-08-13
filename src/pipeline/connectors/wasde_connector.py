@@ -13,8 +13,10 @@ API 키:
 
 from __future__ import annotations
 
+import io
 import os
 import time
+import zipfile
 from datetime import date
 
 import httpx
@@ -34,23 +36,52 @@ SBO_COMMODITY_CODE = "2222000"  # Soybean Oil (USDA commodity code)
 ARMS_BASE = "https://data.ers.usda.gov/api/Data"
 
 
-def _fetch_fas(url: str, api_key: str = "", max_retries: int = 4) -> list | dict:
-    """USDA FAS OpenData API — 헤더 인증 방식 (쿼리 파라미터 아님, MEMORY A-004 참조)."""
-    headers: dict[str, str] = {}
+# A-141(a): 전 연도 403의 유력 원인 = 인증 헤더 이름 불일치 (ESR 전례 A-019: X-Api-Key).
+#           호스트·시기별로 X-Api-Key / API_KEY / ?api_key= 가 혼재 → 3방식 동시 시도 체인.
+_FAS_AUTH_SUCCESS_LOGGED = False
+
+
+def _fetch_fas(url: str, api_key: str = "", max_retries: int = 2) -> list | dict:
+    """USDA FAS OpenData API — 인증 3방식 시도 체인 (A-141a).
+
+    ① 헤더 X-Api-Key (ESR 검증 방식, A-019)
+    ② 헤더 API_KEY   (구 OpenData 방식, A-007)
+    ③ 쿼리 ?api_key= (최초 방식 폴백)
+    성공한 방식은 1회 로그로 남긴다. 401/403이면 다음 방식으로 즉시 전환.
+    """
+    global _FAS_AUTH_SUCCESS_LOGGED
     if api_key:
-        headers["API_KEY"] = api_key
-    delay = 2
-    for attempt in range(max_retries):
-        try:
-            r = httpx.get(url, headers=headers, timeout=30)
-            r.raise_for_status()
-            return r.json()
-        except (httpx.HTTPStatusError, httpx.RequestError) as e:
-            if attempt == max_retries - 1:
-                raise RuntimeError(f"[오류] USDA FAS API 호출 실패: {e}") from e
-            time.sleep(delay)
-            delay *= 2
-    return []
+        auth_styles: list[tuple[str, dict, dict]] = [
+            ("X-Api-Key 헤더", {"X-Api-Key": api_key}, {}),
+            ("API_KEY 헤더",   {"API_KEY": api_key},   {}),
+            ("api_key 쿼리",   {},                     {"api_key": api_key}),
+        ]
+    else:
+        auth_styles = [("무인증", {}, {})]
+
+    last_error: Exception | None = None
+    for style_name, headers, params in auth_styles:
+        delay = 2
+        for attempt in range(max_retries):
+            try:
+                r = httpx.get(url, headers=headers, params=params, timeout=30)
+                if r.status_code in (401, 403):
+                    print(f"[정보] USDA FAS {r.status_code} ({style_name}) — 다음 인증 방식 시도")
+                    last_error = httpx.HTTPStatusError(
+                        f"{r.status_code}", request=r.request, response=r)
+                    break  # 인증 방식 전환 (재시도 무의미)
+                r.raise_for_status()
+                if not _FAS_AUTH_SUCCESS_LOGGED:
+                    print(f"[정보] USDA FAS 인증 성공 방식: {style_name}")
+                    _FAS_AUTH_SUCCESS_LOGGED = True
+                return r.json()
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                last_error = e
+                if attempt == max_retries - 1:
+                    break
+                time.sleep(delay)
+                delay *= 2
+    raise RuntimeError(f"[오류] USDA FAS API 호출 실패 (인증 3방식 모두): {last_error}")
 
 
 def _fetch_arms(params: dict, api_key: str = "", max_retries: int = 4) -> list | dict:
@@ -100,7 +131,10 @@ def fetch_wasde_soybean_oil(marketing_year: int | None = None) -> pd.DataFrame:
             if data:
                 break
         except Exception as e:
-            print(f"[경고] PSD 엔드포인트 실패({url.split('/api')[0]}): {e} — 다음 후보 시도")
+            # A-141(c): 구 코드 url.split('/api')[0]이 "https://api.…"를 '/api'에서 잘라
+            #           "(https:/)"로 깨져 출력됨 → 호스트만 표기하도록 수정.
+            host = httpx.URL(url).host
+            print(f"[경고] PSD 엔드포인트 실패({host}): {e} — 다음 후보 시도")
             data = None
     if not data:
         print(f"[경고] USDA FAS PSD: {year}년 대두유 데이터 없음")
@@ -147,6 +181,126 @@ def fetch_wasde_multi_year(start_year: int = 2010) -> pd.DataFrame:
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True)
+
+
+# A-141(b): API 전 연도 실패(403/500) 대비 — 키 불필요 공개 벌크 CSV 폴백.
+#           PSD Online 공식 벌크 다운로드(oilseeds 전 품목·전 연도, 수십 MB zip).
+PSD_BULK_ZIP_URL = "https://apps.fas.usda.gov/psdonline/downloads/psd_oilseeds_csv.zip"
+
+
+def _find_col(cols: list[str], *candidates: str) -> str | None:
+    """CSV 실물 컬럼명 유연 탐지 — 대소문자·언더스코어 무시 부분 일치."""
+    normalized = {c: c.lower().replace("_", "").replace(" ", "") for c in cols}
+    for cand in candidates:
+        key = cand.lower().replace("_", "").replace(" ", "")
+        for orig, norm in normalized.items():
+            if key == norm:
+                return orig
+    # 부분 일치 폴백
+    for cand in candidates:
+        key = cand.lower().replace("_", "").replace(" ", "")
+        for orig, norm in normalized.items():
+            if key in norm:
+                return orig
+    return None
+
+
+def fetch_psd_bulk_csv(start_year: int = 2010) -> pd.DataFrame:
+    """USDA PSD Online 벌크 CSV(zip) 폴백 — API 키 불필요 (A-141b).
+
+    API가 전 연도 403/500일 때 사용. psd_oilseeds_csv.zip을 스트리밍 다운로드 →
+    메모리 해제(zipfile) → 대두 관련 품목(SBO 2222000 + Commodity 설명에 soybean 포함)
+    행만 필터 → 기존 지표코드 규약(PSD_ 접두) 롱포맷으로 정규화. 2010~현재 전 연도 커버.
+    """
+    print(f"[정보] PSD 벌크 CSV 폴백 시작 — {PSD_BULK_ZIP_URL} (수십 MB, 스트리밍)")
+    buf = io.BytesIO()
+    try:
+        with httpx.stream("GET", PSD_BULK_ZIP_URL, timeout=300,
+                          follow_redirects=True) as r:
+            r.raise_for_status()
+            for chunk in r.iter_bytes():
+                buf.write(chunk)
+    except Exception as e:
+        print(f"[경고] PSD 벌크 zip 다운로드 실패: {e}")
+        return pd.DataFrame()
+
+    try:
+        zf = zipfile.ZipFile(buf)
+        csv_names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
+        if not csv_names:
+            print(f"[경고] PSD 벌크 zip 내 CSV 없음: {zf.namelist()[:5]}")
+            return pd.DataFrame()
+    except zipfile.BadZipFile as e:
+        print(f"[경고] PSD 벌크 zip 판독 실패: {e}")
+        return pd.DataFrame()
+
+    frames: list[pd.DataFrame] = []
+    for name in csv_names:
+        try:
+            with zf.open(name) as fh:
+                raw = pd.read_csv(fh, low_memory=False)
+        except Exception as e:
+            print(f"[경고] PSD 벌크 CSV 파싱 실패({name}): {e}")
+            continue
+
+        cols = [str(c) for c in raw.columns]
+        raw.columns = cols
+        code_col  = _find_col(cols, "Commodity_Code")
+        cdesc_col = _find_col(cols, "Commodity_Description", "Commodity_Name", "Commodity")
+        my_col    = _find_col(cols, "Market_Year", "Marketing_Year")
+        cy_col    = _find_col(cols, "Calendar_Year")
+        attr_col  = _find_col(cols, "Attribute_Description", "Attribute_ID", "Attribute")
+        ctry_col  = _find_col(cols, "Country_Name", "Country_Code", "Country")
+        val_col   = _find_col(cols, "Value")
+        unit_col  = _find_col(cols, "Unit_Description", "Unit_ID", "Unit")
+        year_col  = my_col or cy_col
+        print(f"[정보] PSD 벌크({name}) 컬럼 탐지: code={code_col}, year={year_col}"
+              f"({'Market' if my_col else 'Calendar'}), attr={attr_col}, value={val_col}")
+        if not (val_col and year_col and attr_col and (code_col or cdesc_col)):
+            print(f"[경고] PSD 벌크({name}) 필수 컬럼 미탐지 — 실제 컬럼: {cols[:12]}")
+            continue
+
+        # 대두 관련 품목 필터: SBO 코드(2222000) + Commodity 설명에 soybean 포함
+        # (대두유·대두·대두박 등 코드 체계 변동에도 견고)
+        mask = pd.Series(False, index=raw.index)
+        if code_col:
+            code_str = raw[code_col].astype(str).str.replace(r"\.0$", "", regex=True)
+            mask |= code_str.str.zfill(7) == SBO_COMMODITY_CODE
+        if cdesc_col:
+            mask |= raw[cdesc_col].astype(str).str.contains("soybean", case=False, na=False)
+        sub = raw[mask].copy()
+        if sub.empty:
+            continue
+
+        sub["_year"] = pd.to_numeric(sub[year_col], errors="coerce")
+        sub = sub[sub["_year"] >= start_year].dropna(subset=["_year"])
+        if sub.empty:
+            continue
+
+        attr = sub[attr_col].astype(str).str.strip().str.replace(r"[^0-9A-Za-z]+", "_", regex=True)
+        commodity = (sub[cdesc_col].astype(str).str.strip()
+                     if cdesc_col else pd.Series("SOYBEAN", index=sub.index))
+        out = pd.DataFrame({
+            # Market_Year 기준: 마케팅연도 시작(10월)을 price_date로 (기존 규약과 동일)
+            "price_date":     pd.to_datetime(
+                sub["_year"].astype(int).astype(str) + "-10-01", errors="coerce"),
+            "source_name":    "USDA_PSD_BULK",
+            "indicator_code": "PSD_" + attr,
+            "country":        sub[ctry_col].astype(str) if ctry_col else "",
+            "value":          pd.to_numeric(sub[val_col], errors="coerce"),
+            "unit":           sub[unit_col].astype(str) if unit_col else "1000 MT",
+            "note":           "[PSD-BULK-CSV: " + commodity + "]",
+        }).dropna(subset=["price_date", "value"])
+        frames.append(out)
+
+    if not frames:
+        print("[경고] PSD 벌크 CSV: 대두 관련 행 없음")
+        return pd.DataFrame()
+    df = pd.concat(frames, ignore_index=True)
+    df["ingested_at"] = pd.Timestamp.utcnow()
+    print(f"[완료] PSD 벌크 CSV 폴백 {len(df)}건 ({start_year}~) — "
+          f"지표 {df['indicator_code'].nunique()}종")
+    return df
 
 
 def fetch_usda_arms_soybean_costs(year: int | None = None) -> pd.DataFrame:
@@ -210,6 +364,10 @@ def run() -> None:
 
     frames = []
     psd_df = fetch_wasde_multi_year(start_year=start_year)
+    if psd_df.empty:
+        # A-141(b): API 전 연도 실패(403/500) → 키 불필요 공개 벌크 CSV로 폴백
+        print("[정보] PSD API 전 연도 실패 — 벌크 CSV 폴백으로 전환")
+        psd_df = fetch_psd_bulk_csv(start_year=start_year)
     if not psd_df.empty:
         frames.append(psd_df)
 

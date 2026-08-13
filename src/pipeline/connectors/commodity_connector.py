@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import time
 from datetime import date, timedelta
+
 import httpx
 import pandas as pd
 
@@ -162,39 +163,101 @@ def fetch_cpo_proxy_fred(start: str = "2017-01-01") -> pd.DataFrame:
 
 # ── 3. ARS/USD 공식 환율 (api.bcra.gob.ar — 인증 불필요) ─────────────────────
 
+# A-144: /estadisticas/v3.0/cotizaciones/{date} 404 — 엔드포인트 개편 추정.
+#        신규 estadisticascambiarias/v1.0 (기간 조회) 우선, 구 v3.0 폴백 체인.
+def _bcra_extract_rate(entry: dict) -> float | None:
+    """BCRA 응답 상세 항목에서 환율 숫자 필드 유연 추출 (A-144).
+
+    알려진 필드(tipoCotizacion/tipoPase) 우선, 없으면 첫 양수 숫자 필드 자동 탐지.
+    """
+    for key in ("tipoCotizacion", "tipoPase"):
+        v = entry.get(key)
+        if isinstance(v, (int, float)) and v > 0:
+            return float(v)
+    for v in entry.values():
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0:
+            return float(v)
+    return None
+
+
+def _fetch_bcra_v1_range(start: date, end: date) -> list[dict]:
+    """BCRA estadisticascambiarias v1.0 — USD 기간 조회 (단일 호출)."""
+    url = (
+        "https://api.bcra.gob.ar/estadisticascambiarias/v1.0/Cotizaciones/USD"
+        f"?fechadesde={start.isoformat()}&fechahasta={end.isoformat()}"
+    )
+    r = _get(url, headers={"Accept": "application/json"}, max_retries=2)
+    data = r.json()
+    results = data.get("results", data if isinstance(data, list) else [])
+    rows: list[dict] = []
+    for item in results:
+        fecha = item.get("fecha") or item.get("fechaCotizacion")
+        detalles = item.get("detalle", [item])   # detalle 없으면 항목 자체를 상세로 간주
+        for entry in detalles:
+            rate = _bcra_extract_rate(entry)
+            if fecha and rate is not None:
+                rows.append({
+                    "price_date":     fecha,
+                    "source_name":    "BCRA_OFICIAL",
+                    "indicator_code": "ARS_USD_OFICIAL",
+                    "value":          rate,
+                    "unit":           "ARS/USD",
+                })
+                break
+    if rows:
+        print(f"[정보] BCRA 성공 URL: {url} ({len(rows)}건)")
+    return rows
+
+
 def fetch_ars_usd_bcra(days_back: int = 10) -> pd.DataFrame:
     """
-    아르헨티나 중앙은행(BCRA) 공식 ARS/USD 환율.
-    api.bcra.gob.ar/estadisticas/v3.0/cotizaciones — 인증 불필요.
+    아르헨티나 중앙은행(BCRA) 공식 ARS/USD 환율 (A-144: 후보 엔드포인트 체인).
+    ① estadisticascambiarias/v1.0/Cotizaciones/USD (기간 조회, 신규)
+    ② estadisticas/v3.0/cotizaciones/{date} (일별, 구 — 폴백)
     """
-    rows = []
-    for d in range(days_back):
-        target = date.today() - timedelta(days=d)
-        if target.weekday() >= 5:  # 주말 건너뜀
-            continue
-        try:
-            r = _get(
-                f"https://api.bcra.gob.ar/estadisticas/v3.0/cotizaciones/{target.isoformat()}",
-                headers={"Accept": "application/json"},
-            )
-            data = r.json()
-            results_list = data.get("results", [])
-            for entry in results_list:
-                if entry.get("codigoMoneda") == "USD":
-                    rows.append({
-                        "price_date":     target.isoformat(),
-                        "source_name":    "BCRA_OFICIAL",
-                        "indicator_code": "ARS_USD_OFICIAL",
-                        "value":          float(entry.get("tipoPase", 0)),
-                        "unit":           "ARS/USD",
-                    })
-                    break
-        except Exception as e:
-            print(f"[경고] BCRA ARS/USD {target}: {e}")
+    start = date.today() - timedelta(days=days_back)
+    rows: list[dict] = []
+
+    # ① v1.0 기간 조회 (단일 호출)
+    try:
+        rows = _fetch_bcra_v1_range(start, date.today())
+    except Exception as e:
+        print(f"[경고] BCRA v1.0 기간 조회 실패: {e} — 구 v3.0 폴백 시도")
+
+    # ② 구 v3.0 일별 폴백
+    if not rows:
+        v3_logged = False
+        for d in range(days_back):
+            target = date.today() - timedelta(days=d)
+            if target.weekday() >= 5:  # 주말 건너뜀
+                continue
+            url = f"https://api.bcra.gob.ar/estadisticas/v3.0/cotizaciones/{target.isoformat()}"
+            try:
+                r = _get(url, headers={"Accept": "application/json"}, max_retries=2)
+                data = r.json()
+                for entry in data.get("results", []):
+                    if entry.get("codigoMoneda") == "USD":
+                        rate = _bcra_extract_rate(entry)
+                        if rate is not None:
+                            rows.append({
+                                "price_date":     target.isoformat(),
+                                "source_name":    "BCRA_OFICIAL",
+                                "indicator_code": "ARS_USD_OFICIAL",
+                                "value":          rate,
+                                "unit":           "ARS/USD",
+                            })
+                            if not v3_logged:
+                                print(f"[정보] BCRA 성공 URL(폴백 v3.0): {url}")
+                                v3_logged = True
+                        break
+            except Exception as e:
+                print(f"[경고] BCRA ARS/USD {target}: {e}")
+
     if not rows:
         return pd.DataFrame()
     df = pd.DataFrame(rows)
-    df["price_date"] = pd.to_datetime(df["price_date"])
+    df["price_date"] = pd.to_datetime(df["price_date"], format="mixed", errors="coerce")
+    df = df.dropna(subset=["price_date"])
     df["ingested_at"] = pd.Timestamp.utcnow()
     return df
 

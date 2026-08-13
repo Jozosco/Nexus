@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 import re
 import time
-from datetime import date
+from datetime import date, timedelta
 
 import httpx
 import pandas as pd
@@ -206,30 +206,64 @@ NASA_POWER_PARAMS: dict[str, tuple[str, str]] = {
 }
 
 
+# A-143: 422 재시도 1회용 핵심 6종 (PAR·토양수분 2종 제외) — 파라미터 조합 문제 절연
+NASA_POWER_CORE_PARAMS: tuple[str, ...] = (
+    "T2M", "T2M_MAX", "T2M_MIN", "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN",
+)
+
+
+def _last_complete_month(today: date | None = None) -> date:
+    """직전 완결 월의 1일 반환 — 미완결 월(end=당월) 요청이 422의 유력 원인 (A-143)."""
+    d = today or date.today()
+    first_of_month = d.replace(day=1)
+    prev_month_last_day = first_of_month - timedelta(days=1)
+    return prev_month_last_day.replace(day=1)
+
+
+def _fetch_power_monthly(query: dict) -> dict | None:
+    """NASA POWER monthly point 호출 — 422면 응답 본문 로그 후 None (A-143)."""
+    r = httpx.get(NASA_POWER, params=query, timeout=60)
+    if r.status_code == 422:
+        print(f"[경고] NASA POWER 422 — 응답 본문: {r.text[:200]}")
+        return None
+    r.raise_for_status()
+    return r.json()
+
+
 def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
     """NASA POWER API — 원산지별 월별 농업기상 (선별 9종 파라미터).
     참고: github.com/kdmayer/nasa-power-api | 키 불필요 | community=AG (Agroclimatology)
-    수집 범위: start_date(기본 2017-01-01)부터 현재까지.
+    수집 범위: start_date(기본 2017-01-01)부터 **직전 완결 월**까지 (A-143).
     선별 근거: 대두 수율 구동 = 열(T2M/MAX/MIN)·수분(강수/토양수분)·일사(SW/PAR)·습도(A-065).
+
+    A-143: monthly point 422 원인 = end에 미완결 월(당월) 지정 추정 → 직전 완결 월로
+           클램프. 잔여 422는 파라미터 조합 문제 절연을 위해 핵심 6종 축소 재시도 1회.
     """
-    end   = date.today()
+    end   = _last_complete_month()          # A-143: 미완결 월 제외
     start = start_date if start_date else date(2017, 1, 1)
     param_csv = ",".join(NASA_POWER_PARAMS)
     rows = []
     for location, coord in ORIGIN_COORDS.items():
+        base_query = {
+            "start":      start.strftime("%Y%m"),
+            "end":        end.strftime("%Y%m"),
+            "latitude":   coord["lat"],
+            "longitude":  coord["lon"],
+            "community":  "AG",
+            "format":     "JSON",
+            "user":       "nexus_project",
+            "header":     "true",
+        }
         try:
-            r = _get(NASA_POWER, {
-                "start":      start.strftime("%Y%m"),
-                "end":        end.strftime("%Y%m"),
-                "latitude":   coord["lat"],
-                "longitude":  coord["lon"],
-                "community":  "AG",
-                "parameters": param_csv,
-                "format":     "JSON",
-                "user":       "nexus_project",
-                "header":     "true",
-            })
-            payload = r.json()
+            payload = _fetch_power_monthly({**base_query, "parameters": param_csv})
+            if payload is None:
+                # A-143: 422 → 핵심 6종(PAR·GWETROOT·GWETTOP 제거)으로 1회 축소 재시도
+                print(f"[정보] NASA POWER {location}: 핵심 6종으로 축소 재시도")
+                payload = _fetch_power_monthly(
+                    {**base_query, "parameters": ",".join(NASA_POWER_CORE_PARAMS)})
+            if payload is None:
+                print(f"[경고] NASA POWER {location}: 축소 재시도도 422 — 건너뜀")
+                continue
             props   = payload.get("properties", {}).get("parameter", {})
             for param, (unit, _desc) in NASA_POWER_PARAMS.items():
                 series = props.get(param, {})
