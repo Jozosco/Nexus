@@ -2,7 +2,7 @@ generated: '2026-08-13'
 window:
   start: '2010-01-01'
   end: '2025-12-31'
-  rows: 3918
+  rows: 3822
 target:
   indicator: CBOT_BO_CLOSE
   horizons:
@@ -215,7 +215,7 @@ features:
     median_gap_days: 1.0
     staleness_cap_days: 19
     coverage: 1.0
-    release_events: 3918
+    release_events: 3822
     revision_history: n/a
     revision_contaminated: false
   feat_CBOT_BO_HIGH:
@@ -223,7 +223,7 @@ features:
     median_gap_days: 1.0
     staleness_cap_days: 19
     coverage: 1.0
-    release_events: 3918
+    release_events: 3822
     revision_history: n/a
     revision_contaminated: false
   feat_CBOT_BO_LOW:
@@ -231,7 +231,7 @@ features:
     median_gap_days: 1.0
     staleness_cap_days: 19
     coverage: 1.0
-    release_events: 3918
+    release_events: 3822
     revision_history: n/a
     revision_contaminated: false
   feat_CBOT_BO_OPEN:
@@ -239,7 +239,7 @@ features:
     median_gap_days: 1.0
     staleness_cap_days: 19
     coverage: 1.0
-    release_events: 3918
+    release_events: 3822
     revision_history: n/a
     revision_contaminated: false
   feat_CBOT_BO_ROLLDAY:
@@ -247,7 +247,7 @@ features:
     median_gap_days: 1.0
     staleness_cap_days: 19
     coverage: 1.0
-    release_events: 3918
+    release_events: 3822
     revision_history: n/a
     revision_contaminated: false
   feat_CBOT_BO_VOLUME:
@@ -255,7 +255,7 @@ features:
     median_gap_days: 1.0
     staleness_cap_days: 19
     coverage: 1.0
-    release_events: 3918
+    release_events: 3822
     revision_history: n/a
     revision_contaminated: false
   feat_GATS_US_HSBO_EXPORT_CANADA:
@@ -326,7 +326,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9076
+    coverage: 0.9103
     release_events: 167
     revision_history: none
     revision_contaminated: true
@@ -334,7 +334,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9076
+    coverage: 0.9103
     release_events: 167
     revision_history: none
     revision_contaminated: true
@@ -342,7 +342,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9076
+    coverage: 0.9103
     release_events: 167
     revision_history: none
     revision_contaminated: true
@@ -350,7 +350,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9076
+    coverage: 0.9103
     release_events: 167
     revision_history: none
     revision_contaminated: true
@@ -358,7 +358,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9076
+    coverage: 0.9103
     release_events: 167
     revision_history: none
     revision_contaminated: true
@@ -366,7 +366,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9076
+    coverage: 0.9103
     release_events: 167
     revision_history: none
     revision_contaminated: true
@@ -374,7 +374,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9076
+    coverage: 0.9103
     release_events: 167
     revision_history: none
     revision_contaminated: true
@@ -382,7 +382,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9076
+    coverage: 0.9103
     release_events: 167
     revision_history: none
     revision_contaminated: true
@@ -454,7 +454,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7124
+    coverage: 0.7153
     release_events: 127
     revision_history: none
     revision_contaminated: true
@@ -462,7 +462,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7124
+    coverage: 0.7153
     release_events: 127
     revision_history: none
     revision_contaminated: true
@@ -470,7 +470,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7124
+    coverage: 0.7153
     release_events: 127
     revision_history: none
     revision_contaminated: true
@@ -478,7 +478,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7124
+    coverage: 0.7153
     release_events: 127
     revision_history: none
     revision_contaminated: true
@@ -486,7 +486,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7124
+    coverage: 0.7153
     release_events: 127
     revision_history: none
     revision_contaminated: true
@@ -494,7 +494,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7124
+    coverage: 0.7153
     release_events: 127
     revision_history: none
     revision_contaminated: true
@@ -502,7 +502,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7124
+    coverage: 0.7153
     release_events: 127
     revision_history: none
     revision_contaminated: true
@@ -510,7 +510,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7124
+    coverage: 0.7153
     release_events: 127
     revision_history: none
     revision_contaminated: true
@@ -646,7 +646,7 @@ features:
     source_file: gats_value_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5623
+    coverage: 0.5764
     release_events: 10
     revision_history: none
     revision_contaminated: true
@@ -718,7 +718,7 @@ features:
     source_file: gats_value_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5623
+    coverage: 0.5764
     release_events: 10
     revision_history: none
     revision_contaminated: true
@@ -726,7 +726,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4719
+    coverage: 0.4587
     release_events: 80
     revision_history: none
     revision_contaminated: true
@@ -734,7 +734,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4719
+    coverage: 0.4587
     release_events: 80
     revision_history: none
     revision_contaminated: true
@@ -742,7 +742,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4719
+    coverage: 0.4587
     release_events: 80
     revision_history: none
     revision_contaminated: true
@@ -750,7 +750,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4719
+    coverage: 0.4587
     release_events: 80
     revision_history: none
     revision_contaminated: true
@@ -758,7 +758,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4719
+    coverage: 0.4587
     release_events: 80
     revision_history: none
     revision_contaminated: true
@@ -766,7 +766,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4719
+    coverage: 0.4587
     release_events: 80
     revision_history: none
     revision_contaminated: true
@@ -774,7 +774,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4719
+    coverage: 0.4587
     release_events: 80
     revision_history: none
     revision_contaminated: true
@@ -782,7 +782,7 @@ features:
     source_file: gats_quantity_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4719
+    coverage: 0.4587
     release_events: 80
     revision_history: none
     revision_contaminated: true
@@ -790,7 +790,7 @@ features:
     source_file: gats_value_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5623
+    coverage: 0.5764
     release_events: 10
     revision_history: none
     revision_contaminated: true
@@ -1006,7 +1006,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1603
+    coverage: 0.1518
     release_events: 24
     revision_history: n/a
     revision_contaminated: false
@@ -1014,7 +1014,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1427
+    coverage: 0.1313
     release_events: 19
     revision_history: n/a
     revision_contaminated: false
@@ -1022,7 +1022,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7381
+    coverage: 0.7567
     release_events: 143
     revision_history: n/a
     revision_contaminated: false
@@ -1030,7 +1030,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.0704
+    coverage: 0.0646
     release_events: 7
     revision_history: n/a
     revision_contaminated: false
@@ -1038,7 +1038,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1427
+    coverage: 0.1313
     release_events: 19
     revision_history: n/a
     revision_contaminated: false
@@ -1046,7 +1046,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.2813
+    coverage: 0.2632
     release_events: 43
     revision_history: n/a
     revision_contaminated: false
@@ -1054,7 +1054,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1427
+    coverage: 0.1313
     release_events: 19
     revision_history: n/a
     revision_contaminated: false
@@ -1062,7 +1062,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.685
+    coverage: 0.7023
     release_events: 133
     revision_history: n/a
     revision_contaminated: false
@@ -1070,7 +1070,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.685
+    coverage: 0.7023
     release_events: 133
     revision_history: n/a
     revision_contaminated: false
@@ -1078,7 +1078,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9513
+    coverage: 0.955
     release_events: 179
     revision_history: n/a
     revision_contaminated: false
@@ -1102,7 +1102,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.2813
+    coverage: 0.2632
     release_events: 43
     revision_history: n/a
     revision_contaminated: false
@@ -1110,7 +1110,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7381
+    coverage: 0.7567
     release_events: 143
     revision_history: n/a
     revision_contaminated: false
@@ -1118,7 +1118,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7118
+    coverage: 0.7297
     release_events: 138
     revision_history: n/a
     revision_contaminated: false
@@ -1126,7 +1126,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.6904
+    coverage: 0.7077
     release_events: 134
     revision_history: n/a
     revision_contaminated: false
@@ -1134,7 +1134,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.696
+    coverage: 0.7135
     release_events: 135
     revision_history: n/a
     revision_contaminated: false
@@ -1142,7 +1142,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7381
+    coverage: 0.7567
     release_events: 143
     revision_history: n/a
     revision_contaminated: false
@@ -1150,7 +1150,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.0704
+    coverage: 0.0646
     release_events: 7
     revision_history: n/a
     revision_contaminated: false
@@ -1158,7 +1158,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.879
+    coverage: 0.8885
     release_events: 167
     revision_history: n/a
     revision_contaminated: false
@@ -1166,7 +1166,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.879
+    coverage: 0.8885
     release_events: 167
     revision_history: n/a
     revision_contaminated: false
@@ -1174,7 +1174,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.2325
+    coverage: 0.2182
     release_events: 36
     revision_history: n/a
     revision_contaminated: false
@@ -1182,7 +1182,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.2813
+    coverage: 0.2632
     release_events: 43
     revision_history: n/a
     revision_contaminated: false
@@ -1206,7 +1206,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8918
+    coverage: 0.8891
     release_events: 162
     revision_history: n/a
     revision_contaminated: false
@@ -1222,7 +1222,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8918
+    coverage: 0.8891
     release_events: 162
     revision_history: n/a
     revision_contaminated: false
@@ -1238,7 +1238,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8918
+    coverage: 0.8891
     release_events: 162
     revision_history: n/a
     revision_contaminated: false
@@ -1254,7 +1254,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8918
+    coverage: 0.8891
     release_events: 162
     revision_history: n/a
     revision_contaminated: false
@@ -1270,7 +1270,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1427
+    coverage: 0.1313
     release_events: 19
     revision_history: n/a
     revision_contaminated: false
@@ -1278,7 +1278,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1427
+    coverage: 0.1313
     release_events: 19
     revision_history: n/a
     revision_contaminated: false
@@ -1286,7 +1286,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8918
+    coverage: 0.8891
     release_events: 162
     revision_history: n/a
     revision_contaminated: false
@@ -1294,7 +1294,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.9495
+    coverage: 0.9532
     release_events: 174
     revision_history: n/a
     revision_contaminated: false
@@ -1302,7 +1302,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.6299
+    coverage: 0.6457
     release_events: 119
     revision_history: n/a
     revision_contaminated: false
@@ -1310,7 +1310,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7381
+    coverage: 0.7567
     release_events: 143
     revision_history: n/a
     revision_contaminated: false
@@ -1318,7 +1318,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8918
+    coverage: 0.8891
     release_events: 162
     revision_history: n/a
     revision_contaminated: false
@@ -1334,7 +1334,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7708
+    coverage: 0.7776
     release_events: 143
     revision_history: n/a
     revision_contaminated: false
@@ -1342,7 +1342,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.879
+    coverage: 0.8885
     release_events: 167
     revision_history: n/a
     revision_contaminated: false
@@ -1350,7 +1350,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1603
+    coverage: 0.1518
     release_events: 24
     revision_history: n/a
     revision_contaminated: false
@@ -1358,7 +1358,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1603
+    coverage: 0.1518
     release_events: 24
     revision_history: n/a
     revision_contaminated: false
@@ -1366,7 +1366,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.6299
+    coverage: 0.6457
     release_events: 119
     revision_history: n/a
     revision_contaminated: false
@@ -1374,7 +1374,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7381
+    coverage: 0.7567
     release_events: 143
     revision_history: n/a
     revision_contaminated: false
@@ -1382,7 +1382,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1427
+    coverage: 0.1313
     release_events: 19
     revision_history: n/a
     revision_contaminated: false
@@ -1390,7 +1390,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1427
+    coverage: 0.1313
     release_events: 19
     revision_history: n/a
     revision_contaminated: false
@@ -1398,7 +1398,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.0939
+    coverage: 0.0863
     release_events: 12
     revision_history: n/a
     revision_contaminated: false
@@ -1406,7 +1406,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7708
+    coverage: 0.7776
     release_events: 143
     revision_history: n/a
     revision_contaminated: false
@@ -1414,7 +1414,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.2813
+    coverage: 0.2632
     release_events: 43
     revision_history: n/a
     revision_contaminated: false
@@ -1422,7 +1422,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.2813
+    coverage: 0.2632
     release_events: 43
     revision_history: n/a
     revision_contaminated: false
@@ -1430,7 +1430,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8918
+    coverage: 0.8891
     release_events: 162
     revision_history: n/a
     revision_contaminated: false
@@ -1446,7 +1446,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.0962
+    coverage: 0.0861
     release_events: 12
     revision_history: n/a
     revision_contaminated: false
@@ -1454,7 +1454,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.0962
+    coverage: 0.0861
     release_events: 12
     revision_history: n/a
     revision_contaminated: false
@@ -1462,7 +1462,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8384
+    coverage: 0.843
     release_events: 150
     revision_history: n/a
     revision_contaminated: false
@@ -1470,7 +1470,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.1427
+    coverage: 0.1313
     release_events: 19
     revision_history: n/a
     revision_contaminated: false
@@ -1478,7 +1478,7 @@ features:
     source_file: ice_monthly_volumes.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.804
+    coverage: 0.8226
     release_events: 155
     revision_history: n/a
     revision_contaminated: false
@@ -1582,7 +1582,7 @@ features:
     source_file: nasa_power_agroclimatology_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.5518
+    coverage: 0.5657
     release_events: 108
     revision_history: n/a
     revision_contaminated: false
@@ -1678,7 +1678,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1686,7 +1686,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1694,7 +1694,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1702,7 +1702,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1710,7 +1710,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1718,7 +1718,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1726,7 +1726,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1734,7 +1734,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1742,7 +1742,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1750,7 +1750,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1758,7 +1758,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1766,7 +1766,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1774,7 +1774,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1782,7 +1782,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1790,7 +1790,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1798,7 +1798,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1806,7 +1806,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1814,7 +1814,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1822,7 +1822,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1830,7 +1830,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1838,7 +1838,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1846,7 +1846,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1854,7 +1854,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1862,7 +1862,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1870,7 +1870,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1878,7 +1878,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1886,7 +1886,7 @@ features:
     source_file: psd_historical.parquet
     median_gap_days: 365.0
     staleness_cap_days: 800
-    coverage: 0.5041
+    coverage: 0.5167
     release_events: 9
     revision_history: none
     revision_contaminated: true
@@ -1894,7 +1894,7 @@ features:
     source_file: nasa_power_agroclimatology_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4671
+    coverage: 0.4537
     release_events: 79
     revision_history: n/a
     revision_contaminated: false
@@ -2318,7 +2318,7 @@ features:
     source_file: te_commodities_usd_mt.parquet
     median_gap_days: 1.0
     staleness_cap_days: 19
-    coverage: 0.7647
+    coverage: 0.7839
     release_events: 3208
     revision_history: n/a
     revision_contaminated: false
@@ -2342,7 +2342,7 @@ features:
     source_file: te_commodities_usd_mt.parquet
     median_gap_days: 1.0
     staleness_cap_days: 19
-    coverage: 0.4002
+    coverage: 0.4103
     release_events: 1621
     revision_history: n/a
     revision_contaminated: false
@@ -2350,7 +2350,7 @@ features:
     source_file: te_commodities_usd_mt.parquet
     median_gap_days: 7.0
     staleness_cap_days: 43
-    coverage: 0.0493
+    coverage: 0.0505
     release_events: 42
     revision_history: n/a
     revision_contaminated: false
@@ -2454,7 +2454,7 @@ features:
     source_file: te_commodities_usd_mt.parquet
     median_gap_days: 1.0
     staleness_cap_days: 19
-    coverage: 0.8571
+    coverage: 0.8684
     release_events: 3521
     revision_history: n/a
     revision_contaminated: false
@@ -2470,7 +2470,7 @@ features:
     source_file: te_commodities_usd_mt.parquet
     median_gap_days: 1.0
     staleness_cap_days: 19
-    coverage: 0.3943
+    coverage: 0.4042
     release_events: 1551
     revision_history: n/a
     revision_contaminated: false
@@ -2494,7 +2494,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8259
+    coverage: 0.8414
     release_events: 131
     revision_history: n/a
     revision_contaminated: false
@@ -2502,7 +2502,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8127
+    coverage: 0.8278
     release_events: 119
     revision_history: n/a
     revision_contaminated: false
@@ -2510,7 +2510,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8259
+    coverage: 0.8414
     release_events: 131
     revision_history: n/a
     revision_contaminated: false
@@ -2518,7 +2518,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.782
+    coverage: 0.8017
     release_events: 104
     revision_history: n/a
     revision_contaminated: false
@@ -2526,7 +2526,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.6585
+    coverage: 0.6722
     release_events: 78
     revision_history: n/a
     revision_contaminated: false
@@ -2534,7 +2534,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 61.0
     staleness_cap_days: 259
-    coverage: 0.7892
+    coverage: 0.809
     release_events: 60
     revision_history: n/a
     revision_contaminated: false
@@ -2542,7 +2542,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 60.0
     staleness_cap_days: 255
-    coverage: 0.7274
+    coverage: 0.7457
     release_events: 62
     revision_history: n/a
     revision_contaminated: false
@@ -2550,7 +2550,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.7948
+    coverage: 0.8108
     release_events: 115
     revision_history: n/a
     revision_contaminated: false
@@ -2558,7 +2558,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.8193
+    coverage: 0.8359
     release_events: 126
     revision_history: n/a
     revision_contaminated: false
@@ -2590,7 +2590,7 @@ features:
     source_file: unstructured_signals_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.998
+    coverage: 0.9979
     release_events: 137
     revision_history: n/a
     revision_contaminated: false
@@ -2942,7 +2942,7 @@ features:
     source_file: wasde_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4063
+    coverage: 0.4165
     release_events: 79
     revision_history: full
     revision_contaminated: false
@@ -2998,7 +2998,7 @@ features:
     source_file: wasde_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.0911
+    coverage: 0.0827
     release_events: 11
     revision_history: full
     revision_contaminated: false
@@ -3022,7 +3022,7 @@ features:
     source_file: wasde_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4063
+    coverage: 0.4165
     release_events: 79
     revision_history: full
     revision_contaminated: false
@@ -3110,7 +3110,7 @@ features:
     source_file: wasde_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.0845
+    coverage: 0.0772
     release_events: 10
     revision_history: full
     revision_contaminated: false
@@ -3126,7 +3126,7 @@ features:
     source_file: wasde_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4063
+    coverage: 0.4165
     release_events: 79
     revision_history: full
     revision_contaminated: false
@@ -3414,7 +3414,7 @@ features:
     source_file: wasde_historical.parquet
     median_gap_days: 31.0
     staleness_cap_days: 139
-    coverage: 0.4063
+    coverage: 0.4165
     release_events: 79
     revision_history: full
     revision_contaminated: false

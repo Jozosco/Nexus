@@ -1,18 +1,18 @@
 # Feature Mart 생성 결과 — 2026-08-13
 
-- 분석창: 2010-01-01 ~ 2025-12-31 · 거래일 **3,918일**
+- 분석창: 2010-01-01 ~ 2025-12-31 · 거래일 **3,822일**
 - 목표변수: **CBOT_BO_CLOSE**
 - 원천 지표 438종 → 파생 포함 피처 **1,697열**
-- 산출: `data/gold/feature_mart.parquet` (3,918행 × 1,703열)
+- 산출: `data/gold/feature_mart.parquet` (3,822행 × 1,703열)
 
 ## 커버리지 분포
 
 | 구간 | 지표 수 |
 |---|---|
 | 90% 이상 | 322 |
-| 70~90% | 38 |
-| 40~70% | 52 |
-| 40% 미만 | 26 |
+| 70~90% | 42 |
+| 40~70% | 49 |
+| 40% 미만 | 25 |
 
 ## 개정 오염 피처 (revision-contaminated)
 
@@ -29,26 +29,26 @@
 
 | 지표 | 발표 횟수 | 결측률 기준 커버리지 |
 |---|---|---|
-| `ICE_EU_DUTCH_TTF_GAS_FUTURES` | 7 | 7.0% |
-| `ICE_EU_NAT_GAS_FUTURES` | 7 | 7.0% |
-| `PSD_SBM_BEGINNING_STOCKS` | 9 | 50.4% |
-| `PSD_SBM_DOMESTIC_USE` | 9 | 50.4% |
-| `PSD_SBM_ENDING_STOCKS` | 9 | 50.4% |
-| `PSD_SBM_EXPORTS` | 9 | 50.4% |
-| `PSD_SBM_IMPORTS` | 9 | 50.4% |
-| `PSD_SBM_PRODUCTION` | 9 | 50.4% |
-| `PSD_SBM_STU` | 9 | 50.4% |
-| `PSD_SBM_TOTAL_DISTRIBUTION` | 9 | 50.4% |
-| `PSD_SBM_TOTAL_SUPPLY` | 9 | 50.4% |
-| `PSD_SBO_BEGINNING_STOCKS` | 9 | 50.4% |
-| `PSD_SBO_DOMESTIC_USE` | 9 | 50.4% |
-| `PSD_SBO_ENDING_STOCKS` | 9 | 50.4% |
-| `PSD_SBO_EXPORTS` | 9 | 50.4% |
-| `PSD_SBO_IMPORTS` | 9 | 50.4% |
-| `PSD_SBO_PRODUCTION` | 9 | 50.4% |
-| `PSD_SBO_STU` | 9 | 50.4% |
-| `PSD_SBO_TOTAL_DISTRIBUTION` | 9 | 50.4% |
-| `PSD_SBO_TOTAL_SUPPLY` | 9 | 50.4% |
+| `ICE_EU_DUTCH_TTF_GAS_FUTURES` | 7 | 6.5% |
+| `ICE_EU_NAT_GAS_FUTURES` | 7 | 6.5% |
+| `PSD_SBM_BEGINNING_STOCKS` | 9 | 51.7% |
+| `PSD_SBM_DOMESTIC_USE` | 9 | 51.7% |
+| `PSD_SBM_ENDING_STOCKS` | 9 | 51.7% |
+| `PSD_SBM_EXPORTS` | 9 | 51.7% |
+| `PSD_SBM_IMPORTS` | 9 | 51.7% |
+| `PSD_SBM_PRODUCTION` | 9 | 51.7% |
+| `PSD_SBM_STU` | 9 | 51.7% |
+| `PSD_SBM_TOTAL_DISTRIBUTION` | 9 | 51.7% |
+| `PSD_SBM_TOTAL_SUPPLY` | 9 | 51.7% |
+| `PSD_SBO_BEGINNING_STOCKS` | 9 | 51.7% |
+| `PSD_SBO_DOMESTIC_USE` | 9 | 51.7% |
+| `PSD_SBO_ENDING_STOCKS` | 9 | 51.7% |
+| `PSD_SBO_EXPORTS` | 9 | 51.7% |
+| `PSD_SBO_IMPORTS` | 9 | 51.7% |
+| `PSD_SBO_PRODUCTION` | 9 | 51.7% |
+| `PSD_SBO_STU` | 9 | 51.7% |
+| `PSD_SBO_TOTAL_DISTRIBUTION` | 9 | 51.7% |
+| `PSD_SBO_TOTAL_SUPPLY` | 9 | 51.7% |
 
 ## 신선도 상한 초과 (수집 중단 의심)
 
@@ -57,19 +57,19 @@
 
 | 지표 | 제외 일수 | 상한(일) | 최대 경과(일) |
 |---|---|---|---|
-| `ICE_EU_DUTCH_TTF_GAS_FUTURES` | 3,642 | 139 | 5474 |
-| `ICE_EU_NAT_GAS_FUTURES` | 3,642 | 139 | 5474 |
-| `WASDE_US_CORN_ETHANOL_USE` | 3,587 | 139 | 5408 |
-| `WASDE_USDOM_SBO_BIODIESEL_USE` | 3,561 | 139 | 5377 |
-| `ICE_US_CRB_CCI_INDEX_FUTURES` | 3,359 | 139 | 5109 |
-| `ICE_EU_EMISSIONS_OPTIONS` | 3,359 | 139 | 5109 |
-| `ICE_US_OTHER_FUTURES` | 3,359 | 139 | 5109 |
-| `ICE_US_NYSE_INDEX_OPTIONS` | 3,359 | 139 | 5109 |
-| `ICE_US_US_INDEX_OPTIONS` | 3,359 | 139 | 5109 |
-| `ICE_US_OTHER_OPTIONS` | 3,359 | 139 | 5109 |
-| `ICE_US_CRB_INDEX_OPTIONS` | 3,359 | 139 | 5109 |
-| `ICE_EU_ELEC_FUTURES` | 3,359 | 139 | 5109 |
-| `ICE_EU_COAL_FUTURES` | 3,359 | 139 | 5109 |
+| `ICE_EU_DUTCH_TTF_GAS_FUTURES` | 3,575 | 139 | 5474 |
+| `ICE_EU_NAT_GAS_FUTURES` | 3,575 | 139 | 5474 |
+| `WASDE_US_CORN_ETHANOL_USE` | 3,527 | 139 | 5408 |
+| `WASDE_USDOM_SBO_BIODIESEL_USE` | 3,506 | 139 | 5377 |
+| `ICE_US_CRB_CCI_INDEX_FUTURES` | 3,320 | 139 | 5109 |
+| `ICE_EU_EMISSIONS_OPTIONS` | 3,320 | 139 | 5109 |
+| `ICE_US_OTHER_FUTURES` | 3,320 | 139 | 5109 |
+| `ICE_US_NYSE_INDEX_OPTIONS` | 3,320 | 139 | 5109 |
+| `ICE_US_US_INDEX_OPTIONS` | 3,320 | 139 | 5109 |
+| `ICE_US_OTHER_OPTIONS` | 3,320 | 139 | 5109 |
+| `ICE_US_CRB_INDEX_OPTIONS` | 3,320 | 139 | 5109 |
+| `ICE_EU_ELEC_FUTURES` | 3,320 | 139 | 5109 |
+| `ICE_EU_COAL_FUTURES` | 3,320 | 139 | 5109 |
 | `ICE_US_US_CRB_FUTURES` | 3,067 | 139 | 4743 |
 | `ICE_US_US_CRB_OPTIONS` | 3,067 | 139 | 4743 |
 | `ICE_EU_OTHER_OPTIONS` | 2,816 | 139 | 4378 |

@@ -269,6 +269,14 @@ def _postprocess_and_save(df: pd.DataFrame, end: str) -> None:
             df = df.sort_values(["price_date", "volume"])
             print("       채택 규칙: 동일 날짜는 **거래량 최대** 계약(주력물) 우선")
         df = df.drop_duplicates(subset=["price_date"], keep="last")
+    # A-131: 2010~2013 Globex 초기에는 **일요일 저녁 세션이 별도 일봉**으로 온다
+    #   (96개 · 평균 거래량 816 vs 평일 22,121). 이대로 두면 2011년 '거래일'이 284일이
+    #   되는 등 달력이 부풀고, 일요일→월요일 1일 수익률이 정보 없는 잡음 표본이 된다.
+    #   일요일 저녁 세션은 관행상 월요일 거래일에 속하므로 독립 일봉으로 남기지 않는다.
+    sun = df["price_date"].dt.dayofweek == 6
+    if sun.any():
+        print(f"[정리] 일요일 저녁 세션 일봉 {int(sun.sum())}개 제거 — 달력 부풀림 방지")
+        df = df[~sun]
     df = df.sort_values("price_date")
     _assert_date_range(df, START, end)
 
