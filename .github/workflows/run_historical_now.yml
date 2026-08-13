@@ -24,7 +24,6 @@ on:
     branches: [main]
     paths:
       - ".github/triggers/run-historical.txt"
-      - ".github/workflows/run_historical_now.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -41,10 +40,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 2          # A-157 가드가 HEAD~1 대조에 필요
           sparse-checkout: .github/triggers
           sparse-checkout-cone-mode: false
+      # A-157: 트리거 파일이 실제로 바뀐 push에서만 발사 — 런처 자신·타 파일 변경으로
+      #   옛 파라미터가 재발사되는 사고 차단(전환 커밋 포함).
+      - name: Guard — trigger file actually changed?
+        id: guard
+        run: |
+          git fetch --depth=2 origin main -q || true
+          if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "^.github/triggers/run-historical.txt$"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "[정보] 트리거 파일 무변경 push — 발사 생략 (A-157)"
+          fi
       - name: Read trigger parameters
         id: p
+        if: steps.guard.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           F=".github/triggers/run-historical.txt"
           get() {  # key, default — 주석(#)·공백 무시
@@ -59,6 +72,7 @@ jobs:
             echo "skip_analysis=$(get skip_analysis false)"
           } >> "$GITHUB_OUTPUT"
       - name: Dispatch Historical Analysis Pipeline
+        if: steps.guard.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
