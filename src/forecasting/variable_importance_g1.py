@@ -4,8 +4,8 @@ G1 변수 중요도 분석 — C-03 Lead Data Scientist (WBS 1.1.8 / Phase A)
 수집된 외부 변수 parquet 파일을 로드하여 대두유 가격 변동성 드라이버를 분석.
 
 Phase A 구현 (Snowflake 연동 전):
-  - 데이터 소스: data/raw/*.parquet (GitHub Actions 수집 결과)
-  - 분석 방법: LASSO 선택 + 피어슨 상관 + 기술통계 (기본 방법론)
+  - 모델 입력: data/gold/feature_mart.parquet (as-of 정합 게이트 통과본)
+  - 분석 방법: 시간순 Elastic Net 선택 + 피어슨 상관 + Granger + 기술통계
   - XGBoost+SHAP / Granger 인과검정: 충분한 시계열 누적 후 Phase B에서 적용
   - 출력: reports/pipeline/g1_variable_importance_{DATE}.html (HTML 리포트)
 
@@ -28,6 +28,15 @@ import pandas as pd
 
 OUTPUT_DIR  = "data/raw"
 REPORT_DIR  = "reports/pipeline"
+G1_TARGET_COL = "CBOT_BO_CLOSE"
+G1_TARGET_TIME_BASES = {"CME_SESSION", "EXCHANGE_SETTLEMENT"}
+G1_MIN_TARGET_OBS = int(os.environ.get("G1_MIN_TARGET_OBS", "1000"))
+G1_HORIZON = int(os.environ.get("G1_HORIZON", "20"))
+G1_ALLOWED_HORIZONS = {1, 5, 20, 60}
+FEATURE_MART_PATH = Path(os.environ.get("G1_FEATURE_MART", "data/gold/feature_mart.parquet"))
+FEATURE_CONTRACT_PATH = Path(
+    os.environ.get("G1_FEATURE_CONTRACT", "data/gold/feature_contract.yaml")
+)
 
 # ── Granger 인과검정 설정 ──────────────────────────────────────────────────────
 GRANGER_MIN_OBS = 30                                    # 검정 최소 관측치
@@ -383,6 +392,88 @@ def _load_all_parquets(days: int = 7) -> dict[str, pd.DataFrame]:
     return {k: pd.concat(v, ignore_index=True) for k, v in frames.items() if v}
 
 
+def _load_g1_feature_mart(
+    mart_path: Path = FEATURE_MART_PATH,
+    contract_path: Path = FEATURE_CONTRACT_PATH,
+    horizon: int = G1_HORIZON,
+) -> tuple[pd.DataFrame, pd.DataFrame, str]:
+    """시점 정합 feature mart만 G1 모델 입력으로 로드한다."""
+    import yaml
+
+    if horizon not in G1_ALLOWED_HORIZONS:
+        raise RuntimeError(
+            f"[오류] G1_HORIZON={horizon} — 허용값은 {sorted(G1_ALLOWED_HORIZONS)}입니다.")
+    if not mart_path.is_file() or not contract_path.is_file():
+        raise RuntimeError(
+            f"[오류] G1 feature mart/contract가 없습니다: {mart_path}, {contract_path}. "
+            "readiness와 feature-mart 게이트를 먼저 실행하세요.")
+
+    contract = yaml.safe_load(contract_path.read_text(encoding="utf-8")) or {}
+    target_contract = contract.get("target", {})
+    bases = set(target_contract.get("time_basis", []))
+    units = set(target_contract.get("unit", []))
+    if (
+        target_contract.get("indicator") != G1_TARGET_COL
+        or not target_contract.get("target_eligible")
+        or not bases
+        or not bases.issubset(G1_TARGET_TIME_BASES)
+        or units != {"USc/lb"}
+    ):
+        raise RuntimeError(
+            f"[오류] feature contract 타깃 계약 미충족: {target_contract}. "
+            "UTC 일봉이나 검증 전 가격은 사용할 수 없습니다.")
+
+    mart = pd.read_parquet(mart_path)
+    target_label = f"target_ret{horizon}"
+    required = {"price_date", "target_close", target_label, f"feat_{G1_TARGET_COL}"}
+    missing = sorted(required - set(mart.columns))
+    if missing:
+        raise RuntimeError(f"[오류] G1 feature mart 필수 컬럼 누락: {missing}")
+    dates = pd.to_datetime(mart["price_date"], errors="coerce")
+    if dates.isna().any() or dates.duplicated().any() or not dates.is_monotonic_increasing:
+        raise RuntimeError("[오류] feature mart price_date가 결측·중복·역순입니다.")
+
+    contaminated = {
+        name.removeprefix("feat_")
+        for name, meta in contract.get("features", {}).items()
+        if isinstance(meta, dict) and meta.get("revision_contaminated")
+    }
+    predictor_columns: list[str] = []
+    for column in mart.columns:
+        if not column.startswith("feat_"):
+            continue
+        base = column.removeprefix("feat_").split("__", 1)[0]
+        if base in contaminated or base == G1_TARGET_COL:
+            continue
+        if pd.api.types.is_numeric_dtype(mart[column]) and mart[column].notna().mean() >= 0.60:
+            predictor_columns.append(column)
+    if not predictor_columns:
+        raise RuntimeError("[오류] G1에 사용할 비오염·시점 정합 피처가 없습니다.")
+
+    analysis = mart[[target_label] + predictor_columns].copy()
+    analysis = analysis.rename(
+        columns={column: column.removeprefix("feat_") for column in predictor_columns}
+    )
+    analysis.index = pd.DatetimeIndex(dates)
+    analysis = analysis.replace([np.inf, -np.inf], np.nan)
+    if analysis[target_label].notna().sum() < G1_MIN_TARGET_OBS:
+        raise RuntimeError(
+            f"[오류] {target_label} 유효 관측 {analysis[target_label].notna().sum():,}건 — "
+            f"G1 최소 {G1_MIN_TARGET_OBS:,}건 미달입니다.")
+
+    level_columns = [
+        column for column in mart.columns
+        if column.startswith("feat_") and "__" not in column
+        and column not in {f"feat_{G1_TARGET_COL}"}
+        and column.removeprefix("feat_") not in contaminated
+        and pd.api.types.is_numeric_dtype(mart[column])
+    ]
+    levels = mart[[f"feat_{G1_TARGET_COL}"] + level_columns].copy()
+    levels.columns = [column.removeprefix("feat_") for column in levels.columns]
+    levels.index = pd.DatetimeIndex(dates)
+    return analysis, levels, target_label
+
+
 def _freshness_flag(df: pd.DataFrame, stale_days: int = 5) -> str:
     """데이터 신선도 판정: STALE / OK."""
     if "ingested_at" not in df.columns:
@@ -511,27 +602,79 @@ def _pivot_for_correlation(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return _wide_out
 
 
-def _lasso_importance(wide: pd.DataFrame, target_col: str | None = None) -> pd.DataFrame:
-    """LASSO 회귀로 변수 중요도 계산. target_col이 없으면 가장 완전한 컬럼을 사용."""
-    from sklearn.linear_model import ElasticNetCV
+def _require_g1_target(
+    frames: dict[str, pd.DataFrame],
+    wide: pd.DataFrame,
+    min_observations: int = G1_MIN_TARGET_OBS,
+) -> str:
+    """검증된 CBOT 세션 타깃이 없으면 보고서 생성을 중단한다."""
+    candidates: list[pd.DataFrame] = []
+    for frame in frames.values():
+        if "indicator_code" not in frame.columns:
+            continue
+        rows = frame.loc[frame["indicator_code"].astype(str) == G1_TARGET_COL].copy()
+        if not rows.empty:
+            candidates.append(rows)
+    if not candidates or G1_TARGET_COL not in wide.columns:
+        raise RuntimeError(
+            f"[오류] G1 필수 타깃 {G1_TARGET_COL}이 없습니다. "
+            "Brent/CPO를 대체 타깃으로 사용하지 않습니다.")
+
+    target_rows = pd.concat(candidates, ignore_index=True)
+    missing_meta = [c for c in ("target_eligible", "time_basis") if c not in target_rows.columns]
+    if missing_meta:
+        raise RuntimeError(
+            f"[오류] {G1_TARGET_COL} 타깃 계약 필드가 없습니다: {missing_meta}. "
+            "세션 기준 검증을 통과한 원천만 사용할 수 있습니다.")
+    eligible = target_rows["target_eligible"]
+    if not pd.api.types.is_bool_dtype(eligible):
+        eligible = eligible.astype("string").str.lower().isin({"true", "1", "yes"})
+    if not eligible.fillna(False).all():
+        raise RuntimeError(f"[오류] {G1_TARGET_COL}에 target_eligible=false 행이 있습니다.")
+    bases = set(target_rows["time_basis"].dropna().astype(str).unique())
+    if not bases or not bases.issubset(G1_TARGET_TIME_BASES):
+        raise RuntimeError(
+            f"[오류] {G1_TARGET_COL} time_basis={sorted(bases) or ['UNSPECIFIED']} — "
+            "UTC 일봉은 G1 타깃이 아닙니다.")
+
+    date_col = "price_date" if "price_date" in target_rows.columns else "event_time"
+    dates = pd.to_datetime(target_rows[date_col], errors="coerce").dropna().dt.normalize()
+    if (dates.dt.dayofweek >= 5).any():
+        raise RuntimeError(
+            f"[오류] {G1_TARGET_COL}에 주말 날짜가 있습니다. UTC 버킷/세션 매핑을 확인하세요.")
+    observations = int(wide[G1_TARGET_COL].notna().sum())
+    if observations < min_observations:
+        raise RuntimeError(
+            f"[오류] {G1_TARGET_COL} 유효 관측 {observations:,}건 — "
+            f"G1 최소 {min_observations:,}건 미달입니다.")
+    return G1_TARGET_COL
+
+
+def _lasso_importance(wide: pd.DataFrame, target_col: str) -> pd.DataFrame:
+    """시간순 CV·fold 내부 전처리로 Elastic Net 중요도를 계산한다."""
+    from sklearn.impute import SimpleImputer
+    from sklearn.linear_model import ElasticNet
+    from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
+    from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
 
     if wide.empty or len(wide) < 10:
         return pd.DataFrame(columns=["변수", "피어슨_r", "LASSO_계수", "포함여부"])
 
-    wide_clean = wide.dropna(thresh=max(2, len(wide) // 2), axis=1)
-    wide_clean = wide_clean.dropna()
+    wide_clean = wide.replace([np.inf, -np.inf], np.nan)
+    wide_clean = wide_clean.dropna(subset=[target_col])
+    keep = [target_col] + [
+        column for column in wide_clean.columns
+        if column != target_col and wide_clean[column].notna().mean() >= 0.60
+    ]
+    wide_clean = wide_clean[keep]
 
     if wide_clean.empty or wide_clean.shape[1] < 2:
         return pd.DataFrame(columns=["변수", "피어슨_r", "LASSO_계수", "포함여부"])
 
-    # target: 가장 완전한 컬럼 (대두유 관련 코드 우선)
-    priority = ["CBOT_BO_CLOSE", "BO_CLOSE", "cbot_soybean_oil", "BRENT_USD_BBL"]
-    if target_col is None:
-        target_col = next(
-            (c for c in priority if c in wide_clean.columns),
-            wide_clean.columns[0],
-        )
+    if target_col not in wide_clean.columns:
+        raise RuntimeError(
+            f"[오류] 결측 정리 후 G1 타깃 {target_col}이 남지 않았습니다. 커버리지를 확인하세요.")
 
     y = wide_clean[target_col]
     X = wide_clean.drop(columns=[target_col])
@@ -539,24 +682,37 @@ def _lasso_importance(wide: pd.DataFrame, target_col: str | None = None) -> pd.D
     if X.empty:
         return pd.DataFrame(columns=["변수", "피어슨_r", "LASSO_계수", "포함여부"])
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
     try:
-        # D10(설계결정): 곡물 복합체 강상관(대두-옥수수 r=0.66 등) 환경에서 순수 LASSO는
-        # 상관 변수군 중 1개만 남기고 전부 0으로 만드는 불안정성 존재 → ElasticNet(L1+L2)으로
-        # 상관 그룹을 완만하게 축소해 공선성 하에서도 안정적 계수 산출 (l1_ratio 0.5 균형).
-        lasso = ElasticNetCV(l1_ratio=0.5, cv=min(5, len(y) // 2),
-                             max_iter=5000, random_state=42)
-        lasso.fit(X_scaled, y)
-        coefs = dict(zip(X.columns, lasso.coef_))
-    except Exception:
-        coefs = {c: 0.0 for c in X.columns}
+        gap = max(G1_HORIZON, 1)
+        splitter = TimeSeriesSplit(n_splits=5, gap=gap)
+        pipeline = Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+                ("model", ElasticNet(max_iter=10_000, random_state=42)),
+            ]
+        )
+        search = GridSearchCV(
+            pipeline,
+            {
+                "model__alpha": [0.001, 0.01, 0.1, 1.0],
+                "model__l1_ratio": [0.2, 0.5, 0.8],
+            },
+            cv=splitter,
+            scoring="neg_mean_absolute_error",
+            n_jobs=-1,
+            error_score="raise",
+        )
+        search.fit(X, y)
+        coefs = dict(zip(X.columns, search.best_estimator_.named_steps["model"].coef_))
+    except Exception as exc:
+        raise RuntimeError(f"[오류] 시간순 Elastic Net 적합 실패: {exc}") from exc
 
     rows = []
     for col in X.columns:
         try:
-            r = float(np.corrcoef(X[col], y)[0, 1])
+            paired = pd.concat([X[col], y], axis=1).dropna()
+            r = float(np.corrcoef(paired.iloc[:, 0], paired.iloc[:, 1])[0, 1])
         except Exception:
             r = float("nan")
         coef = coefs.get(col, 0.0)
@@ -880,8 +1036,6 @@ def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
            GPR_NORMALIZED는 원시 GPR에서 [0,1] 정규화 파생(percentile 임계).
     """
     alerts = []
-    today = date.today().isoformat()
-
     def _is_fresh(df: pd.DataFrame, stale_days: int = 5) -> bool:
         if "ingested_at" not in df.columns:
             return False
@@ -1381,14 +1535,14 @@ def _render_feature_selection_methodology(lang: str = "ko") -> str:
         for r in gate_rows
     )
     gate_table = (
-        f"<table class='tbl'><thead><tr>"
+        "<table class='tbl'><thead><tr>"
         + "".join(f"<th>{h}</th>" for h in gate_hdr)
         + f"</tr></thead><tbody>{gate_rows_html}</tbody></table>"
     )
 
     # Phase A 핵심 피처 8개 테이블
     core_features = [
-        ("CBOT_SBO_FUTURES",          "상품가격",   "대두유 선물 가격 — G1/G2/G3 타깃 변수. 피어슨 r 최고.",          status_collected),
+        ("CBOT_BO_CLOSE",             "상품가격",   "검증된 CME 세션/정산 기준가격 — G1/G2/G3 타깃.",               status_collected),
         ("CPO_SBO_SPREAD",            "상품가격",   "CPO-SBO 스프레드 — 대체재 전환 임계값(>$175/MT). 비선형 효과.",  status_missing),
         ("WASDE_SBO_STU",             "작황",       "WASDE 재고사용비율 — 공급 타이트니스 핵심. Granger p<0.01.",      status_partial),
         ("BDI",                       "해운",       "발틱건화물지수 z-score 90일 — 운임 충격 선행지표.",              status_partial),
@@ -1397,7 +1551,7 @@ def _render_feature_selection_methodology(lang: str = "ko") -> str:
         ("PSD_SOY_CRUSH",             "작황",       "글로벌 대두 압착량 — SBO 공급의 직접 원료. USDA FAS PSD.",      status_partial),
         ("GATS_US_SBO_EXPORT_KOREA",  "수입통계",  "미국→한국 대두유 수출 — 한국 조달 비용 직접 지표. GATS 수동업로드.", status_partial),
     ] if lang == "ko" else [
-        ("CBOT_SBO_FUTURES",          "Commodity",    "SBO futures — target variable for G1/G2/G3. Highest Pearson r.",       status_collected),
+        ("CBOT_BO_CLOSE",             "Commodity",    "Validated CME session/settlement target for G1/G2/G3.",                 status_collected),
         ("CPO_SBO_SPREAD",            "Commodity",    "CPO-SBO spread — substitution threshold (>$175/MT). Nonlinear effect.", status_missing),
         ("WASDE_SBO_STU",             "Crop",         "WASDE stocks-to-use — supply tightness. Granger p<0.01.",              status_partial),
         ("BDI",                       "Shipping",     "BDI 90-day z-score — freight shock leading indicator.",                status_partial),
@@ -1681,6 +1835,7 @@ def _render_html(
     days: int,
     data_period: str = "",
     lang: Literal["ko", "en"] = "ko",
+    target_label: str = "",
     granger_conditions: pd.DataFrame | None = None,
     granger_results: pd.DataFrame | None = None,
     current_values: dict[str, str] | None = None,
@@ -1699,7 +1854,9 @@ def _render_html(
         "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
     )
     title  = "대두유 가격 핵심 영향 인자 분석 보고서" if lang == "ko" else "Key Variable Analysis Report"
-    sub    = f"{data_period} 데이터 기준" if (lang == "ko" and data_period) else (f"Based on {data_period} data" if data_period else (f"최근 {days}일 데이터 기준" if lang == "ko" else f"Based on last {days} days"))
+    period_sub = f"{data_period} 데이터 기준" if (lang == "ko" and data_period) else (f"Based on {data_period} data" if data_period else (f"최근 {days}일 데이터 기준" if lang == "ko" else f"Based on last {days} days"))
+    target_sub = (f" · 타깃 {target_label}" if lang == "ko" else f" · target {target_label}") if target_label else ""
+    sub = period_sub + target_sub
 
     # executive summary
     category_summary = _build_category_summary(importance_df, {})
@@ -1874,10 +2031,20 @@ def _render_html(
 <h2>{'변수 중요도 (ElasticNet 기반)' if lang == 'ko' else 'Variable Importance (ElasticNet-based)'}</h2>
 {imp_html}
 
+{feature_selection_html}
+
 {top5_html}
 
 <h2>{'구조적 단절 임계값 현황' if lang == 'ko' else 'Structural Break Status'}</h2>
 {alerts_html}
+
+<h2>{thr_title}</h2>
+{threshold_rationale_html}
+
+<h2>{lasso_title}</h2>
+{lasso_html}
+
+{granger_conditions_section}
 
 {granger_results_section}
 
@@ -1910,8 +2077,7 @@ def run(days: int = 7) -> None:
     frames = _load_all_parquets(days=days)
 
     if not frames:
-        print(f"[경고] {OUTPUT_DIR} 에서 유효한 parquet 파일 없음 — 분석 건너뜀.")
-        return
+        raise RuntimeError(f"[오류] {OUTPUT_DIR} 에서 유효한 parquet 파일을 찾지 못했습니다.")
 
     print(f"[C-03] {len(frames)}개 커넥터 데이터 로드 완료: {list(frames.keys())}")
 
@@ -1933,22 +2099,18 @@ def run(days: int = 7) -> None:
         _ey = os.environ.get("HISTORICAL_END_YEAR", "2025")
         data_period = f"{_sy}~{_ey}년"
 
-    wide          = _pivot_for_correlation(frames)
-    importance_df = _lasso_importance(wide)
+    wide, hist_wide, target_label = _load_g1_feature_mart()
+    importance_df = _lasso_importance(wide, target_label)
+    if importance_df.empty:
+        raise RuntimeError("[오류] G1 변수 중요도가 비어 있습니다. 보고서를 생성하지 않습니다.")
     alerts        = _check_structural_breaks(frames)
 
-    print(f"[C-03] 상관 분석 변수 수: {wide.shape[1] if not wide.empty else 0}")
+    print(f"[C-03] 분석 타깃: {target_label} · 시점 정합 변수 수: {wide.shape[1] - 1}")
     print(f"[C-03] 구조적 단절 임계값 초과: {sum(1 for a in alerts if '🚨' in a.get('상태', ''))}/{len(alerts)}")
 
     # ── Granger 인과검정: 전체 히스토리 parquet 사용 (2020~작년) ──────────────────
     print("[C-03] Granger 인과검정 선결 조건 점검 중 (2017~작년 연도별)...")
-    hist_frames = _load_all_parquets(days=2000)   # 보관된 전체 parquet 로드
-    hist_wide   = _pivot_for_correlation(hist_frames)
-    granger_target = next(
-        (c for c in ["CBOT_BO_CLOSE", "BRENT_USD_BBL", "CPO_USD_MT"]
-         if not hist_wide.empty and c in hist_wide.columns),
-        None,
-    )
+    granger_target = G1_TARGET_COL if G1_TARGET_COL in hist_wide.columns else None
     if granger_target and not hist_wide.empty:
         print(f"[C-03] Granger 타깃: {granger_target}")
         granger_conditions = _check_granger_conditions(hist_wide, granger_target)
@@ -1957,9 +2119,8 @@ def run(days: int = 7) -> None:
         n_causal = (granger_results["인과성"] == "✅ 인과관계 있음").sum() if not granger_results.empty else 0
         print(f"[C-03] Granger 조건 충족: {n_ready}개 변수 / 유의 인과관계: {n_causal}건 (α={GRANGER_ALPHA})")
     else:
-        granger_conditions = pd.DataFrame()
-        granger_results    = pd.DataFrame()
-        print("[C-03] Granger 건너뜀 — 타깃 변수(CBOT_BO_CLOSE / BRENT_USD_BBL) 없음")
+        raise RuntimeError(
+            f"[오류] Granger 필수 타깃 {G1_TARGET_COL}이 없습니다. 대체 타깃을 사용하지 않습니다.")
 
     current_values = _build_current_values(frames)
     print(f"[C-03] 최신값 추출 완료: {len(current_values)}개 지표")
@@ -1971,6 +2132,7 @@ def run(days: int = 7) -> None:
                 status_df, importance_df, alerts, run_id, run_ts, days,
                 data_period=data_period,
                 lang=lang,  # type: ignore[arg-type]
+                target_label=target_label,
                 granger_conditions=granger_conditions,
                 granger_results=granger_results,
                 current_values=current_values,
@@ -1993,6 +2155,7 @@ def run(days: int = 7) -> None:
     md_lines = [
         f"# 대두유 가격 핵심 영향 인자 분석 보고서 — {run_ts[:10]}",
         f"**데이터 범위**: {data_period if data_period else f'최근 {days}일'}  |  **생성 일자**: {run_ts[:10]}",
+        f"**분석 타깃**: `{target_label}` (기준가격: `{G1_TARGET_COL}` · 단위: USc/lb)",
         "",
         "## 구조적 단절 임계값 현황",
     ]
@@ -2031,7 +2194,7 @@ def run(days: int = 7) -> None:
         "",
         "---",
         "*Project Nexus · 핵심 변수 분석 보고서*",
-        f"*HITL 게이트: 조달 결정은 CLAUDE.md §6 HITL 프로세스 필요*",
+        "*HITL 게이트: 조달 결정은 CLAUDE.md §6 HITL 프로세스 필요*",
     ]
     md_path = f"{REPORT_DIR}/g1_variable_importance_{tag}_ko.md"
     with open(md_path, "w", encoding="utf-8") as fh:

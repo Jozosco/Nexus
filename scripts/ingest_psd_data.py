@@ -178,3 +178,4 @@ def run(psd_dir: Path = PSD_DIR, output_dir: Path = OUTPUT_DIR) -> None:
 
 if __name__ == "__main__":
     run()
+

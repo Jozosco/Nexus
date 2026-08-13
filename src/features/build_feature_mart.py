@@ -69,19 +69,23 @@ DEFAULT_END = "2025-12-31"
 # 목표변수 후보 — 앞쪽 우선
 TARGET_CANDIDATES = ["CBOT_BO_CLOSE", "CBOT_SBO_FUTURES"]
 TARGET_HORIZONS = [1, 5, 20, 60]        # 거래일 — CLAUDE.md §1
+TARGET_TIME_BASES = {"CME_SESSION", "EXCHANGE_SETTLEMENT"}
 
 # ── 중복 적재 방지 ───────────────────────────────────────────────────────────
 # 같은 indicator_code를 담은 파일이 둘 이상이면 롱 테이블이 2배가 되고 ASOF 동점이 생긴다.
 # 자동 판정(행 수 많은 쪽 등)은 조용히 틀리므로 **명시적으로** 우선순위를 적는다.
-SUPERSEDES: dict[str, str] = {
-    # 대체될 파일                                : 사유
-    "te_commodities_historical.parquet":
-        "te_commodities_usd_mt.parquet가 동일 지표에 단위정규화(value_usd_mt)를 더한 상위집합 (D8)",
+SUPERSEDES: dict[str, tuple[str, str]] = {
+    # 대체될 파일 : (상위집합 파일, 사유)
+    "te_commodities_historical.parquet": (
+        "te_commodities_usd_mt.parquet",
+        "단위정규화(value_usd_mt)를 더한 검증된 상위집합 (D8)",
+    ),
 }
 # 단위정규화 파일에서 원 value 대신 쓸 컬럼(converted=True인 행만)
 NORMALIZED_VALUE_COL = "value_usd_mt"
 
 REQUIRED_COLS = ["indicator_code", "value", "event_time", "available_at"]
+TARGET_METADATA_COLS = ["target_eligible", "time_basis", "unit"]
 
 
 # ── 신선도 상한 ──────────────────────────────────────────────────────────────
@@ -112,12 +116,17 @@ def load_long(raw_dir: str = RAW_DIR) -> Loaded:
     frames: list[pd.DataFrame] = []
     origin: dict[str, str] = {}
     skipped: list[str] = []
+    files = sorted(glob.glob(os.path.join(raw_dir, "**", "*.parquet"), recursive=True))
+    available_names = {os.path.basename(path) for path in files}
+    target_metadata_missing: list[str] = []
 
-    for f in sorted(glob.glob(os.path.join(raw_dir, "**", "*.parquet"), recursive=True)):
+    for f in files:
         name = os.path.basename(f)
         if name in SUPERSEDES:
-            skipped.append(f"{name} — 중복 제외: {SUPERSEDES[name]}")
-            continue
+            replacement, reason = SUPERSEDES[name]
+            if replacement in available_names:
+                skipped.append(f"{name} — 중복 제외: {replacement} {reason}")
+                continue
         try:
             df = pd.read_parquet(f)
         except Exception as e:                        # 손상 파일이 전체를 막지 않게
@@ -130,17 +139,33 @@ def load_long(raw_dir: str = RAW_DIR) -> Loaded:
             skipped.append(f"{name} — 필수 컬럼 없음 {missing}")
             continue
 
+        codes = set(df["indicator_code"].dropna().astype(str).unique())
+        if codes.intersection(TARGET_CANDIDATES):
+            missing_target_meta = [c for c in TARGET_METADATA_COLS if c not in df.columns]
+            if missing_target_meta:
+                target_metadata_missing.append(
+                    f"{name}: {sorted(codes.intersection(TARGET_CANDIDATES))} "
+                    f"메타데이터 누락 {missing_target_meta}")
+
         val = df["value"]
         if NORMALIZED_VALUE_COL in df.columns and "converted" in df.columns:
-            # 단위정규화된 행만 교체 — 미변환 행은 원값 유지(D8: 환율 미확보 시 converted=False)
-            val = df[NORMALIZED_VALUE_COL].where(df["converted"].fillna(False), df["value"])
+            # 미변환 현지통화를 USD/MT 계열에 섞지 않는다. 별도 raw 코드가 없으면 모델에서 제외.
+            val = df[NORMALIZED_VALUE_COL].where(df["converted"].fillna(False))
 
+        eligible_raw = df.get("target_eligible", pd.Series(False, index=df.index))
+        if not pd.api.types.is_bool_dtype(eligible_raw):
+            eligible_raw = eligible_raw.astype("string").str.lower().isin({"true", "1", "yes"})
         sub = pd.DataFrame({
             "indicator_code": df["indicator_code"].astype(str),
             "value": pd.to_numeric(val, errors="coerce"),
             "event_time": pd.to_datetime(df["event_time"], errors="coerce"),
             "available_at": pd.to_datetime(df["available_at"], errors="coerce"),
             "source_vintage": df.get("source_vintage", pd.Series([None] * len(df))).astype("string"),
+            "unit": df.get("unit", pd.Series("UNSPECIFIED", index=df.index)).astype("string"),
+            "target_eligible": eligible_raw.fillna(False).astype(bool),
+            "time_basis": df.get(
+                "time_basis", pd.Series("UNSPECIFIED", index=df.index)
+            ).astype("string"),
         })
         sub = sub.dropna(subset=["value", "event_time", "available_at"])
         if sub.empty:
@@ -153,6 +178,11 @@ def load_long(raw_dir: str = RAW_DIR) -> Loaded:
     if not frames:
         raise RuntimeError(f"[오류] {raw_dir} 에서 as-of 필드를 갖춘 parquet을 찾지 못했습니다. "
                            f"커넥터·파서를 먼저 실행하세요.")
+    if target_metadata_missing:
+        raise RuntimeError(
+            "[오류] canonical target 코드가 계약 메타데이터 없이 적재되었습니다: "
+            + "; ".join(target_metadata_missing)
+            + ". 기존 CBOT 코드를 UTC 버킷에서 재사용하지 말고 명시적 세션/정산 원천만 발행하세요.")
 
     long = pd.concat(frames, ignore_index=True)
     for col in ("event_time", "available_at"):
@@ -168,6 +198,15 @@ def load_long(raw_dir: str = RAW_DIR) -> Loaded:
     #    (A-126: WASDE가 세계표 1.44 백만MT와 미국표 3,176 백만파운드를 한 코드에 담고 있었다).
     #    ASOF JOIN은 동점을 물리적 행 순서로 조용히 해소하므로 실행마다 값이 바뀐다.
     #    자동 선택으로 덮지 말고 **실패시킨다**.
+    unit_clash = long.groupby("indicator_code")["unit"].nunique()
+    unit_clash = unit_clash[unit_clash > 1]
+    if len(unit_clash):
+        sample = ", ".join(f"{code}({int(count)}단위)"
+                           for code, count in unit_clash.head(5).items())
+        raise RuntimeError(
+            f"[오류] 동일 indicator_code에 단위가 여러 개인 지표 {len(unit_clash):,}종: {sample}. "
+            "단위별 지표코드로 분리하세요.")
+
     key = ["indicator_code", "event_time"]
     clash = long.groupby(key)["value"].nunique()
     clash = clash[clash > 1]
@@ -194,20 +233,62 @@ def load_long(raw_dir: str = RAW_DIR) -> Loaded:
     return Loaded(long=long, freq=freq.to_dict(), origin=origin, skipped=skipped)
 
 
-def build_calendar(long: pd.DataFrame, start: str, end: str) -> tuple[pd.DatetimeIndex, str | None]:
-    """목표변수의 실제 거래일을 달력으로 쓴다. 없으면 영업일로 폴백."""
+def _validate_target_rows(long: pd.DataFrame, target: str) -> pd.DatetimeIndex:
+    """타깃 계열이 거래 세션 의미 계약을 충족하는지 검증한다."""
+    rows = long.loc[long["indicator_code"] == target].copy()
+    if rows.empty:
+        raise RuntimeError(f"[오류] 목표변수 {target} 관측이 없습니다.")
+    if not rows["target_eligible"].fillna(False).all():
+        raise RuntimeError(
+            f"[오류] {target}에 target_eligible=true가 아닌 행이 있습니다. "
+            "UTC 일봉·검증 전 가격은 G1/G2 타깃으로 사용할 수 없습니다.")
+    bases = set(rows["time_basis"].dropna().astype(str).unique())
+    if not bases or not bases.issubset(TARGET_TIME_BASES):
+        raise RuntimeError(
+            f"[오류] {target} time_basis={sorted(bases) or ['UNSPECIFIED']} — "
+            f"허용값은 {sorted(TARGET_TIME_BASES)}입니다.")
+    units = set(rows["unit"].dropna().astype(str).unique())
+    if units != {"USc/lb"}:
+        raise RuntimeError(
+            f"[오류] {target} 단위={sorted(units)} — 모델 타깃은 USc/lb 단일 단위여야 합니다.")
+
+    dates = pd.to_datetime(rows["event_time"], errors="coerce").dropna().dt.normalize()
+    available = pd.to_datetime(rows["available_at"], errors="coerce")
+    event = pd.to_datetime(rows["event_time"], errors="coerce")
+    if event.isna().any() or available.isna().any():
+        raise RuntimeError(f"[오류] {target}의 event_time/available_at에 결측이 있습니다.")
+    if (available < event).any():
+        raise RuntimeError(f"[오류] {target}의 available_at이 event_time보다 이른 행이 있습니다.")
+    values = pd.to_numeric(rows["value"], errors="coerce")
+    if values.isna().any() or (values <= 0).any():
+        raise RuntimeError(f"[오류] {target}에 결측·0·음수 가격이 있습니다.")
+    weekends = dates[dates.dt.dayofweek >= 5]
+    if not weekends.empty:
+        sample = ", ".join(str(d.date()) for d in weekends.head(3))
+        raise RuntimeError(
+            f"[오류] {target}에 주말 거래일 {weekends.nunique():,}개가 있습니다(예: {sample}). "
+            "UTC 버킷을 거래소 세션 날짜로 오인했을 가능성이 있습니다.")
+    duplicated = dates.duplicated(keep=False)
+    if duplicated.any():
+        raise RuntimeError(
+            f"[오류] {target}에 세션당 2개 이상 관측 {dates[duplicated].nunique():,}일이 있습니다.")
+    return pd.DatetimeIndex(dates.drop_duplicates().sort_values())
+
+
+def build_calendar(long: pd.DataFrame, start: str, end: str) -> tuple[pd.DatetimeIndex, str]:
+    """검증된 목표변수의 실제 거래일만 달력으로 쓴다."""
     target = next((c for c in TARGET_CANDIDATES if c in set(long["indicator_code"])), None)
     lo, hi = pd.Timestamp(start), pd.Timestamp(end)
-    if target:
-        d = (long.loc[long["indicator_code"] == target, "event_time"]
-                 .drop_duplicates().sort_values())
-        cal = pd.DatetimeIndex(d[(d >= lo) & (d <= hi)])
-        if len(cal) >= 100:
-            return cal, target
-        print(f"[경고] 목표변수 {target} 관측 {len(cal)}일 — 달력으로 쓰기 부족, 영업일 폴백")
-    else:
-        print("[경고] 목표변수 미보유 — 영업일 달력으로 폴백(타깃 컬럼은 결측)")
-    return pd.DatetimeIndex(pd.bdate_range(lo, hi)), target
+    if target is None:
+        raise RuntimeError(
+            "[오류] 검증된 목표변수가 없습니다. feature mart를 생성하지 않습니다. "
+            "CBOT 거래 세션 또는 공식 settlement 계열을 먼저 적재하세요.")
+    dates = _validate_target_rows(long, target)
+    calendar = pd.DatetimeIndex(dates[(dates >= lo) & (dates <= hi)])
+    if len(calendar) < 100:
+        raise RuntimeError(
+            f"[오류] 목표변수 {target} 관측 {len(calendar):,}일 — 거래 달력으로 쓰기 부족합니다.")
+    return calendar, target
 
 
 def asof_align(long: pd.DataFrame, calendar: pd.DatetimeIndex) -> pd.DataFrame:
@@ -420,8 +501,22 @@ def main() -> int:
     contract = {
         "generated": str(date.today()),
         "window": {"start": a.start, "end": a.end, "rows": int(len(mart))},
-        "target": {"indicator": target, "horizons": TARGET_HORIZONS,
-                   "columns": sorted(targets.columns)},
+        "target": {
+            "indicator": target,
+            "horizons": TARGET_HORIZONS,
+            "columns": sorted(targets.columns),
+            "target_eligible": bool(
+                L.long.loc[L.long["indicator_code"] == target, "target_eligible"].all()
+            ),
+            "time_basis": sorted(
+                L.long.loc[L.long["indicator_code"] == target, "time_basis"]
+                .dropna().astype(str).unique().tolist()
+            ),
+            "unit": sorted(
+                L.long.loc[L.long["indicator_code"] == target, "unit"]
+                .dropna().astype(str).unique().tolist()
+            ),
+        },
         "asof_rule": "모델의 t일 입력 = available_at <= t 인 최근값 (CLAUDE.md §1)",
         "features": {
             f"feat_{c}": {

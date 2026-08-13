@@ -36,10 +36,8 @@ on:
         required: false
         default: "false"
 
-# A-083: github-actions[bot] push 403의 근본 원인 — permissions 블록 부재 시 GITHUB_TOKEN이
-# 읽기 전용으로 발급됨. Databento/GAIN 요약/customs-gw의 main 커밋에 write 필요.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # ── WBS 1.1.2: 경제 지표 히스토리 ────────────────────────────────────────────
@@ -276,8 +274,6 @@ jobs:
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'fao-amis' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -308,7 +304,6 @@ jobs:
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'databento' }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main }
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - name: Install dependencies
@@ -317,22 +312,23 @@ jobs:
         env:
           DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
           DATABENTO_START:   "2010-06-06"
-        run: python scripts/ingest_databento_bo.py
-      - name: Commit collected files to main
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/raw/Databento || true
-          git diff --cached --quiet || (git commit -m "data: Databento ZL(BO=F) 15개년 수집 (A-081)" && git push origin HEAD:main)
+          if [ -n "$DATABENTO_API_KEY" ]; then
+            python scripts/ingest_databento_bo.py
+          else
+            CSV_PATH=$(find data/raw/Databento/GLBX.MDP3 -name 'ZL_ohlcv-1d_*.csv' -type f | sort | tail -n 1)
+            test -n "$CSV_PATH" || { echo "Databento API key and captured CSV are both unavailable" >&2; exit 1; }
+            DATABENTO_FROM_CSV="$CSV_PATH" python scripts/ingest_databento_bo.py
+          fi
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: databento-bo-${{ github.run_id }}
           path: |
             data/raw/Databento/**
-            data/raw/databento_bo_historical.parquet
+            data/raw/databento_bo_utc_historical.parquet
           retention-days: 90
-          if-no-files-found: warn
+          if-no-files-found: error
 
   # ── WBS 1.1.48: 관세청 GW 확장 수집 (대체·보완재 × 확대 원산지) ────────────────
   # 업로드본과 동일 포맷(연도시트×월행×5지표)으로 품목(HS)별·국가별 xlsx 생성 (A-073)
@@ -346,8 +342,6 @@ jobs:
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs-gw' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -384,8 +378,6 @@ jobs:
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'gain-pdf' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -420,8 +412,6 @@ jobs:
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'usda-xlsx' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -603,10 +593,6 @@ jobs:
       - fao-amis-ingest
       - usda-manual-xlsx-ingest
       - gain-pdf-ingest
-      # A-128: databento-bo·customs-gw-extended가 needs에 빠져 있었다.
-      #   connector=databento 실행에서는 위 11개 잡이 전부 skip → summary가 즉시 시작 →
-      #   C-08이 **databento 잡과 병렬로** 돌며 아직 존재하지 않는 아티팩트를 다운로드
-      #   → "parquet 파일을 찾을 수 없습니다 · REJECTED". 게이트 실패의 1차 원인.
       - databento-bo
       - customs-gw-extended
     if: always()
@@ -685,7 +671,7 @@ jobs:
     name: "C-08 | DQSOps Data Quality Validation Gate"
     runs-on: ubuntu-latest
     needs: [backfill-summary]
-    if: always() && github.event.inputs.skip_analysis != 'true'
+    if: needs.backfill-summary.result == 'success' && github.event.inputs.skip_analysis != 'true'
     outputs:
       overall_status: ${{ steps.dq.outputs.overall_status || steps.dq_skip.outputs.overall_status }}
     steps:
@@ -699,33 +685,27 @@ jobs:
         with:
           path: data/raw/
           merge-multiple: true
-      - name: Compute expected artifacts for this run (A-128)
-        # A-119의 고정 목록은 connector=all 전제였다. 선택 실행(databento만 등)에서는
-        # 수동 파서 잡이 **의도적으로 skip**되므로 그 산출물 부재는 결함이 아니다.
-        # 이번 회차에 실제로 실행된 커넥터의 산출물만 필수로 요구한다.
+      - name: Compute expected artifacts for this run
         id: expected
         run: |
           case "${{ github.event.inputs.connector }}" in
-            all|"")     echo "expected=wasde_historical,psd_historical,gats_quantity_historical,te_commodities_historical" >> "$GITHUB_OUTPUT" ;;
+            all|"")     echo "expected=wasde_historical,psd_historical,gats_quantity_historical,te_commodities_historical,databento_bo_utc_historical" >> "$GITHUB_OUTPUT" ;;
             usda-xlsx)  echo "expected=wasde_historical,psd_historical,gats_quantity_historical" >> "$GITHUB_OUTPUT" ;;
-            databento)  echo "expected=databento_bo_historical" >> "$GITHUB_OUTPUT" ;;
+            databento)  echo "expected=databento_bo_utc_historical" >> "$GITHUB_OUTPUT" ;;
             fao-amis)   echo "expected=fao_amis_historical" >> "$GITHUB_OUTPUT" ;;
             gain-pdf)   echo "expected=gain_historical" >> "$GITHUB_OUTPUT" ;;
-            customs-gw) echo "expected=" >> "$GITHUB_OUTPUT" ;;   # xlsx 산출 — parquet 필수 없음
             *)          echo "expected=" >> "$GITHUB_OUTPUT" ;;
           esac
       - name: Run C-08 DQSOps validation
         id: dq
-        # parquet 산출물이 없는 회차(customs-gw는 xlsx만 생성)는 검증 대상 자체가 없다 —
-        # 빈 디렉터리 fail-closed(A-108)가 오탐으로 작동하므로 건너뛰고 SKIPPED를 남긴다.
         if: steps.expected.outputs.expected != ''
         env:
           DQ_EXPECTED: ${{ steps.expected.outputs.expected }}
         run: python src/pipeline/validators/c08_dq_validator.py
-      - name: Mark gate skipped (no parquet-producing connector in this run)
+      - name: Mark gate skipped when the selected connector has no parquet output
+        id: dq_skip
         if: steps.expected.outputs.expected == ''
         run: echo "overall_status=SKIPPED" >> "$GITHUB_OUTPUT"
-        id: dq_skip
       - name: Upload C-08 DQ report
         uses: actions/upload-artifact@v4
         with:
@@ -739,7 +719,10 @@ jobs:
     name: "C-06 | EDA Validation — Data Integrity Gate"
     runs-on: ubuntu-latest
     needs: [c08-dq-validation]
-    if: always() && github.event.inputs.skip_analysis != 'true'
+    if: >-
+      github.event.inputs.skip_analysis != 'true' &&
+      needs.c08-dq-validation.result == 'success' &&
+      needs.c08-dq-validation.outputs.overall_status == 'PASS'
     outputs:
       eda_status: ${{ steps.eda.outputs.eda_status }}
       stale_connectors: ${{ steps.eda.outputs.stale_connectors }}
@@ -839,13 +822,51 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
-  # ── G1 변수 중요도 분석 (5년 히스토리 기반 — C-06 게이트 통과 후) ────────────────
+  # ── 모델 진입 준비도 게이트: 목표가격 계약·핵심피처·as-of ───────────────────
+  model-readiness:
+    name: "Model Readiness | Target Contract & Core Features"
+    runs-on: ubuntu-latest
+    needs: [c06-eda-validation]
+    if: >-
+      github.event.inputs.skip_analysis != 'true' &&
+      needs.c06-eda-validation.result == 'success' &&
+      needs.c06-eda-validation.outputs.eda_status == 'PASS'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow duckdb pyyaml
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run model readiness gate
+        run: python scripts/data_readiness.py
+      - name: Build and independently verify feature mart
+        run: |
+          python src/features/build_feature_mart.py --self-test
+          python src/features/build_feature_mart.py
+      - name: Upload readiness evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-readiness-backfill-${{ github.run_id }}
+          path: |
+            reports/market/data_readiness_*.md
+            reports/market/feature_mart_*.md
+            data/gold/feature_mart.parquet
+            data/gold/feature_contract.yaml
+          retention-days: 90
+          if-no-files-found: error
+
+  # ── G1 변수 중요도 분석 (5년 히스토리 기반 — 준비도 게이트 통과 후) ────────────
   # 5년 데이터를 사용하므로 days=1825 (5년치 parquet 전체 로드)
   g1-analysis:
     name: "C-03 | G1 Variable Importance Analysis (5-Year Backfill Dataset)"
     runs-on: ubuntu-latest
-    needs: [c06-eda-validation]
-    if: always() && github.event.inputs.skip_analysis != 'true'
+    needs: [model-readiness]
+    if: needs.model-readiness.result == 'success'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -854,7 +875,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install -y fonts-noto-cjk libpango-1.0-0 libpangocairo-1.0-0 2>/dev/null || true
-          pip install pandas pyarrow scikit-learn statsmodels numpy weasyprint markdown2
+          pip install pandas pyarrow pyyaml scikit-learn statsmodels numpy weasyprint markdown2
       - uses: actions/download-artifact@v4
         with:
           path: data/raw/
@@ -864,29 +885,12 @@ jobs:
         # 이행기에는 ASOF_EXEMPT로 미적용 산출물을 면제할 수 있다(적용 완료 시 제거).
         env:
           ASOF_EXEMPT: ${{ vars.ASOF_EXEMPT }}
-        run: python scripts/validate_asof.py --warn
+        run: python scripts/validate_asof.py
 
       - name: Rebuild unstructured signal time series (통합 분석 입력 — Session 44)
         # 커밋된 비정형 인덱스 CSV(unstructured_index_*.csv)에서 UNSTR_* 월별 태그·톤
         # parquet을 재생성 → G1이 정형+비정형 통합 분석 (parquet은 .gitignore라 커밋 불가)
-        run: python scripts/build_unstructured_timeseries.py || true
-      - name: Build as-of feature mart (D-033 — G1/G2/G3 공통 스냅샷)
-        # API 커넥터 parquet은 아티팩트로만 존재한다(.gitignore). 전 아티팩트가 모이는
-        # 이 잡에서 mart를 조립해야 economic·climate 포함 완전한 스냅샷이 된다.
-        # 로컬 재구성은 커밋된 CSV(databento)·수동 xlsx 파서만으로 부분 조립 가능.
-        run: |
-          pip install duckdb pyyaml
-          python -m src.features.build_feature_mart || echo "[경고] mart 게이트 미충족 — 리포트 확인"
-      - name: Upload feature mart artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: feature-mart-${{ github.run_id }}
-          path: |
-            data/gold/feature_mart.parquet
-            data/gold/feature_contract.yaml
-            reports/market/feature_mart_*.md
-          retention-days: 90
-          if-no-files-found: warn
+        run: python scripts/build_unstructured_timeseries.py
       - name: Run C-03 G1 variable importance analysis (5-year window)
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -916,4 +920,4 @@ jobs:
             reports/pipeline/g1_variable_importance_*.html
             reports/pipeline/g1_variable_importance_*.pdf
           retention-days: 90
-          if-no-files-found: warn
+          if-no-files-found: error

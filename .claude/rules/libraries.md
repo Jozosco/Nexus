@@ -61,6 +61,8 @@ google-genai >= 2.0         # Gemini API (⚠ google-generativeai 지원 종료 
 snowflake-connector-python >= 3.5   # Snowflake access
 azureml-sdk >= 1.56                 # Azure ML pipeline integration
 mlflow >= 2.10                      # model tracking and registration (use over pickle)
+azure-identity >= 1.17              # OIDC / managed identity credential chain
+azure-storage-blob >= 12.20         # immutable model-ready snapshot publishing
 
 # Data Validation
 great-expectations >= 0.18  # schema and quality checks on pipeline inputs

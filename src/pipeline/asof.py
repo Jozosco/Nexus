@@ -37,8 +37,7 @@ available_at vs release_time:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timedelta
-from typing import Callable, Literal
+from typing import Literal
 
 import pandas as pd
 
@@ -111,7 +110,11 @@ TARGET_MARKET_CLOSE_ET = "14:20"   # CBOT ZL 정규장 마감 — 위 판정의 
 # ⚠️ 확인되지 않은 값은 보수적(늦은) 추정이며 note에 근거·검증 필요 여부를 남긴다.
 RELEASE_RULES: dict[str, ReleaseRule] = {
     # ── 일별 시장가격: 관측일 장 마감 후 즉시 이용 가능 ──────────────────────
-    "CBOT_BO_":  ReleaseRule("immediate", note="CME 일봉 — 당일 정산 후 공개"),
+    "CBOT_BO_UTC_": ReleaseRule(
+        "immediate", lag_days=1,
+        note="Databento ohlcv-1d UTC 버킷 — 모델 타깃 아님. UTC 일자 종료 후 이용 가능",
+    ),
+    "CBOT_BO_":  ReleaseRule("immediate", note="검증된 CME 세션/정산 계열만 사용"),
 
     # ── TE: 거래소 정산 시각이 ZL 마감(14:20 ET)보다 늦은 계열은 1일 지연 ───────
     # M-014: `"TE_": immediate` 일괄 적용은 **에너지 계열에서 장중 누수**를 만든다.
@@ -179,8 +182,10 @@ RELEASE_RULES: dict[str, ReleaseRule] = {
     # ── 무역통계 ───────────────────────────────────────────────────────────
     "CUSTOMS_":  ReleaseRule("monthly_on_day", day=15, revises=True,
                              note="관세청 월간 수출입 — 익월 15일경 잠정치. **확정치 개정 있음** → vintage 필수"),
-    "COMTRADE_": ReleaseRule("monthly_on_day", day=45 % 31 or 14, lag_days=45,
-                             note="UN Comtrade — 회원국 보고 지연으로 수개월. 보수적 45일"),
+    "COMTRADE_": ReleaseRule(
+        "lag_days", lag_days=45,
+        note="UN Comtrade — 관측 기간 종료 후 보수적으로 45일 지연. 중복 지연 금지",
+    ),
 
     # ── 기후: 재분석 자료는 지연이 본질 ────────────────────────────────────
     "ONI":       ReleaseRule("monthly_on_day", day=10, revises=True,

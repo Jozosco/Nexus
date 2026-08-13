@@ -43,17 +43,25 @@ OUT_PARQUET  = Path("data/raw/unstructured_signals_historical.parquet")
 _FAO_DATE = re.compile(r"(\d{2})년\s*(\d{1,2})월")
 
 
+def _as_bool(series: pd.Series) -> pd.Series:
+    """CSV의 'False' 문자열을 True로 오인하지 않도록 명시적으로 변환한다."""
+    if pd.api.types.is_bool_dtype(series):
+        return series.fillna(False).astype(bool)
+    return series.astype("string").str.strip().str.lower().isin({"true", "1", "yes"})
+
+
 def _records_from_gain_parquet() -> list[dict]:
     """GAIN 판독 parquet → 월별 신호 태그 카운트."""
     if not GAIN_PARQUET.exists():
         print(f"[정보] {GAIN_PARQUET} 없음 — GAIN 신호 건너뜀")
         return []
     df = pd.read_parquet(GAIN_PARQUET)
-    df = df[df["readable"] & df["signal_tags"].astype(str).str.len().gt(0)].copy()
+    tags = df["signal_tags"].fillna("").astype(str).str.strip()
+    df = df[_as_bool(df["readable"]) & tags.ne("")].copy()
     if df.empty:
         return []
     df["price_date"] = pd.to_datetime(df["price_date"]).dt.to_period("M").dt.to_timestamp()
-    df["tag"] = df["signal_tags"].astype(str).str.split(",")
+    df["tag"] = df["signal_tags"].fillna("").astype(str).str.split(",")
     long = df.explode("tag")
     long["tag"] = long["tag"].str.strip()
     long = long[long["tag"].str.len() > 0]
@@ -89,7 +97,9 @@ def _records_from_index(target: str, idx_path: Path, source_name: str) -> list[d
     if not needed.issubset(df.columns):
         print(f"[경고] {idx_path} 컬럼 불일치 — 건너뜀 (필요: {sorted(needed)})")
         return []
-    df = df[df["readable"].astype(bool)].copy()
+    df = df[_as_bool(df["readable"])].copy()
+    df["bull"] = pd.to_numeric(df["bull"], errors="coerce").fillna(0)
+    df["bear"] = pd.to_numeric(df["bear"], errors="coerce").fillna(0)
     df["price_date"] = [
         _month_from_index_row(target, str(p), str(f)) for p, f in zip(df["path"], df["file"])
     ]
@@ -99,9 +109,10 @@ def _records_from_index(target: str, idx_path: Path, source_name: str) -> list[d
 
     recs: list[dict] = []
     # ① 신호 태그 카운트 ('|' 구분)
-    sig = df[df["signals"].astype(str).str.len().gt(0)].copy()
+    signals = df["signals"].fillna("").astype(str).str.strip()
+    sig = df[signals.ne("")].copy()
     if not sig.empty:
-        sig["tag"] = sig["signals"].astype(str).str.split("|")
+        sig["tag"] = sig["signals"].fillna("").astype(str).str.split("|")
         long = sig.explode("tag")
         long["tag"] = long["tag"].str.strip()
         long = long[long["tag"].str.len() > 0]

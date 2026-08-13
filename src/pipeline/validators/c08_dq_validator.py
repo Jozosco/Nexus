@@ -45,7 +45,7 @@ EXPECTED_ARTIFACTS: list[tuple[str, bool]] = [
     ("gats_quantity_historical", False),
     ("te_commodities_historical", False),
     ("customs_gw_historical", True),      # API 키 상태에 따라 결번 가능
-    ("databento_bo_historical", True),    # 유료 종량제 — 회차별 선택 실행
+    ("databento_bo_utc_historical", True),  # UTC 버킷 진단용 — 모델 타깃 아님
     ("nasa_power_agroclimatology_historical", True),
     ("ice_monthly_volumes", True),
     ("unstructured_signals_historical", True),
@@ -73,7 +73,12 @@ REQUIRED_COLUMNS: dict[str, list[str]] = {
     "production_data":      ["price_date"],
     "commodity_data":       ["price_date"],
     "customs_import":       ["price_date"],
+    "databento_bo_utc_historical": [
+        "price_date", "indicator_code", "value", "time_basis", "target_eligible"
+    ],
 }
+TARGET_CODES = {"CBOT_BO_CLOSE", "CBOT_SBO_FUTURES"}
+TARGET_TIME_BASES = {"CME_SESSION", "EXCHANGE_SETTLEMENT"}
 
 # 수치 컬럼 유효 범위 (정확도 검증용)
 VALID_RANGES: dict[str, tuple[float, float]] = {
@@ -94,7 +99,7 @@ def _score_accuracy(df: pd.DataFrame, connector_name: str) -> float:
                수치 컬럼이 없으면 1.0 반환.
     """
     if df.empty:
-        return 1.0
+        return 0.0
 
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     if not numeric_cols:
@@ -126,7 +131,7 @@ def _score_completeness(df: pd.DataFrame) -> float:
         float: 0.0~1.0 범위의 완전성 점수.
     """
     if df.empty:
-        return 1.0
+        return 0.0
 
     total_cells = df.shape[0] * df.shape[1]
     if total_cells == 0:
@@ -157,23 +162,29 @@ def _score_consistency(df: pd.DataFrame, connector_name: str) -> float:
         float: 0.0~1.0 범위의 일관성 점수.
     """
     if df.empty:
-        return 1.0
+        return 0.0
 
     # 하위 검사 1: 필수 컬럼 존재 여부
     required = REQUIRED_COLUMNS.get(connector_name, ["price_date"])
     missing_cols = [c for c in required if c not in df.columns]
     schema_score = 1.0 - (len(missing_cols) / max(len(required), 1))
 
-    # 하위 검사 2: price_date 단조 증가 (역방향 점프 > 365일 없음)
+    # 하위 검사 2: 원래 입력 순서에서 지표별 price_date 단조 증가
     date_score = 1.0
     if "price_date" in df.columns:
         try:
-            dates = pd.to_datetime(df["price_date"], errors="coerce").dropna().sort_values()
-            if len(dates) > 1:
+            groups = (df.groupby("indicator_code", sort=False)
+                      if "indicator_code" in df.columns else [(connector_name, df)])
+            violations = 0
+            comparisons = 0
+            for _, group in groups:
+                dates = pd.to_datetime(group["price_date"], errors="coerce").dropna()
+                if len(dates) <= 1:
+                    continue
                 diffs = dates.diff().dropna()
-                # 365일 초과 역방향 점프(음수 차이)를 위반으로 판정
-                violations = int((diffs < timedelta(days=-365)).sum())
-                date_score = 1.0 - (violations / max(len(diffs), 1))
+                violations += int((diffs < timedelta(0)).sum())
+                comparisons += len(diffs)
+            date_score = 1.0 - (violations / max(comparisons, 1))
         except Exception:
             date_score = 0.5  # 날짜 파싱 실패 시 중간 점수
 
@@ -224,7 +235,7 @@ def _score_skewness(df: pd.DataFrame) -> float:
         float: 1.0 - (이상 컬럼 수 / 전체 수치 컬럼 수).
     """
     if df.empty:
-        return 1.0
+        return 0.0
 
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     if not numeric_cols:
@@ -249,6 +260,52 @@ def _score_skewness(df: pd.DataFrame) -> float:
     return max(0.0, float(score))
 
 
+def _connector_name(stem: str) -> str:
+    """등록된 파일 접두사 중 가장 긴 이름을 커넥터명으로 선택한다."""
+    known = set(REQUIRED_COLUMNS) | {prefix for prefix, _ in EXPECTED_ARTIFACTS}
+    return next((prefix for prefix in sorted(known, key=len, reverse=True)
+                 if stem.startswith(prefix)), stem)
+
+
+def _target_contract_alerts(df: pd.DataFrame) -> list[str]:
+    """모델 타깃이 거래 세션 의미 계약을 위반하면 차단 사유를 반환한다."""
+    if "indicator_code" not in df.columns:
+        return []
+    target = df[df["indicator_code"].astype(str).isin(TARGET_CODES)].copy()
+    if target.empty:
+        return []
+    alerts: list[str] = []
+    required = ["target_eligible", "time_basis", "available_at", "event_time", "unit"]
+    missing = [column for column in required if column not in target.columns]
+    if missing:
+        return [f"[오류] 타깃 계약 필드 누락: {missing}"]
+    eligible = target["target_eligible"]
+    if not pd.api.types.is_bool_dtype(eligible):
+        eligible = eligible.astype("string").str.lower().isin({"true", "1", "yes"})
+    if not eligible.fillna(False).all():
+        alerts.append("[오류] target_eligible=false인 목표가격 행 존재")
+    bases = set(target["time_basis"].dropna().astype(str).unique())
+    if not bases or not bases.issubset(TARGET_TIME_BASES):
+        alerts.append(f"[오류] 허용되지 않은 목표가격 time_basis: {sorted(bases)}")
+    dates = pd.to_datetime(target["price_date"], errors="coerce")
+    if dates.isna().any():
+        alerts.append("[오류] 목표가격 날짜 파싱 실패")
+    elif (dates.dt.dayofweek >= 5).any():
+        alerts.append("[오류] 목표가격에 주말 날짜 존재 — UTC 버킷 가능성")
+    if dates.dropna().duplicated().any():
+        alerts.append("[오류] 목표가격 세션당 복수 관측 존재")
+    values = pd.to_numeric(target["value"], errors="coerce")
+    if values.isna().any() or not values.gt(0).all():
+        alerts.append("[오류] 목표가격에 결측 또는 0 이하 값 존재")
+    if set(target["unit"].dropna().astype(str).unique()) != {"USc/lb"}:
+        alerts.append("[오류] 목표가격 단위는 USc/lb 단일값이어야 함")
+    available = pd.to_datetime(target["available_at"], utc=True, errors="coerce")
+    event = pd.to_datetime(target["event_time"], utc=True, errors="coerce")
+    if available.isna().any() or event.isna().any() or (available < event).any():
+        alerts.append("[오류] 목표가격 as-of 필드 결측 또는 역전")
+    return alerts
+
+
 def _validate_connector(f: str) -> dict[str, Any]:
     """단일 parquet 파일에 대해 DQSOps 5차원 검증을 실행하고 결과를 반환한다.
 
@@ -259,8 +316,7 @@ def _validate_connector(f: str) -> dict[str, Any]:
         dict: 커넥터별 검증 결과 (상태, DQ 점수, 차원별 점수, 알림 목록 포함).
     """
     stem = Path(f).stem
-    # 파일명에서 커넥터 이름 추출 (첫 번째 '_' 이전 또는 전체 스템)
-    connector_name = stem.split("_")[0] if "_" in stem else stem
+    connector_name = _connector_name(stem)
 
     alerts: list[str] = []
 
@@ -280,6 +336,7 @@ def _validate_connector(f: str) -> dict[str, Any]:
         }
 
     rows = len(df)
+    target_alerts = _target_contract_alerts(df)
 
     # ── 차원별 점수 계산 ───────────────────────────────────────────────────────
     acc  = _score_accuracy(df, connector_name)
@@ -299,7 +356,9 @@ def _validate_connector(f: str) -> dict[str, Any]:
     dq_score = sum(DQ_WEIGHTS[k] * dimensions[k] for k in DQ_WEIGHTS)
 
     # ── 상태 판정 ──────────────────────────────────────────────────────────────
-    if dq_score >= DQ_THRESHOLD:
+    if rows == 0 or target_alerts:
+        status = "REJECTED"
+    elif dq_score >= DQ_THRESHOLD:
         status = "PASS"
     elif dq_score >= DQ_WARN:
         status = "WARNING"
@@ -308,6 +367,10 @@ def _validate_connector(f: str) -> dict[str, Any]:
 
     # ── 중복 행 수 ─────────────────────────────────────────────────────────────
     duplicate_rows = int(df.duplicated().sum())
+
+    if rows == 0:
+        alerts.append(f"[오류] 빈 parquet — 커넥터 '{connector_name}' 산출물 0행")
+    alerts.extend(target_alerts)
 
     # ── 알림 생성 ──────────────────────────────────────────────────────────────
     # Timeliness: STALE 경고
@@ -349,9 +412,12 @@ def _validate_connector(f: str) -> dict[str, Any]:
 
     # REJECTED 경우 명시적 오류 메시지
     if status == "REJECTED":
+        reason = ("빈 파일 또는 목표가격 하드 계약 위반"
+                  if rows == 0 or target_alerts
+                  else f"DQ 점수 {dq_score:.3f} < 임계값 {DQ_WARN}")
         alerts.append(
             f"[오류] 데이터 품질 검증 실패 — 커넥터 '{connector_name}': "
-            f"DQ 점수 {dq_score:.3f} < 임계값 {DQ_WARN}. 파이프라인을 중단합니다."
+            f"{reason}. 파이프라인을 중단합니다."
         )
 
     return {
@@ -539,7 +605,7 @@ def _set_github_output(overall_status: str) -> None:
         print(f"[정보] GITHUB_OUTPUT 미설정 — overall_status={overall_status}")
 
     # A-108(이식성): 게이트 결과를 Actions 전용 채널에만 싣지 않는다.
-    # Apache Hop·Snowflake 등 다른 오케스트레이터도 읽을 수 있게 파일로도 남긴다.
+    # 다른 승인된 오케스트레이터도 읽을 수 있게 파일로도 남긴다.
     try:
         Path(REPORT_DIR).mkdir(parents=True, exist_ok=True)
         (Path(REPORT_DIR) / "dq_overall_status.txt").write_text(

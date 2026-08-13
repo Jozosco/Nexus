@@ -1,0 +1,47 @@
+name: Pull Request Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "scripts/**"
+      - "src/**"
+      - "tests/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  milestone-gates:
+    name: "G1/G2 Preview | Static & Synthetic Gates"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install validation dependencies
+        run: pip install pytest pandas numpy pyarrow duckdb pyyaml scikit-learn statsmodels ruff
+      - name: Compile Python modules
+        run: python -m compileall -q scripts src tests
+      - name: Parse workflow YAML
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          for path in sorted(Path(".github/workflows").glob("*.yml")):
+              with path.open(encoding="utf-8") as stream:
+                  yaml.safe_load(stream)
+              print(f"[통과] {path}")
+          PY
+      - name: Check fatal Python defects
+        run: ruff check scripts src tests --select F,E9
+      - name: Run synthetic milestone gates
+        run: pytest tests/test_milestone_gates.py -q --disable-warnings

@@ -418,7 +418,9 @@ jobs:
     name: "C-06 | EDA Validation — Data Integrity Gate"
     runs-on: ubuntu-latest
     needs: [c08-dq-validation]
-    if: always()
+    if: >-
+      needs.c08-dq-validation.result == 'success' &&
+      needs.c08-dq-validation.outputs.overall_status == 'PASS'
     outputs:
       eda_status: ${{ steps.eda.outputs.eda_status }}
       stale_connectors: ${{ steps.eda.outputs.stale_connectors }}
@@ -514,6 +516,44 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
+  # ── 모델 진입 준비도 게이트: 목표가격 계약·핵심피처·as-of ───────────────────
+  model-readiness:
+    name: "Model Readiness | Target Contract & Core Features"
+    runs-on: ubuntu-latest
+    needs: [c06-eda-validation]
+    if: >-
+      (github.event.inputs.connector == 'all' || github.event_name == 'schedule') &&
+      needs.c06-eda-validation.result == 'success' &&
+      needs.c06-eda-validation.outputs.eda_status == 'PASS'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow duckdb pyyaml
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/raw/
+          merge-multiple: true
+      - name: Run model readiness gate
+        run: python scripts/data_readiness.py
+      - name: Build and independently verify feature mart
+        run: |
+          python src/features/build_feature_mart.py --self-test
+          python src/features/build_feature_mart.py
+      - name: Upload readiness evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-readiness-${{ github.run_id }}
+          path: |
+            reports/market/data_readiness_*.md
+            reports/market/feature_mart_*.md
+            data/gold/feature_mart.parquet
+            data/gold/feature_contract.yaml
+          retention-days: 30
+          if-no-files-found: error
+
   # ── WBS 1.1.8+: C-03 G1 변수 중요도 분석 ───────────────────────────────────
   # C-03 Lead Data Scientist (Claude Opus 4.7 Thinking Mode) — Phase A 기초 분석
   # 입력: c06-eda-validation 통과 후 data/raw/*.parquet (최근 7일)
@@ -522,8 +562,8 @@ jobs:
   g1-analysis:
     name: "C-03 | G1 Variable Importance Analysis (P1-01~04 통합)"
     runs-on: ubuntu-latest
-    needs: [c06-eda-validation]
-    if: always()
+    needs: [model-readiness]
+    if: needs.model-readiness.result == 'success'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -532,7 +572,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install -y fonts-noto-cjk libpango-1.0-0 libpangocairo-1.0-0 2>/dev/null || true
-          pip install pandas pyarrow scikit-learn statsmodels numpy weasyprint markdown2
+          pip install pandas pyarrow pyyaml scikit-learn statsmodels numpy weasyprint markdown2
       - uses: actions/download-artifact@v4
         with:
           path: data/raw/
@@ -542,11 +582,11 @@ jobs:
         # 이행기에는 ASOF_EXEMPT로 미적용 산출물을 면제할 수 있다(적용 완료 시 제거).
         env:
           ASOF_EXEMPT: ${{ vars.ASOF_EXEMPT }}
-        run: python scripts/validate_asof.py --warn
+        run: python scripts/validate_asof.py
 
       - name: Rebuild unstructured signal time series (통합 분석 입력 — Session 44)
         # 커밋된 비정형 인덱스 CSV에서 UNSTR_* parquet 재생성 → 정형+비정형 통합 분석
-        run: python scripts/build_unstructured_timeseries.py || true
+        run: python scripts/build_unstructured_timeseries.py
       - name: Run C-03 G1 variable importance analysis
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -571,14 +611,16 @@ jobs:
             reports/pipeline/g1_variable_importance_*.pdf
             reports/pipeline/g1_variable_importance_*.md
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: error
 
   # ── WBS 1.1.19: pytest 데이터 품질 테스트 (C-08 검증 후 실행) ────────────────────
   pipeline-tests:
     name: "C-08 | pytest Pipeline Quality Tests (WBS 1.1.19)"
     runs-on: ubuntu-latest
     needs: [c08-dq-validation]
-    if: always()
+    if: >-
+      needs.c08-dq-validation.result == 'success' &&
+      needs.c08-dq-validation.outputs.overall_status == 'PASS'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -592,7 +634,6 @@ jobs:
           merge-multiple: true
       - name: Run pipeline quality tests
         run: pytest tests/test_pipeline_quality.py -v --tb=short
-        continue-on-error: true   # 테스트 실패 시 경고만 — 파이프라인 차단 없음
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
@@ -736,4 +777,3 @@ jobs:
   #         SNOWFLAKE_DATABASE:  ${{ secrets.SNOWFLAKE_DATABASE }}
   #         SNOWFLAKE_SCHEMA:    ${{ secrets.SNOWFLAKE_SCHEMA }}
   #       run: python src/pipeline/snowflake_loader.py
-

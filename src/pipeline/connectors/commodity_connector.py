@@ -13,8 +13,6 @@ from __future__ import annotations
 import os
 import time
 from datetime import date, timedelta
-from typing import Optional
-
 import httpx
 import pandas as pd
 
