@@ -67,16 +67,24 @@ START_YEAR = int(os.environ.get("HISTORICAL_START_YEAR", "2010"))
 END_YEAR   = int(os.environ.get("HISTORICAL_END_YEAR", "2026"))
 
 # 품목 → (폴더명, HS코드) — session37 §4 확정(대체재·보완재)
+# A-120: 관세청 hsSgn은 **6자리**를 요구한다(A-043). 아래 3건이 4자리(1511·2304·3826)라
+#   조회가 어긋날 수 있었다 → 전 항목 6자리로 통일하고, 커넥터(customs_connector.py)의
+#   HS_CODES_SUBSTITUTES/COMPLEMENTS와 **동일 집합**으로 맞춘다(두 경로 정합).
 COMMODITIES: list[tuple[str, str]] = [
-    ("Palm Oil (1511)",            "1511"),
+    ("Palm Oil (1511.10)",         "151110"),
+    ("Palm Oil (1511.90)",         "151190"),
     ("Sunflower Oil (1512.11)",    "151211"),
     ("Sunflower Oil (1512.19)",    "151219"),
     ("Rapeseed Oil (1514.11)",     "151411"),
     ("Rapeseed Oil (1514.19)",     "151419"),
     ("Palm Kernel Oil (1513.21)",  "151321"),
+    ("Palm Kernel Oil (1513.29)",  "151329"),
+    ("Corn Oil (1515.21)",         "151521"),
+    ("Corn Oil (1515.29)",         "151529"),
+    ("Other Veg Oils (1515.90)",   "151590"),   # 포도씨유 포함 바스켓
     ("Soybean (1201.90)",          "120190"),
-    ("Soybean Meal (2304)",        "2304"),
-    ("Biodiesel (3826)",           "3826"),
+    ("Soybean Meal (2304.00)",     "230400"),
+    ("Biodiesel (3826.00)",        "382600"),
 ]
 
 # 국가코드 → 파일명(기존 업로드본 표기 준수: U.S.A / Argentina …)

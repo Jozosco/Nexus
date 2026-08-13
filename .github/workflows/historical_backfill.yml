@@ -695,6 +695,9 @@ jobs:
           merge-multiple: true
       - name: Run C-08 DQSOps validation
         id: dq
+        env:
+          # A-119: Historical은 수동 업로드 파서 산출물을 필수로 본다
+          DQ_EXPECTED: "wasde_historical,psd_historical,gats_quantity_historical,te_commodities_historical"
         run: python src/pipeline/validators/c08_dq_validator.py
       - name: Upload C-08 DQ report
         uses: actions/upload-artifact@v4
