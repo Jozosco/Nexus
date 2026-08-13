@@ -6,11 +6,11 @@
 #   이미 확보된 히스토리는 제외하고 필요한 커넥터만 지정 권장
 #   예: connector=databento,economic,climate,shipping
 
-connector=databento,shipping,gpr,production,commodity,customs
+connector=all
 include_api=true
 start_year=2010
 end_year=2026
-skip_analysis=true
+skip_analysis=false
 
 # 실행 이력
 # 2026-08-13 조정자 위임 실행 — A-138~A-145 수정 반영 확인 목적
@@ -19,3 +19,4 @@ skip_analysis=true
 # 2026-08-13 A-147~A-155 수정 반영 — GPR xlrd · FAS ESR 인증 3방식 · NASA POWER
 #   YYYY 형식 · TE 심볼 자기발견 · ZL=F 승격 · 관세청 XML 파싱 · 런처 다중 커넥터
 #   2026-08-13(2차) A-147~A-156 수정 검증 — 실패 커넥터 6종만 재실행(확보분 제외·분석 생략)
+#   2026-08-13(3차) 통합 실행 — 조정자 지시. CBOT_BO_CLOSE 발행분 포함 전체 수집+분석(mart·G1)

@@ -13,9 +13,11 @@ on:
   #   재개하려면 아래 schedule 블록의 주석을 해제할 것.
   #   ※ GitHub는 기본 브랜치(main) 사본의 schedule만 실행하므로, 실제 중단은
   #     이 변경이 main에 병합된 뒤 적용됨.
-  # schedule:
-  #   # 스케줄: 일~목 20:30 UTC = KST 월~금 05:30, 시장 개장 45분 전
-  #   - cron: "30 20 * * 0-4"
+  # A-162: 조정자 지시(8/13 — 부재기간 주기 수집)로 일별 스케줄 재개.
+  #   Session 30의 일시중단 사유(수집 오류 미해소)는 A-138~A-161로 해소됨.
+  schedule:
+    # 일~목 20:30 UTC = KST 월~금 05:30, 시장 개장 45분 전
+    - cron: "30 20 * * 0-4"
   workflow_dispatch:
     # 스케줄 실행: 모든 커넥터 자동 실행 (connector 입력값 무시 — github.event_name == 'schedule' 조건 적용)
     # 수동 실행: connector 선택 가능 (기본값: all). 특정 커넥터만 재실행할 때 사용.
