@@ -603,6 +603,12 @@ jobs:
       - fao-amis-ingest
       - usda-manual-xlsx-ingest
       - gain-pdf-ingest
+      # A-128: databento-bo·customs-gw-extended가 needs에 빠져 있었다.
+      #   connector=databento 실행에서는 위 11개 잡이 전부 skip → summary가 즉시 시작 →
+      #   C-08이 **databento 잡과 병렬로** 돌며 아직 존재하지 않는 아티팩트를 다운로드
+      #   → "parquet 파일을 찾을 수 없습니다 · REJECTED". 게이트 실패의 1차 원인.
+      - databento-bo
+      - customs-gw-extended
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -681,7 +687,7 @@ jobs:
     needs: [backfill-summary]
     if: always() && github.event.inputs.skip_analysis != 'true'
     outputs:
-      overall_status: ${{ steps.dq.outputs.overall_status }}
+      overall_status: ${{ steps.dq.outputs.overall_status || steps.dq_skip.outputs.overall_status }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -693,12 +699,33 @@ jobs:
         with:
           path: data/raw/
           merge-multiple: true
+      - name: Compute expected artifacts for this run (A-128)
+        # A-119의 고정 목록은 connector=all 전제였다. 선택 실행(databento만 등)에서는
+        # 수동 파서 잡이 **의도적으로 skip**되므로 그 산출물 부재는 결함이 아니다.
+        # 이번 회차에 실제로 실행된 커넥터의 산출물만 필수로 요구한다.
+        id: expected
+        run: |
+          case "${{ github.event.inputs.connector }}" in
+            all|"")     echo "expected=wasde_historical,psd_historical,gats_quantity_historical,te_commodities_historical" >> "$GITHUB_OUTPUT" ;;
+            usda-xlsx)  echo "expected=wasde_historical,psd_historical,gats_quantity_historical" >> "$GITHUB_OUTPUT" ;;
+            databento)  echo "expected=databento_bo_historical" >> "$GITHUB_OUTPUT" ;;
+            fao-amis)   echo "expected=fao_amis_historical" >> "$GITHUB_OUTPUT" ;;
+            gain-pdf)   echo "expected=gain_historical" >> "$GITHUB_OUTPUT" ;;
+            customs-gw) echo "expected=" >> "$GITHUB_OUTPUT" ;;   # xlsx 산출 — parquet 필수 없음
+            *)          echo "expected=" >> "$GITHUB_OUTPUT" ;;
+          esac
       - name: Run C-08 DQSOps validation
         id: dq
+        # parquet 산출물이 없는 회차(customs-gw는 xlsx만 생성)는 검증 대상 자체가 없다 —
+        # 빈 디렉터리 fail-closed(A-108)가 오탐으로 작동하므로 건너뛰고 SKIPPED를 남긴다.
+        if: steps.expected.outputs.expected != ''
         env:
-          # A-119: Historical은 수동 업로드 파서 산출물을 필수로 본다
-          DQ_EXPECTED: "wasde_historical,psd_historical,gats_quantity_historical,te_commodities_historical"
+          DQ_EXPECTED: ${{ steps.expected.outputs.expected }}
         run: python src/pipeline/validators/c08_dq_validator.py
+      - name: Mark gate skipped (no parquet-producing connector in this run)
+        if: steps.expected.outputs.expected == ''
+        run: echo "overall_status=SKIPPED" >> "$GITHUB_OUTPUT"
+        id: dq_skip
       - name: Upload C-08 DQ report
         uses: actions/upload-artifact@v4
         with:
@@ -843,6 +870,23 @@ jobs:
         # 커밋된 비정형 인덱스 CSV(unstructured_index_*.csv)에서 UNSTR_* 월별 태그·톤
         # parquet을 재생성 → G1이 정형+비정형 통합 분석 (parquet은 .gitignore라 커밋 불가)
         run: python scripts/build_unstructured_timeseries.py || true
+      - name: Build as-of feature mart (D-033 — G1/G2/G3 공통 스냅샷)
+        # API 커넥터 parquet은 아티팩트로만 존재한다(.gitignore). 전 아티팩트가 모이는
+        # 이 잡에서 mart를 조립해야 economic·climate 포함 완전한 스냅샷이 된다.
+        # 로컬 재구성은 커밋된 CSV(databento)·수동 xlsx 파서만으로 부분 조립 가능.
+        run: |
+          pip install duckdb pyyaml
+          python -m src.features.build_feature_mart || echo "[경고] mart 게이트 미충족 — 리포트 확인"
+      - name: Upload feature mart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-mart-${{ github.run_id }}
+          path: |
+            data/gold/feature_mart.parquet
+            data/gold/feature_contract.yaml
+            reports/market/feature_mart_*.md
+          retention-days: 90
+          if-no-files-found: warn
       - name: Run C-03 G1 variable importance analysis (5-year window)
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}

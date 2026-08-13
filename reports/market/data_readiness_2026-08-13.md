@@ -1,7 +1,7 @@
 # 데이터 준비도 감사 — 2026-08-13
 
 **분석창**: 2010-01-01 ~ 2025-12-31 (192개월, M-008)
-**보유 지표 수**: 432종
+**보유 지표 수**: 438종
 
 > 이 문서는 추정이 아니라 **실제 parquet을 열어 확인한 사실**이다.
 
@@ -9,8 +9,8 @@
 
 | 요건 | 상태 | 지표코드 | 관측 개월 | 커버리지 | as-of | 조달 경로 |
 |---|---|---|---|---|---|---|
-| 목표변수 — CBOT 대두유 선물 종가 | 🚨 **미보유** | — | — | — | — | Historical Analysis Pipeline · connector=databento |
-| ① CBOT 대두유 선물 | 🚨 **미보유** | — | — | — | — | Historical · connector=databento |
+| 목표변수 — CBOT 대두유 선물 종가 | ✅ | `CBOT_BO_CLOSE` | 187/192 | 97% | ✅ | databento_bo_historical.parquet |
+| ① CBOT 대두유 선물 | ✅ | `CBOT_BO_CLOSE` | 187/192 | 97% | ✅ | databento_bo_historical.parquet |
 | ② CPO(팜유) — CPO–SBO 스프레드 재료 | ✅ | `TE_PALM_OIL` | 192/192 | 100% | ✅ | te_commodities_historical.parquet |
 | ③ WASDE 대두유 재고사용비율 | ✅ | `WASDE_SBO_STU` | 186/192 | 97% | ✅ | wasde_historical.parquet |
 | ④ BDI 해운지수 | ✅ | `TE_BDI` | 192/192 | 100% | ✅ | te_commodities_historical.parquet |
@@ -21,13 +21,11 @@
 
 ## 2. 판정
 
-🚨 **모델 착수 불가 — 미충족 4건**
+🚨 **모델 착수 불가 — 미충족 2건**
 
 c03 스펙 §6 모델 진입 게이트는 목표가격 ≥98%·핵심 피처 커버리지 ≥85%를 요구한다.
 아래가 해소되기 전 G1 동인분석·G2 가격밴드는 **의미 있는 결과를 낼 수 없다**.
 
-- 목표변수 — CBOT 대두유 선물 종가 → Historical Analysis Pipeline · connector=databento
-- ① CBOT 대두유 선물 → Historical · connector=databento
 - ⑤ FX BRL/USD → Data Integration · connector=economic
 - ⑥ ENSO ONI → Data Integration · connector=climate
 
@@ -54,12 +52,12 @@ c03 스펙 §6 모델 진입 게이트는 목표가격 ≥98%·핵심 피처 커
 | `TE_NAPHTHA` | 4,146 | 2010-01-04~2026-07-01 | 192 | ✅ |
 | `TE_COAL` | 4,099 | 2010-01-01~2026-07-01 | 192 | ✅ |
 | `TE_CANOLA` | 4,085 | 2010-01-04~2026-07-01 | 192 | ✅ |
-| `TE_PALM_OIL` | 4,062 | 2010-01-04~2026-07-01 | 192 | ✅ |
-| `TE_EU_NATURAL_GAS` | 3,868 | 2010-03-12~2026-07-01 | 190 | ✅ |
-| `TE_SUNFLOWER_OIL` | 3,641 | 2012-05-25~2026-07-01 | 164 | ✅ |
-| `TE_CONTAINERIZED_FREIGHT_INDEX` | 3,338 | 2013-09-06~2026-07-01 | 148 | ✅ |
-| `TE_DI_AMMONIUM` | 1,745 | 2019-06-07~2026-07-01 | 79 | ✅ |
-| `TE_UREA` | 1,675 | 2019-06-07~2026-07-01 | 78 | ✅ |
+| `CBOT_BO_CLOSE` | 4,062 | 2010-06-07~2026-08-10 | 187 | ✅ |
+| `CBOT_BO_HIGH` | 4,062 | 2010-06-07~2026-08-10 | 187 | ✅ |
+| `CBOT_BO_LOW` | 4,062 | 2010-06-07~2026-08-10 | 187 | ✅ |
+| `CBOT_BO_OPEN` | 4,062 | 2010-06-07~2026-08-10 | 187 | ✅ |
+| `CBOT_BO_ROLLDAY` | 4,062 | 2010-06-07~2026-08-10 | 187 | ✅ |
+| `CBOT_BO_VOLUME` | 4,062 | 2010-06-07~2026-08-10 | 187 | ✅ |
 
 ## 4. as-of 미충족 지표
 

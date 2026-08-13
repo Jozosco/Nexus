@@ -174,7 +174,38 @@ def _assert_date_range(df: pd.DataFrame, start: str, end: str) -> None:
     print(f"[검증] 기간 정합 OK: {lo.date()} ~ {hi.date()}")
 
 
+def _load_from_csv(csv_path: str) -> pd.DataFrame | None:
+    """A-128: Actions가 커밋한 CSV에서 parquet을 재생성하는 오프라인 경로.
+
+    왜 필요한가: parquet은 .gitignore 대상이라 **Actions 아티팩트로만** 존재한다.
+    반면 CSV·XLSX는 main에 커밋된다. 개발 샌드박스는 Databento API에 접근할 수 없으므로
+    (외부 프록시 차단), 커밋된 CSV가 로컬에서 목표변수를 재구성하는 유일한 경로다.
+    API 재호출(유료 종량제) 없이 같은 산출물을 만든다.
+    """
+    p = Path(csv_path)
+    if not p.exists():
+        print(f"[오류] CSV 없음: {p}")
+        return None
+    df = pd.read_csv(p)
+    df["price_date"] = pd.to_datetime(df["price_date"], errors="coerce")
+    bad = int(df["price_date"].isna().sum()) + int((df["price_date"].dt.year < 2000).sum())
+    if bad:
+        print(f"[오류] CSV 날짜 파손 {bad}행(1970 오염 등) — .BROKEN 산출물 여부 확인")
+        return None
+    return df
+
+
 def run() -> None:
+    # 오프라인 재구성 모드 — DATABENTO_FROM_CSV=<경로>
+    from_csv = os.environ.get("DATABENTO_FROM_CSV", "").strip()
+    if from_csv:
+        df = _load_from_csv(from_csv)
+        if df is None:
+            return
+        end = str(df["price_date"].max().date())
+        _postprocess_and_save(df, end)
+        return
+
     key = os.environ.get("DATABENTO_API_KEY", "").strip()
     if not key:
         print("[오류] DATABENTO_API_KEY 미등록 — GitHub Secrets 확인 필요")
@@ -218,7 +249,11 @@ def run() -> None:
         print(f"[경고] 미수집 연도: {', '.join(failed)} — 수집분만 저장하고 재실행 시 보완")
 
     df = _normalize(pd.concat(parts, ignore_index=True))
+    _postprocess_and_save(df, end)
 
+
+def _postprocess_and_save(df: pd.DataFrame, end: str) -> None:
+    """검증 → 중복 해소 → CSV/XLSX/parquet 저장. API·CSV 재구성 양쪽 공용 (A-128)."""
     # A-111(F8): ZL.c.0 연속 심볼은 롤 시점에 같은 날짜로 만기·신규 계약 2행이 올 수 있다.
     # 무조건 drop_duplicates하면 **가격이 다른 두 계약 중 하나를 근거 없이 선택**하게 되고,
     # 그 임의 선택이 G2 타깃 시계열에 계약 전환 점프로 주입된다(연 12회 × 16년 ≈ 190회).
@@ -277,6 +312,21 @@ def run() -> None:
         sub["indicator_code"] = f"CBOT_BO_{col.upper()}"
         sub["unit"] = "USc/lb" if col != "volume" else "contracts"
         recs.append(sub)
+
+    # A-128(S4): ZL.c.0은 **무조정 연속물**이라 롤일의 전일 대비 수익률은 시장 움직임이
+    # 아니라 계약 간 스프레드다(롤 129회 · 롤일 평균 |변동| 1.96% vs 평시 1.13%).
+    # 구 parquet은 instrument_id를 버려 소비 측이 롤일을 식별할 수 없었다.
+    # 롤일 플래그를 지표로 내보내 G1/G2가 롤 구간 수익률을 분리 처리하게 한다.
+    if "instrument_id" in df.columns:
+        seq = df.sort_values("price_date")
+        roll = (seq["instrument_id"] != seq["instrument_id"].shift()).fillna(False)
+        roll.iloc[0] = False                      # 첫 행은 롤이 아니라 시계열 시작
+        flag = pd.DataFrame({"price_date": seq["price_date"],
+                             "value": roll.astype(float)})
+        flag["indicator_code"] = "CBOT_BO_ROLLDAY"
+        flag["unit"] = "flag"
+        recs.append(flag)
+        print(f"[정보] 롤일 플래그 생성: {int(roll.sum())}회 계약 전환 표시 (CBOT_BO_ROLLDAY)")
     out = pd.concat(recs, ignore_index=True)
     out["source_name"] = "Databento/GLBX.MDP3/ZL"
     out["ingested_at"] = pd.Timestamp.now("UTC")

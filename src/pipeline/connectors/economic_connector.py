@@ -310,6 +310,10 @@ def run(start_date: str | None = None, end_date: str | None = None) -> None:
         _safe(fetch_eia_brent,   start, end, label="EIA Brent"),
         # ── 환율 (원산지·결제통화) ─────────────────────────────────────────────
         _safe(fetch_bok_krw_usd, start, end, label="BOK ECOS KRW/USD"),
+        # A-129: BOK ECOS ERROR-100이 반복되는 동안 KRW/USD가 통째로 비는 것을 막는다.
+        #   FRED DEXKOUS(원/달러, 뉴욕 정오 매입환율)는 같은 방향·일별 계열로 ALFRED
+        #   실측 게시일까지 제공한다. BOK가 정상화돼도 교차검증 지표로 계속 수집한다.
+        _safe(fetch_fred_series, "DEXKOUS", start, end, label="FRED DEXKOUS (KRW/USD 폴백)"),
         _safe(fetch_fred_series, "DEXBZUS", start, end, label="FRED DEXBZUS (BRL/USD)"),
         # DEXARUE(아르헨티나 페소): FRED 미제공 — 다중 환율제도로 공식 시리즈 없음
         # 추후 BCRA(아르헨티나 중앙은행) API 또는 IMF IFS API로 대체 예정 (MEMORY D-002)
