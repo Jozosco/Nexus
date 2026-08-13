@@ -270,10 +270,13 @@ def run(
     ffill_missing_months: bool = True,
 ) -> None:
     """전체 FAO AMIS PDF 수집·정규화·저장."""
-    pdf_files = sorted(amis_dir.glob("*.pdf"))
+    # A-135: 재정리 후 PDF는 AMIS/{YYYY}/ 하위에 있다 — 비재귀 glob은 0건을 찾고도
+#   exit 0으로 끝나 3중(스크립트·사전체크·warn 업로드)으로 조용히 실패했다.
+#   A-083(GAIN)·D-027(ICE)과 동일한 버그 유형. 재귀 + 0건 시 실패로 전환.
+    pdf_files = sorted(amis_dir.rglob("*.pdf"))
     if not pdf_files:
         print(f"[오류] {amis_dir}에 PDF 파일 없음.")
-        return
+        raise SystemExit(1)   # A-135: 0건을 성공으로 위장하지 않는다
 
     print(f"[C-03] FAO AMIS PDF {len(pdf_files)}개 파싱 시작...")
     all_frames: list[pd.DataFrame] = []

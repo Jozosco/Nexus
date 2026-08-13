@@ -14,9 +14,9 @@
 | C-01 | Senior PM | `common/01_senior_pm.md` | Claude Opus 4.8 | — | Orchestration, WSJF prioritization, Korean status reports |
 | C-02 | Market Research Specialist | `common/02_market_research.md` | Claude Opus 4.8 | Perplexity Pro | Real-time intelligence, NotebookLM hub |
 | C-03 | Data Scientist | `common/03_data_scientist.md` | Claude Opus 4.8 (thinking) | — | G1/G2/G3 model execution, statistical analysis |
-| C-04 | Document Intelligence & Infrastructure | `common/04_azure_engineer.md` | Claude Sonnet 4.6 | — | PDF/Excel ingestion, Snowflake pipelines, Azure ML, GitHub Actions |
+| C-04 | Document Intelligence & Infrastructure | `common/04_azure_engineer.md` | Claude Sonnet 5 | — | PDF/Excel ingestion, Snowflake pipelines, Azure ML, GitHub Actions |
 | C-05 | Code Reviewer (QA/QC) | `common/05_code_reviewer.md` | Claude Haiku 4.5 | — | Style/security/correctness gating (fast, deterministic) |
-| C-06 | EDA Agent | `common/06_eda_agent.md` | Claude Sonnet 4.6 | Gemini 2.5 Pro | Statistical profiling, anomaly flagging |
+| C-06 | EDA Agent | `common/06_eda_agent.md` | Claude Sonnet 5 | — (Gemini 배제, C-012) | Statistical profiling, anomaly flagging |
 | C-07 | Documentation & Knowledge Manager | `common/07_documentation_agent.md` | Claude Haiku 4.5 | — | MEMORY.md, reports, stakeholder docs |
 | C-08 | Data Quality Validator | `common/08_data_validator.md` | Claude Haiku 4.5 | — | DQSOps 5-dimension scoring, schema enforcement |
 
@@ -26,9 +26,9 @@
 |---|---|---|---|---|---|
 | P1-01 | Commodity Analyst | `phase1/01_commodity_analyst.md` | Claude Opus 4.8 | Perplexity Pro | Price fundamentals, supply/demand balance |
 | P1-02 | Geopolitical & Trade Risk Analyst | `phase1/02_geopolitical_analyst.md` | Claude Opus 4.8 | Perplexity Pro | Trade route risk, sanctions, conflict impact |
-| P1-03 | Agrometeorologist / Climate Specialist | `phase1/03_climate_specialist.md` | Claude Sonnet 4.6 | Perplexity Pro | ENSO, crop yield, AA protocols, agromet bulletins |
-| P1-04 | Supply Chain & Logistics Analyst | `phase1/04_supply_chain_analyst.md` | Claude Sonnet 4.6 | Perplexity Pro | BDI, CFR optimization, ABCD value chain, 3-month lead-time |
-| P1-05 | News & Sentiment Analyst | `phase1/05_news_sentiment.md` | Claude Sonnet 4.6 | — | FinBERT sentiment scoring, GDELT, GAIN report analysis |
+| P1-03 | Agrometeorologist / Climate Specialist | `phase1/03_climate_specialist.md` | Claude Sonnet 5 | Perplexity Pro | ENSO, crop yield, AA protocols, agromet bulletins |
+| P1-04 | Supply Chain & Logistics Analyst | `phase1/04_supply_chain_analyst.md` | Claude Sonnet 5 | Perplexity Pro | BDI, CFR optimization, ABCD value chain, 3-month lead-time |
+| P1-05 | News & Sentiment Analyst | `phase1/05_news_sentiment.md` | Claude Sonnet 5 | — | FinBERT sentiment scoring, GDELT, GAIN report analysis |
 
 ### Tier 2 — Phase 2: Modeling Agents
 
@@ -36,20 +36,20 @@
 |---|---|---|---|---|---|
 | P2-01 | Commodity Financial Risk Manager | `phase2/01_risk_manager.md` | Claude Opus 4.8 | — | PaR, VaR, hedging P&L, capital exposure |
 | P2-02 | FID / Pricing & Regime Analyst | `phase2/02_fid_pricing_analyst.md` | Claude Opus 4.8 | — | Real-time Bear/Bull regime, futures pricing |
-| P2-03 | S&OP Integration Lead | `phase2/03_sop_lead.md` | Claude Sonnet 4.6 | — | MPS ↔ procurement alignment, demand signal |
-| P2-04 | NLP / Sentiment Analyst | `phase2/04_nlp_sentiment.md` | Claude Sonnet 4.6 | — | FinBERT scoring, news corpus, geopolitical index |
-| P2-05 | Statistical Time Series Modeler | `phase2/05_statistical_modeler.md` | Claude Sonnet 4.6 | — | ARIMA, GARCH, SARIMAX, Granger causality |
+| P2-03 | S&OP Integration Lead | `phase2/03_sop_lead.md` | Claude Sonnet 5 | — | MPS ↔ procurement alignment, demand signal |
+| P2-04 | NLP / Sentiment Analyst | `phase2/04_nlp_sentiment.md` | Claude Sonnet 5 | — | FinBERT scoring, news corpus, geopolitical index |
+| P2-05 | Statistical Time Series Modeler | `phase2/05_statistical_modeler.md` | Claude Sonnet 5 | — | ARIMA, GARCH, SARIMAX, Granger causality |
 
 ### Tier 3 — Phase 3: Optimization Agents (extends Phase 2)
 
 | # | Agent | File | Primary Model | Secondary LLM | Core Purpose |
 |---|---|---|---|---|---|
 | P3-01 | DSS Analyst | `phase3/01_dss_analyst.md` | Claude Opus 4.8 | — | Decision synthesis, HITL interface, confidence scoring |
-| P3-02 | 4PL Control Tower Manager | `phase3/02_control_tower.md` | Claude Sonnet 4.6 | — | End-to-end supply chain visibility, alert dispatch |
+| P3-02 | 4PL Control Tower Manager | `phase3/02_control_tower.md` | Claude Sonnet 5 | — | End-to-end supply chain visibility, alert dispatch |
 | P3-03 | Strategic Procurement Negotiator | `phase3/03_procurement_negotiator.md` | Claude Opus 4.8 | Perplexity Pro | Contract strategy, spot market leverage, BATNA |
 | P3-04 | Scenario Planning Expert | `phase3/04_scenario_planner.md` | Claude Opus 4.8 | — | Monte Carlo, Bear/Bull/Neutral scenarios, stress tests |
-| P3-05 | Procurement Optimizer | `phase3/05_procurement_optimizer.md` | Claude Sonnet 4.6 | — | LP/MIP, optimal buy quantity, multi-constraint solver |
-| P3-06 | Executive Reporting Agent | `phase3/06_executive_reporter.md` | Claude Sonnet 4.6 | — | C-suite dashboards, KPI reports, Korean stakeholder briefs |
+| P3-05 | Procurement Optimizer | `phase3/05_procurement_optimizer.md` | Claude Sonnet 5 | — | LP/MIP, optimal buy quantity, multi-constraint solver |
+| P3-06 | Executive Reporting Agent | `phase3/06_executive_reporter.md` | Claude Sonnet 5 | — | C-suite dashboards, KPI reports, Korean stakeholder briefs |
 
 ---
 
@@ -95,10 +95,10 @@ Task Type                        → Best LLM
 ──────────────────────────────────────────────────────────
 Strategic reasoning / orchestration → Claude Opus 4.8
 Statistical modeling (thinking mode) → Claude Opus 4.8 (thinking)
-Analysis (EDA, supply chain, climate) → Claude Sonnet 4.6
-Code generation / pipelines         → Claude Sonnet 4.6
+Analysis (EDA, supply chain, climate) → Claude Sonnet 5
+Code generation / pipelines         → Claude Sonnet 5
 Style check / deterministic gate    → Claude Haiku 4.5-20251001
 Real-time market research           → Perplexity Pro (sonar-pro)
-Large document analysis (2M ctx)    → Gemini 2.5 Pro
+Large document analysis              → Claude Sonnet 5 (Gemini 배제 — C-012; P1-05/06 secondary=gemini-3.1-pro는 C-010 예외)
 PDF/Excel extraction                → C-04 (claude-sonnet-5)
 ```

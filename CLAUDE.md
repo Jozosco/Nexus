@@ -118,4 +118,4 @@ docs:     revise CLAUDE.md session protocol
 | `git log --oneline -20` | Run to reconstruct prior decisions before starting a task with no recent MEMORY.md entry. |
 
 > **컨텍스트 최적화(JIT · pointer-not-copy)**: 오래된 학습은 아카이브로 이관하고 포인터만 유지.
-> 과거 세부가 필요할 때만 로드: @docs/memory_archive/2026-04.md · @docs/memory_archive/2026-05.md · @docs/memory_archive/2026-06.md · @docs/memory_archive/2026-07.md
+> 과거 세부가 필요할 때만 로드: @docs/memory_archive/2026-04.md · @docs/memory_archive/2026-05.md · @docs/memory_archive/2026-06.md · @docs/memory_archive/2026-07.md · @docs/memory_archive/2026-08.md

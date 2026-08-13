@@ -53,5 +53,5 @@
 
 > **월별 아카이브 운영(조정자 지시)**: 모든 월간 학습은 `docs/memory_archive/YYYY-MM.md`에 기록.
 > 갱신 시 **당월 파일**에 추가한다. 과거 상세는 온디맨드 로드:
-> @docs/memory_archive/2026-04.md · @docs/memory_archive/2026-05.md · @docs/memory_archive/2026-06.md · @docs/memory_archive/2026-07.md
+> @docs/memory_archive/2026-04.md · @docs/memory_archive/2026-05.md · @docs/memory_archive/2026-06.md · @docs/memory_archive/2026-07.md · 2026-08.md
 
