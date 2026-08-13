@@ -292,4 +292,3 @@ if __name__ == "__main__":
         print(f"... 총 {len(out)}행")
     else:
         run()
-

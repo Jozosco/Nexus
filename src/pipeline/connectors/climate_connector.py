@@ -447,4 +447,3 @@ def run(start_year: int | None = None) -> None:
 
 if __name__ == "__main__":
     run()
-

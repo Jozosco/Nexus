@@ -237,4 +237,3 @@ def run(gain_dir: Path = GAIN_DIR, output_dir: Path = OUTPUT_DIR) -> None:
 if __name__ == "__main__":
     target = Path(sys.argv[1]) if len(sys.argv) > 1 else GAIN_DIR
     run(gain_dir=target)
-
