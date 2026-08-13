@@ -138,10 +138,32 @@ def parse_quantity_file(xlsx_path: Path, hs_prefix: str) -> pd.DataFrame:
             if month is None:        # 'total' 밴드는 월별 합산이라 생략(중복 방지)
                 continue
             qty = pd.to_numeric(str(raw.iat[r, ci]).replace(",", ""), errors="coerce")
-            if pd.notna(qty) and qty != 0:
+            # A-121(D4): 구 코드는 `qty != 0`으로 **0을 버렸다**. 월간 무역 시계열에서
+            #   0은 "그 달 선적 없음"이라는 **정보**이지 결측이 아니다. 버리면 as-of join이
+            #   직전 비영(非零) 값을 끌어와 물량을 과대계상한다.
+            #   A-086에서 이미 "전 국가 0 = 실제 무역 부재 → 0으로 보존(대체 금지)"로 확정.
+            if pd.notna(qty):
                 records.append({**base, "price_date": date(year, month, 1),
                                 "indicator_code": f"{hs_prefix}{flow}_{tag}",
                                 "value": float(qty)})
+
+    # A-121(D4): GATS는 **교역이 없는 국가 행을 파일에 싣지 않는다**. 그대로 두면
+    #   "그 달 선적 0"이 결측으로 남고, as-of join이 직전 비영 값을 끌어와 물량을
+    #   과대계상한다(2017년 한국 조유가 통째로 사라진 사례).
+    #   World Total이 존재하면 그 파일은 정상 파싱된 것이므로, 파일에 등장한 월에 한해
+    #   **대상국 중 누락된 국가를 0으로 채운다**(파싱 실패와 무역 부재를 구분).
+    months_seen = sorted({_MONTHS[b] for b, _ in qty_cols if b in _MONTHS})
+    saw_total = any(TARGET_COUNTRIES.get(str(raw.iat[r, country_col]).strip().lower()) == "TOTAL"
+                    for r in range(first_data, raw.shape[0]))
+    if saw_total and months_seen:
+        present = {(rec["price_date"], rec["indicator_code"]) for rec in records}
+        for tag in sorted(set(TARGET_COUNTRIES.values())):
+            code = f"{hs_prefix}{flow}_{tag}"
+            for mo in months_seen:
+                key = (date(year, mo, 1), code)
+                if key not in present:
+                    records.append({**base, "price_date": key[0],
+                                    "indicator_code": code, "value": 0.0})
 
     return pd.DataFrame(records)
 
@@ -196,9 +218,21 @@ def run(gats_dir: Path = GATS_DIR, output_dir: Path = OUTPUT_DIR) -> None:
     #   ICE(A-114)·GAIN(A-083)과 같은 '경로 이동 후 하드코딩 조회' 유형.
     #   HS 코드를 **경로 문자열이 아니라 하위 트리 전체에서 매칭**해 재정리에 견디게 한다.
     quantity_frames: list[pd.DataFrame] = []
+    # A-121: `1507.90` 아래 **.4020(1회 정제)·.4050(완전 정제)** 두 하위 코드가 같은
+    #   `GATS_US_RSBO_` 접두사로 합쳐져 동일 (price_date, indicator_code)에 2행이 생겼다
+    #   (연도별 관측이 24개월로 나온 원인) → as-of join이 임의 행을 선택.
+    #   KOSIS 키 붕괴(A-116)와 같은 유형. 하위 코드를 접두사에 반영해 유일화한다.
     HS_PREFIX_MAP = [("1507.10", "GATS_US_SBO_"),    # 조대두유
-                     ("1507.90", "GATS_US_RSBO_"),   # 정제 대두유
+                     ("1507.90", "GATS_US_RSBO_"),   # 정제 대두유(하위코드로 세분)
                      ("1517.90", "GATS_US_HSBO_")]   # 완전 경화 대두유
+
+    def _sub_suffix(path) -> str:
+        """경로의 하위 HTS 코드(.4020/.4050 등)를 지표코드 접미사로."""
+        for part in path.parts:
+            if part.startswith(".") and part[1:].isdigit():
+                return part[1:] + "_"
+            return_ = None
+        return ""
     for hs_sub, prefix in HS_PREFIX_MAP:
         files = sorted(f for f in gats_dir.rglob("*")
                        if f.suffix.lower() in (".xlsx", ".csv")
@@ -210,7 +244,7 @@ def run(gats_dir: Path = GATS_DIR, output_dir: Path = OUTPUT_DIR) -> None:
         for f in files:
             print(f"  처리 중: {f.name}")
             try:
-                df = parse_quantity_file(f, prefix)
+                df = parse_quantity_file(f, prefix + _sub_suffix(f))
                 if not df.empty:
                     quantity_frames.append(df)
                 print(f"    → {len(df)}건")
