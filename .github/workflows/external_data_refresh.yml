@@ -32,7 +32,16 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'economic' || github.event_name == 'schedule' }}
     steps:
+      # A-136: API 커넥터 잡은 data/raw 원문(GAIN·FAO PDF 등, 추적 파일 1.5GB의 98%)을 읽지 않음
+      #   → sparse checkout으로 체크아웃을 수십 MB로 경량화 (잡당 1~2분 절감)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -62,7 +71,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'shipping' || github.event_name == 'schedule' }}
     steps:
+      # A-136: API 커넥터 잡 — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -89,7 +106,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'wasde' || github.event_name == 'schedule' }}
     steps:
+      # A-136: API 커넥터 잡 — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -117,7 +142,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'climate' || github.event_name == 'schedule' }}
     steps:
+      # A-136: API 커넥터 잡 — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -144,7 +177,16 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'gpr' || github.event_name == 'schedule' }}
     steps:
+      # A-136: API 커넥터 잡(GPR xlsx는 웹 다운로드·AIS는 실시간) — data/raw 원문 불필요,
+      #   sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -177,7 +219,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'production' || github.event_name == 'schedule' }}
     steps:
+      # A-136: API 커넥터 잡 — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -205,7 +255,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs' || github.event_name == 'schedule' }}
     steps:
+      # A-136: API 커넥터 잡 — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -234,7 +292,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'geointel' || github.event_name == 'schedule' }}
     steps:
+      # A-136: API 커넥터 잡(실시간 전용) — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -288,7 +354,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'commodity' || github.event_name == 'schedule' }}
     steps:
+      # A-136: API 커넥터 잡 — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
