@@ -81,6 +81,8 @@ _ATTR_MAP = {
     "Food, Seed & Industrial": "FSI",
 }
 
+_ATTR_MAP_CI = {k.lower(): v for k, v in _ATTR_MAP.items()}
+
 # Commodity(tidy 명칭) → 지표 인픽스 (session34 §2.1 선별)
 _COMMODITY_MAP = {
     "Soybean Oil":      "SBO",
@@ -101,6 +103,22 @@ _REGION_PREFIX = {
     "World":         "WASDE_",
     "United States": "WASDE_US_",
 }
+
+# ── A-126: 지표코드 충돌 — 두 개의 서로 다른 표가 한 코드로 뭉개졌다 ──────────────
+# WASDE tidy 파일에는 이름이 비슷하지만 **성격이 완전히 다른 두 계열의 표**가 있다.
+#
+#   ① 세계 수급표    "Soybean Oil" / "Soybean Meal"
+#      → 미국을 포함한 전 지역, 단위 **백만 MT** 통일
+#   ② 미국 국내 수급표 "Oil, Soybean" / "Meal, Soybean"
+#      → 미국 단독, 단위 **Million Pounds / Thousand Short Tons**(+ c/lb, $/s.t. 가격)
+#
+# 구 _COMMODITY_MAP은 둘 다 같은 인픽스(SBO/MEAL)로 보냈다. United States 행이 양쪽에
+# 존재하므로 `WASDE_US_SBO_BEGINNING_STOCKS` 하나에 **1.44(백만MT)와 3,176(백만파운드)**가
+# 동시에 적재됐다 — (지표, 날짜) 중복 1,926건, 값 배율 중앙 1,111배. as-of 정렬은 동점을
+# 물리적 행 순서로 임의 해소하므로 **실행할 때마다 값이 바뀔 수 있었다**.
+# 미국 국내표는 별도 네임스페이스로 분리한다(단위가 다르므로 같은 코드로 합칠 수 없다).
+_US_DOMESTIC_TABLES = {"Oil, Soybean", "Meal, Soybean"}
+_US_DOMESTIC_PREFIX = "WASDE_USDOM_"
 
 
 def _year_from_filename(filename: str) -> Optional[int]:
@@ -177,12 +195,15 @@ def parse_wasde_tidy(xlsx_path: Path, year: int) -> pd.DataFrame:
         }
         if any(v is None for v in col.values()):
             continue
+        # A-126: 단위는 원천 컬럼에서 읽는다. 구 코드는 전 행에 '1000000MT'를 박아 넣어
+        #   Million Pounds·Thousand Short Tons·$/bu·Bushels가 전부 MT로 표기됐다 —
+        #   단위 정규화(D8)와 교차검증이 원천적으로 불가능한 상태였다.
+        unit_col = norm.get("unit")
 
         comm_series = df[col["commodity"]].astype(str).str.strip()
         base = {
             "price_date":  price_date,
             "source_name": "USDA_WASDE_XLSX",
-            "unit":        "1000000MT",
             "ingested_at": pd.Timestamp.now("UTC"),
             "note":        f"{xlsx_path.name} / {sheet_name}",
         }
@@ -195,6 +216,8 @@ def parse_wasde_tidy(xlsx_path: Path, year: int) -> pd.DataFrame:
                 reg = comm_df[comm_df[col["region"]].astype(str).str.strip() == region]
                 if reg.empty:
                     continue
+                if comm_name in _US_DOMESTIC_TABLES:
+                    prefix = _US_DOMESTIC_PREFIX     # A-126: 미국 국내표 네임스페이스 분리
                 my = _latest_market_year(reg[col["market_year"]])
                 if my is None:
                     continue
@@ -203,11 +226,17 @@ def parse_wasde_tidy(xlsx_path: Path, year: int) -> pd.DataFrame:
                 vals: dict[str, float] = {}
                 for _, r in cur.iterrows():
                     attr = str(r[col["attribute"]]).strip()
-                    code = _ATTR_MAP.get(attr)
+                    # A-126: 원천이 같은 항목을 대소문자만 다르게 쓴다
+                    #   ('Ending Stocks' vs 'Ending stocks' — 미국 국내 대두유표에서 확인).
+                    #   대소문자 민감 조회 탓에 WASDE_USDOM_SBO_ENDING_STOCKS가 0건이었고,
+                    #   그로 인해 그 표의 STU(재고사용비율)도 산출되지 않았다.
+                    code = _ATTR_MAP_CI.get(attr.lower())
                     v = pd.to_numeric(r[col["value"]], errors="coerce")
                     if code and pd.notna(v) and code not in vals:
                         vals[code] = float(v)
                         records.append({**base, "market_year": my,
+                                        "unit": (str(r[unit_col]).strip()
+                                                 if unit_col else "unknown"),
                                         "indicator_code": f"{prefix}{infix}_{code}",
                                         "value": float(v)})
 

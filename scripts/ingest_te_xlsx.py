@@ -95,6 +95,103 @@ def _iter_te_files() -> list[Path]:
                   if re.match(r"\d{4}~\d{4}_", p.name))
 
 
+def _longest_monotonic_run(days: list[int]) -> set[int]:
+    """일(day) 수열에서 가장 긴 단조 구간의 인덱스 집합.
+
+    시트가 오름차순인지 내림차순인지 **가정하지 않는다** — 둘 다 계산해 긴 쪽을 택한다.
+    (TE 파일은 대부분 오름차순이지만 Urea 시트는 내림차순이다. 방향을 가정한 초판
+    구현은 정상인 Urea 855행을 이물로 오판해 삭제했다.)
+    """
+    best: tuple[int, int] = (0, 0)                     # (start, length)
+    for sign in (1, -1):
+        run_start = 0
+        for i in range(1, len(days) + 1):
+            if i < len(days) and (days[i] - days[i - 1]) * sign > 0:
+                continue
+            if i - run_start > best[1]:
+                best = (run_start, i - run_start)
+            run_start = i
+    return set(range(best[0], best[0] + best[1]))
+
+
+def _fix_sheet_ordering(sub: pd.DataFrame, label: str) -> pd.DataFrame:
+    """연도 시트의 날짜 오류 두 종류를 구분해 처리한다 (A-127).
+
+    시트는 일별 시계열이므로 날짜가 **단조 증가**해야 한다. 실측된 위반은 두 가지다.
+
+    ① 월 오타 — Month 칸이 1 커진 채 Day가 직전 행에서 이어진다.
+       BDI 2021년 시트: `2/23 → 2/24 → **3/25** → **3/26** → 3/1 → 3/2 …`
+       진짜 3월은 3/1부터 다시 시작하므로 앞의 두 행은 **2/25·2/26의 오타**다.
+       실제 관측값이므로 버리지 않고 월을 되돌린다(가격도 1709→1700→1675로 연속).
+       판정 근거: 새 달의 첫 행은 1~3일에서 시작하지 실측 25일에서 시작하지 않는다.
+
+    ② 타 구간 혼입 — 이미 지나간 날짜가 값 수준까지 어긋난 채 다시 나온다.
+       Canola 2010년 시트: 4/23~4/30 진행 후 4/27·4/28이 383원대가 아닌 **529원대**로
+       재등장. 복원할 근거가 없으므로 제거한다.
+
+    ①을 ②로 묶어 지우면 **정상 관측을 버리고 오타 행을 남기는** 정반대 결과가 난다
+    (`duplicated(keep='first')`는 나중에 나온 진짜 행을 중복으로 표시한다).
+    """
+    if len(sub) < 3:
+        return sub
+    dates = pd.to_datetime(sub["price_date"]).tolist()
+    n = len(dates)
+
+    # 판정 기준은 정렬 방향이 아니라 **월 블록의 연속성**이다.
+    #   시트가 오름차순이든 내림차순이든(Urea 시트는 내림차순이다) 한 달의 행들은
+    #   파일 순서상 **한 덩어리**로 모여 있다. 어떤 달이 두 덩어리로 쪼개져 있으면
+    #   작은 쪽이 이물질이다. 이 기준은 정렬 방향 가정을 하지 않는다.
+    blocks: list[tuple[int, int, int]] = []            # (month, start, end)
+    s = 0
+    for i in range(1, n + 1):
+        if i == n or dates[i].month != dates[s].month:
+            blocks.append((dates[s].month, s, i))
+            s = i
+    existing = set(dates)
+    fixed: list[tuple] = []
+    drop_idx: set[int] = set()
+
+    for month, st, en in blocks:
+        days = [d.day for d in dates[st:en]]
+        keep = _longest_monotonic_run(days)            # 그 달의 정상 본문
+        odd = [i for i in range(len(days)) if i not in keep]
+        if not odd or len(odd) > 3:
+            # 이상행이 없거나 너무 많으면 판정 근거가 약하다 — 손대지 않는다.
+            # (내림차순 시트를 오름차순으로 오판해 대량 삭제하는 사고를 막는다)
+            continue
+        is_prefix = all(i < min(keep) for i in odd)
+        prev_month = dates[st - 1].month if st > 0 else None
+        for k in odd:
+            i = st + k
+            # ① 월 오타: 블록 **앞머리**에 붙어 있고 직전 행이 한 달 전이면 그 달의 오타다
+            cand = None
+            if is_prefix and prev_month is not None and month == (prev_month % 12) + 1:
+                try:
+                    cand = dates[i].replace(month=prev_month)
+                except ValueError:
+                    cand = None
+            if cand is not None and cand not in existing:
+                existing.discard(dates[i]); existing.add(cand)
+                fixed.append((dates[i].date(), cand.date()))
+                dates[i] = cand
+            else:
+                drop_idx.add(i)                        # ② 복원 근거 없음 — 제거
+
+    out = sub.copy()
+    out["price_date"] = pd.Series(dates, index=out.index)
+    if fixed:
+        s_ = ', '.join(f"{a}→{b}" for a, b in fixed[:4])
+        print(f"    [보정] {label}: 월 오타 {len(fixed)}건 복원 ({s_}"
+              f"{' …' if len(fixed) > 4 else ''})")
+    if drop_idx:
+        pos = sorted(drop_idx)
+        bad = [dates[i].date() for i in pos[:4]]
+        print(f"    [제외] {label}: 복원 불가 이물 {len(pos)}건 "
+              f"({', '.join(str(x) for x in bad)}{' …' if len(pos) > 4 else ''})")
+        out = out.iloc[[i for i in range(n) if i not in drop_idx]]
+    return out
+
+
 def parse_te_file(path: Path) -> pd.DataFrame:
     """단일 TE xlsx → 롱포맷 DataFrame (연도 시트 전체)."""
     parsed = _parse_filename(path.stem)
@@ -137,6 +234,7 @@ def parse_te_file(path: Path) -> pd.DataFrame:
         for col in ("Open", "High", "Low"):
             sub[col.lower()] = pd.to_numeric(df[col], errors="coerce") if col in df.columns else pd.NA
         sub = sub.dropna(subset=["price_date", "value"])
+        sub = _fix_sheet_ordering(sub, f"{path.stem} {sheet}")
         rows.append(sub[["price_date", "value", "open", "high", "low"]])
 
     if not rows:

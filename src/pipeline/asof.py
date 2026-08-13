@@ -112,7 +112,30 @@ TARGET_MARKET_CLOSE_ET = "14:20"   # CBOT ZL 정규장 마감 — 위 판정의 
 RELEASE_RULES: dict[str, ReleaseRule] = {
     # ── 일별 시장가격: 관측일 장 마감 후 즉시 이용 가능 ──────────────────────
     "CBOT_BO_":  ReleaseRule("immediate", note="CME 일봉 — 당일 정산 후 공개"),
-    "TE_":       ReleaseRule("immediate", note="Trading Economics 시장 시세"),
+
+    # ── TE: 거래소 정산 시각이 ZL 마감(14:20 ET)보다 늦은 계열은 1일 지연 ───────
+    # M-014: `"TE_": immediate` 일괄 적용은 **에너지 계열에서 장중 누수**를 만든다.
+    #   ICE Brent 정산 19:30 London(=14:30 ET) · NYMEX WTI/난방유/휘발유/천연가스 14:30 ET ·
+    #   ICE EU 가스·탄소배출권은 런던 마감(=ET 오후) — 전부 ZL 마감 이후다.
+    #   VIXCLS에는 같은 논리로 이미 lag_days=1을 걸어 두고(아래) TE만 빠져 있었다.
+    #   에너지→바이오디젤→대두유 수요는 G1 핵심 인과체인이라 영향이 크다.
+    "TE_BRENT_":     ReleaseRule("immediate", lag_days=1, note="ICE Brent 정산 14:30 ET > ZL 14:20"),
+    "TE_WTI_":       ReleaseRule("immediate", lag_days=1, note="NYMEX 정산 14:30 ET"),
+    "TE_HEATING_":   ReleaseRule("immediate", lag_days=1, note="NYMEX 정산 14:30 ET"),
+    "TE_GASOLINE":   ReleaseRule("immediate", lag_days=1, note="NYMEX 정산 14:30 ET"),
+    "TE_NATURAL_":   ReleaseRule("immediate", lag_days=1, note="NYMEX Henry Hub 정산 14:30 ET"),
+    "TE_EU_NATURAL_":ReleaseRule("immediate", lag_days=1, note="ICE TTF — 런던 마감"),
+    "TE_UK_NATURAL_":ReleaseRule("immediate", lag_days=1, note="ICE NBP — 런던 마감"),
+    "TE_EU_CARBON_": ReleaseRule("immediate", lag_days=1, note="ICE EUA — 런던 마감"),
+    "TE_ETHANOL":    ReleaseRule("immediate", lag_days=1, note="CME 에탄올 — 마감 후 정산"),
+    "TE_NAPHTHA":    ReleaseRule("immediate", lag_days=1, note="유럽 평가가격 — 런던 종가 기준"),
+    "TE_COAL":       ReleaseRule("immediate", lag_days=1, note="ICE Newcastle — 런던 마감"),
+    "TE_CRB_":       ReleaseRule("immediate", lag_days=1, note="지수 산출이 미국 장 마감 후"),
+    "TE_GSCI":       ReleaseRule("immediate", lag_days=1, note="지수 산출이 미국 장 마감 후"),
+    # 아래는 ZL 마감 이전에 확정 — 지연 불필요
+    #   CBOT 농산물(대두·옥수수·밀) 14:20 ET 동시 · ICE Canada 캐놀라 14:15 ET ·
+    #   Bursa 팜유 06:00 ET · Baltic/Drewry 지수 런던 오전
+    "TE_":       ReleaseRule("immediate", note="Trading Economics 시장 시세 — ZL 마감 이전 확정 계열"),
     "BDI":       ReleaseRule("immediate", note="Baltic Exchange 일별 발표(런던 시간)"),
     "BCAA":      ReleaseRule("immediate"),
     "CPO":       ReleaseRule("immediate"),
@@ -203,6 +226,45 @@ EXPLICIT_RELEASE_SOURCES: set[str] = {"USDA_WASDE_XLSX", "USDA_FAS_GAIN_PDF", "F
 _DEFAULT_RULE = ReleaseRule(
     "lag_days", lag_days=1,
     note="규칙 미등록 — 보수적 1일 지연 적용. RELEASE_RULES 등재 필요")
+
+
+# ── 개정 이력 보유 여부 (D-034) ──────────────────────────────────────────────
+# `revises=True`는 "그 소스가 값을 고친다"는 사실이고, 아래는 "**우리가 그 이력을
+# 갖고 있는가**"라는 별개의 질문이다. 둘을 구분하지 않으면 백테스트가 조용히
+# 개정 후 확정치를 과거에 사용한다.
+#
+#   full — 발표 회차마다 별도 행이 쌓여 available_at이 곧 vintage 역할을 한다.
+#          예) WASDE: 매월 보고서가 같은 마케팅연도를 다시 싣고, 우리는 그 회차별
+#              행을 모두 보관한다(2010-04~2026-07). 반면 PSD는 같은 성격의 소스인데도
+#              **최신 스냅샷만** 내려받아 왔으므로 none이다 — 소스가 아니라 수집 방식의 문제.
+#   none — 최신 스냅샷 하나만 있다. 과거 시점의 값을 복원할 수 없다.
+#          → 해당 피처는 **개정 오염(revision-contaminated)** 상태이며,
+#            모델 성능이 실전에서 재현되지 않을 수 있다. 반드시 표기하고
+#            민감도 검증(해당 피처 제외 비교)을 함께 보고한다.
+REVISION_HISTORY: dict[str, str] = {
+    "WASDE_":    "full",   # 월간 보고서별 행 보유 확인(2010-04~2026-07, 193회차)
+    "PSD_":      "none",   # 마케팅연도당 1행 — 개정 전 값 없음
+    "GATS_":     "none",   # 월별 최종치만 — 잠정→확정 이력 없음
+    "CUSTOMS_":  "none",   # 관세청 잠정→확정 개정 이력 없음
+    "CPIAUCSL":  "none",   # FRED ALFRED 사용 시 full로 승격 가능
+    "CPI_KOREA": "none",
+    "ONI":       "none",   # NOAA CPC는 3개월 이동평균 후속 개정
+    "GPR":       "none",
+    "NASS_":     "none",
+    "FAOSTAT_":  "none",
+    "COMTRADE_": "none",
+}
+
+
+def revision_status(indicator_code: str) -> str:
+    """개정 이력 보유 상태 — 'full' · 'none' · 'n/a'(개정 없는 소스)."""
+    rule = rule_for(indicator_code)
+    if not rule.revises:
+        return "n/a"
+    for key in sorted(REVISION_HISTORY, key=len, reverse=True):
+        if indicator_code.startswith(key):
+            return REVISION_HISTORY[key]
+    return "none"
 
 
 def rule_for(indicator_code: str, source_name: str = "") -> ReleaseRule:
@@ -314,14 +376,22 @@ def attach_asof(
     avail = pd.to_datetime(out["release_time"]) + pd.Timedelta(days=ingest_lag_days)
     out["available_at"] = avail.where(avail >= out["event_time"], out["event_time"])
 
+    # ── vintage: "모른다"를 "안다"로 위장하지 않는다 (D-034) ────────────────────
+    # 구 코드는 개정 소스에 **수집일을 일괄 스탬프**했다. 그 결과 2010년 WASDE 값도
+    # source_vintage=2026-08-12가 되어, 파일 전체의 vintage 고유값이 **1개**뿐이었다.
+    # 그러면 "available_at ≤ t 중 최신 vintage" 규칙은 고를 대상이 없어 항상 **개정 후
+    # 확정치**를 과거에 쓰게 된다. 더 나쁜 것은 validate_asof의 non-null 검사를
+    # 100% 통과해 **게이트가 아무것도 막지 못한다**는 점이다.
+    #   → 원천이 vintage를 주지 않으면 NULL로 두고, 안다/모른다를 별도 컬럼으로 남긴다.
+    #     (WASDE처럼 발표회차마다 행이 쌓이는 소스는 available_at 자체가 vintage 역할을 한다.)
     if vintage is not None:
         out["source_vintage"] = str(vintage)
+        out["vintage_known"] = True
     elif "source_vintage" in df.columns and out["source_vintage"].notna().any():
-        pass          # 원천이 준 vintage(ALFRED realtime_start 등)를 그대로 둔다
+        out["vintage_known"] = out["source_vintage"].notna()   # 원천 제공분(ALFRED 등)
     else:
-        revises = {c for c, r in rules.items() if r.revises}
-        today = date.today().isoformat()
-        out["source_vintage"] = [today if c in revises else None for c in codes]
+        out["source_vintage"] = None
+        out["vintage_known"] = False
 
     return out
 

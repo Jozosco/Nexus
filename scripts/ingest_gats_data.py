@@ -152,10 +152,20 @@ def parse_quantity_file(xlsx_path: Path, hs_prefix: str) -> pd.DataFrame:
     #   과대계상한다(2017년 한국 조유가 통째로 사라진 사례).
     #   World Total이 존재하면 그 파일은 정상 파싱된 것이므로, 파일에 등장한 월에 한해
     #   **대상국 중 누락된 국가를 0으로 채운다**(파싱 실패와 무역 부재를 구분).
-    months_seen = sorted({_MONTHS[b] for b, _ in qty_cols if b in _MONTHS})
-    saw_total = any(TARGET_COUNTRIES.get(str(raw.iat[r, country_col]).strip().lower()) == "TOTAL"
-                    for r in range(first_data, raw.shape[0]))
-    if saw_total and months_seen:
+    #   ⚠️ 채울 월의 판정 기준(A-122): 컬럼 헤더에 12개월이 다 있다고 해서 12개월이
+    #   보고된 것은 아니다. **당해 연도 파일은 미래 월 컬럼을 빈칸으로 미리 갖고 있다.**
+    #   헤더 기준으로 채우면 아직 오지 않은 달에 0이 들어가 "선적 없음"으로 위조된다
+    #   (2026-09~12에 192행 발생). 실제 보고 여부는 **World Total 행의 값 유무**가
+    #   유일한 근거이므로 그 행이 숫자를 가진 월만 채운다.
+    total_row = next((r for r in range(first_data, raw.shape[0])
+                      if TARGET_COUNTRIES.get(str(raw.iat[r, country_col]).strip().lower()) == "TOTAL"),
+                     None)
+    months_seen = sorted({
+        _MONTHS[b] for b, ci in qty_cols
+        if b in _MONTHS and total_row is not None
+        and pd.notna(pd.to_numeric(str(raw.iat[total_row, ci]).replace(",", ""), errors="coerce"))
+    })
+    if total_row is not None and months_seen:
         present = {(rec["price_date"], rec["indicator_code"]) for rec in records}
         for tag in sorted(set(TARGET_COUNTRIES.values())):
             code = f"{hs_prefix}{flow}_{tag}"
@@ -165,7 +175,21 @@ def parse_quantity_file(xlsx_path: Path, hs_prefix: str) -> pd.DataFrame:
                     records.append({**base, "price_date": key[0],
                                     "indicator_code": code, "value": 0.0})
 
-    return pd.DataFrame(records)
+    # A-122: 당해 연도 파일은 **미래 월의 Total 칸에 0을 채워 배포**한다. 그래서 위의
+    #   'Total 값 유무' 판정만으로는 걸러지지 않는다(2026-09~12에 160행 잔존).
+    #   물리적 제약을 최종 방어선으로 둔다 — **끝나지 않은 달의 월간 무역통계는
+    #   존재할 수 없다**. 그 달의 0은 "선적 없음"이 아니라 "아직 데이터 없음"이며,
+    #   as-of join에서 걸러지더라도 커버리지·품질 지표를 오염시킨다.
+    out = pd.DataFrame(records)
+    if not out.empty:
+        month_end = pd.to_datetime(out["price_date"]) + pd.offsets.MonthEnd(0)
+        elapsed = month_end < pd.Timestamp.today().normalize()
+        if (~elapsed).any():
+            dropped = sorted(pd.to_datetime(out.loc[~elapsed, "price_date"])
+                             .dt.strftime("%Y-%m").unique())
+            print(f"    [제외] 미완결 월 {int((~elapsed).sum())}건 — {', '.join(dropped)}")
+            out = out[elapsed].reset_index(drop=True)
+    return out
 
 
 def parse_value_file(xlsx_path: Path) -> pd.DataFrame:

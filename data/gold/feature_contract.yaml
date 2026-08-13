@@ -1,0 +1,3478 @@
+generated: '2026-08-13'
+window:
+  start: '2010-01-01'
+  end: '2025-12-31'
+  rows: 4174
+target:
+  indicator: null
+  horizons:
+  - 1
+  - 5
+  - 20
+  - 60
+  columns:
+  - target_close
+  - target_ret1
+  - target_ret20
+  - target_ret5
+  - target_ret60
+asof_rule: 모델의 t일 입력 = available_at <= t 인 최근값 (CLAUDE.md §1)
+features:
+  feat_ALLSKY_SFC_PAR_TOT_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_PAR_TOT_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ALLSKY_SFC_SW_DWN_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GATS_US_HSBO_EXPORT_CANADA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_EXPORT_CHINA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_EXPORT_COLOMBIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_EXPORT_INDIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_EXPORT_JAPAN:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_EXPORT_KOREA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_EXPORT_MEXICO:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_EXPORT_TOTAL:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_REEXPORT_CANADA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_REEXPORT_CHINA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_REEXPORT_COLOMBIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_REEXPORT_INDIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_REEXPORT_JAPAN:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_REEXPORT_KOREA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_REEXPORT_MEXICO:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_HSBO_REEXPORT_TOTAL:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_EXPORT_CANADA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_EXPORT_CHINA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_EXPORT_COLOMBIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_EXPORT_INDIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_EXPORT_JAPAN:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_EXPORT_KOREA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_EXPORT_MEXICO:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_EXPORT_TOTAL:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_REEXPORT_CANADA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7185
+    release_events: 131
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_REEXPORT_CHINA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7185
+    release_events: 131
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_REEXPORT_COLOMBIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7185
+    release_events: 131
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_REEXPORT_INDIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7185
+    release_events: 131
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_REEXPORT_JAPAN:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7185
+    release_events: 131
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_REEXPORT_KOREA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7185
+    release_events: 131
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_REEXPORT_MEXICO:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7185
+    release_events: 131
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4020_REEXPORT_TOTAL:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7185
+    release_events: 131
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_EXPORT_CANADA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_EXPORT_CHINA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_EXPORT_COLOMBIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_EXPORT_INDIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_EXPORT_JAPAN:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_EXPORT_KOREA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_EXPORT_MEXICO:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_EXPORT_TOTAL:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_REEXPORT_CANADA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_REEXPORT_CHINA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_REEXPORT_COLOMBIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_REEXPORT_INDIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_REEXPORT_JAPAN:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_REEXPORT_KOREA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_REEXPORT_MEXICO:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_RSBO_4050_REEXPORT_TOTAL:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBM_EXPORT_VALUE:
+    source_file: gats_value_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5719
+    release_events: 10
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_EXPORT_CANADA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_EXPORT_CHINA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_EXPORT_COLOMBIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_EXPORT_INDIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_EXPORT_JAPAN:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_EXPORT_KOREA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_EXPORT_MEXICO:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_EXPORT_TOTAL:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9938
+    release_events: 191
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_EXPORT_VALUE:
+    source_file: gats_value_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5719
+    release_events: 10
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_REEXPORT_CANADA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4564
+    release_events: 84
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_REEXPORT_CHINA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4564
+    release_events: 84
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_REEXPORT_COLOMBIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4564
+    release_events: 84
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_REEXPORT_INDIA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4564
+    release_events: 84
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_REEXPORT_JAPAN:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4564
+    release_events: 84
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_REEXPORT_KOREA:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4564
+    release_events: 84
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_REEXPORT_MEXICO:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4564
+    release_events: 84
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SBO_REEXPORT_TOTAL:
+    source_file: gats_quantity_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4564
+    release_events: 84
+    revision_history: none
+    revision_contaminated: true
+  feat_GATS_US_SOY_EXPORT_VALUE:
+    source_file: gats_value_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5719
+    release_events: 10
+    revision_history: none
+    revision_contaminated: true
+  feat_GWETROOT_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETROOT_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_GWETTOP_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_BRENT_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_BRENT_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_COAL_ELEC_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1437
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_COAL_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1435
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_COAL_POWER_EMISSIONS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7441
+    release_events: 143
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_DUTCH_TTF_GAS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.081
+    release_events: 12
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_ELEC_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1435
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_EMISSIONS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.2686
+    release_events: 48
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_EMISSIONS_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1435
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_EQUITY_DERIVATIVES_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.6921
+    release_events: 133
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_EQUITY_DERIVATIVES_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.6921
+    release_events: 133
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_EU_NAT_GAS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9315
+    release_events: 179
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_GAS_OIL_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_GAS_OIL_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_HEATING_OIL_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.2686
+    release_events: 48
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_HEATING_OIL_RBOB_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7441
+    release_events: 143
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_INTEREST_RATES_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7183
+    release_events: 138
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_INTEREST_RATES_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.6974
+    release_events: 134
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_LONDON_AGS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7027
+    release_events: 135
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_LONDON_AGS_OTHER_ENERGY_OPTIONS_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7441
+    release_events: 143
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_NAT_GAS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.081
+    release_events: 12
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_OIL_PRODUCTS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8692
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_OIL_PRODUCTS_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8692
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_OTHER_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.206
+    release_events: 36
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_RBOB_GASOLINE_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.2686
+    release_events: 48
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_WTI_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_EU_WTI_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_CANOLA_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_CANOLA_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_COCOA_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_COCOA_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_COFFEE_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_COFFEE_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_COTTON_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_COTTON_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_CRB_CCI_INDEX_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1435
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_CRB_INDEX_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1435
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_CURRENCIES_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_CURRENCIES_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9502
+    release_events: 179
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_EQUITY_DERIVATIVES_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.6375
+    release_events: 119
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_EQUITY_DERIVATIVES_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7441
+    release_events: 143
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_FCOJ_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_FCOJ_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_GAS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7626
+    release_events: 143
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_GAS_POWER_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8692
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_GRAINS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1437
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_GRAINS_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1437
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_METALS_GRAINS_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.6375
+    release_events: 119
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_METALS_GRAINS_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7441
+    release_events: 143
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_NYSE_INDEX_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1435
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_OTHER_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1435
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_OTHER_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.081
+    release_events: 12
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_POWER_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7626
+    release_events: 143
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_RUSSELL_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.2686
+    release_events: 48
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_RUSSELL_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.2686
+    release_events: 48
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_SUGAR_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8874
+    release_events: 167
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_SUGAR_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.994
+    release_events: 191
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_US_CRB_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.0815
+    release_events: 12
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_US_CRB_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.0815
+    release_events: 12
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_US_FUTURES:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8436
+    release_events: 155
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_US_INDEX_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.1435
+    release_events: 24
+    revision_history: n/a
+    revision_contaminated: false
+  feat_ICE_US_US_OPTIONS:
+    source_file: ice_monthly_volumes.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8067
+    release_events: 155
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PRECTOTCORR_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.5613
+    release_events: 108
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSC_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_PSD_SBM_BEGINNING_STOCKS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBM_DOMESTIC_USE:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBM_ENDING_STOCKS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBM_EXPORTS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBM_IMPORTS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBM_PRODUCTION:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBM_STU:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBM_TOTAL_DISTRIBUTION:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBM_TOTAL_SUPPLY:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBO_BEGINNING_STOCKS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBO_DOMESTIC_USE:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBO_ENDING_STOCKS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBO_EXPORTS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBO_IMPORTS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBO_PRODUCTION:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBO_STU:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBO_TOTAL_DISTRIBUTION:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SBO_TOTAL_SUPPLY:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SOY_BEGINNING_STOCKS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SOY_CRUSH:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SOY_ENDING_STOCKS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SOY_EXPORTS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SOY_IMPORTS:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SOY_PRODUCTION:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SOY_STU:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SOY_TOTAL_DISTRIBUTION:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PSD_SOY_TOTAL_SUPPLY:
+    source_file: psd_historical.parquet
+    median_gap_days: 365.0
+    staleness_cap_days: 800
+    coverage: 0.5139
+    release_events: 9
+    revision_history: none
+    revision_contaminated: true
+  feat_PS_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4562
+    release_events: 84
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_RH2M_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MAX_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_Buenos_Aires:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_Cordoba:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_Heilongjiang:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_Illinois:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_Indiana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_Iowa:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_Jiangsu:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MIN_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MatoGrosso:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_MatoGrossodoSul:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_Parana:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_SantaFe:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_T2M_Shandong:
+    source_file: nasa_power_agroclimatology_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9988
+    release_events: 192
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_BDI:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 4018
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_BRENT_CRUDE_OIL:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 4288
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_CANOLA:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 3955
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_COAL:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 3970
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_CONTAINERIZED_FREIGHT_INDEX:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.77
+    release_events: 3208
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_CORN:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 1.0
+    release_events: 4127
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_CRB_INDEX:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 4168
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_DI_AMMONIUM:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.4087
+    release_events: 1621
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_DREWRY_WORLD_CONTAINER_INDEX:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 7.0
+    staleness_cap_days: 43
+    coverage: 0.0503
+    release_events: 42
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_ETHANOL:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 4249
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_EU_CARBON_PERMITS:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9995
+    release_events: 4116
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_EU_NATURAL_GAS:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9878
+    release_events: 3737
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_GASOLINE:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9995
+    release_events: 4110
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_GSCI:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 4188
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_HEATING_OIL:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9995
+    release_events: 4125
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_NAPHTHA:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9995
+    release_events: 4021
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_NATURAL_GAS:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 4153
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_PALM_OIL:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 3946
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_RAPESEED:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 4052
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_SOYBEANS:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 4065
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_SUGAR:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9998
+    release_events: 4073
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_SUNFLOWER_OIL:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.8503
+    release_events: 3521
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_UK_NATURAL_GAS:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9995
+    release_events: 4098
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_UREA:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.4023
+    release_events: 1551
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_WHEAT:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 1.0
+    release_events: 4113
+    revision_history: n/a
+    revision_contaminated: false
+  feat_TE_WTI_CRUDE_OIL:
+    source_file: te_commodities_usd_mt.parquet
+    median_gap_days: 1.0
+    staleness_cap_days: 19
+    coverage: 0.9995
+    release_events: 4243
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_FAO_TONE:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8249
+    release_events: 131
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_FAO_기상이변:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8119
+    release_events: 119
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_FAO_물류충격:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8249
+    release_events: 131
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_FAO_바이오연료수요:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7865
+    release_events: 104
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_FAO_생산변동:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.6545
+    release_events: 78
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_FAO_수입관세:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 61.0
+    staleness_cap_days: 259
+    coverage: 0.7937
+    release_events: 60
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_FAO_수출규제:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 60.0
+    staleness_cap_days: 255
+    coverage: 0.7324
+    release_events: 62
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_FAO_압착:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.7947
+    release_events: 115
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_FAO_재고:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.8198
+    release_events: 126
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_GAIN_기상이변:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9866
+    release_events: 178
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_GAIN_바이오연료수요:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9914
+    release_events: 177
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_GAIN_생산변동:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9866
+    release_events: 143
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_GAIN_수입관세:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9895
+    release_events: 140
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_GAIN_수출규제:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9866
+    release_events: 138
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_GAIN_압착:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9914
+    release_events: 186
+    revision_history: n/a
+    revision_contaminated: false
+  feat_UNSTR_GAIN_재고:
+    source_file: unstructured_signals_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.9914
+    release_events: 184
+    revision_history: n/a
+    revision_contaminated: false
+  feat_WASDE_CORN_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_CORN_DOMESTIC_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_CORN_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_CORN_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_CORN_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_CORN_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_CORN_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_MEAL_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_MEAL_DOMESTIC_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_MEAL_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_MEAL_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_MEAL_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_MEAL_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_MEAL_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_OILMEALS_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_OILMEALS_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_OILMEALS_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_OILMEALS_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_OILSEEDS_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_OILSEEDS_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_OILSEEDS_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_OILSEEDS_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SBO_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SBO_DOMESTIC_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SBO_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SBO_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SBO_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SBO_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SBO_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SOY_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SOY_CRUSH:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SOY_DOMESTIC_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SOY_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SOY_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SOY_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SOY_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_SOY_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_MEAL_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_MEAL_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_MEAL_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_MEAL_FARM_PRICE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4152
+    release_events: 79
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_MEAL_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_MEAL_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_MEAL_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_MEAL_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_MEAL_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_BIODIESEL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.0865
+    release_events: 13
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_FARM_PRICE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4152
+    release_events: 79
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_USDOM_SBO_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_AREA_HARVESTED:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_AREA_PLANTED:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_DOMESTIC_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_ETHANOL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.0815
+    release_events: 12
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_FARM_PRICE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4152
+    release_events: 79
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_FSI:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_CORN_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_MEAL_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_MEAL_DOMESTIC_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_MEAL_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_MEAL_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_MEAL_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_MEAL_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_MEAL_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_OILMEALS_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_OILMEALS_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_OILMEALS_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_OILMEALS_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_OILSEEDS_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_OILSEEDS_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_OILSEEDS_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_OILSEEDS_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SBO_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SBO_DOMESTIC_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SBO_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SBO_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SBO_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SBO_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SBO_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_AREA_HARVESTED:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_AREA_PLANTED:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_BEGINNING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_CRUSH:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_DOMESTIC_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_EXPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_FARM_PRICE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.4152
+    release_events: 79
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_IMPORTS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_PRODUCTION:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_SOY_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 186
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_VEGOIL_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 184
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_VEGOIL_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 184
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_VEGOIL_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 184
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_US_VEGOIL_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 184
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_VEGOIL_ENDING_STOCKS:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 184
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_VEGOIL_STU:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 184
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_VEGOIL_TOTAL_SUPPLY:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 184
+    revision_history: full
+    revision_contaminated: false
+  feat_WASDE_VEGOIL_TOTAL_USE:
+    source_file: wasde_historical.parquet
+    median_gap_days: 31.0
+    staleness_cap_days: 139
+    coverage: 0.983
+    release_events: 184
+    revision_history: full
+    revision_contaminated: false
+derived_rule: '일별(중앙간격<=4일): log수익률 1/5/20/60 + 90일 롤링 z. 저빈도: 12개월 변화율 + 252일 롤링
+  z. 전부 후방참조.'

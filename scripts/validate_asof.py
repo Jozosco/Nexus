@@ -29,7 +29,8 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.pipeline.asof import ASOF_FIELDS, ASOF_REQUIRED, rule_for  # noqa: E402
+from src.pipeline.asof import (ASOF_FIELDS, ASOF_REQUIRED,  # noqa: E402
+                               revision_status)
 
 RAW_DIR = os.environ.get("NEXUS_DATA_ROOT", "data/raw")
 SCHEMA_DIR = Path("data/schemas")
@@ -65,14 +66,19 @@ def _check_frame(path: str, df: pd.DataFrame) -> list[str]:
     if future:
         issues.append(f"{name}: available_at이 미래인 행 {future:,}건 — 현시점 모델 사용 불가(정상일 수 있음)")
 
-    # 개정 소스인데 vintage가 없으면 백테스트에서 최신값을 쓰게 된다
-    if "indicator_code" in df.columns and "source_vintage" in df.columns:
+    # ── 개정 이력 (D-034) ────────────────────────────────────────────────────
+    # 구 검사는 `source_vintage`의 non-null만 봤다. 그런데 그 값이 **수집일 한 개**로
+    # 일괄 스탬프돼 있었기 때문에(파일당 고유값 1개) 검사는 100% 통과하면서
+    # 실제로는 아무것도 막지 못했다 — 게이트가 있는데 비어 있던 상태.
+    # 이제 "vintage가 있는가"가 아니라 "**개정 전 값을 복원할 수 있는가**"를 묻는다.
+    if "indicator_code" in df.columns:
         codes = df["indicator_code"].astype(str)
-        rev = codes.map(lambda c: rule_for(c).revises)
-        no_vint = int((rev & df["source_vintage"].isna()).sum())
-        if no_vint:
-            issues.append(f"{name}: 개정 소스인데 source_vintage 결측 {no_vint:,}행 "
-                          f"— vintage 없이 백테스트하면 개정 후 값을 과거에 쓰게 됨")
+        contaminated = sorted({c for c in codes.unique() if revision_status(c) == "none"})
+        if contaminated:
+            issues.append(
+                f"{name}: [경고] 개정 이력 없는 지표 {len(contaminated)}종 — "
+                f"백테스트가 '당시 알 수 없던 확정치'를 사용합니다"
+                f"(예: {', '.join(contaminated[:3])}). 제거가 아니라 민감도 검증 대상.")
     return issues
 
 
@@ -128,9 +134,14 @@ def main() -> int:
             passed += 1
             print(f"  ✅ {os.path.basename(f)} ({len(df):,}행)")
 
-    hard = [i for i in issues if "미래" not in i]     # 미래 available_at은 경고
+    # 차단(hard) vs 경고 구분: 규칙 위반은 차단, 상태 보고는 경고.
+    #   · 미래 available_at — 아직 못 쓸 뿐 데이터는 정상
+    #   · 개정 이력 없음    — 사실 보고이며 지금 고칠 수단이 없다. 여기서 차단하면
+    #     해결 경로 없이 전 작업이 멈춘다. 대신 **반드시 눈에 띄게** 남긴다.
+    hard = [i for i in issues if "미래" not in i and "[경고]" not in i]
     for i in issues:
-        print(f"  {'⚠️' if '미래' in i else '🚨'} {i}")
+        soft = ("미래" in i) or ("[경고]" in i)
+        print(f"  {'⚠️' if soft else '🚨'} {i}")
 
     print(f"\n[결과] 통과 {passed}/{len(files)} · 위반 {len(hard)}건 · 경고 {len(issues)-len(hard)}건")
     if hard or schema_issues:
