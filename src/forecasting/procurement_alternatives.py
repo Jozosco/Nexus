@@ -49,7 +49,8 @@ from src.forecasting.landed_cost import (
 WAIT_WEEKS = (2, 4)                     # ①시점 축 — 대기 시나리오(주)
 Z_WINDOW_DAYS = 90                      # 대체유지 z-score 창(관측일)
 Z_MIN_PERIODS = 30
-CPO_SBO_THRESHOLD_USD_MT = 175.0        # CE-015 대체압력 임계 (통계 검증 대기 상태 유지)
+CPO_SBO_THRESHOLD_USD_MT = 175.0        # CE-015 대체압력 임계 — SBO−CPO(대두유 고평가 폭) 기준
+                                        # (GPT 교차검증 정정: CPO−SBO 표기는 방향 역전이었음)
 SUBSTITUTE_CODES = {                    # feature mart / TE parquet 지표코드
     "팜유(CPO)": "TE_PALM_OIL",
     "유채유": "TE_RAPESEED",
@@ -206,7 +207,8 @@ def axis_substitutes(cfg: ProcurementConfig) -> tuple[Axis, list[dict]]:
     axis = Axis(
         name="④대체유지 (팜·유채·해바라기 스프레드)",
         signal=f"CBOT 90일 z={cbot_z:+.2f} 대비 대체유지 z격차 관측 · {spread_note}",
-        delta=f"전환 임계: CPO−SBO 스프레드 > {cfg.substitution_threshold_usd_mt:,.0f} $/MT"
+        delta=f"전환 임계: SBO−CPO 스프레드 > {cfg.substitution_threshold_usd_mt:,.0f} $/MT "
+              f"(SBO가 팜유 대비 임계 이상 고평가 시 배합 전환 검토 — GPT 교차검증 부호 정정)"
               "(CE-015 — 통계 검증 대기) · 관세청 대체유 9품목 실측 CIF는 GW 확장수집 "
               "완료 후 병행(A-161: 현재 템플릿만 존재)",
         guidance="z격차 음수(대체유가 SBO보다 약세)가 지속되면 배합 전환 검토 신호 — "

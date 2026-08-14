@@ -723,9 +723,20 @@ jobs:
           kst = now_utc + timedelta(hours=9)
           mode = "weekly" if kst.weekday() == 4 else "alert"   # 금요일(KST) 정규판
 
-          # WASDE 발표 익영업일 감지: wasde parquet의 available_at 최신값이 36시간 이내.
-          # 36h 창은 KST 05:30 일별 실행 기준 발표 후 정확히 1회만 monthly로 판정됨
-          # (발표 ~16:00 UTC → 익일 20:30 UTC 실행 delta ≈ 28.5h, 그다음 날은 52.5h).
+          # WASDE 발표 감지 — 정확히-1회 판정 (GPT 교차검증 정정 2026-08-14):
+          # 고정 시간창(36h)은 발표 당일 20:30 UTC 실행과 익일 실행이 모두 창에 들어
+          # monthly 이중 발행 가능, 금요일 발표는 월요일 실행에서 누락 가능.
+          # → "직전 스케줄 실행 시각 이후에 available_at이 새로 생겼는가"로 판정.
+          #   직전 실행 = 가장 최근의 20:30 UTC(일~목, cron과 동일) — 주말·공휴일을
+          #   건너뛰어도 창이 이어지므로 금요일 발표도 일요일 실행에서 1회 잡힘.
+          def prev_scheduled_run(ref: datetime) -> datetime:
+              cand = ref.replace(hour=20, minute=30, second=0, microsecond=0)
+              if cand >= ref:
+                  cand -= timedelta(days=1)
+              while cand.weekday() not in {6, 0, 1, 2, 3}:   # 일~목(UTC)만 cron 발화
+                  cand -= timedelta(days=1)
+              return cand
+
           try:
               latest = None
               for p in sorted(glob.glob("data/raw/wasde*.parquet")):
@@ -733,9 +744,16 @@ jobs:
                   m = pd.to_datetime(df["available_at"], errors="coerce", utc=True).max()
                   if pd.notna(m) and (latest is None or m > latest):
                       latest = m
-              if latest is not None and (now_utc - latest.to_pydatetime()) <= timedelta(hours=36):
-                  mode = "monthly"
-                  print(f"[정보] WASDE 발표 감지 (available_at={latest}) — 월별 심층판")
+              if latest is not None:
+                  latest_dt = latest.to_pydatetime()
+                  prev_run = prev_scheduled_run(now_utc)
+                  # 미래 타임스탬프는 발표로 인정하지 않음 (look-ahead 차단)
+                  if prev_run < latest_dt <= now_utc:
+                      mode = "monthly"
+                      print(f"[정보] WASDE 발표 감지 (available_at={latest}, "
+                            f"직전 실행 {prev_run:%m-%d %H:%M} 이후) — 월별 심층판")
+                  elif latest_dt > now_utc:
+                      print(f"[경고] WASDE available_at이 미래값({latest}) — 발표로 인정 안 함")
           except Exception as e:
               print(f"[경고] WASDE 발표 감지 실패 — 요일 기반 모드 유지: {e}")
 
@@ -747,6 +765,8 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           G1_PUBLISH_MODE: ${{ steps.pubmode.outputs.mode }}
+          # 실행별 격리 디렉터리 — 과거 산출물 재발행 차단 (GPT 교차검증 정정)
+          G1_REPORT_DIR: reports/pipeline/run_${{ github.run_id }}
         run: python src/forecasting/variable_importance_g1.py 7
       - name: Append G1 summary to GitHub Step Summary
         run: |
@@ -755,14 +775,17 @@ jobs:
           from pathlib import Path
           summary = open(os.environ["GITHUB_STEP_SUMMARY"], "a")
           mode = "${{ steps.pubmode.outputs.mode }}"
-          alerts = sorted(glob.glob("reports/pipeline/g1_alert_*.md"))
-          reports = sorted(glob.glob("reports/pipeline/g1_variable_importance_*_ko.html"))
+          rdir = "reports/pipeline/run_${{ github.run_id }}"   # 이번 실행 산출물만
+          alerts = sorted(glob.glob(f"{rdir}/g1_alert_*.md"))
+          reports = sorted(glob.glob(f"{rdir}/g1_variable_importance_*_ko.html"))
           if mode == "alert":
               if alerts:
                   summary.write(f"\n\n## 🚨 C-03 G1 일별 경보판 발행\n")
                   summary.write(Path(alerts[-1]).read_text(encoding="utf-8"))
               else:
-                  summary.write("\n\n## C-03 G1 일별 점검 — 이상 없음 (경보판 미발행)\n")
+                  # "이상 없음"이 아니라 임계값 기준의 사실만 기술 (GPT 교차검증 정정)
+                  summary.write("\n\n## C-03 G1 일별 점검 — 구조적 단절 임계값 초과 없음"
+                                " (경보판 미발행)\n")
           elif reports:
               label = {"weekly": "주별 정규판", "monthly": "월별 심층판"}.get(mode, "전체 보고서")
               summary.write(f"\n\n## C-03 G1 분석 완료 ({label})\n리포트: `{Path(reports[-1]).name}`\n")
@@ -776,10 +799,10 @@ jobs:
         with:
           name: g1-variable-importance-${{ github.run_id }}
           path: |
-            reports/pipeline/g1_variable_importance_*.html
-            reports/pipeline/g1_variable_importance_*.pdf
-            reports/pipeline/g1_variable_importance_*.md
-            reports/pipeline/g1_alert_*.md
+            reports/pipeline/run_${{ github.run_id }}/g1_variable_importance_*.html
+            reports/pipeline/run_${{ github.run_id }}/g1_variable_importance_*.pdf
+            reports/pipeline/run_${{ github.run_id }}/g1_variable_importance_*.md
+            reports/pipeline/run_${{ github.run_id }}/g1_alert_*.md
           retention-days: ${{ steps.pubmode.outputs.mode == 'monthly' && 90 || 30 }}
           if-no-files-found: ${{ steps.pubmode.outputs.mode == 'alert' && 'ignore' || 'error' }}
 

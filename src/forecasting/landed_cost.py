@@ -43,6 +43,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 # ── 상수 (매직 넘버 금지 — CLAUDE.md §3.2) ──────────────────────────────────
@@ -59,6 +60,8 @@ SELF_TEST_BASIS_ABS_MIN = 10.0      # 내재층 중앙값 |값| 하한 — kg/MT
 SELF_TEST_BASIS_ABS_MAX = 300.0     # 상한 — 자릿수 오류 감지
 
 # 운임 레짐 → 내재층 적용 분위 (하단, 중앙, 상단). 1.00 = 창 내 최대값.
+MC_SAMPLES = 20_000                     # 몬테카를로 컨볼루션 표본 수 (시드 고정)
+
 FREIGHT_SCENARIOS: dict[str, tuple[float, float, float]] = {
     "평시": (0.10, 0.50, 0.90),
     "경계": (0.25, 0.75, 0.90),     # z>1 — 분포 상위로 이동
@@ -100,6 +103,7 @@ class LandedCostResult:
     band_p50: float
     band_p90: float
     basis_applied: tuple[float, float, float]   # 시나리오 적용 후 내재층 (하·중·상)
+    band_stress: tuple[float, float, float]     # 완전 순위의존 상계 (분위 단순합 + 운임 레짐)
     cif_country: pd.DataFrame         # 국가별 실측 CIF 최근 N개월
     basis_monthly: pd.Series          # 월별 내재값(최근 창)
 
@@ -272,8 +276,12 @@ def classify_freight_regime(z: float | None) -> str:
 def build_landed_band() -> LandedCostResult:
     """CBOT 층 + 내재 basis·운임 층 합성 → 도착가 밴드.
 
-    합성 규칙(보수적 폭): 두 층의 분위를 **독립 가산**한다 — 결합 분포의 실제 분위보다
-    상·하한이 벌어져 밴드폭 ≥ CBOT 밴드폭이 구조적으로 보장된다(운임 불확실성 가산).
+    합성 규칙(GPT-5.6-Sol 교차검증 정정 2026-08-14):
+    - **주 밴드** = 몬테카를로 독립 컨볼루션 — 두 층에서 독립 복원추출한 합의
+      P10/P50/P90. 분위 단순합(P10+P10 등)은 완전 순위의존(comonotonic) 가정이라
+      합계의 통계적 분위가 아니므로 주 밴드로 쓰지 않는다.
+    - **스트레스 상계** = 분위 단순합 + 운임 레짐 시나리오 — 두 층이 함께 극단으로
+      움직이는 최악 결합의 보수적 상·하계로만 별도 표기한다.
     """
     cbot_daily, cbot_src, cbot_note = load_cbot_usd_mt()
     recent = cbot_daily.tail(CBOT_WINDOW_DAYS)
@@ -303,10 +311,17 @@ def build_landed_band() -> LandedCostResult:
     recent_countries = by_country[by_country["price_date"]
                                   >= by_country["price_date"].max()
                                   - pd.DateOffset(months=CIF_COUNTRY_MONTHS - 1)]
+
+    # 주 밴드: 몬테카를로 독립 컨볼루션 (시드 고정 — 재현성)
+    rng = np.random.default_rng(20260814)
+    mc_sums = (rng.choice(recent.to_numpy(), MC_SAMPLES, replace=True)
+               + rng.choice(basis_window.to_numpy(), MC_SAMPLES, replace=True))
+    mc = tuple(float(np.quantile(mc_sums, q)) for q in (0.10, 0.50, 0.90))
+
     return LandedCostResult(
         cbot=cbot, basis=basis, scenario=scenario, bdi_z=bdi_z, bdi_last=bdi_last,
-        band_p10=cbot.p10 + applied[0], band_p50=cbot.p50 + applied[1],
-        band_p90=cbot.p90 + applied[2], basis_applied=applied,
+        band_p10=mc[0], band_p50=mc[1], band_p90=mc[2], basis_applied=applied,
+        band_stress=(cbot.p10 + applied[0], cbot.p50 + applied[1], cbot.p90 + applied[2]),
         cif_country=recent_countries.sort_values(["price_date", "country"]),
         basis_monthly=basis_window)
 
@@ -327,22 +342,26 @@ def render_md(r: LandedCostResult) -> str:
     else:
         regime_line = f"- 운임 레짐: **{r.scenario}** (BDI z 미확보 — 평시 가정)"
     lines = [
-        f"# CFR 한국항 도착가 밴드 v0 — {today}",
+        f"# CIF 한국항 도착가 밴드 v0 — {today}",
         "",
         "> G2 운영 현실화 계층(D-041). CBOT 층은 G2 분위수 모델 산출 전 **임시 스탠드인**",
         "> (최근 60거래일 경험 분포)이며, G2 Preview 이후 모델 분위수로 교체함.",
         "> 근거 구조: 가격 4층 분해(CBOT+basis+운임+보험) — competitive_differentiation §3b.",
         "",
-        "## 도착가 밴드 (조대두유 CFR 한국항, USD/MT)",
+        "## 도착가 밴드 (조대두유 CIF 한국항 기준, USD/MT)",
         "",
-        "| 분위 | 도착가 밴드 | 구성: CBOT 층 | 구성: 내재 basis+운임층 |",
-        "|---|---|---|---|",
-        f"| P10 | **{r.band_p10:,.0f}** | {r.cbot.p10:,.0f} | {r.basis_applied[0]:+,.0f} |",
-        f"| P50 | **{r.band_p50:,.0f}** | {r.cbot.p50:,.0f} | {r.basis_applied[1]:+,.0f} |",
-        f"| P90 | **{r.band_p90:,.0f}** | {r.cbot.p90:,.0f} | {r.basis_applied[2]:+,.0f} |",
+        "| 분위 | **주 밴드 (MC 독립 컨볼루션)** | 스트레스 상계 (완전 순위의존 + 운임 레짐) |",
+        "|---|---|---|",
+        f"| P10 | **{r.band_p10:,.0f}** | {r.band_stress[0]:,.0f} |",
+        f"| P50 | **{r.band_p50:,.0f}** | {r.band_stress[1]:,.0f} |",
+        f"| P90 | **{r.band_p90:,.0f}** | {r.band_stress[2]:,.0f} |",
         "",
-        f"- 밴드폭 {band_width:,.0f} $/MT ≥ CBOT 밴드폭 {cbot_width:,.0f} $/MT — "
-        "운임·basis 불확실성 가산(보수적 독립 분위 합성)",
+        f"- 주 밴드폭 {band_width:,.0f} $/MT ≥ CBOT 밴드폭 {cbot_width:,.0f} $/MT — "
+        "운임·basis 불확실성 가산",
+        "- 주 밴드는 두 층 독립 복원추출 합의 분위(몬테카를로 20,000표본·시드 고정). "
+        "분위 단순합은 합계의 통계적 분위가 아니므로(GPT 교차검증 정정) 스트레스 상계로만 표기.",
+        "- 기준 명칭 정정: 원천이 관세청 **CIF**(보험 포함)이므로 CIF 기준으로 표기 "
+        "(CFR은 매도인 보험 조달 의무 없음 — Incoterms 구분).",
         regime_line,
         f"- 시나리오 임계: 평시 z≤{BDI_Z_WATCH:.0f} / 경계 z>{BDI_Z_WATCH:.0f} / "
         f"급등 z>{BDI_Z_SURGE:.0f} — 인과 근거 CE-010·CE-013·CE-016(ontology causal_edges)",
@@ -387,6 +406,9 @@ def render_md(r: LandedCostResult) -> str:
         f"- BDI 마지막 관측: {_age_days(r.bdi_last)}",
         f"- 벌크 하한 {MIN_BULK_KG // 1000} MT 미만 소량 수입은 제외(단가 왜곡 방지).",
         "- 보험·부대비는 내재층에 합산 포함(분리 실측 없음 — Platts/BCAA 구독 전).",
+        "- 내재층 해석 한계(GPT 교차검증): 도착월 CIF와 동월 CBOT의 차이는 basis+운임 외에"
+        " **리드타임(40~50일) 중 가격변동·계약조건·원산지 구성**을 함께 포함함. 순수"
+        " basis·운임 분리는 계약 시점 정렬(리드타임 시프트) 또는 실측 호가(DQ-1) 확보 후 가능.",
         "- 본 산출물은 참고 정보임. 조달 의사결정은 CLAUDE.md §6 HITL 게이트를 따름.",
         "",
     ]

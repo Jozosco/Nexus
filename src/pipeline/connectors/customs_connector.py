@@ -112,6 +112,15 @@ HS_NOTES: dict[str, str] = {**HS_CODES_SUBSTITUTES, **HS_CODES_COMPLEMENTS}
 # 한국 대두유 주요 수입 국가 (2026-06-18 사용자 확인)
 COUNTRY_CODES: list[str] = ["US", "AR", "BR", "CN", "ID"]
 
+# 시간 예산 — 잡 timeout-minutes 강제종료(수집분 전량 유실) 이전에 스스로 중단·저장한다.
+# 0 또는 미설정이면 무제한 (A-167: 런 31812867920에서 90분 kill로 HS1507 유실된 사후 조치)
+_BUDGET_S = float(os.environ.get("CUSTOMS_TIME_BUDGET_S", "0") or 0)
+_START_MONO = time.monotonic()
+
+
+def _budget_exceeded() -> bool:
+    return _BUDGET_S > 0 and (time.monotonic() - _START_MONO) > _BUDGET_S
+
 COMTRADE_REPORTER_KOREA = "410"
 
 
@@ -343,9 +352,15 @@ def fetch_customs_total_imports(
     total_calls = 0
 
     for yr in range(start_year, end_year + 1):
+        if _budget_exceeded():
+            print(f"[경고] 시간 예산({_BUDGET_S:.0f}s) 초과 — Itemtrade {yr}년 이후 중단, "
+                  "수집분 저장 진행")
+            break
         strt_ym = f"{yr:04d}01"
         end_ym  = f"{yr:04d}12" if yr < date.today().year else today_ym
         for hs_sgn in HS_CODES_ALL:
+            if _budget_exceeded():
+                break
             total_calls += 1
             items = _fetch_customs_range(service_key, strt_ym, end_ym, hs_sgn, use_nitemtrade=False)
             if items:
@@ -401,10 +416,16 @@ def fetch_customs_sbo_imports(
     success_calls = 0
 
     for yr in range(start_year, end_year + 1):
+        if _budget_exceeded():
+            print(f"[경고] 시간 예산({_BUDGET_S:.0f}s) 초과 — nitemtrade {yr}년 이후 중단, "
+                  "수집분 저장 진행")
+            break
         strt_ym = f"{yr:04d}01"
         end_ym  = f"{yr:04d}12" if yr < date.today().year else today_ym
 
         for hs_sgn in HS_CODES_ALL:
+            if _budget_exceeded():
+                break
             for cnty_cd in country_codes:
                 total_calls += 1
                 items = _fetch_customs_range(service_key, strt_ym, end_ym, hs_sgn, cnty_cd)

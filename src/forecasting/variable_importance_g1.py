@@ -27,7 +27,9 @@ import numpy as np
 import pandas as pd
 
 OUTPUT_DIR  = "data/raw"
-REPORT_DIR  = "reports/pipeline"
+# G1_REPORT_DIR: 실행별 격리 디렉터리 지정용 — 과거 산출물이 glob에 섞여
+# 재발행되는 것을 차단 (GPT 교차검증 정정 2026-08-14)
+REPORT_DIR  = os.environ.get("G1_REPORT_DIR", "reports/pipeline")
 G1_TARGET_COL = "CBOT_BO_CLOSE"
 G1_TARGET_TIME_BASES = {"CME_SESSION", "EXCHANGE_SETTLEMENT"}
 G1_MIN_TARGET_OBS = int(os.environ.get("G1_MIN_TARGET_OBS", "1000"))

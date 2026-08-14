@@ -320,6 +320,8 @@ jobs:
           HISTORICAL_START_YEAR:      ${{ github.event.inputs.start_year }}
           HISTORICAL_END_YEAR:        ${{ github.event.inputs.end_year }}
           BACKFILL_MODE:              "true"
+          # 잡 timeout-minutes(90)보다 먼저 스스로 중단·저장 — 강제종료 유실 방지 (A-167)
+          CUSTOMS_TIME_BUDGET_S:      "4500"
         run: python src/pipeline/connectors/customs_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
