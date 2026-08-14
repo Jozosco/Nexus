@@ -1,0 +1,71 @@
+# GPT 교차검증 자동화 (조정자 지시 2026-08-13 · D-041)
+# "모든 데이터 분석·코딩 작업은 GPT 5.6 - Sol (Effort - Max)로 교차검증한다."
+#
+# 발화 조건: main push 중 G2 운영 현실화 계층 산출물(src/forecasting·도착가 밴드·
+#   4축 대안 보고서·온톨로지)이 바뀔 때 + 수동(workflow_dispatch).
+#   → 이 워크플로우를 추가하는 push 자체가 위 경로를 포함하므로 즉시 1회 발화되어
+#     방금 만든 G2 코드·산출물이 곧바로 GPT 검증을 받는다.
+#
+# ⚠️ 모델 ID: 기본값 'gpt-5.6-sol'이 OpenAI 실제 모델명과 다르면(404 등),
+#   저장소 Settings → Actions Variables에 GPT_XVERIFY_MODEL을 등록해 교정한다
+#   (코드 수정 불요 — L-008 전례: 모델명 하드코딩 금지).
+#   스크립트는 호출 실패 시 경고만 남기고 exit 0 — 외부 서비스 장애가 우리 장애가
+#   되지 않게 한다(cross_verify_gpt.py 설계 원칙).
+
+name: GPT Cross-Verify (G2 Ops Layer)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/forecasting/**"
+      - "reports/market/landed_cost_band_*.md"
+      - "reports/market/procurement_alternatives_*.md"
+      - "src/semantic/ontology.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xverify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false          # 검증 기록은 중단 없이 남긴다
+
+jobs:
+  gpt-cross-verify:
+    name: "GPT 교차검증 | diff + G2 산출물"
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GPT_XVERIFY_MODEL: ${{ vars.GPT_XVERIFY_MODEL || 'gpt-5.6-sol' }}
+      GPT_XVERIFY_EFFORT: "max"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2             # --diff HEAD~1 대조용
+          sparse-checkout: |
+            src
+            scripts
+            reports
+            docs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install openai
+      - name: Cross-verify commit diff (HEAD~1)
+        shell: bash
+        run: python scripts/cross_verify_gpt.py --diff HEAD~1
+      - name: Cross-verify G2 ops reports (도착가 밴드 · 4축 대안)
+        shell: bash
+        run: |
+          python scripts/cross_verify_gpt.py \
+            "reports/market/landed_cost_band_*.md" \
+            "reports/market/procurement_alternatives_*.md"
+      - name: Upload verification artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpt-xverify-g2-${{ github.run_id }}
+          path: reports/cross_verify/
+          retention-days: 90
+          if-no-files-found: warn    # 키 미등록 시 검증 건너뜀 — 산출물 없음이 정상

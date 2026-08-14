@@ -8,10 +8,15 @@
 #   ⑤ causal_edges 신설 — causal_chains.md 18체인 + 도메인 메커니즘 노트 3경로를
 #      validated/evidence/direction/lag 필드로 정형화 (감사 갭 6 · S-1 · S-5)
 #   ⑥ direction_vocab 신설 — 방향 어휘 3계통 변환 규칙 (감사 갭 8)
+# v3.1 변경(2026-08-14 · G2 운영 현실화 계층 — D-041):
+#   ① supply_chain 섹션 신설 — 트레이딩하우스 6사·수출입 항만·한국향 루트 3종(리드타임)
+#   ② 관계 유형 58종 → 60종 (OPERATED_BY · TRANSITS 신규 — 공급망 계층 전용)
+#   ③ entity_types에 TradingHouse · Route 클래스 등록
+#   ④ CE-010 · CE-013에 route_refs 부가 필드 — 교란 사건 → 루트 → KR_IMPORT_CIF 전파 참조
 # 게이트: scripts/validate_semantic_layer.py (DAG 순환·매핑 존재·evidence 필수 필드 검증)
 # 관리: P1-06 (인과엣지 검증: P1-01~04 · 기계적 추출: C-04 · 신호 생산: P1-05)
-version: '3.0'
-updated: 2026-08-13
+version: '3.1'
+updated: 2026-08-14
 erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md
 managed_by: 'P1-06 (검증: P1-01~04 · 게이트: scripts/validate_semantic_layer.py)'
 refs:
@@ -77,7 +82,8 @@ entity_types:
   - family: geopolitics_logistics
     label_ko: 지정학·물류·해운
     classes: [GeopoliticalEvent, LogisticsEvent, LogisticsIndicator, LogisticsMetric,
-              LeadTimeMetric, Chokepoint, Port, PortRegion, LaborEvent, InsuranceMetric]
+              LeadTimeMetric, Chokepoint, Port, PortRegion, LaborEvent, InsuranceMetric,
+              TradingHouse, Route]          # v3.1 — supply_chain 계층(회사·항로)
   - family: market_price_decision
     label_ko: 시장·가격·의사결정·분석
     classes: [PriceMetric, SpreadIndicator, MarketRegime, DecisionSignal, ModelFeature,
@@ -363,6 +369,18 @@ relation_types:
   range: GeoEntity
   symmetric: false
   constraints_example: Panama Canal CONNECTS Atlantic-Pacific
+- code: OPERATED_BY
+  definition: 시설(항만·압착 플랜트·터미널)이 운영 주체에 의해 운영됨 (v3.1 — supply_chain)
+  domain: Port/Facility
+  range: TradingHouse/Actor
+  symmetric: false
+  constraints_example: Rosario crushing hub OPERATED_BY Bunge
+- code: TRANSITS
+  definition: 항로가 해협·운하를 경유함 (v3.1 — supply_chain 루트 → 교란 전파 연결)
+  domain: Route
+  range: Chokepoint
+  symmetric: false
+  constraints_example: US Gulf-Korea route TRANSITS Panama Canal
 - code: LOCATED_AT
   definition: 엔터티가 위치에 존재
   domain: Entity
@@ -578,6 +596,114 @@ signal_tag_mapping:
     unstr_codes: [UNSTR_GAIN_TONE, UNSTR_FAO_TONE]
     absa_indicator: SBO_NEWS_SENTIMENT   # 키워드 톤은 LLM 정밀 ABSA의 Phase A 프록시
     entities: [TERM-139]
+
+# ── 공급망 참조 계층 (v3.1 신설 — G2 운영 현실화: 도착가 밴드·4축 대안 · D-041) ──
+# 소비자: src/forecasting/landed_cost.py · src/forecasting/procurement_alternatives.py ·
+#         docs/templates/weekly_procurement_brief.md
+# 필드 → 관계 코드 매핑: operated_by → OPERATED_BY(시설→운영주체) · transits → TRANSITS(항로→해협) ·
+#   origin/destination → CONNECTS(항로→지리) · disruption_edges → causal_edges 원장 참조
+# 근거: docs/research_desk/2026-08/competitive_differentiation_2026_08_14.md §3a·§3b
+supply_chain:
+  note: 교란 사건(호르무즈·수에즈·파나마 등)이 chokepoint → route → KR_IMPORT_CIF로
+    전파되는 구조의 참조 데이터. 리드타임·운영 주체는 공개 자료 기반 초기값 —
+    관세청 월별 도착 실측 역산으로 갱신 예정(성약~도착 전체 주기 포함).
+  companies:                       # class TradingHouse — entities.yaml TERM 미등재(P1-06 등재 대기)
+  - company_id: SC-ADM
+    name: ADM (Archer Daniels Midland)
+    class: TradingHouse
+    pending_entity_registration: true
+    footprint_note: 미국 중서부 압착 벨트 + 걸프 수출 체계. Spiritwood·Quincy 압착·정제 증설 (§3a)
+  - company_id: SC-BUNGE
+    name: Bunge
+    class: TradingHouse
+    pending_entity_registration: true
+    footprint_note: 로사리오 권역 단독 일 18,000톤 압착 — 미주 최대 허브의 핵심 운영사 (§3a)
+  - company_id: SC-CARGILL
+    name: Cargill
+    class: TradingHouse
+    pending_entity_registration: true
+    footprint_note: 미국·브라질·아르헨티나 압착·수출 체계 전반 (§3a)
+  - company_id: SC-LDC
+    name: LDC (Louis Dreyfus Company)
+    class: TradingHouse
+    pending_entity_registration: true
+    footprint_note: 아르헨티나 Bahía Blanca 심수항 압착 증설 (§3a)
+  - company_id: SC-COFCO
+    name: COFCO International
+    class: TradingHouse
+    pending_entity_registration: true
+    footprint_note: 장자강 East Ocean Oils & Grains — 아시아 최대급 통합 압착·정제 단지 (§3a)
+  - company_id: SC-WILMAR
+    name: Wilmar International
+    class: TradingHouse
+    pending_entity_registration: true
+    footprint_note: 중국·인도·베트남·말레이시아 압착 + 세계 최대급 정제·유통망 — 아시아 RBD 공급 채널 (§3a)
+  ports:
+  - port_id: PORT-USG
+    entity_term: TERM-100          # US Gulf (PortRegion) — entities.yaml 등재분 참조
+    role: export
+    operated_by: [SC-ADM, SC-BUNGE, SC-CARGILL, SC-LDC]   # 대표 운영 주체 — 비완전 목록
+  - port_id: PORT-SANTOS
+    entity_term: TERM-101          # Santos/Paranaguá (Port)
+    role: export
+    operated_by: [SC-BUNGE, SC-CARGILL, SC-LDC, SC-COFCO]
+  - port_id: PORT-ROSARIO
+    entity_term: TERM-102          # Rosario (PortRegion) — Up River FOB 기준점
+    role: export
+    operated_by: [SC-BUNGE, SC-CARGILL, SC-LDC, SC-COFCO]
+  - port_id: PORT-PYEONGTAEK
+    name: Pyeongtaek (평택항)
+    class: Port
+    role: import_discharge
+    pending_entity_registration: true   # entities.yaml TERM 미등재 — P1-06 등재 대기
+  - port_id: PORT-INCHEON
+    name: Incheon (인천항)
+    class: Port
+    role: import_discharge
+    pending_entity_registration: true
+  waypoints:                       # 해협·운하 — TRANSITS 대상
+  - way_id: WP-PANAMA
+    entity_term: TERM-083          # Panama Canal (Chokepoint)
+  - way_id: WP-HORMUZ
+    entity_term: TERM-081          # Strait of Hormuz (Chokepoint) — 한국향 SBO 직항로 아님(운임 시장 전파)
+  - way_id: WP-MALACCA
+    name: Strait of Malacca (말라카 해협)
+    class: Chokepoint
+    pending_entity_registration: true
+  - way_id: WP-SUEZ
+    name: Suez Canal (수에즈 운하)
+    class: Chokepoint
+    pending_entity_registration: true
+  routes:
+  # 리드타임 출처: .claude/skills/phase1/04_supply_chain_analyst.md:115-121 (Avg CFR Lead Days)
+  # ⚠️ 리드타임은 관세청 실측(월별 도착) 역산으로 갱신 예정 — 아래 값은 공개 문서 초기값
+  - route_id: RT-USG-KR
+    label_ko: 미국 걸프 → 한국 (조대두유 탱커)
+    origin: PORT-USG
+    destination: [PORT-PYEONGTAEK, PORT-INCHEON]
+    lead_time_days: {min: 45, max: 50}
+    lead_time_source: '.claude/skills/phase1/04_supply_chain_analyst.md:115-121'
+    transits: [WP-PANAMA]
+    disruption_edges: []           # 파나마 단독 인과엣지 미등재 — 후보 등재는 P1-04 검증 대기
+  - route_id: RT-SANTOS-KR
+    label_ko: 브라질 산투스·파라나과 → 한국
+    origin: PORT-SANTOS
+    destination: [PORT-PYEONGTAEK, PORT-INCHEON]
+    lead_time_days: {min: 40, max: 45}
+    lead_time_source: '.claude/skills/phase1/04_supply_chain_analyst.md:115-121'
+    transits: [WP-MALACCA]         # 희망봉 → 인도양 → 말라카 경유 접근
+    disruption_edges: [CE-010]
+  - route_id: RT-ROSARIO-KR
+    label_ko: 아르헨티나 로사리오 → 한국
+    origin: PORT-ROSARIO
+    destination: [PORT-PYEONGTAEK, PORT-INCHEON]
+    lead_time_days: {min: 40, max: 45}
+    lead_time_source: '.claude/skills/phase1/04_supply_chain_analyst.md:115-121'
+    transits: [WP-MALACCA]
+    disruption_edges: [CE-010]
+  market_wide_freight_note: 호르무즈(WP-HORMUZ)·수에즈(WP-SUEZ)는 한국향 3개 루트의 직접
+    경유지가 아니나 탱커 선복·AWRP(전쟁위험보험료)를 통해 운임 시장 전체로 전파된다
+    (CE-010 · CE-013). 관측 지표는 BDI·BCAA z-score.
 
 # ── 인과엣지 원장 (감사 갭 6 — causal_chains.md 18체인 정형화 + 도메인 노트 3경로) ──
 # 규칙:
@@ -796,6 +922,10 @@ causal_edges:
   status: validated
   validated_by: [P1-01, P1-04]
   domain_mechanism_ref: '§3 해운 운임 (액체 벌크 탱커)'
+  route_refs:                      # v3.1 부가 필드 — supply_chain.routes 전파 경로 참조
+    routes: [RT-SANTOS-KR, RT-ROSARIO-KR]     # 말라카 직접 경유 루트
+    propagation: 말라카는 남미→한국 루트 직접 경유(TRANSITS), 호르무즈는 탱커 선복·AWRP
+      경유 운임 시장 전파(supply_chain.market_wide_freight_note)
   evidence:
   - source_type: research_doc
     ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
@@ -859,6 +989,10 @@ causal_edges:
   status: validated
   validated_by: [P1-01, P1-04]
   domain_mechanism_ref: '§3 해운 운임 (2023-12~2024 홍해 사태 실증)'
+  route_refs:                      # v3.1 부가 필드 — supply_chain.routes 전파 경로 참조
+    routes: [RT-USG-KR, RT-SANTOS-KR, RT-ROSARIO-KR]
+    propagation: 수에즈(WP-SUEZ)는 한국향 3개 루트의 직접 경유지가 아님 — 우회로 인한
+      유효 선복 감소가 운임 시장 전체(BDI·BCAA)를 경유해 전 루트 CIF에 전파
   evidence:
   - source_type: research_doc
     ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md

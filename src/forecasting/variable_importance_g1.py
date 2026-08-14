@@ -188,6 +188,12 @@ VARIABLE_CATALOG: list[dict] = [
 ]
 
 # ── C-03 구조적 단절 임계값 (c03-data-scientist.md) ──────────────────────────
+# ⚠️ 문서 모순(2026-08-14 · D-041 감사): 아래 GPR 0.022 상수는
+#   .claude/skills/phase1/04_supply_chain_analyst.md:68-69 (MEMORY P-002)의
+#   "legacy 0.022 scale은 deprecated — never use it, 현행 기준은 GPR≥200(baseline≈100)"과
+#   모순됨. 런타임 경보는 이미 P90 분포 임계로 대체됐으나(A-062, 아래 gpr 경보 로직 참조)
+#   이 상수·THRESHOLD_RATIONALE 문구는 잔존 상태 — 척도 통일은 조정자 결정 대기.
+#   본 주석은 모순 표기만 하며 코드 로직은 변경하지 않음.
 THRESHOLDS: dict[str, dict] = {
     "GPR_NORMALIZED":   {"alert": 0.022,  "dir": ">",  "label": "지정학 구조적 단절"},
     "BDI":              {"alert": None,    "dir": "z",  "label": "해운비용 급등 (90일 rolling z>2σ)"},
@@ -199,6 +205,8 @@ THRESHOLDS: dict[str, dict] = {
 # ── C-03 임계값 산출 근거 설명 ─────────────────────────────────────────────────
 THRESHOLD_RATIONALE: list[dict] = [
     {
+        # ⚠️ 문서 모순: 0.022 척도는 04_supply_chain_analyst.md:68-69에서 deprecated·사용 금지
+        #   (현행 GPR≥200 기준). 아래 서술은 레거시 잔존 — 척도 통일은 조정자 결정 대기(D-041).
         "variable": "GPR (Geopolitical Risk Index)",
         "threshold": "> 0.022 (정규화)",
         "rationale_ko": (
