@@ -22,6 +22,7 @@ on:
       - "reports/market/landed_cost_band_*.md"
       - "reports/market/procurement_alternatives_*.md"
       - "src/semantic/ontology.yaml"
+      - "docs/research_desk/2026-08/g1_publication_schedule_panel_*.md"
   workflow_dispatch:
 
 permissions:
@@ -61,7 +62,8 @@ jobs:
         run: |
           python scripts/cross_verify_gpt.py \
             "reports/market/landed_cost_band_*.md" \
-            "reports/market/procurement_alternatives_*.md"
+            "reports/market/procurement_alternatives_*.md" \
+            "docs/research_desk/2026-08/g1_publication_schedule_panel_*.md"
       - name: Upload verification artifacts
         uses: actions/upload-artifact@v4
         with:
