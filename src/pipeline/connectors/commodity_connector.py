@@ -116,11 +116,10 @@ def fetch_bo_futures_yfinance(days_back: int = 10) -> pd.DataFrame:
                 result["source_name"] = f"yfinance/CME_{symbol.split('=')[0]}"
                 # 지표코드 CBOT_BO_* 유지 — 심볼 교체가 다운스트림 분석 코드를 깨지 않게(A-151)
                 # A-165: 캐노니컬 타깃명(CBOT_BO_CLOSE)은 세션 종가 검증기(A-145/A-156)가
-            #   계약 필드(target_eligible·time_basis)와 함께 발행하는 전유물이다.
-            #   여기(yfinance 미검증 경로)가 같은 이름을 쓰면 C-08 타깃 하드 계약이
-            #   REJECTED로 파이프라인을 중단시킨다(런 31753575819 실증).
-            #   → 진단·백업 용도의 별도 네임스페이스로 발행.
-            result["indicator_code"] = "CBOT_BO_YF_" + result["indicator_code"].str.upper()
+                #   계약 필드(target_eligible·time_basis)와 함께 발행하는 전유물 —
+                #   미검증 yfinance 경로가 같은 이름을 쓰면 C-08 타깃 하드 계약이
+                #   REJECTED로 파이프라인을 중단시킨다(런 31753575819 실증).
+                result["indicator_code"] = "CBOT_BO_YF_" + result["indicator_code"].str.upper()
                 result["unit"] = "USc/lb"
                 result["ingested_at"] = pd.Timestamp.utcnow()
                 print(f"[정보] CBOT 대두유 선물 수집 성공 (심볼: {symbol}, {days_back}d)")
