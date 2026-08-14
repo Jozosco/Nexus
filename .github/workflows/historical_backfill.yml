@@ -296,6 +296,7 @@ jobs:
   customs-backfill:
     name: "1.1.2+ | Korea Customs HS 1507 Import Backfill (data.go.kr)"
     runs-on: ubuntu-latest
+    timeout-minutes: 90   # A-166: data.go.kr 장애 시 6h 러너 소진 방지(런 31758600044 cancelled)
     if: ${{ (github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs') && github.event.inputs.include_api == 'true' }}
     steps:
       # A-136: include_api 게이트 API 커넥터 잡 — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
@@ -806,10 +807,13 @@ jobs:
     name: "C-06 | EDA Validation — Data Integrity Gate"
     runs-on: ubuntu-latest
     needs: [c08-dq-validation]
+    # A-166: 구 조건(overall == 'PASS')은 C-08 WARNING(보조 지표 경고일 뿐, 필수 5종
+    #   전부 PASS·종합 0.8905)에도 체인을 전멸시켰다(런 31758600044 — G1 미산출).
+    #   WARNING은 진행하되 리포트에 표기, REJECTED만 차단한다.
     if: >-
       github.event.inputs.skip_analysis != 'true' &&
       needs.c08-dq-validation.result == 'success' &&
-      needs.c08-dq-validation.outputs.overall_status == 'PASS'
+      needs.c08-dq-validation.outputs.overall_status != 'REJECTED'
     outputs:
       eda_status: ${{ steps.eda.outputs.eda_status }}
       stale_connectors: ${{ steps.eda.outputs.stale_connectors }}
@@ -989,7 +993,7 @@ jobs:
         env:
           OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
           GPT_XVERIFY_MODEL:  ${{ vars.GPT_XVERIFY_MODEL || 'gpt-5.6' }}
-          GPT_XVERIFY_EFFORT: "max"
+          GPT_XVERIFY_EFFORT: "xhigh"   # A-166: gpt-5.6-sol은 max 미지원(400) — 지원 최대치 xhigh
         run: |
           pip install openai
           python scripts/cross_verify_gpt.py "reports/pipeline/variable_importance_*.md" "reports/market/feature_mart_*.md"

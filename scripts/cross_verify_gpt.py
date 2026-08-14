@@ -31,7 +31,7 @@ from pathlib import Path
 
 OUT_DIR = Path("reports/cross_verify")
 MODEL = os.environ.get("GPT_XVERIFY_MODEL", "gpt-5.6")
-EFFORT = os.environ.get("GPT_XVERIFY_EFFORT", "max")
+EFFORT = os.environ.get("GPT_XVERIFY_EFFORT", "xhigh")   # A-166: max는 모델별 미지원(400) — xhigh 기본
 MAX_CHARS = 60_000        # 컨텍스트 예산 — 초과분은 앞부분 우선
 
 SYSTEM = (
