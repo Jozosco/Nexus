@@ -72,7 +72,9 @@
 1. `external_data_refresh.yml` g1-analysis 잡에 발행 모드 분기: 평일=①(경보 게이트), 금요일=①+②, WASDE 익영업일=①+③.
 2. `variable_importance_g1.py`에 `G1_PUBLISH_MODE` 환경변수(alert/weekly/monthly) — 월별 모드에서만 horizon×레짐 전면 재산출.
 3. WASDE 발표 감지: wasde parquet의 `available_at` 최신값이 당일이면 익영업일에 ③ 트리거 (발표일 하드코딩 캘린더는 보조 폴백).
-4. 아카이브 규약(C-04): ③만 `docs/reports/g1/YYYY-MM/` 커밋, ②는 아티팩트 90일, ①은 Step Summary.
+4. 아카이브 규약(C-04, **구현 시 정정**): ③ 월별 심층판은 아티팩트 **90일 보관**, ②는 30일, ①은 Step Summary.
+   당초 "③만 `docs/` 커밋" 안은 D-026(신규 `git push` 저장소 패턴 생성 금지 — 이관 대비)과 충돌하여 기각.
+   영구 아카이브는 Azure Blob 이관(D-028) 후 Blob 경로로 일원화한다.
 5. 예상 작업량: 워크플로우 분기 + 스크립트 모드 플래그 — 약 반일. 신규 워크플로우·시크릿 불필요.
 
 ## 6. 결정 요청 사항

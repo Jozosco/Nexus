@@ -2118,6 +2118,53 @@ def run(days: int = 7) -> None:
     print(f"[C-03] 분석 타깃: {target_label} · 시점 정합 변수 수: {wide.shape[1] - 1}")
     print(f"[C-03] 구조적 단절 임계값 초과: {sum(1 for a in alerts if '🚨' in a.get('상태', ''))}/{len(alerts)}")
 
+    # ── 3계층 발행 체계 (2026-08-14 조정자 승인 — g1_publication_schedule_panel) ──
+    # alert   = 일별 경보판: 임계값 초과 시에만 발행, 무경보 시 미발행
+    # weekly  = 주별 정규판(금요일 KST 07:00 전), monthly = 월별 심층판(WASDE 익영업일)
+    # full    = 기본값: 백필·수동 실행은 기존 전체 보고서 유지
+    publish_mode = os.environ.get("G1_PUBLISH_MODE", "full").lower()
+    if publish_mode not in {"full", "alert", "weekly", "monthly"}:
+        print(f"[경고] 알 수 없는 G1_PUBLISH_MODE='{publish_mode}' — full로 처리합니다.")
+        publish_mode = "full"
+    print(f"[C-03] 발행 모드: {publish_mode}")
+
+    if publish_mode == "alert":
+        breach = [a for a in alerts if "🚨" in a.get("상태", "")]
+        if not breach:
+            print("[C-03] 경보판 — 구조적 단절 임계값 초과 없음. 보고서 미발행(이상 없음).")
+            return
+        alert_lines = [
+            f"# G1 일별 경보판 — {run_ts[:10]}",
+            f"**분석 타깃**: `{target_label}`  |  **생성 일자**: {run_ts[:10]}",
+            "",
+            "## 🚨 구조적 단절 임계값 초과",
+            "| 변수 | 현재값 | 임계값 | 설명 |",
+            "|---|---|---|---|",
+        ]
+        for a in breach:
+            alert_lines.append(
+                f"| {a['변수']} | {a['현재값']} | {a['임계값']} | {a['설명']} |")
+        alert_lines += [
+            "",
+            "## 상위 기여 변수 (중요도 순위 상위 3)",
+            "| 변수 | 피어슨 r | LASSO 계수 |",
+            "|---|---|---|",
+        ]
+        for _, row in importance_df.head(3).iterrows():
+            r_val = f"{row.get('피어슨_r'):.3f}" if isinstance(row.get("피어슨_r"), float) else "N/A"
+            l_val = f"{row.get('LASSO_계수'):.4f}" if isinstance(row.get("LASSO_계수"), float) else "N/A"
+            alert_lines.append(f"| {row.get('변수', '?')} | {r_val} | {l_val} |")
+        alert_lines += [
+            "",
+            "*일별 경보판은 임계값 초과 시에만 발행됨 (3계층 발행 체계 · 2026-08-14 승인)*",
+            "*조달 결정은 CLAUDE.md §6 HITL 프로세스 필요*",
+        ]
+        alert_path = f"{REPORT_DIR}/g1_alert_{tag}.md"
+        with open(alert_path, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(alert_lines))
+        print(f"[C-03 경보] 임계값 초과 {len(breach)}건 — 경보판 발행 → {alert_path}")
+        return
+
     # ── Granger 인과검정: 전체 히스토리 parquet 사용 (2020~작년) ──────────────────
     print("[C-03] Granger 인과검정 선결 조건 점검 중 (2017~작년 연도별)...")
     granger_target = G1_TARGET_COL if G1_TARGET_COL in hist_wide.columns else None
@@ -2161,9 +2208,10 @@ def run(days: int = 7) -> None:
             print(f"[경고] G1 PDF 변환 실패 ({lang.upper()}): {e}")
 
     # Markdown 요약 (기계 판독용 + generate_research_pdf.py 입력)
+    _mode_label = {"weekly": " (주별 정규판)", "monthly": " (월별 심층판)"}.get(publish_mode, "")
     breach = [a for a in alerts if "🚨" in a.get("상태", "")]
     md_lines = [
-        f"# 대두유 가격 핵심 영향 인자 분석 보고서 — {run_ts[:10]}",
+        f"# 대두유 가격 핵심 영향 인자 분석 보고서{_mode_label} — {run_ts[:10]}",
         f"**데이터 범위**: {data_period if data_period else f'최근 {days}일'}  |  **생성 일자**: {run_ts[:10]}",
         f"**분석 타깃**: `{target_label}` (기준가격: `{G1_TARGET_COL}` · 단위: USc/lb)",
         "",
@@ -2206,6 +2254,9 @@ def run(days: int = 7) -> None:
         "*Project Nexus · 핵심 변수 분석 보고서*",
         "*HITL 게이트: 조달 결정은 CLAUDE.md §6 HITL 프로세스 필요*",
     ]
+    if publish_mode == "monthly":
+        md_lines.insert(-2, "*월별 심층판 — horizon(1·5·20·60일)×레짐별 중요도 전면 재산출은 "
+                            "M-009 구현과 함께 확장 예정*")
     md_path = f"{REPORT_DIR}/g1_variable_importance_{tag}_ko.md"
     with open(md_path, "w", encoding="utf-8") as fh:
         fh.write("\n".join(md_lines))

@@ -703,22 +703,75 @@ jobs:
       - name: Rebuild unstructured signal time series (통합 분석 입력 — Session 44)
         # 커밋된 비정형 인덱스 CSV에서 UNSTR_* parquet 재생성 → 정형+비정형 통합 분석
         run: python scripts/build_unstructured_timeseries.py
+      - name: Determine G1 publish mode (3계층 발행 — 2026-08-14 조정자 승인)
+        # 스케줄 실행에만 적용: 평일=alert(경보 시에만 발행) · 금요일 KST=weekly ·
+        # WASDE 발표 후 첫 실행(36시간 창)=monthly. 수동/디스패치 실행은 full 유지.
+        id: pubmode
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "mode=full" >> "$GITHUB_OUTPUT"
+            echo "[정보] 비스케줄 실행 — full 모드"
+            exit 0
+          fi
+          python - <<'PYEOF'
+          import glob, os
+          from datetime import datetime, timedelta, timezone
+          import pandas as pd
+
+          now_utc = datetime.now(timezone.utc)
+          kst = now_utc + timedelta(hours=9)
+          mode = "weekly" if kst.weekday() == 4 else "alert"   # 금요일(KST) 정규판
+
+          # WASDE 발표 익영업일 감지: wasde parquet의 available_at 최신값이 36시간 이내.
+          # 36h 창은 KST 05:30 일별 실행 기준 발표 후 정확히 1회만 monthly로 판정됨
+          # (발표 ~16:00 UTC → 익일 20:30 UTC 실행 delta ≈ 28.5h, 그다음 날은 52.5h).
+          try:
+              latest = None
+              for p in sorted(glob.glob("data/raw/wasde*.parquet")):
+                  df = pd.read_parquet(p, columns=["available_at"])
+                  m = pd.to_datetime(df["available_at"], errors="coerce", utc=True).max()
+                  if pd.notna(m) and (latest is None or m > latest):
+                      latest = m
+              if latest is not None and (now_utc - latest.to_pydatetime()) <= timedelta(hours=36):
+                  mode = "monthly"
+                  print(f"[정보] WASDE 발표 감지 (available_at={latest}) — 월별 심층판")
+          except Exception as e:
+              print(f"[경고] WASDE 발표 감지 실패 — 요일 기반 모드 유지: {e}")
+
+          print(f"[정보] G1 발행 모드: {mode} (KST {kst:%Y-%m-%d %a})")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"mode={mode}\n")
+          PYEOF
       - name: Run C-03 G1 variable importance analysis
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
+          G1_PUBLISH_MODE: ${{ steps.pubmode.outputs.mode }}
         run: python src/forecasting/variable_importance_g1.py 7
       - name: Append G1 summary to GitHub Step Summary
         run: |
           python - <<'PYEOF'
           import os, glob
           from pathlib import Path
+          summary = open(os.environ["GITHUB_STEP_SUMMARY"], "a")
+          mode = "${{ steps.pubmode.outputs.mode }}"
+          alerts = sorted(glob.glob("reports/pipeline/g1_alert_*.md"))
           reports = sorted(glob.glob("reports/pipeline/g1_variable_importance_*_ko.html"))
-          if reports:
-              latest = Path(reports[-1]).name
-              with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
-                  f.write(f"\n\n## C-03 G1 분석 완료\n리포트: `{latest}`\n")
+          if mode == "alert":
+              if alerts:
+                  summary.write(f"\n\n## 🚨 C-03 G1 일별 경보판 발행\n")
+                  summary.write(Path(alerts[-1]).read_text(encoding="utf-8"))
+              else:
+                  summary.write("\n\n## C-03 G1 일별 점검 — 이상 없음 (경보판 미발행)\n")
+          elif reports:
+              label = {"weekly": "주별 정규판", "monthly": "월별 심층판"}.get(mode, "전체 보고서")
+              summary.write(f"\n\n## C-03 G1 분석 완료 ({label})\n리포트: `{Path(reports[-1]).name}`\n")
+          summary.close()
           PYEOF
       - name: Upload G1 analysis reports (HTML + PDF + Markdown)
+        # alert 모드에서 무경보면 산출물이 없는 것이 정상 — ignore.
+        # monthly(심층판)는 90일 보관: D-026(신규 git push 저장소 금지)에 따라 repo 커밋
+        # 대신 아티팩트 장기 보관, 영구 아카이브는 Azure Blob 이관(D-028) 후 일원화.
         uses: actions/upload-artifact@v4
         with:
           name: g1-variable-importance-${{ github.run_id }}
@@ -726,8 +779,9 @@ jobs:
             reports/pipeline/g1_variable_importance_*.html
             reports/pipeline/g1_variable_importance_*.pdf
             reports/pipeline/g1_variable_importance_*.md
-          retention-days: 30
-          if-no-files-found: error
+            reports/pipeline/g1_alert_*.md
+          retention-days: ${{ steps.pubmode.outputs.mode == 'monthly' && 90 || 30 }}
+          if-no-files-found: ${{ steps.pubmode.outputs.mode == 'alert' && 'ignore' || 'error' }}
 
   # ── WBS 1.1.19: pytest 데이터 품질 테스트 (C-08 검증 후 실행) ────────────────────
   pipeline-tests:
