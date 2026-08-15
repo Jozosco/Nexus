@@ -62,6 +62,40 @@ EU 압착 능력의 약 80%를 A·B·C 3사가 점유(2021)할 만큼 집중도�
 - **바이오디젤**: 식물성유지 시장의 약 20%, 혼합의무 확대 계획으로 점증(HS 1507.10.2000
   바이오디젤용 조유 트랙 별도 — 우리 수집 체계와 일치).
 
+## 4b. 2026년 최신 구조 변화 (GAIN 2026-03 한국 Oilseeds Annual + 국내 기관 — 증보)
+
+> 조정자 지시(8/15)로 §4(2024-03 기준)를 최신 자료로 보강. 원문: 코퍼스
+> `GAIN/Oilseeds/2026/03/26.03_South Korea_Oilseeds and Products Annual.pdf` (53,827자 판독).
+
+- **압착 축소의 구조화**: MY 2026/27 압착 800,000 MT 전망 — 설비 능력 1.1 백만 MT 대비
+  73%, 10년 평균 대비 **−20%**. 대두박 수입가가 국내 압착 채산성을 지속 압박 →
+  **조유 수입 의존이 추세적으로 심화**(§4의 350~400천 MT 상회 전망).
+- **원산지 다변화 실측** (관세청 원천, GAIN 표 인용 — 전 유형 합계):
+
+  | MY | 총수입 | 미국 | 아르헨티나 | 베트남 | 조유 비중 |
+  |---|---|---|---|---|---|
+  | 2023/24 | 447,461 MT | 12,114 (3%) | 252,735 | 71,309 | 76% |
+  | 2024/25 | 482,357 MT | **84,686 (18%)** | 153,122 | **132,764** | 78% |
+
+  미국 점유 3%→18% 회복은 §5의 우리 실측(2025-01/03/04 대형 화물 18~40천 MT ≈ 합계
+  82천 MT)과 **정확히 정합**. **베트남의 신규 진입**은 2022~23년 정제유 수입관세 한시
+  면제(물가 대응)가 공급국 구조를 바꾼 결과 — "시장이 과거보다 가격 민감해졌고,
+  구매자는 원산지·유형(조유/정제유)에 유연"하다는 GAIN 평가는 4축 대안 엔진의
+  원산지·계약형 축이 겨냥하는 실무 행태 그 자체다.
+- **SBO−팜유 CIF Korea 스프레드 9년 평균 $179/MT** (GAIN 도표) — 온톨로지 CE-015
+  대체압력 임계(175 $/MT)의 **독립 실증치**. 임계의 통계 검증 대기 상태를 사실상 해소.
+- **정책**: 2025-12 기획재정부가 식용 대두 WTO TRQ를 2026년부터 최소 물량으로 축소
+  (자발적 증량 중단) — 국산 대두 장려 → 압착용 수입 감소 → 조유 수입 확대 압력.
+- **신수요(바이오연료)**: RFS 바이오디젤 혼합의무 현행 3.5% → **2030년 8.0% 상향 계획**
+  (연 0.5%p), 바이오항공유 2026년 도입 목표. LG화학이 국내 첫 HVO 플랜트 착공
+  (2027년 연 30만 MT — SAF 50~70%). 단 KBEA 기준 국내 바이오디젤 원료는 RBD 팜유·팜
+  부산물·UCO 중심이라 **SBO 직접 수요 견인은 제한적** — 팜계 가격 경유 간접 전이
+  (CE-002 계열)로 해석해야 함.
+- **국내 기관 소스 맵**: KREI 「글로벌 식량 공급망 분석과 과제(1년차): 식용유」(P291,
+  2023-11, 김종진 외 — 사내 프록시가 저장소 차단, 원문 미열람 상태로 참조 등재) ·
+  aT FIS 국제 원료가격 통계(유지류 가격 시계열 — A-011 재평가: HS 수입통계는 없으나
+  **가격 통계는 유효**, Phase B 소스 후보) · 한국바이오에너지협회(KBEA).
+
 ## 5. 실측 수입 채널 프로파일 — 관세청 GW (조유 식용 1507.10.1000, 2022~2026)
 
 | 원산지 | 활동월 수 | 화물 중앙값 | 최대 화물 | CIF 중앙값 | 채널 성격 (실측 해석) |
@@ -126,3 +160,7 @@ counterparty_profile:            # 실값은 실행 시에만 주입 — repo �
 - [European Parliament — The role of commodity traders in shaping agricultural markets (2024)](https://www.europarl.europa.eu/RegData/etudes/STUD/2024/747276/IPOL_STU(2024)747276_EN.pdf)
 - [Wilmar International — History & Milestones](https://www.wilmar-international.com/about-us/history-milestones)
 - [CME Group — Soybean Oil Futures Contract Specs](https://www.cmegroup.com/markets/agriculture/oilseeds/soybean-oil.contractSpecs.html)
+- USDA FAS GAIN **2026-03** "South Korea Oilseeds and Products Annual" — 저장소 코퍼스 판독 (§4b)
+- [KBEA 한국바이오에너지협회 — 바이오디젤](https://k-biofuels.or.kr/front/kor/bio/bio-diesel) · [에너지데일리 — 바이오디젤 의무혼합비율 2030년 8.0% 상향](https://www.energydaily.co.kr/news/articleView.html?idxno=131487)
+- KREI 「글로벌 식량 공급망 분석과 과제(1년차): 식용유」 P291 (2023-11) — repository.krei.re.kr (프록시 차단으로 참조만)
+- [aT FIS 식품산업통계 — 국제 원료가격(유지류)](https://www.atfis.or.kr/home/commodity.do?act=detail&cmdtSeCd=OIL&cmdtId=0602000001001103)
