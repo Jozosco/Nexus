@@ -147,10 +147,14 @@ def fetch_wasde_soybean_oil(marketing_year: int | None = None) -> pd.DataFrame:
         country   = item.get("countryName") or item.get("country", "")
         unit_desc = item.get("unitDescription") or item.get("unitDesc", "1000 MT")
         val       = item.get("value")
+        # A-172 후속(11차 잔존 240건): country/all 응답의 65개국이 SBO_{attr} 하나에
+        # 충돌 — 국가 축을 코드에 접미. countryCode 우선, 없으면 국가명 축약.
+        cc = str(item.get("countryCode") or "").strip()
+        suffix = cc or "".join(ch for ch in str(country).upper() if ch.isalpha())[:6] or "UNK"
         rows.append({
             "price_date":     f"{year}-10-01",  # WASDE 마케팅 연도 시작 (10월)
             "source_name":    "USDA_PSD",
-            "indicator_code": f"SBO_{attr_id}",
+            "indicator_code": f"SBO_{attr_id}_{suffix}",
             "country":        country,
             "value":          val,
             "unit":           unit_desc,
