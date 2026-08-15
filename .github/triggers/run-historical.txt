@@ -36,3 +36,5 @@ skip_analysis=false
 #     FAOSTAT 국가 접미·Open-Meteo 지역 접미). D-033 게이트가 잡은 마지막 관문 — G1 첫 산출 목표
 #   2026-08-15(12차) 재발사 — A-173: PSD API 국가 축 접미(SBO_{attr}_{cc}) — 잔존 240건 해소.
 #     관세청 429는 당일 반복 수집 탓(무해·체인 진행) — G1 첫 산출 목표
+#   2026-08-15(13차) 재발사 — A-174: NASS 생산방식 축 고정(ALL PRODUCTION/UTILIZATION PRACTICES)
+#     — 잔존 32건 소거. 충돌 궤적 48,789→240→32→0 목표. G1 첫 산출 목표

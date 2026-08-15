@@ -86,6 +86,10 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
             "freq_desc": "ANNUAL",
             "reference_period_desc": "YEAR",
             "domain_desc": "TOTAL",
+            # A-174: 관개 주(AR·NE·KS 등)는 IRRIGATED/NON-IRRIGATED/ALL 3계열 반환
+            #   (12차 잔존 32건 — 주·연도당 정확히 3개 값). 합계 계열만 고정.
+            "prodn_practice_desc": "ALL PRODUCTION PRACTICES",
+            "util_practice_desc": "ALL UTILIZATION PRACTICES",
             # 2010 기준선(조정자 지시) — HISTORICAL_START_YEAR 우선
             "year__GE": start_year,
             "unit_desc": "BU",
