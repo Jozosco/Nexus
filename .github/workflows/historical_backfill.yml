@@ -761,7 +761,7 @@ jobs:
     name: "C-08 | DQSOps Data Quality Validation Gate"
     runs-on: ubuntu-latest
     needs: [backfill-summary]
-    if: always() && needs.backfill-summary.result == 'success' && github.event.inputs.skip_analysis != 'true'
+    if: "!cancelled() && needs.backfill-summary.result == 'success' && github.event.inputs.skip_analysis != 'true'"
     outputs:
       overall_status: ${{ steps.dq.outputs.overall_status || steps.dq_skip.outputs.overall_status }}
     steps:
@@ -816,10 +816,11 @@ jobs:
     #   cancelled/failure 잡(관세청 2종)이 있으면 C-08 성공에도 skip됨(런 31812867920
     #   재발, A-160 동일 유형). always() 명시로 차단.
     if: >-
-      always() &&
+      !cancelled() &&
       github.event.inputs.skip_analysis != 'true' &&
       needs.c08-dq-validation.result == 'success' &&
-      needs.c08-dq-validation.outputs.overall_status != 'REJECTED'
+      (needs.c08-dq-validation.outputs.overall_status == 'PASS' ||
+       needs.c08-dq-validation.outputs.overall_status == 'WARNING')
     outputs:
       eda_status: ${{ steps.eda.outputs.eda_status }}
       stale_connectors: ${{ steps.eda.outputs.stale_connectors }}
@@ -925,7 +926,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [c06-eda-validation]
     if: >-
-      always() &&
+      !cancelled() &&
       github.event.inputs.skip_analysis != 'true' &&
       needs.c06-eda-validation.result == 'success' &&
       needs.c06-eda-validation.outputs.eda_status == 'PASS'
@@ -964,7 +965,7 @@ jobs:
     name: "C-03 | G1 Variable Importance Analysis (5-Year Backfill Dataset)"
     runs-on: ubuntu-latest
     needs: [model-readiness]
-    if: always() && needs.model-readiness.result == 'success'
+    if: "!cancelled() && needs.model-readiness.result == 'success'"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

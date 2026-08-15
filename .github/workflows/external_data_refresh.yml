@@ -534,11 +534,12 @@ jobs:
     name: "C-06 | EDA Validation — Data Integrity Gate"
     runs-on: ubuntu-latest
     needs: [c08-dq-validation]
-    # A-168: 암묵 success() 차단 — 전이 needs에 cancelled/failure 잡이 있어도 진행
+    # A-168/A-169: 암묵 success() 차단(전이 실패 허용) + 수동 취소는 존중(!cancelled())
     if: >-
-      always() &&
+      !cancelled() &&
       needs.c08-dq-validation.result == 'success' &&
-      needs.c08-dq-validation.outputs.overall_status == 'PASS'
+      (needs.c08-dq-validation.outputs.overall_status == 'PASS' ||
+       needs.c08-dq-validation.outputs.overall_status == 'WARNING')
     outputs:
       eda_status: ${{ steps.eda.outputs.eda_status }}
       stale_connectors: ${{ steps.eda.outputs.stale_connectors }}
@@ -640,7 +641,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [c06-eda-validation]
     if: >-
-      always() &&
+      !cancelled() &&
       (github.event.inputs.connector == 'all' || github.event_name == 'schedule') &&
       needs.c06-eda-validation.result == 'success' &&
       needs.c06-eda-validation.outputs.eda_status == 'PASS'
@@ -682,7 +683,7 @@ jobs:
     name: "C-03 | G1 Variable Importance Analysis (P1-01~04 통합)"
     runs-on: ubuntu-latest
     needs: [model-readiness]
-    if: always() && needs.model-readiness.result == 'success'
+    if: "!cancelled() && needs.model-readiness.result == 'success'"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -814,11 +815,12 @@ jobs:
     name: "C-08 | pytest Pipeline Quality Tests (WBS 1.1.19)"
     runs-on: ubuntu-latest
     needs: [c08-dq-validation]
-    # A-168: 암묵 success() 차단 — 전이 needs에 cancelled/failure 잡이 있어도 진행
+    # A-168/A-169: 암묵 success() 차단(전이 실패 허용) + 수동 취소는 존중(!cancelled())
     if: >-
-      always() &&
+      !cancelled() &&
       needs.c08-dq-validation.result == 'success' &&
-      needs.c08-dq-validation.outputs.overall_status == 'PASS'
+      (needs.c08-dq-validation.outputs.overall_status == 'PASS' ||
+       needs.c08-dq-validation.outputs.overall_status == 'WARNING')
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
