@@ -104,8 +104,13 @@ def _check_schemas() -> list[str]:
 def main() -> int:
     warn_only = "--warn" in sys.argv
     files = sorted(glob.glob(os.path.join(RAW_DIR, "**", "*.parquet"), recursive=True))
+    # A-175: G1 잡이 전체 아티팩트를 data/raw/로 병합 다운로드하면서 gold 산출물
+    # (feature_mart — 와이드 포맷, as-of는 조립 시 이미 강제됨)이 원천 검사에 오탐 유입.
+    # 원천 롱포맷 계약(indicator_code+value) 파일만 검증 대상으로 한다.
+    _NON_SOURCE_PREFIXES = {"feature_mart"}
     files = [f for f in files
-             if not any(os.path.basename(f).startswith(p) for p in EXEMPT_PREFIXES)]
+             if not any(os.path.basename(f).startswith(p)
+                        for p in EXEMPT_PREFIXES | _NON_SOURCE_PREFIXES)]
 
     print(f"[as-of 검증] 대상 {len(files)}개 parquet · 기준일 {date.today()}")
     if EXEMPT_PREFIXES:

@@ -302,16 +302,47 @@ def _normalize_customs_df(all_rows: list[dict], source_tag: str) -> pd.DataFrame
         "expWgt":      "export_weight_kg",
         "balPayments": "trade_balance_usd",
     }
+    # A-158(b): hsCode(XML)·hsSgn(요청키)이 둘 다 있으면 rename이 hs_code **중복 컬럼**을
+    # 만들어 이후 df["hs_code"]가 DataFrame이 되며 .str에서 크래시(로컬 재현). 요청키
+    # hsSgn을 정본으로 두고 응답 echo(hsCode)는 원명 유지.
+    if "hsCode" in df.columns and "hsSgn" in df.columns:
+        col_map = {k: v for k, v in col_map.items() if k != "hsCode"}
     df.rename(columns={k: v for k, v in col_map.items() if k in df.columns}, inplace=True)
 
-    if "period_start" in df.columns:
-        df["price_date"] = pd.to_datetime(df["period_start"], format="%Y%m", errors="coerce")
-    elif "strtYymm" in df.columns:
-        df["price_date"] = pd.to_datetime(df["strtYymm"], format="%Y%m", errors="coerce")
-    elif "stat_year" in df.columns:
-        # A-158: XML 경로는 연 단위 행(year 태그) — 연초 기점 파생 + 집계 단위 note 명시
-        df["price_date"] = pd.to_datetime(df["stat_year"].astype(str), format="%Y", errors="coerce")
-        df["note"] = "연간 집계(XML 응답)"
+    # A-158(b'): JSON·XML 혼재 프레임은 금액·중량도 중복 표준명을 만든다
+    # (impDlr·impAmt→import_cif_usd 등) → 중복 라벨을 행 단위 첫 비결측으로 병합.
+    if not df.columns.is_unique:
+        dup_names = sorted({c for c in df.columns[df.columns.duplicated()]})
+        merged: dict[str, pd.Series] = {}
+        for col in dict.fromkeys(df.columns):        # 등장 순서 보존
+            sub = df.loc[:, df.columns == col]
+            merged[col] = sub.iloc[:, 0] if sub.shape[1] == 1 else sub.bfill(axis=1).iloc[:, 0]
+        df = pd.DataFrame(merged)
+        print(f"[정보] 혼재 응답 중복 컬럼 병합: {dup_names}")
+
+    # A-158(c): 구 배타 분기(if/elif)는 JSON·XML 행이 **한 프레임에 섞이면** 뒤 분기가
+    # 영원히 실행되지 않아 한쪽 전량이 price_date NaT로 남았다(13차 런 10,966행 전량
+    # as-of 결측의 유력 경로). 행 단위 coalesce로 교체.
+    pd_parts = []
+    for col, fmt in (("period_start", "%Y%m"), ("strtYymm", "%Y%m"), ("stat_year", "%Y")):
+        if col in df.columns:
+            pd_parts.append(pd.to_datetime(df[col].astype(str).str.strip(),
+                                           format=fmt, errors="coerce"))
+    if pd_parts:
+        price_date = pd_parts[0]
+        for part in pd_parts[1:]:
+            price_date = price_date.fillna(part)
+        df["price_date"] = price_date
+        if "stat_year" in df.columns:
+            annual_mask = df["price_date"].notna() & df.get(
+                "period_start", pd.Series(pd.NaT, index=df.index)).isna()
+            if "note" not in df.columns:
+                df["note"] = ""
+            df.loc[annual_mask & df["note"].astype(str).eq(""), "note"] = "연간 집계(XML 응답)"
+    n_nat = int(df["price_date"].isna().sum()) if "price_date" in df.columns else len(df)
+    if n_nat:
+        print(f"[경고] price_date 파생 실패 {n_nat}건 — 원본 기간 필드 확인 필요 "
+              f"(보유 컬럼: {sorted(set(df.columns) & {'period_start','strtYymm','stat_year'})})")
 
     # A-152(c): XML items에는 hsCd='-'인 집계 행(HS코드 합계)이 올 수 있다.
     #           삭제하지 않고 유지하되 note에 '집계행'을 표기해 상세 행과 구분한다.
@@ -585,6 +616,15 @@ def run() -> None:
     out = f"{OUTPUT_DIR}/customs_import_{today_str}.parquet"
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
     df = attach_asof(df, source="CUSTOMS_")
+    # A-158(d): 13차 런에서 전량 as-of 결측 parquet이 조용히 저장돼 G1 게이트에서야
+    # 발각됨 — 커넥터가 자체 차단한다(전량 결측 = 파생 로직 결함, 저장 무의미).
+    if df["event_time"].isna().all():
+        raise RuntimeError("[오류] 관세청 event_time 전량 결측 — price_date 파생 실패. "
+                           "parquet을 저장하지 않습니다(기간 필드 매핑 점검 필요).")
+    n_nat = int(df["event_time"].isna().sum())
+    if n_nat:
+        print(f"[경고] event_time 결측 {n_nat}건 제외 후 저장")
+        df = df[df["event_time"].notna()]
     df.to_parquet(out, index=False)
     print(f"[완료] 대두유 수입통계 {len(df)}건 저장 → {out}")
 

@@ -38,3 +38,5 @@ skip_analysis=false
 #     관세청 429는 당일 반복 수집 탓(무해·체인 진행) — G1 첫 산출 목표
 #   2026-08-15(13차) 재발사 — A-174: NASS 생산방식 축 고정(ALL PRODUCTION/UTILIZATION PRACTICES)
 #     — 잔존 32건 소거. 충돌 궤적 48,789→240→32→0 목표. G1 첫 산출 목표
+#   2026-08-15(14차) 재발사 — A-175: as-of 게이트 3원인 수정(관세청 중복컬럼·혼재 분기 coalesce·
+#     production NaT 제외·mart 오탐 제외). mart는 13차에 확보 — 이번엔 G1 첫 산출 목표

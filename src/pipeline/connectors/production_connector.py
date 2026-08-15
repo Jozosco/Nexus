@@ -524,6 +524,15 @@ def run() -> None:
     out = f"{OUTPUT_DIR}/production_data_{today}.parquet"
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
     combined = attach_asof(combined, source="PRODUCTION")
+    # A-175: 13차 런에서 1,048/1,580행 as-of 결측(ESR 등 날짜 미파싱 행) — 날짜 없는
+    # 관측은 시계열 투입이 불가하므로 원인 로그 후 제외(전량 결측이면 결함으로 중단).
+    if combined["event_time"].isna().all():
+        raise RuntimeError("[오류] production event_time 전량 결측 — price_date 파생 결함.")
+    n_nat = int(combined["event_time"].isna().sum())
+    if n_nat:
+        bad_src = combined.loc[combined["event_time"].isna(), "source_name"].value_counts()
+        print(f"[경고] event_time 결측 {n_nat}건 제외 — 원천별: {bad_src.to_dict()}")
+        combined = combined[combined["event_time"].notna()]
     combined.to_parquet(out, index=False)
     print(f"[완료] 원산지 생산량 데이터 {len(combined)}건 저장 → {out}")
 
