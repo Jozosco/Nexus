@@ -265,7 +265,9 @@ def fetch_openmeteo_regional_climate(
                         "source_name":    "OpenMeteo/ERA5Land",
                         "region_code":    region_code,
                         "country":        info["country"],
-                        "indicator_code": var,
+                        # A-172: 지역 축을 코드에 반영 — 구 공유 코드는 동일 일자에
+                        #   12개 지역 값이 충돌(mart 하드 실패 48,789건의 대부분)
+                        "indicator_code": f"{var}_{region_code}",
                         "value":          float(v),
                         "unit":           OPEN_METEO_UNITS.get(var, ""),
                         "ingested_at":    ingested_at,
@@ -280,7 +282,7 @@ def fetch_openmeteo_regional_climate(
                         "source_name":    "OpenMeteo/ERA5Land",
                         "region_code":    region_code,
                         "country":        info["country"],
-                        "indicator_code": var,
+                        "indicator_code": f"{var}_{region_code}",   # A-172 지역 접미
                         "value":          float(v),
                         "unit":           OPEN_METEO_UNITS.get(var, ""),
                         "ingested_at":    ingested_at,

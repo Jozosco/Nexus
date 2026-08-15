@@ -74,31 +74,42 @@ def fetch_usda_nass_soybeans(year: int | None = None) -> pd.DataFrame:
         return pd.DataFrame()
     start_year = year or int(os.environ.get("HISTORICAL_START_YEAR", "2010"))
     try:
-        r = _get(NASS_BASE, {
+        # A-172: 축 미분리 키 붕괴 수정 — 구 코드는 STATE 전 행(주×통계원천×기준기간×
+        #   도메인)을 SOYBEAN_PROD_BU 하나에 적재해 동일 event_time에 3,000여 값이 충돌
+        #   (mart 하드 실패의 예시 항목). ①서버측 필터로 확정 연간치(SURVEY·ANNUAL·
+        #   YEAR·TOTAL)만 수집 ②NATIONAL=기본 코드, STATE는 _ST_{주} 접미 분리.
+        common = {
             "key": api_key,
             "commodity_desc": "SOYBEANS",
             "statisticcat_desc": "PRODUCTION",
-            "agg_level_desc": "STATE",
+            "source_desc": "SURVEY",
+            "freq_desc": "ANNUAL",
+            "reference_period_desc": "YEAR",
+            "domain_desc": "TOTAL",
             # 2010 기준선(조정자 지시) — HISTORICAL_START_YEAR 우선
             "year__GE": start_year,
             "unit_desc": "BU",
             "format": "JSON",
-        })
-        items = r.json().get("data", [])
+        }
         rows = []
-        for it in items:
-            try:
-                rows.append({
-                    "price_date": f"{it['year']}-10-01",
-                    "source_name": "USDA_NASS",
-                    "indicator_code": "SOYBEAN_PROD_BU",
-                    "region": f"US_{it.get('state_alpha', 'UNKNOWN')}",
-                    "country": "US",
-                    "value": float(it["Value"].replace(",", "")),
-                    "unit": "Bushels",
-                })
-            except (ValueError, KeyError):
-                continue
+        for agg in ("NATIONAL", "STATE"):
+            r = _get(NASS_BASE, {**common, "agg_level_desc": agg})
+            for it in r.json().get("data", []):
+                try:
+                    state = it.get("state_alpha", "") or "UNKNOWN"
+                    code = ("SOYBEAN_PROD_BU" if agg == "NATIONAL"
+                            else f"SOYBEAN_PROD_BU_ST_{state}")
+                    rows.append({
+                        "price_date": f"{it['year']}-10-01",
+                        "source_name": "USDA_NASS",
+                        "indicator_code": code,
+                        "region": f"US_{state}" if agg == "STATE" else "US",
+                        "country": "US",
+                        "value": float(it["Value"].replace(",", "")),
+                        "unit": "Bushels",
+                    })
+                except (ValueError, KeyError):
+                    continue
         if not rows:
             return pd.DataFrame()
         df = pd.DataFrame(rows)
@@ -124,14 +135,21 @@ def fetch_faostat_soybeans(year_start: int = 2017) -> pd.DataFrame:
         from io import StringIO
         df_raw = pd.read_csv(StringIO(r.text))
         df_raw.columns = [c.strip() for c in df_raw.columns]
+        # A-172: 국가 축을 코드에 반영 — 구 단일 코드는 동일 연도에 5개국 값이 충돌
+        _AREA_SUFFIX = {"Argentina": "AR", "Brazil": "BR", "China": "CN",
+                        "China, mainland": "CN", "Paraguay": "PY",
+                        "United States of America": "US"}
         rows = []
         for _, row in df_raw.iterrows():
             try:
+                area = str(row.get("Area", ""))
+                suffix = _AREA_SUFFIX.get(
+                    area, "".join(ch for ch in area.upper() if ch.isalpha())[:3] or "UNK")
                 rows.append({
                     "price_date": f"{int(row['Year'])}-10-01",
                     "source_name": "FAOSTAT",
-                    "indicator_code": "SOYBEAN_PROD_TONNE",
-                    "country": str(row.get("Area", "")),
+                    "indicator_code": f"SOYBEAN_PROD_TONNE_{suffix}",
+                    "country": area,
                     "value": float(str(row.get("Value", "0")).replace(",", "")),
                     "unit": "Tonnes",
                 })
@@ -154,7 +172,8 @@ def fetch_argentina_indec() -> pd.DataFrame:
     """
     # INDEC 농업통계 시계열 ID (대두 생산량 및 재배면적)
     SERIES_IDS = {
-        "170.1_SOJA_PRODUCCI_0_A_20": ("SOYBEAN_PROD_TONNE_AR", "Tonnes"),
+        # A-172: FAOSTAT 국가 접미(_AR)와의 코드 충돌 방지 — 원천 접미로 분리
+        "170.1_SOJA_PRODUCCI_0_A_20": ("SOYBEAN_PROD_TONNE_AR_INDEC", "Tonnes"),
         "170.1_SOJA_SUPERFICI_0_A_20": ("SOYBEAN_AREA_HA_AR", "Hectares"),
     }
     rows = []
