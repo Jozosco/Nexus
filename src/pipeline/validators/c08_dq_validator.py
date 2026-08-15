@@ -87,6 +87,16 @@ VALID_RANGES: dict[str, tuple[float, float]] = {
     "import_weight_kg": (0.0, 1e12),
 }
 
+# A-177: 전역 value 범위는 가격류 기준이라 **물량 단위에 오탐** — NASS 부셸(주별 수천만~
+# 전국 44억)·FAOSTAT 톤은 정당한 값. 14차 런에서 production_data가 무일자 소값 행 제거
+# (A-175) 후 대형 물량 비중이 급증하며 정확도 0.023→REJECTED로 급락한 실증.
+# unit 컬럼이 물량 단위면 물량 범위를 적용한다(스케일 오류 1e12 초과는 여전히 차단).
+QUANTITY_UNITS: set[str] = {
+    "bushels", "bu", "tonnes", "tonne", "mt", "1000 mt", "1000mt", "1000000mt",
+    "metric tons", "kg", "1000 ha", "ha", "head", "million pounds",
+}
+QUANTITY_RANGE: tuple[float, float] = (0.0, 1e12)
+
 # 핵심 컬럼 — 결측 시 추가 패널티
 KEY_COLUMNS: list[str] = ["price_date", "value", "indicator_code"]
 
@@ -108,12 +118,23 @@ def _score_accuracy(df: pd.DataFrame, connector_name: str) -> float:
     total_non_null: int = 0
     out_of_range: int = 0
 
+    # A-177: value 컬럼은 unit이 물량 단위인 행에 물량 범위를 적용 (가격류 기준 오탐 방지)
+    unit_norm = (df["unit"].astype(str).str.strip().str.lower()
+                 if "unit" in df.columns else None)
+
     for col in numeric_cols:
         series = df[col].dropna()
         total_non_null += len(series)
-        if col in VALID_RANGES:
-            lo, hi = VALID_RANGES[col]
-            out_of_range += int(((series < lo) | (series > hi)).sum())
+        if col not in VALID_RANGES:
+            continue
+        lo, hi = VALID_RANGES[col]
+        violations = (series < lo) | (series > hi)
+        if col == "value" and unit_norm is not None:
+            qty_mask = unit_norm.reindex(series.index).isin(QUANTITY_UNITS)
+            q_lo, q_hi = QUANTITY_RANGE
+            violations = violations.where(
+                ~qty_mask, (series < q_lo) | (series > q_hi))
+        out_of_range += int(violations.sum())
 
     if total_non_null == 0:
         return 1.0
