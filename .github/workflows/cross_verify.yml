@@ -23,6 +23,7 @@ on:
       - "reports/market/procurement_alternatives_*.md"
       - "src/semantic/ontology.yaml"
       - "docs/research_desk/*/g1_publication_schedule_panel_*.md"   # 월 폴더 비고정 (GPT 정정)
+      - "docs/research_desk/*/abcd_trading_structure_*.md"
   workflow_dispatch:
 
 permissions:
@@ -63,7 +64,8 @@ jobs:
           python scripts/cross_verify_gpt.py \
             "reports/market/landed_cost_band_*.md" \
             "reports/market/procurement_alternatives_*.md" \
-            "docs/research_desk/*/g1_publication_schedule_panel_*.md"
+            "docs/research_desk/*/g1_publication_schedule_panel_*.md" \
+            "docs/research_desk/*/abcd_trading_structure_*.md"
       - name: Upload verification artifacts
         uses: actions/upload-artifact@v4
         with:
