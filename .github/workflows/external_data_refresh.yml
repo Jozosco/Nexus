@@ -171,6 +171,55 @@ jobs:
           path: data/raw/climate_data_*.parquet
           retention-days: 7
 
+  # ── 목표변수 발행: 세션 종가 교차검증 (A-176 — 일별 체인에도 CBOT_BO_CLOSE 공급) ──
+  # 일별 파이프라인에는 목표변수 발행 잡이 없어 mart·G1(경보판)이 준비도에서 차단될
+  # 구조였다(historical 전용이던 A-145 검증기를 이식). Databento는 repo 커밋 CSV 사용.
+  session-close-target:
+    name: "목표변수 | CBOT_BO_CLOSE 세션 종가 검증·발행 (A-145 이식)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.connector == 'all' || github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            config
+            data/schemas
+            data/raw/Databento
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas pyarrow yfinance curl_cffi
+      - name: Rebuild Databento parquet from committed CSV (A-130)
+        run: |
+          CSV_PATH=$(find data/raw/Databento/GLBX.MDP3 -name 'ZL_ohlcv-1d_*.csv' -type f | sort | tail -n 1)
+          test -n "$CSV_PATH" || { echo "::warning::커밋된 Databento CSV 없음 — 검증 표본 축소"; exit 0; }
+          DATABENTO_FROM_CSV="$CSV_PATH" python scripts/ingest_databento_bo.py
+      - name: Validate session close (A-145)
+        run: |
+          set +e
+          python scripts/validate_session_close.py
+          rc=$?
+          set -e
+          if [ "$rc" -eq 2 ]; then
+            echo "::warning::세션 종가 검증 불가 — 정산가 표본 미확보 (CBOT_BO_CLOSE 미발행)"
+            exit 0
+          fi
+          exit $rc
+      - name: Upload session close artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbot-session-close-daily-${{ github.run_id }}
+          path: |
+            data/raw/cbot_session_close.parquet
+            reports/market/session_close_validation_*.md
+          retention-days: 30
+          if-no-files-found: warn
+
   # ── WBS 1.1.6: 지정학 리스크 지수 + AIS 해협 탱커 모니터링 ──────────────────
   # GPR: Caldara & Iacoviello 공개 xlsx (openpyxl 필수) + Perplexity 실시간
   # AIS: AISstream.io 탱커 추적 (무료 tier) → Perplexity 폴백
@@ -425,7 +474,7 @@ jobs:
   pipeline-summary:
     name: "Pipeline Summary & Data Quality Report (PDF)"
     runs-on: ubuntu-latest
-    needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso, geopolitical-risk, production-data, commodity-prices, customs-import-stats, geointel]
+    needs: [economic-indicators, shipping-indices, wasde-crop-data, climate-enso, geopolitical-risk, production-data, commodity-prices, customs-import-stats, geointel, session-close-target]
     if: always()   # 일부 커넥터 실패 시에도 요약 실행
     steps:
       - uses: actions/checkout@v4
