@@ -659,9 +659,11 @@ jobs:
       - name: Run model readiness gate
         run: python scripts/data_readiness.py
       - name: Build and independently verify feature mart
+        # A-171: 'python src/...' 직접 실행은 repo 루트가 sys.path에 없어
+        #   `from src.pipeline.asof import ...`가 ModuleNotFoundError(9차 런 실증) — -m 실행
         run: |
-          python src/features/build_feature_mart.py --self-test
-          python src/features/build_feature_mart.py
+          python -m src.features.build_feature_mart --self-test
+          python -m src.features.build_feature_mart
       - name: Upload readiness evidence
         uses: actions/upload-artifact@v4
         with:

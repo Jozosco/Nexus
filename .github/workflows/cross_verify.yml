@@ -60,12 +60,15 @@ jobs:
         run: python scripts/cross_verify_gpt.py --diff HEAD~1
       - name: Cross-verify G2 ops reports (도착가 밴드 · 4축 대안)
         shell: bash
+        # A-171: 4패턴 일괄 호출이 대용량 입력으로 APIConnectionError 2연속(런 #5·#6) —
+        #   글로브별 개별 호출로 요청 크기 축소. 스크립트는 호출 실패 시 비치명(exit 0).
         run: |
-          python scripts/cross_verify_gpt.py \
-            "reports/market/landed_cost_band_*.md" \
-            "reports/market/procurement_alternatives_*.md" \
-            "docs/research_desk/*/g1_publication_schedule_panel_*.md" \
-            "docs/research_desk/*/abcd_trading_structure_*.md"
+          for g in "reports/market/landed_cost_band_*.md" \
+                   "reports/market/procurement_alternatives_*.md" \
+                   "docs/research_desk/*/g1_publication_schedule_panel_*.md" \
+                   "docs/research_desk/*/abcd_trading_structure_*.md"; do
+            python scripts/cross_verify_gpt.py "$g"
+          done
       - name: Upload verification artifacts
         uses: actions/upload-artifact@v4
         with:
