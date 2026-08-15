@@ -27,3 +27,6 @@ skip_analysis=false
 #   2026-08-14(7차) 재발사 — A-166(effort xhigh·C-06 WARNING 허용·관세청 90분 상한). G1 최종 산출 목표
 #   2026-08-14(8차) 재발사 — A-168(C-06·Readiness·G1 게이트 always() 명시 — 암묵 success()가
 #     관세청 cancelled/failure를 흡수 못해 7차에서도 체인 스킵) + 관세청 부분저장 예산. G1 산출 재시도
+#   2026-08-15(9차) 재발사 — A-170: FRED ALFRED output_type=4의 첫 vintage 이전 결손을 표준
+#     요청으로 보충(FX BRL/USD 74%→기대 100% — 8차 유일 차단 해소) + GW 예산 3h→40min.
+#     8차에서 A-168 게이트 검증 완료(관세청 실패에도 체인 진행) — 이번엔 G1 산출 기대

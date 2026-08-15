@@ -103,7 +103,36 @@ def fetch_fred_series(series_id: str, start: str, end: str) -> pd.DataFrame:
         df = df.drop(columns=["realtime_start"])
         n = int(df["release_time"].notna().sum())
         print(f"[정보] FRED {series_id}: 실측 게시일 {n:,}/{len(df):,}건 확보(추정 불요)")
-    return df.dropna(subset=["value"])
+    df = df.dropna(subset=["value"])
+
+    # A-170 (D-029 보완): output_type=4는 ALFRED 아카이브 **첫 vintage 이전** 관측치를
+    # 아예 반환하지 않는다 → 시계열 앞구간 결손(FX BRL/USD 커버리지 74%의 원인 —
+    # Model Readiness 게이트 85% 미달로 G1 차단). 결손 앞구간은 표준 요청으로 보충한다.
+    # 보충분은 실측 게시일이 없으므로 release_time을 비워 두고 asof.py 규칙 추정에 맡긴다
+    # (일간 FX는 개정이 사실상 없어 최신값=최초값으로 보아도 무방).
+    if not df.empty:
+        earliest = df["price_date"].min()
+        want_start = pd.to_datetime(start)
+        if (earliest - want_start).days > 45:
+            gap_end = (earliest - pd.Timedelta(days=1)).date().isoformat()
+            print(f"[정보] FRED {series_id}: ALFRED 초기 구간 결손 {start}~{gap_end} — 표준 요청 보충")
+            std_params = {k: v for k, v in params.items()
+                          if k not in ("realtime_start", "realtime_end", "output_type")}
+            std_params["observation_end"] = gap_end
+            obs2 = _fetch(FRED_BASE, std_params).get("observations", [])
+            if obs2:
+                df2 = pd.DataFrame(obs2)
+                if {"date", "value"}.issubset(df2.columns):
+                    df2 = df2[["date", "value"]].rename(columns={"date": "price_date"})
+                    df2["price_date"] = pd.to_datetime(df2["price_date"])
+                    df2["value"] = pd.to_numeric(df2["value"], errors="coerce")
+                    df2["source_name"] = "FRED"
+                    df2["indicator_code"] = series_id
+                    df2 = df2.dropna(subset=["value"])
+                    df = pd.concat([df2, df], ignore_index=True)
+                    print(f"[정보] FRED {series_id}: 앞구간 {len(df2):,}건 병합 "
+                          f"(총 {len(df):,}건)")
+    return df
 
 
 def fetch_eia_brent(start: str, end: str) -> pd.DataFrame:
