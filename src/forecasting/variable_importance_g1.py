@@ -1084,13 +1084,23 @@ def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
         oni_df = frames["climate_data"]
         oni = oni_df[oni_df["indicator_code"] == "ONI"] if "indicator_code" in oni_df.columns else pd.DataFrame()
         if not oni.empty and "value" in oni.columns and not oni["value"].dropna().empty:
+            # A-179: 무정렬 iloc[-1]은 파일 병합 순서의 마지막 행을 집음 — 날짜 정렬 후 최신값.
+            #   물리 범위(±5) 밖이면 임계 판정 대신 데이터 이상으로 표기(단위/열 혼입 의심).
+            if "price_date" in oni.columns:
+                oni = oni.sort_values("price_date")
             latest_oni = float(oni["value"].dropna().iloc[-1])
             fresh = _is_fresh(oni_df)
+            if abs(latest_oni) > 5:
+                status = "🚨 데이터 이상 (물리 범위 ±5 밖 — 단위/열 혼입 의심)"
+            elif abs(latest_oni) >= 0.5:
+                status = "🚨 임계초과"
+            else:
+                status = "✅ 정상"
             alerts.append({
                 "변수": "ENSO_ONI",
                 "현재값": round(latest_oni, 2),
                 "임계값": "±0.5",
-                "상태": "🚨 임계초과" if abs(latest_oni) >= 0.5 else "✅ 정상",
+                "상태": status,
                 "설명": THRESHOLDS["ENSO_ONI"]["label"],
                 "데이터신선도": "✅ 최신" if fresh else "⚠️ STALE (월별 갱신 정상)",
             })
@@ -2259,6 +2269,20 @@ def run(days: int = 7) -> None:
     if publish_mode == "monthly":
         md_lines.insert(-2, "*월별 심층판 — horizon(1·5·20·60일)×레짐별 중요도 전면 재산출은 "
                             "M-009 구현과 함께 확장 예정*")
+    # A-179(②): 개정 확정치 포함 사실 명시 — GPT 교차검증 [치명] 지적(D-034 연계).
+    _rc_codes: set[str] = set()
+    for _df in frames.values():
+        if "indicator_code" not in _df.columns:
+            continue
+        if "vintage_known" in _df.columns:
+            _rc_codes.update(_df.loc[~_df["vintage_known"].fillna(False),
+                                     "indicator_code"].astype(str).unique())
+        else:
+            _rc_codes.update(_df["indicator_code"].astype(str).unique())
+    if _rc_codes:
+        md_lines.insert(-2, f"*⚠️ 개정 이력 미보존(revision-contaminated) 지표 "
+                            f"{len(_rc_codes)}종 포함 — 본 결과는 point-in-time 성능이 아님. "
+                            f"vintage 민감도 검증은 M-009 단계에서 수행 예정*")
     md_path = f"{REPORT_DIR}/g1_variable_importance_{tag}_ko.md"
     with open(md_path, "w", encoding="utf-8") as fh:
         fh.write("\n".join(md_lines))

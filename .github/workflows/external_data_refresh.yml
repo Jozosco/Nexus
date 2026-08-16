@@ -855,6 +855,10 @@ jobs:
           elif reports:
               label = {"weekly": "주별 정규판", "monthly": "월별 심층판"}.get(mode, "전체 보고서")
               summary.write(f"\n\n## C-03 G1 분석 완료 ({label})\n리포트: `{Path(reports[-1]).name}`\n")
+              # A-179: TOP 10 표 포함 ko.md 전문을 Step Summary에 노출 — 조정자 즉시 열람
+              mds = sorted(glob.glob(f"{rdir}/g1_variable_importance_*_ko.md"))
+              if mds:
+                  summary.write("\n" + Path(mds[-1]).read_text(encoding="utf-8"))
           summary.close()
           PYEOF
       - name: Upload G1 analysis reports (HTML + PDF + Markdown)

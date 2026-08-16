@@ -1010,6 +1010,14 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: python src/forecasting/variable_importance_g1.py 1825
+      - name: Publish G1 TOP 10 to Step Summary (A-179 — 조정자 즉시 열람)
+        run: |
+          latest=$(ls -t reports/pipeline/g1_variable_importance_*_ko.md 2>/dev/null | head -n 1)
+          if [ -n "$latest" ]; then
+            cat "$latest" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::G1 ko.md 미발견 — Step Summary 노출 생략"
+          fi
       - name: GPT 교차검증 (조정자 지시 2026-08-13 — 분석 산출물 외부 모델 검증)
         # 실패해도 파이프라인을 막지 않는다 — 외부 서비스 장애가 우리 장애가 되지 않게.
         # 검증 결과는 아티팩트로 남겨 사람이 리포트와 대조한다.

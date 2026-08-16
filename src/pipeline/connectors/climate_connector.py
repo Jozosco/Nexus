@@ -116,7 +116,15 @@ def fetch_enso_index(start_year: int = 2017) -> pd.DataFrame:
             try:
                 season = parts[0]
                 year   = int(parts[1])
-                oni    = float(parts[2])
+                # A-179: oni.ascii.txt 실제 형식은 SEAS YR **TOTAL ANOM** 4열 —
+                #   구 코드(A-005)가 parts[2](TOTAL = Niño3.4 절대 SST ~26-29°C)를
+                #   ANOM으로 오독 → G1 경보값 29.02 이상값(16차 런 실증)·핵심 8변수 오염.
+                #   마지막 열(ANOM) 사용 + 물리 범위(±5) 가드로 형식 변화에도 안전.
+                oni    = float(parts[-1])
+                if abs(oni) > 5:
+                    print(f"[경고] ONI 물리 범위(±5) 밖 값 {oni} ({season} {year}) — "
+                          "열 오독 의심, 행 건너뜀")
+                    continue
                 if year < start_year:
                     continue
                 # A-110(F15): 구 코드는 연 12개 계절값을 **전부 1월 1일**에 찍었다.
