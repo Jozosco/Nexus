@@ -984,6 +984,17 @@ jobs:
         with:
           path: data/raw/
           merge-multiple: true
+      - name: Restore feature mart to data/gold (A-178 — merge 다운로드 착지 보정)
+        # Readiness 잡이 만든 mart(gold)는 아티팩트 내부 경로가 data/gold/*라서
+        # merge 다운로드 시 data/raw/data/gold/에 착지 — G1 로더 기대 경로로 복원.
+        # (15차 런 실증: 모든 게이트 통과 후 mart 미발견으로만 실패)
+        run: |
+          mkdir -p data/gold
+          for f in feature_mart.parquet feature_contract.yaml; do
+            src=$(find data/raw -name "$f" -type f | head -n 1)
+            if [ -n "$src" ]; then mv "$src" "data/gold/$f"; echo "복원: $f ($src)"; fi
+          done
+          test -f data/gold/feature_mart.parquet || { echo "::error::feature mart 미착지 — readiness 아티팩트 확인"; exit 1; }
       - name: as-of 시점 정합성 게이트 (D-023) — 위반 시 모델 진입 차단
         # available_at 없는 피처는 CLAUDE.md §1에 따라 모델 투입 금지.
         # 이행기에는 ASOF_EXEMPT로 미적용 산출물을 면제할 수 있다(적용 완료 시 제거).
