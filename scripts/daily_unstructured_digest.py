@@ -23,6 +23,9 @@ import pandas as pd
 
 RAW = os.environ.get("NEXUS_DATA_ROOT", "data/raw")
 OUT = Path("reports/market")
+# A-181: 일별 신호의 변수별 영구 아카이브 (조정자 지시 8/16 — 아티팩트 7~30일 한계 해소).
+#   커밋 저장은 unstructured_analysis.yml 인덱스 CSV 선례(A-090)를 따른다.
+ARCHIVE = Path("data/processed/unstructured_daily_signals.csv")
 
 # 일 단위 갱신되는 비정형·프록시 지표 (커넥터별)
 DAILY_UNSTRUCTURED = {
@@ -101,7 +104,42 @@ def main() -> int:
     out.write_text(text, encoding="utf-8")
     print(text)
     print(f"[완료] → {out}")
+
+    _append_archive(rows)
     return 0
+
+
+def _append_archive(rows: list[dict]) -> None:
+    """당일 수집 행을 변수별 일별 아카이브 CSV에 append (중복 제거·S-5 발췌 보존)."""
+    targets = set(sum(DAILY_UNSTRUCTURED.values(), []))
+    cat_of = {ind: cat for cat, inds in DAILY_UNSTRUCTURED.items() for ind in inds}
+    new = pd.DataFrame([{
+        "date": r["date"],
+        "indicator": r["indicator"],
+        "category": cat_of.get(r["indicator"], ""),
+        "value": r["value"],
+        "note": r["note"][:500].replace("\n", " "),
+        "source_name": r["source"],
+        "appended_at": pd.Timestamp.utcnow().isoformat(timespec="seconds"),
+    } for r in rows if r["indicator"] in targets])
+    if new.empty:
+        print("[아카이브] 신규 비정형 신호 없음 — append 생략")
+        return
+    ARCHIVE.parent.mkdir(parents=True, exist_ok=True)
+    if ARCHIVE.exists():
+        old = pd.read_csv(ARCHIVE, dtype=str)
+        merged = pd.concat([old, new.astype(str)], ignore_index=True)
+    else:
+        merged = new.astype(str)
+    before = len(merged)
+    merged = merged.drop_duplicates(subset=["date", "indicator"], keep="first")
+    merged = merged.sort_values(["date", "indicator"]).reset_index(drop=True)
+    n_new = len(merged) - (before - len(new))
+    if ARCHIVE.exists() and n_new <= 0:
+        print("[아카이브] 전량 기존재(중복) — 파일 무변경")
+        return
+    merged.to_csv(ARCHIVE, index=False, encoding="utf-8")
+    print(f"[아카이브] 신규 {max(n_new, 0)}건 append → {ARCHIVE} (누적 {len(merged)}행)")
 
 
 if __name__ == "__main__":
