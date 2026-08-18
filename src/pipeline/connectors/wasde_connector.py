@@ -380,8 +380,11 @@ def run() -> None:
         frames.append(arms_df)
 
     if not frames:
-        print("[경고] WASDE: 수집된 데이터 없음")
-        return
+        # A-182: 0건을 조용히 success로 넘기면 crop_data 부재가 C-08 게이트에서야
+        # 발각되는 '녹색 실패'가 됨(런 32068230640 실증 — 1시간 29분 돌고 산출 0건).
+        # 원인 경고(PSD·ARMS 등)는 위 로그에 이미 노출됨 — 잡을 red로 표면화한다.
+        raise SystemExit("[오류] WASDE: 수집된 데이터 0건 — 전 소스 실패. "
+                         "위 경고 로그에서 소스별 원인을 확인하세요.")
 
     combined = pd.concat(frames, ignore_index=True)
     out = f"{OUTPUT_DIR}/crop_data_{today}.parquet"

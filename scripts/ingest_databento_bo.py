@@ -336,7 +336,12 @@ def run() -> None:
     csv_df.to_csv(csv_path, index=False)
 
     keep = ["price_date"] + [c for c in ("open", "high", "low", "close", "volume") if c in df.columns]
-    csv_df[keep].to_excel(OUT_DIR / f"ZL_{SCHEMA}.xlsx", index=False)
+    # A-182: xlsx는 열람용 부가 산출물 — openpyxl 부재가 목표변수 발행(파이프라인 필수
+    # 경로)을 죽이면 안 된다(런 32068230640 실증: CBOT_BO_CLOSE 미발행의 직접 원인).
+    try:
+        csv_df[keep].to_excel(OUT_DIR / f"ZL_{SCHEMA}.xlsx", index=False)
+    except ImportError as e:
+        print(f"[경고] xlsx 변환 생략(openpyxl 미설치): {e} — parquet·CSV 산출은 정상 진행")
 
     # UTC 일봉은 세션 타깃으로 승격하지 않는다.
     out = _to_long_output(df)

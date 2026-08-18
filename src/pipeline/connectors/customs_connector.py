@@ -328,14 +328,20 @@ def _normalize_customs_df(all_rows: list[dict], source_tag: str) -> pd.DataFrame
         if col in df.columns:
             pd_parts.append(pd.to_datetime(df[col].astype(str).str.strip(),
                                            format=fmt, errors="coerce"))
+    # A-182: 런 32068230640 실증 — 이번 XML 응답의 year 태그가 "2023.02" **연.월 형식**으로
+    # 와 %Y 파싱이 7,143건 전량 실패(fail-loud가 정상 차단). 연월 형식 폴백 추가.
+    if "stat_year" in df.columns:
+        pd_parts.append(pd.to_datetime(df["stat_year"].astype(str).str.strip(),
+                                       format="%Y.%m", errors="coerce"))
     if pd_parts:
         price_date = pd_parts[0]
         for part in pd_parts[1:]:
             price_date = price_date.fillna(part)
         df["price_date"] = price_date
         if "stat_year" in df.columns:
-            annual_mask = df["price_date"].notna() & df.get(
-                "period_start", pd.Series(pd.NaT, index=df.index)).isna()
+            # A-182: 연간 라벨은 stat_year가 순수 연도(YYYY)인 행에만 — 연.월 형식은 월 단위
+            annual_mask = (df["price_date"].notna()
+                           & df["stat_year"].astype(str).str.strip().str.fullmatch(r"\d{4}"))
             if "note" not in df.columns:
                 df["note"] = ""
             df.loc[annual_mask & df["note"].astype(str).eq(""), "note"] = "연간 집계(XML 응답)"

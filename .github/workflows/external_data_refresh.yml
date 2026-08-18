@@ -137,6 +137,7 @@ jobs:
           name: wasde-crop-${{ github.run_id }}
           path: data/raw/crop_data_*.parquet
           retention-days: 7
+          if-no-files-found: error   # A-182: 0건 녹색 통과 차단
 
   # ── WBS 1.1.5: ENSO / 기상이상 ────────────────────────────────────────────
   climate-enso:
@@ -192,7 +193,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pandas pyarrow yfinance curl_cffi
+        run: pip install pandas pyarrow yfinance curl_cffi openpyxl   # A-182: xlsx 변환 의존성
       - name: Rebuild Databento parquet from committed CSV (A-130)
         run: |
           CSV_PATH=$(find data/raw/Databento/GLBX.MDP3 -name 'ZL_ohlcv-1d_*.csv' -type f | sort | tail -n 1)
