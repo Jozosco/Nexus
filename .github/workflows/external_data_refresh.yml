@@ -718,11 +718,22 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pandas pyarrow duckdb pyyaml
+        run: pip install pandas pyarrow duckdb pyyaml openpyxl xlrd
       - uses: actions/download-artifact@v4
         with:
           path: data/raw/
           merge-multiple: true
+      - name: Rebuild manual-upload parquets (A-183 — 일별 커버리지 정합)
+        # 일별 런에는 Historical 전용 수동 파서 산출물(TE 9개년 BDI·CPO 등)이 없어
+        # Readiness 커버리지가 실시간분만으로 산정(BDI·CPO 56%<85% — 런 32184410301
+        # 실증). 커밋된 원본 xlsx에서 결정적 파서 6종을 재실행해 실보유분으로 산정.
+        run: |
+          python scripts/ingest_te_xlsx.py
+          python scripts/ingest_wasde_xlsx.py
+          python scripts/ingest_psd_data.py
+          python scripts/ingest_gats_data.py
+          python scripts/ingest_ice_volumes.py
+          python scripts/ingest_nasa_power_xlsx.py
       - name: Run model readiness gate
         run: python scripts/data_readiness.py
       - name: Build and independently verify feature mart

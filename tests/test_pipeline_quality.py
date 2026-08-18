@@ -54,8 +54,20 @@ def _assert_common_schema(df: pd.DataFrame, connector: str) -> None:
         print(f"\n[{connector}] ⚠️ 결측치 경고: {null:.1f}% (권장 {NULL_WARN_PCT}% 이하)")
 
 
+# A-183: 마케팅연도 라벨 소스(WASDE·PSD·NASS — price_date=10/1)는 라벨이 미래일 수
+# 있음 — 누출 판정은 as-of 체계(D-023)대로 available_at ≤ 오늘로 검증한다.
+MARKETING_YEAR_CONNECTORS = {"crop_data", "production_data"}
+
+
 def _assert_no_future_price_date(df: pd.DataFrame, connector: str) -> None:
-    """가격 날짜가 오늘 이후를 포함하지 않는지 확인 (데이터 누출 방지)."""
+    """데이터 누출 방지 — 일반 소스는 price_date, 마케팅연도 소스는 available_at 기준."""
+    if connector in MARKETING_YEAR_CONNECTORS and "available_at" in df.columns:
+        avail = pd.to_datetime(df["available_at"], errors="coerce").dropna()
+        future = (avail.dt.date > date.today()).sum()
+        assert future == 0, (
+            f"[{connector}] 미래 available_at {future}건 — as-of 누출 가능성"
+        )
+        return
     dates = pd.to_datetime(df["price_date"], errors="coerce").dropna()
     future = (dates.dt.date > date.today()).sum()
     assert future == 0, (
@@ -85,13 +97,15 @@ def _assert_freshness(df: pd.DataFrame, connector: str) -> None:
 
 
 def _assert_date_range(df: pd.DataFrame, connector: str) -> None:
-    """price_date 범위가 2020-01-01 이후인지 확인."""
+    """price_date 범위가 분석창 시작(2010-01-01, M-008) 이후인지 확인.
+
+    A-183: 구 하한 2020(D-003)은 수집범위 2010 확장(A-082·M-008)과 충돌 — 갱신."""
     dates = pd.to_datetime(df["price_date"], errors="coerce").dropna()
     if dates.empty:
         return
     min_date = dates.min().date()
-    assert min_date >= date(2019, 12, 31), (
-        f"[{connector}] price_date 최솟값 {min_date}가 2020년 이전 — 수집 범위 확인 필요"
+    assert min_date >= date(2009, 12, 31), (
+        f"[{connector}] price_date 최솟값 {min_date}가 2010년 이전 — 수집 범위 확인 필요"
     )
 
 
@@ -270,8 +284,11 @@ class TestCustomsImport:
         df = _skip_if_none(customs_df)
         if "hs_code" not in df.columns:
             pytest.skip("hs_code 컬럼 없음")
-        non_1507 = (~df["hs_code"].astype(str).str.startswith("1507")).sum()
-        assert non_1507 == 0, f"HS 1507 이외 코드 {non_1507}건 포함"
+        # A-183: 대체·보완재 16종 확장(D-031) 반영 — 커넥터 정의와 동기화(드리프트 방지)
+        from src.pipeline.connectors.customs_connector import HS_CODES_ALL
+        allowed = tuple(HS_CODES_ALL)
+        bad = (~df["hs_code"].astype(str).str.startswith(allowed)).sum()
+        assert bad == 0, f"허용 HS {len(allowed)}종 이외 코드 {bad}건 포함"
 
 
 class TestTimeSeriesIntegrity:
