@@ -1,0 +1,56 @@
+# 주간 WBS 보고 자동화 (A-185 · 조정자 지시 2026-08-19)
+#
+# "WBS를 주 단위로 업데이트하고 매주 월요일 14시(KST)까지 요약 보고할 것."
+#   → cron 05:00 UTC 월요일 = KST 월 14:00. 초안 파일을 생성·커밋하고
+#     Step Summary에 요약(진척·검토 필요·MEMORY·커밋)을 게시한다.
+#
+# ⚠️ 진척률·작업 행 구성은 자동 확정하지 않는다(초안 + 검토 표시) — C-01이 검토·확정.
+
+name: Weekly WBS Report (월 14:00 KST)
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"        # 월요일 05:00 UTC = KST 월 14:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weekly-wbs
+  cancel-in-progress: false
+
+jobs:
+  build-wbs:
+    name: "주간 WBS 초안 생성·커밋"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # git log 주간 집계용
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install openpyxl
+      - name: Build weekly WBS draft
+        run: python scripts/build_weekly_wbs.py | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Commit WBS draft
+        run: |
+          if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files -o --exclude-standard reports)" ]; then
+            echo "변경 없음 — 커밋 생략"; exit 0
+          fi
+          git config user.name "nexus-wbs-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add reports/WBS_*.xlsm
+          git diff --cached --quiet && { echo "스테이징 변경 없음"; exit 0; }
+          git commit -m "docs: 주간 WBS 초안 자동 생성 ($(date -u +%F)) [A-185]"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Upload WBS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-wbs-${{ github.run_id }}
+          path: reports/WBS_*.xlsm
+          retention-days: 90
+          if-no-files-found: warn

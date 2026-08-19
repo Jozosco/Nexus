@@ -61,6 +61,12 @@ _WINDOW_MONTHS: list[int] = [12]
 
 BASE_URL = "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList"
 GW_ROOT  = Path("data/raw/관세청/Import Export Performance by Commodity and Country(GW)")
+# A-184(조정자 확정): API 수집분은 **원본과 같은 폴더에 `_API` 접미 파일**로 저장한다.
+#   원본 `{국가}.xlsx`(조정자 업로드분)은 스크립트가 읽지도 쓰지도 않는다 — 경로가
+#   다르므로 덮어쓰기가 구조적으로 불가능하다. 분석 시 원본 우선·API 보완으로 병합.
+API_SUFFIX = "_API"
+# 재개(A-184): 완료 쌍은 건너뛴다. true면 전량 재수집(분기 개정 반영용 수동 스위치).
+FORCE_REFRESH = os.environ.get("CUSTOMS_FORCE_REFRESH", "").lower() in ("1", "true", "yes")
 PARQUET  = Path("data/raw/customs_gw_historical.parquet")
 
 START_YEAR = int(os.environ.get("HISTORICAL_START_YEAR", "2010"))
@@ -228,6 +234,25 @@ def fetch_range(hs: str, cnty: str, start_year: int, end_year: int) -> list[dict
     return out
 
 
+def _pair_complete(out_path: Path, expected_years: int) -> bool:
+    """(품목·국가) 쌍이 이미 완전 수집됐는지 판정 — 재개용 (A-184).
+
+    완료 조건: 파일 존재 + 연도 시트 수 ≥ 기대 연도. 불완전본은 False를 반환해
+    재수집 대상이 되므로, 재수집은 **항상 개선 방향**으로만 일어난다.
+    """
+    if FORCE_REFRESH or not out_path.exists():
+        return False
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(out_path, read_only=True)
+        n_sheets = len(wb.sheetnames)
+        wb.close()
+        return n_sheets >= expected_years
+    except Exception as e:                      # 손상 파일은 재수집 대상
+        print(f"    [경고] 기존 파일 판독 실패({e}) — 재수집 대상으로 처리: {out_path.name}")
+        return False
+
+
 def _write_gw_xlsx(rows: list[dict], out_path: Path,
                    expected_years: int | None = None) -> None:
     """업로드본과 동일 포맷으로 저장: 연도별 시트 × 월행 × 5지표열.
@@ -260,7 +285,7 @@ def run() -> int:
     """전 품목·국가 수집. 반환값 = 프로세스 종료코드(0 정상 / 1 실패 존재)."""
     started = time.monotonic()
     all_records: list[dict] = []
-    done = skipped = empty = 0
+    done = skipped = empty = resumed = 0
     total_pairs = len(COMMODITIES) * len(COUNTRIES)
     expected_years = END_YEAR - START_YEAR + 1
 
@@ -276,6 +301,12 @@ def run() -> int:
     for folder, hs in COMMODITIES:
         print(f"[C-03] {folder} (HS {hs}) 수집...")
         for cnty_code, cnty_name in COUNTRIES.items():
+            out = GW_ROOT / folder / f"{cnty_name}{API_SUFFIX}.xlsx"
+            # A-184 재개: 이미 완전 수집된 쌍은 건너뛴다 — 예산 소진 시 다음 실행이
+            #   남은 쌍부터 시작하므로 '뒤쪽 품목 영구 누락'(A-109 F10) 구조가 해소된다.
+            if _pair_complete(out, expected_years):
+                resumed += 1
+                continue
             if time.monotonic() - started > TIME_BUDGET_S:
                 skipped += 1
                 continue
@@ -287,9 +318,8 @@ def run() -> int:
                 empty += 1
                 print(f"  [정보] {folder}/{cnty_name}: 반환 행 없음")
                 continue
-            out = GW_ROOT / folder / f"{cnty_name}.xlsx"
             _write_gw_xlsx(rows, out, expected_years=expected_years)
-            print(f"  [xlsx] {folder}/{cnty_name}.xlsx ({len(rows)}개월)")
+            print(f"  [xlsx] {folder}/{out.name} ({len(rows)}개월)")
             for r in rows:
                 all_records.append({**r, "commodity": folder, "hs_code": hs,
                                     "country": cnty_name,
@@ -299,12 +329,14 @@ def run() -> int:
                                     "ingested_at": pd.Timestamp.now("UTC")})
 
     mins = (time.monotonic() - started) / 60
+    if resumed:
+        print(f"\n[재개] 완료분 {resumed}/{total_pairs}쌍 건너뜀 — 이번 실행은 나머지만 수집"
+              + (" (FORCE_REFRESH 활성)" if FORCE_REFRESH else ""))
     if skipped:
-        # A-109(F10): 재개 상태를 저장하지 않으므로 "이어서 수집"은 사실이 아니다.
-        # 매 실행이 같은 순서로 돌아 같은 지점에서 소진된다 — 정확히 알린다.
+        # A-184: 재개 기능 도입으로 다음 실행이 미수집 쌍부터 시작한다(A-109 F10 해소).
         print(f"\n[경고] 시간 예산({TIME_BUDGET_S/3600:.1f}h) 초과 — {skipped}/{total_pairs}쌍 미수집. "
-              f"⚠️ 재개 기능 없음: 다음 실행도 동일 순서로 시작하므로 뒤쪽 품목은 계속 누락된다. "
-              f"CUSTOMS_TIME_BUDGET_S 상향 또는 COMMODITIES 분할 실행 필요")
+              f"✅ 재개 지원: 다음 실행이 이번에 못 채운 쌍부터 이어서 수집한다. "
+              f"조기 완주를 원하면 CUSTOMS_TIME_BUDGET_S 상향 또는 COMMODITIES 분할 실행")
 
     if all_records:
         # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
@@ -324,6 +356,9 @@ def run() -> int:
         print("  ⚠️ 실패가 '데이터 없음'으로 위장되지 않도록 종료코드 1로 차단합니다.")
         return 1
     if not all_records:
+        if resumed == total_pairs:
+            print(f"  ✅ 전 {total_pairs}쌍이 이미 완전 수집 상태 — 신규 호출 없음(정상)")
+            return 0
         print("  ⚠️ 성공 요청이 하나도 없음 — 키·네트워크 확인 필요(종료코드 1)")
         return 1
     return 0

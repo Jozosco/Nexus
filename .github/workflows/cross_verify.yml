@@ -25,6 +25,7 @@ on:
       - "docs/research_desk/*/g1_publication_schedule_panel_*.md"   # 월 폴더 비고정 (GPT 정정)
       - "docs/research_desk/*/abcd_trading_structure_*.md"
       - "docs/research_desk/*/differentiation_brainstorm_*.md"
+      - "docs/research_desk/*/glossary_*.md"
   workflow_dispatch:
 
 permissions:
@@ -68,7 +69,8 @@ jobs:
                    "reports/market/procurement_alternatives_*.md" \
                    "docs/research_desk/*/g1_publication_schedule_panel_*.md" \
                    "docs/research_desk/*/abcd_trading_structure_*.md" \
-                   "docs/research_desk/*/differentiation_brainstorm_*.md"; do
+                   "docs/research_desk/*/differentiation_brainstorm_*.md" \
+                   "docs/research_desk/*/glossary_*.md"; do
             python scripts/cross_verify_gpt.py "$g"
           done
       - name: Upload verification artifacts

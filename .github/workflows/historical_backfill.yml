@@ -422,6 +422,9 @@ jobs:
   # data.go.kr REST — 개발 샌드박스 프록시 차단이라 Actions에서만 수집 가능(A-069)
   customs-gw-extended:
     name: "1.1.48 | Korea Customs GW Extended (대체·보완재 HS × 원산지)"
+    # A-184: _API 수집분을 main에 커밋 — 아티팩트 90일 만료 후에도 보존(재개 판정 근거)
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     # A-094: 6시간 강제 취소로 수집분 전량 유실 → 잡 상한을 240분으로 낮추고,
     # 스크립트 내부 예산(CUSTOMS_TIME_BUDGET_S)이 그보다 먼저 만료돼 저장 후 정상 종료하게 함.
@@ -449,6 +452,19 @@ jobs:
           #   (7·8차 런 실증: 182분 대기 후 수집 0건). 장애면 빨리 실패하고 체인을 진행한다.
           CUSTOMS_TIME_BUDGET_S:  "2400"
         run: python scripts/ingest_customs_gw_xlsx.py
+      - name: Commit API-collected GW files (A-184 — 90일 만료 대비 영속화)
+        if: always()
+        run: |
+          if git diff --quiet -- "data/raw/관세청" 2>/dev/null; then
+            echo "GW _API 수집분 변경 없음 — 커밋 생략"; exit 0
+          fi
+          git config user.name "nexus-gw-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add "data/raw/관세청/**/*_API.xlsx" || true
+          git diff --cached --quiet && { echo "스테이징 변경 없음"; exit 0; }
+          git commit -m "data: 관세청 GW API 수집분 갱신 ($(date -u +%F)) [A-184]"
+          git pull --rebase origin main
+          git push origin HEAD:main
       - name: Upload customs GW outputs
         uses: actions/upload-artifact@v4
         with:
