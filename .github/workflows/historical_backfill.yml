@@ -1040,7 +1040,7 @@ jobs:
         continue-on-error: true
         env:
           OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
-          GPT_XVERIFY_MODEL:  ${{ vars.GPT_XVERIFY_MODEL || 'gpt-5.6' }}
+          GPT_XVERIFY_MODEL:  ${{ vars.GPT_XVERIFY_MODEL || 'gpt-5.6-sol' }}
           GPT_XVERIFY_EFFORT: "xhigh"   # A-166: gpt-5.6-sol은 max 미지원(400) — 지원 최대치 xhigh
         run: |
           pip install openai

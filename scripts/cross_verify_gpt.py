@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import glob
 import os
+import re
 import subprocess
 import sys
 from datetime import date
@@ -84,18 +85,61 @@ def main() -> int:
             resp = client.chat.completions.create(**req)       # effort 미지원 SDK/모델
         verdict = resp.choices[0].message.content or "(빈 응답)"
     except Exception as e:
-        # 모델명 오류(404)면 안내 — 사용 가능 모델은 config/llm_models.json 모니터 참조
+        # A-186: 실패도 기록으로 남긴다 — 조용한 무판정이 '검증됨'으로 오인되지 않게.
+        #   잡은 계속 비치명(exit 0)이되, 사람이 볼 수 있는 흔적을 남긴다.
         print(f"[경고] 교차검증 호출 실패({type(e).__name__}): {e}")
         print(f"       GPT_XVERIFY_MODEL={MODEL} — 모델명 확인(llm_model_monitor 산출 참조)")
+        _write_result(label, f"⚠️ **검증 실패** — `{type(e).__name__}`: {e}\n\n"
+                             f"이 대상은 **검증되지 않았습니다**. 재실행 필요.",
+                      failed=True)
+        _step_summary(f"⚠️ 교차검증 실패 — 대상 `{label}` ({type(e).__name__})")
         return 0
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out = OUT_DIR / f"xverify_{date.today()}_{MODEL.replace('/', '_')}.md"
-    out.write_text(f"# GPT 교차검증 — {date.today()}\n\n- 모델: {MODEL} (effort={EFFORT})\n"
-                   f"- 대상: {label}\n\n---\n\n{verdict}\n", encoding="utf-8")
-    print(f"[완료] 교차검증 → {out}")
+    _write_result(label, verdict, failed=False)
+    _step_summary(f"✅ 교차검증 완료 — 대상 `{label}`")
     print(verdict[:1500])
     return 0
+
+
+def _slug(label: str) -> str:
+    """대상 라벨 → 파일명 조각 (A-186: 대상별 분리 저장으로 덮어쓰기 유실 방지)."""
+    base = re.sub(r"[^0-9A-Za-z가-힣._-]+", "_", label)[:60].strip("_")
+    return base or "target"
+
+
+def _write_result(label: str, body: str, *, failed: bool) -> Path:
+    """대상·순번별 파일로 저장 — 한 실행의 7회 호출이 서로 덮어쓰지 않게 한다.
+
+    A-186: 구 코드는 `xverify_{날짜}.md` 고정이라 한 런의 마지막 판정만 남았다
+    (아티팩트가 항상 1파일·수백 바이트였던 원인).
+    """
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = date.today()
+    run_id = os.environ.get("GITHUB_RUN_ID", "local")
+    slug = _slug(label)
+    n = 1
+    while (OUT_DIR / f"xverify_{stamp}_{run_id}_{slug}_{n}.md").exists():
+        n += 1
+    out = OUT_DIR / f"xverify_{stamp}_{run_id}_{slug}_{n}.md"
+    status = "❌ 실패" if failed else "✅ 판정"
+    out.write_text(
+        f"# GPT 교차검증 — {stamp} [{status}]\n\n"
+        f"- 모델: {MODEL} (effort={EFFORT})\n- 대상: {label}\n- 런: {run_id}\n\n---\n\n{body}\n",
+        encoding="utf-8")
+    print(f"[완료] 교차검증 → {out}")
+    return out
+
+
+def _step_summary(line: str) -> None:
+    """GitHub Step Summary에 한 줄 — 실패가 초록 결론에 묻히지 않게 한다."""
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
