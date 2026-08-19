@@ -8,15 +8,21 @@
 
 ## 요약
 
-- 총 검증 기록 **0건** — 판정 산출 0 · 실패(미판정) 0
-- 누적 지적: **[치명] 0건 · [높음] 0건**
+- 총 검증 기록 **7건** — 판정 산출 7 · 실패(미판정) 0
+- 누적 지적: **[치명] 8건 · [높음] 69건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
-| — | (기록 없음) | — | — | — | — | — | — |
+| 2026-08-19 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 3 | 21 | [치명] 현재 도착가 밴드로 2·4주 대기 손익을 판단했다.** 동일 일자의 `[1,290, 1,770]` 밴드는 2주·4주 후 조건부 가격분포가 아니다. 또한 무추세 가정은 `E | 32207719881 | [xverify_2026-08-19_322077198…](../../reports/cross_verify/xverify_2026-08-19_32207719881_reports_market_procurement_alternatives_2026-08-14.md_1.md) |
+| 2026-08-19 | `reports/market/landed_cost_band_2026-08-14.md` | ⚠️ 지적 | 1 | 14 | [치명] ‘내재 basis+운임’ 층이 정의상 해당 성분을 식별하지 못해 주 밴드의 해석이 성립하지 않음. | 32207719881 | [xverify_2026-08-19_322077198…](../../reports/cross_verify/xverify_2026-08-19_32207719881_reports_market_landed_cost_band_2026-08-14.md_1.md) |
+| 2026-08-19 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 0 | [치명] 재현 불가능**: 저장소와 `git diff HEAD~1` 출력이 제공되지 않아 변경 내용을 검증할 수 없습니다. 또한 `HEAD~1`은 저장소 상태에 따라 달라져 대상  | 32207719881 | [xverify_2026-08-19_322077198…](../../reports/cross_verify/xverify_2026-08-19_32207719881_git_diff_HEAD_1_1.md) |
+| 2026-08-19 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 32207719881 | [xverify_2026-08-19_322077198…](../../reports/cross_verify/xverify_2026-08-19_32207719881_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-19 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 2 | 16 | [높음] 분석창 연수와 표본 비율이 불일치함. | 32207719881 | [xverify_2026-08-19_322077198…](../../reports/cross_verify/xverify_2026-08-19_32207719881_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-19 | `docs/research_desk/2026-08/differentiation_brainstor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32207719881 | [xverify_2026-08-19_322077198…](../../reports/cross_verify/xverify_2026-08-19_32207719881_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-19 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 1 | 18 | [치명] 월별 수입 합계를 개별 화물(parcel) 크기로 오인 | 32207719881 | [xverify_2026-08-19_322077198…](../../reports/cross_verify/xverify_2026-08-19_32207719881_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 
 ## 해소 이력
 
