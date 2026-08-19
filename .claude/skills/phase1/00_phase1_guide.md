@@ -12,7 +12,7 @@
 
 | 에이전트 | 역할 | 모델 | 담당 WBS | 스킬 파일 |
 |---|---|---|---|---|
-| **C-01** | Senior PM | Sonnet 4.6 | 전체 오케스트레이션 | `common/01_senior_pm.md` |
+| **C-01** | Senior PM | Opus 4.8 | 전체 오케스트레이션 | `common/01_senior_pm.md` |
 | **C-02** | 시장 조사 전문가 | Perplexity Pro | 1.4.1 (시장 인텔리전스) | `common/02_market_research.md` |
 | **C-04** | 데이터·ML 인프라 엔지니어 | Sonnet 4.6 | 1.1.x, 1.2.x | `common/04_azure_engineer.md` |
 | **C-07** | 문서화·지식 관리자 | Haiku 4.5 | 1.1.9, 1.2.6, 1.3.5, 1.4.7 | `common/07_documentation_agent.md` |

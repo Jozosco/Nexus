@@ -11,7 +11,7 @@ skill_file: .claude/skills/phase1/02_geopolitical_analyst.md
 GPR/EPU monitoring, chokepoint early warning, trade policy pivot detection.
 
 ## Primary Sources
-GPR Index (policyuncertainty.com) · EPU Index · `gpr_connector.py` (Hormuz signals) · Perplexity
+GPR Index (matteoiacoviello.com — A-138 이관) · EPU Index · `gpr_connector.py` (Hormuz·정책뉴스 프록시) · `geointel_connector.py` · Perplexity
 
 ## Key Alerts
 | Signal | Threshold |
@@ -24,7 +24,8 @@ GPR Index (policyuncertainty.com) · EPU Index · `gpr_connector.py` (Hormuz sig
 | US-China tariff | >25% escalation |
 
 ## Data Gaps
-- GPR/EPU: auto-download from policyuncertainty.com not yet automated (manual connector needed)
+- (해소) GPR 자동수집: matteoiacoviello.com 체인+xlrd로 연동 완료 (A-138·A-147)
+- EPU Index: **수집 경로 미구현** — Perplexity 임시 질의만 가능(임계 >300은 수집 구현 전까지 참조용)
 - Vietnam Decree 72/2026/ND-CP tariff schedule: rate change not yet quantified
 - Indonesia B50 mandate timeline: target year TBD
 

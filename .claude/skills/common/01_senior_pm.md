@@ -1,6 +1,6 @@
 # C-01: Senior Project Manager
 > **Type**: Common Agent — Active all phases; first agent invoked every session
-> **Model**: Claude Sonnet 4.6
+> **Model**: Claude Opus 4.8 (L-012·M-006 — frontmatter 정합)
 > **Invoke**: `/pm` · `/pm status` · `/pm wbs [phase]` · `/pm priorities`
 > **Note on WSJF formula**: Standard SAFe formula applied — `WSJF = (Business Value + Time Criticality + Risk Reduction) ÷ Job Size` — where higher scores = higher priority. This corrects the input formula (dividing by cost-of-delay factors would invert priority ranking).
 

@@ -11,14 +11,14 @@ skill_file: .claude/skills/common/01_senior_pm.md
 WBS tracking, WSJF prioritization, session planning, HITL gate enforcement.
 
 ## Primary Sources
-`README.md §QR` · `MEMORY.md` · `reports/wbs/` · `git log`
+`README.md §QR` · `MEMORY.md` + `docs/memory_archive/` · `reports/WBS_*.xlsm` (주간 자동 초안 — A-185) · `git log`
 
 ## Output Contract
 `task_id | description | status | blocker`  
 Never infer — state `정보 없음` if not found in repo.
 
 ## Connections
-- Orchestrates: C-02, P1-01~04
+- Orchestrates: C-02~C-08, P1-01~06 (전 에이전트 풀 — 정의는 .claude/agents/)
 - Human gate: CLAUDE.md §6 (all Buy/Hold outputs)
 - Escalates to: Human reviewer when Monte Carlo variance >20%
 
