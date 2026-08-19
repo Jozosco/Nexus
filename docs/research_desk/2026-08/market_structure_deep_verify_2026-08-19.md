@@ -1,7 +1,7 @@
 # 시장구조 브리프 Deep Research 교차검증 — 2026-08-19
 
 - **대상**: `Global Oilseeds & Fats Market Structure_26.08.19.docx` (조정자 업로드 · 컷오프 2026-08-19 17:41 KST)
-- **모델**: Perplexity `sonar-deep-research` · 주제 7개 중 판정 6 · 실패 1
+- **모델**: Perplexity `sonar-deep-research` · 주제 8개 중 판정 6 · 실패 2
 - **지시**: 조정자 2026-08-19 — 브리프 내용의 철저한 교차검증
 
 ---
@@ -1326,9 +1326,16 @@ LDC에 대해서는 General Lagos 콤플렉스의 대두 처리능력 2.5Mt/yr�
 
 ---
 
-## 아르헨티나 수출·가격
+## 아르헨티나 수출자 순위 2025
 
-⚠️ **검증 실패** — `ReadTimeout`: The read operation timed out
+⚠️ **검증 실패** — `RemoteProtocolError`: Server disconnected without sending a response.
+이 주제는 검증되지 않았습니다. 재실행 필요.
+
+---
+
+## 아르헨티나 FOB·DJVE
+
+⚠️ **검증 실패** — `RemoteProtocolError`: Server disconnected without sending a response.
 이 주제는 검증되지 않았습니다. 재실행 필요.
 
 ---
