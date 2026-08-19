@@ -6,6 +6,8 @@
 # 발화: 이 워크플로우 파일 자체의 push(생성 시 1회 자동 실행 — A-046 패턴) + 수동.
 #   sonar-deep-research는 고비용 — 스케줄 편입 금지(CI-004), 재검증은 workflow_dispatch.
 # 샌드박스는 api.perplexity.ai 차단(프록시 403) — Actions 러너가 유일한 실행 표면.
+# 재개(A-184 패턴): 당일 보고서의 판정 완료 주제는 보존 — 실패분만 재실행하므로
+#   재발화가 성공 판정을 재과금하지 않는다. read 타임아웃 45분·주제당 2회 재시도.
 
 name: Market Structure Deep Verify (Perplexity)
 

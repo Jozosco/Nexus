@@ -32,7 +32,8 @@ DOCX = Path("data/raw/Market Structure (Production & Distribution)/"
 OUT_DIR = Path("docs/research_desk/2026-08")
 MODEL = "sonar-deep-research"          # L-007: 구 huge — 심층 조사 전용
 API_URL = "https://api.perplexity.ai/chat/completions"
-PER_QUERY_TIMEOUT_S = 1800             # deep research는 질의당 수 분~수십 분
+PER_QUERY_READ_S = 2700                # 1차 실행 실측: 1800s로 2개 주제 ReadTimeout → 45분로 상향
+RETRIES_PER_THEME = 2                  # RemoteProtocolError(서버 절단) 1회 관측 — 재시도
 
 # 주제별 검증 질의 — 문서의 핵심 수치·사실 주장을 명시적으로 나열해 반증을 요구
 THEMES: list[tuple[str, str]] = [
@@ -81,15 +82,23 @@ def _extract_docx_text(path: Path) -> str:
 
 
 def _deep_research(client: httpx.Client, key: str, theme: str, claims: str) -> str:
-    resp = client.post(
-        API_URL,
-        headers={"Authorization": f"Bearer {key}"},
-        json={"model": MODEL,
-              "messages": [{"role": "system", "content": SYSTEM},
-                           {"role": "user", "content": f"[검증 주제] {theme}\n\n{claims}"}]},
-        timeout=PER_QUERY_TIMEOUT_S)
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"]
+    last: Exception | None = None
+    for attempt in range(1, RETRIES_PER_THEME + 1):
+        try:
+            resp = client.post(
+                API_URL,
+                headers={"Authorization": f"Bearer {key}"},
+                json={"model": MODEL,
+                      "messages": [{"role": "system", "content": SYSTEM},
+                                   {"role": "user", "content": f"[검증 주제] {theme}\n\n{claims}"}]},
+                timeout=httpx.Timeout(connect=30.0, read=PER_QUERY_READ_S, write=60.0, pool=60.0))
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            last = e
+            print(f"  [경고] 시도 {attempt}/{RETRIES_PER_THEME} 실패({type(e).__name__}) — "
+                  + ("재시도" if attempt < RETRIES_PER_THEME else "포기"))
+    raise last  # type: ignore[misc]
 
 
 def main() -> int:
@@ -104,9 +113,27 @@ def main() -> int:
     doc_chars = len(_extract_docx_text(DOCX))
     print(f"[정보] 대상 문서 {doc_chars:,}자 · 주제 {len(THEMES)}개 · 모델 {MODEL}")
 
+    # 재개(A-184 패턴): 당일 보고서에 이미 판정된 주제는 보존 — 실패·부재만 재실행
+    out = OUT_DIR / f"market_structure_deep_verify_{date.today()}.md"
+    existing: dict[str, str] = {}
+    if out.exists():
+        body = out.read_text(encoding="utf-8").split("---\n\n", 1)[-1]
+        for chunk in body.split("\n---\n\n"):
+            if chunk.startswith("## "):
+                title = chunk.split("\n", 1)[0][3:].strip()
+                if "검증 실패" not in chunk:
+                    existing[title] = chunk.rstrip() + "\n"
+        if existing:
+            print(f"[재개] 기존 판정 {len(existing)}개 주제 보존 — 실패분만 재실행")
+
     sections, ok, fail = [], 0, 0
     with httpx.Client() as client:
         for theme, claims in THEMES:
+            if theme in existing:
+                sections.append(existing[theme])
+                ok += 1
+                print(f"[재개] 보존: {theme}")
+                continue
             print(f"[진행] Deep Research: {theme} …")
             try:
                 verdict = _deep_research(client, key, theme, claims)
@@ -120,7 +147,6 @@ def main() -> int:
                 print(f"  ❌ 실패({type(e).__name__}): {e}")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out = OUT_DIR / f"market_structure_deep_verify_{date.today()}.md"
     out.write_text(
         f"# 시장구조 브리프 Deep Research 교차검증 — {date.today()}\n\n"
         f"- **대상**: `{DOCX.name}` (조정자 업로드 · 컷오프 2026-08-19 17:41 KST)\n"
