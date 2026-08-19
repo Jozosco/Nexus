@@ -8,14 +8,21 @@
 
 ## 요약
 
-- 총 검증 기록 **14건** — 판정 산출 13 · 실패(미판정) 1
-- 누적 지적: **[치명] 11건 · [높음] 131건**
+- 총 검증 기록 **21건** — 판정 산출 18 · 실패(미판정) 3
+- 누적 지적: **[치명] 16건 · [높음] 174건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-19 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-19 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 3 | 10 | [치명] 예측 분위로 해석할 수 없는 값을 P10/P50/P90 도착가 밴드로 제시 — 양 문서 | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-19 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 9 | [치명] 알려진 오규격 밴드를 제거하지 않고 핵심 수치로 계속 노출·재사용한다. | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_git_diff_HEAD_1_1.md) |
+| 2026-08-19 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-19 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-19 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 1 | 24 | [높음] 대표 아이디어 수가 24건이 아니라 28건이다. | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-19 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-19 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 1 | 16 | [치명] 2·4주 대기 손익을 단일 시점 가격 밴드로 판단했다. | 32242841236 | [xverify_2026-08-19_322428412…](../../reports/cross_verify/xverify_2026-08-19_32242841236_reports_market_procurement_alternatives_2026-08-14.md_1.md) |
 | 2026-08-19 | `reports/market/landed_cost_band_2026-08-14.md` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32242841236 | [xverify_2026-08-19_322428412…](../../reports/cross_verify/xverify_2026-08-19_32242841236_reports_market_landed_cost_band_2026-08-14.md_1.md) |
 | 2026-08-19 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32242841236 | [xverify_2026-08-19_322428412…](../../reports/cross_verify/xverify_2026-08-19_32242841236_git_diff_HEAD_1_1.md) |

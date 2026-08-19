@@ -1,0 +1,11 @@
+# GPT 교차검증 — 2026-08-19 [❌ 실패]
+
+- 모델: gpt-5.6-sol (effort=xhigh)
+- 대상: docs/research_desk/2026-08/g1_publication_schedule_panel_2026_08_14.md
+- 런: 32251935391
+
+---
+
+⚠️ **검증 실패** — `APIConnectionError`: Connection error.
+
+이 대상은 **검증되지 않았습니다**. 재실행 필요.
