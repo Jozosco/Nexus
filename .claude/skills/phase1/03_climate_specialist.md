@@ -190,7 +190,7 @@ Advisory: [TEXT] | Severity: LOW / MEDIUM / HIGH
 |---|---|---|---|---|
 | P1 | T-3M | [Preparation action] | Procurement | YYYY-MM-DD |
 | P2 | T-1M | [Warning action] | Procurement + P1-01 | YYYY-MM-DD |
-| P3 | Real-time | [Response action] | C-04 (pipeline trigger) | Immediate |
+| P3 | Real-time | [Response action] | G1 일별 경보판 · D-043 (구 C-04 트리거 폐기 — C-007) | Immediate |
 
 ## 5. Citations
 [n] Source name — date — URL or publication reference

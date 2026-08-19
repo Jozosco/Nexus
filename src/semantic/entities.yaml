@@ -1202,7 +1202,7 @@ market,_price_and_procurement:
   impact_target: Substitution
   price_direction: CONTEXT
   unit_range: MT or USD/MT
-  alert_criteria: Canola CFR > SBO by USD 20/MT
+  alert_criteria: SBO CFR > Canola by USD 20/MT (A-167 부호 규약 — SBO가 비쌀 때 대체 압력)
   priority: B
   ambiguity_risk: 중
   relations: SUBSTITUTES_FOR

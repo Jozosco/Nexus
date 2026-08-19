@@ -3,7 +3,7 @@ LLM 라우터 — 작업 유형에 따라 최적 LLM으로 자동 라우팅.
 에이전트는 직접 특정 LLM을 호출하는 대신 이 모듈을 통해 쿼리를 전달한다.
 
 구독 기준 (2025-04 기준):
-  Google AI Pro   → Gemini 2.5 Pro (GEMINI_PRO_MODEL) / 2.0 Flash (GEMINI_FLASH_MODEL)
+  (Gemini: C-012로 전면 배제 — LARGE_DOCUMENT는 OpenAI로 라우팅)
   OpenAI Business → GPT-4o (GPT4O_MODEL) / GPT-4o-mini (GPT4O_MINI_MODEL)
   Perplexity Pro  → sonar-pro (PERPLEXITY_ONLINE_MODEL) / sonar-deep-research (PERPLEXITY_LARGE_MODEL)
   Claude Pro      → Claude Code 세션 직접 처리 (CLAUDE_NATIVE passthrough)
@@ -25,7 +25,7 @@ from src.utils.perplexity_client import (
     query_perplexity,
     PERPLEXITY_LARGE_MODEL,
 )
-from src.utils.gemini_client import query_gemini, count_tokens, GEMINI_PRO_MODEL, GEMINI_FLASH_MODEL
+from src.utils.gemini_client import count_tokens   # C-012: Gemini 라우팅 배제 — 토큰 계수 유틸만 유지
 from src.utils.openai_client import query_openai, GPT4O_MODEL, GPT4O_MINI_MODEL
 
 # 문서를 Gemini로 보내는 최소 토큰 기준 (~50 페이지 분량)
@@ -122,15 +122,14 @@ class LLMRouter:
             return query_perplexity(prompt, **kwargs)
 
         elif task_type == TaskType.LARGE_DOCUMENT:
-            # 문서 없이 호출된 경우 토큰 체크 후 자동 판단
+            # C-012(2026-08-11): Gemini 전면 배제 — OpenAI로 재라우팅.
+            #   대형 문서 본문은 프롬프트에 병합해 전달(소형은 mini로 비용 절감).
+            merged = prompt if not document_text else f"{prompt}\n\n[문서 본문]\n{document_text}"
+            model = GPT4O_MODEL
             if document_text and not use_powerful_model:
-                token_count = count_tokens(document_text)
-                if token_count < LARGE_DOCUMENT_TOKEN_THRESHOLD:
-                    # 소형 문서는 Flash 모델로 비용 절감 (MEMORY L-008: gemini-2.0-flash)
-                    return query_gemini(prompt, document_text=document_text,
-                                       model=GEMINI_FLASH_MODEL)
-            return query_gemini(prompt, document_text=document_text,
-                                model=GEMINI_PRO_MODEL)
+                if count_tokens(document_text) < LARGE_DOCUMENT_TOKEN_THRESHOLD:
+                    model = GPT4O_MINI_MODEL
+            return query_openai(merged, system_prompt=system_prompt, model=model)
 
         elif task_type == TaskType.STRUCTURED_EXTRACT:
             model = GPT4O_MODEL if use_powerful_model else GPT4O_MINI_MODEL

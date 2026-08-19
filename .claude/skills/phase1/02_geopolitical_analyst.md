@@ -53,10 +53,8 @@ If any artifact is missing: state `"정보 없음 — 컨텍스트에서 확인 
 | `MEMORY.md` | Last 5 session summaries — geopolitical risk posture continuity | Session-start mandatory |
 | `docs/research_desk/MEMORY.md` | Prior GIRA signals + Procurement feedback | Load if exists |
 | Perplexity (via LLMRouter) | GPR Index updates, EPU, maritime insurance, conflict news | Pull at session start |
-| GPR Index (Caldara & Iacoviello) | Monthly geopolitical risk score | Auto-download from policyuncertainty.com |
-| EPU Index (Baker, Bloom & Davis) | Economic Policy Uncertainty index | Auto-download from policyuncertainty.com |
-| NLM-02 (NotebookLM) | Geopolitical Risk Monitor notebook | Human query → paste cited summary |
-| NLM-04 (NotebookLM) | EPA RFS, Korea RFS, tariff schedules, trade policy | Human query → paste cited summary |
+| GPR Index (Caldara & Iacoviello) | Monthly geopolitical risk score | 자동수집: matteoiacoviello.com 체인 (A-138 — policyuncertainty.com 미러 소멸) |
+| EPU Index (Baker, Bloom & Davis) | Economic Policy Uncertainty index | ⚠️ 수집 미구현 — Perplexity 임시 질의만 (파이프라인 경로 없음) |
 
 **Data Freshness Rule**: Any data point older than 5 business days must be tagged `[STALE:YYYY-MM-DD]` inline.
 **Absent Data Rule**: If a source is unavailable, state `"데이터 미연결 — [소스명]"` — never substitute invented values.

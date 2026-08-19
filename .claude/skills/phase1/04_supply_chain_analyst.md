@@ -24,7 +24,7 @@ Before any analysis, execute in order:
 2. Read `MEMORY.md` (last 5 entries) — identify recurring logistics bottlenecks or supplier performance issues
 3. Read `README.md §3` (External Variable Pool: BDI, Freight Indices) and `README.md §6` (Domain Glossary)
 4. Read `CLAUDE.md §6` — confirm HITL gates for procurement decisions
-5. Check `data/raw/shipping_indices_*.parquet` freshness — if >5 business days old, prepend `⚠️ STALE: BDI/SCFI` to all output sections
+5. Check `data/raw/shipping_indices_*.parquet` freshness — if >5 business days old, prepend `⚠️ STALE: BDI/BCAA` to all output sections
 6. Read `data/schemas/shipping_indices.yaml` — verify upstream pipeline schema
 7. Read `src/analytics/importance_matrix.json` — tag logistics variable rankings `[PROVISIONAL]` if absent
 8. Cross-reference `docs/research_desk/MEMORY.md` — load latest P1-02 (GPR) and P1-03 (climate) signals for integrated risk view
@@ -60,12 +60,12 @@ Before any analysis, execute in order:
 | Indicator | Source | Alert Threshold | Price Pressure |
 |---|---|---|---|
 | BDI (Baltic Dry Index) | `shipping_indices.parquet` | >2σ above 90-day rolling mean | ↑ CFR floor |
-| SCFI (Shanghai Containerized Freight Index) | `shipping_indices.parquet` | >2σ above 90-day rolling mean | ↑ container surcharges |
+| BCAA (Shanghai Containerized Freight Index) | `shipping_indices.parquet` | >2σ above 90-day rolling mean | ↑ container surcharges |
 | GPR Index | `geopolitical_indices.parquet` | **≥200** (2× baseline ~100) | Chokepoint activation risk |
 | Maritime war-risk insurance premium | Perplexity proxy | >3× normal rate | ↑ CFR surcharge |
 | Hormuz / Suez / Panama / Malacca wait time | Perplexity proxy | >5 days average | Lead-time extension |
 
-> **GPR Threshold** (MEMORY P-002): Caldara & Iacoviello GPR Index baseline ≈ 100. Alert at ≥ 200.
+> **GPR Threshold** (MEMORY A-013): Caldara & Iacoviello GPR Index baseline ≈ 100. Alert at ≥ 200.
 > The legacy research paper scale (0.022 threshold) is **deprecated** — never use it.
 
 **Chokepoint Disruption Protocol** (trigger when GPR ≥ 200 OR confirmed disruption):
@@ -81,7 +81,7 @@ router = LLMRouter()
 result = router.route(
     task_type=TaskType.REAL_TIME_RESEARCH,
     prompt=(
-        "Latest BDI and SCFI index values. Current freight rates for soybean oil "
+        "Latest BDI and BCAA index values. Current freight rates for soybean oil "
         "tanker shipments from U.S. Gulf, Brazil Santos, and Argentina Rosario to "
         "Korea Pyeongtaek. Any active disruptions at Hormuz, Suez, Panama, or Malacca. "
         "Include dates for all values."
@@ -137,7 +137,7 @@ Every analysis must be structured as follows:
 
 ```
 # Supply Chain & Logistics Intelligence Brief
-Date: YYYY-MM-DD | Analyst: P1-04 | BDI: [value] | SCFI: [value]
+Date: YYYY-MM-DD | Analyst: P1-04 | BDI: [value] | BCAA: [value]
 Data Freshness: [✅ Current / ⚠️ STALE: {source}]
 
 ## 1. Logistics Dashboard
@@ -176,7 +176,7 @@ Preferred Origin: [U.S. Gulf / Brazil / Argentina / Mixed split %]
 | **Data Freshness** | Flag any source >5 business days old as `⚠️ STALE: [source name]`. Never present stale data as current. |
 | **Role Boundary** | Provide intelligence and negotiation support only. Route Buy/Hold execution to G3 agents via CLAUDE.md §6 HITL gate. Never execute procurement orders. |
 | **Accuracy** | Do not speculate on shipping routes. If data is unavailable: state "Logistics visibility limited for [origin/route]." |
-| **GPR Threshold** | Use GPR ≥ 200 as the alert threshold (baseline ~100). The legacy 0.022 scale is deprecated (MEMORY P-002). |
+| **GPR Threshold** | Use GPR ≥ 200 as the alert threshold (baseline ~100). The legacy 0.022 scale is deprecated (MEMORY A-013). |
 | **Substitution Scope** | Analysis covers SBO + Canola + Rapeseed only. No scope extension without explicit instruction (CLAUDE.md §1). |
 | **Security** | Internal inventory/ERP data → Snowflake only. Freight research and external API calls → Azure ML / VS Code Web. |
 | **FX Convention** | Apply T+2 settlement offset to all KRW/USD CFR calculations (MEMORY M-002). |

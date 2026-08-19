@@ -1,9 +1,9 @@
 # C-02: Market Research & Intelligence Specialist
 > **Type**: Common Agent — Active all phases
-> **Primary Tool**: Perplexity Pro (real-time web) · Gemini AI Pro (documents > 50 pages, NotebookLM equivalent)
+> **Primary Tool**: Perplexity Pro (real-time web) · 대형 문서는 Claude 네이티브 판독(C-04 파이프라인 — pdfplumber 코퍼스)
 > **Orchestration**: `src/utils/llm_router.py` → `TaskType.REAL_TIME_RESEARCH` → `perplexity_client.py`
 > **Invoke**: `/market-research [topic] [G1|G2|G3]`
-> **NotebookLM status**: No public API — use `gemini_client.py` with document text as programmatic equivalent; maintain named notebooks manually (see §NotebookLM below)
+> **Gemini/NotebookLM**: 전면 배제(C-012·C-013) — 어떤 경로로도 사용하지 않음. 교차검증 secondary = gpt-5.6-sol (config/llm_cross_validation.json)
 
 ---
 
@@ -90,9 +90,10 @@ result_2 = router.query(TaskType.REAL_TIME_RESEARCH, "soybean oil freight cost A
 # ... triangulate results before writing output
 ```
 
-**Large document analysis** (WASDE, EPA filings > 50 pages) → use Gemini:
+**Large document analysis** (WASDE, EPA filings > 50 pages) → Claude 네이티브 판독
+(저장소 코퍼스는 C-04 파이프라인이 텍스트화) 또는 OpenAI 라우팅:
 ```python
-result = router.query(TaskType.LARGE_DOCUMENT,
+result = router.query(TaskType.LARGE_DOCUMENT,   # C-012: Gemini 배제 — OpenAI로 라우팅됨
     "대두 수급 전망 및 재생연료 정책 영향 요약",
     document_text=document_full_text)
 ```
@@ -159,33 +160,20 @@ Step 1 Framework → Step 2 Base Rate → Step 3 Evidence → 종합 판단 순�
 
 ### Next Steps
 - G3 에이전트 전달 필요 데이터: [항목 목록]
-- NotebookLM 업데이트 필요: [노트북명]
 - 추가 조사 권고: [주제]
 ```
 
 ---
 
-## NotebookLM Integration
+## Large-Document Handling (구 NotebookLM Integration — C-012로 대체)
 
-**Current state (no API)**: Human-maintained notebooks; query results pasted into agent context.
+Gemini·NotebookLM은 **전면 배제**(C-012·C-013). 대형 문서 처리 경로:
 
-| Notebook | Content | This Agent's Responsibility |
-|---|---|---|
-| `NLM-01: Soybean Oil Market Intelligence` | Price reports, analyst research | Weekly upload of new reports |
-| `NLM-02: Geopolitical Risk Monitor` | News corpora, conflict indices | Daily upload on major events |
-| `NLM-04: Regulatory Environment` | EPA/Korea RFS rulings, tariff schedules | Upload on policy changes |
-
-**Programmatic equivalent** (use when human upload is not available):
-```python
-# gemini_client.py serves as the NotebookLM equivalent for large documents
-from src.utils.llm_router import LLMRouter, TaskType
-router = LLMRouter()
-result = router.query(
-    TaskType.LARGE_DOCUMENT,
-    "이 보고서에서 대두유 공급 전망에 영향을 미치는 핵심 요인을 요약하세요",
-    document_text=report_full_text  # paste full document text here
-)
-```
+| 경로 | 용도 |
+|---|---|
+| 저장소 코퍼스 (C-04 파이프라인) | GAIN·FAO·WASDE 등 반입 문서 — pdfplumber 텍스트화 후 직접 판독 |
+| `TaskType.LARGE_DOCUMENT` (OpenAI 라우팅) | 코퍼스 밖 임시 대형 텍스트 요약 |
+| GPT-5.6-sol 교차검증 | 분석 산출물 검증 (cross_verify.yml) |
 
 ---
 
