@@ -54,10 +54,12 @@ THEMES: list[tuple[str, str]] = [
 ③ Cargill: 남미 대두 네트워크 가공공장 14 · 남미 항만 13 · Regina 카놀라 1.0Mt/yr (2026-04 개소)
 ④ LDC: General Lagos 대두 2.5Mt/yr·바이오디젤 0.6Mt/yr · Timbues 복수유지 라인(2026-01) · Bahia Blanca 신공장 발표(2026-06)
 ⑤ COFCO Intl 2025: 가공 35.6Mt · 항만 28.7Mt · 3자 판매 100.4Mt · Santos STS11 목표 14.5Mt/yr"""),
-    ("아르헨티나 수출·가격", """다음 아르헨티나 공식 통계 주장을 검증하라(농업사무국 Law 21.453 수출자 순위·FOB 공시·DJVE):
-① 2025년 법인별 대두유 수출: Viterra Argentina 1,496,325t · Cargill 1,171,480t · LDC 716,462t · COFCO 689,036t · Bunge Argentina 200,047t
-② 아르헨티나 조대두유 공식 FOB 2026-08-04 = USD 1,187/t
-③ 2026-07 DJVE 대두유 판매등록 사례: COFCO 15,000t · Bunge 6,300/6,800/3,800t · Cargill 4,000t · LDC 5,000t"""),
+    # 3회 연속 타임아웃 — 2분할(최종 시도)
+    ("아르헨티나 수출자 순위 2025", """다음 주장을 아르헨티나 농업사무국(Law 21.453) 공식 수출자 순위로 검증하라:
+2025년 법인별 대두유 수출 — Viterra Argentina 1,496,325t · Cargill 1,171,480t · LDC 716,462t · COFCO 689,036t · Bunge Argentina 200,047t"""),
+    ("아르헨티나 FOB·DJVE", """다음 주장을 아르헨티나 농업사무국 공식 FOB 공시·DJVE 등록으로 검증하라:
+① 조대두유 공식 FOB 2026-08-04 = USD 1,187/t
+② 2026-07 DJVE 대두유 판매등록: COFCO 15,000t · Bunge 6,300/6,800/3,800t · Cargill 4,000t · LDC 5,000t"""),
     ("바이오연료 정책·수요", """다음 바이오연료 정책·수요 주장을 검증하라(EPA·EIA·인니 에너지광물자원부):
 ① EPA RFS 최종 BBD 의무량: 2026년 9.07bn RINs · 2027년 9.20bn RINs
 ② EIA 2026-05 미국 바이오연료 원료 투입: 대두유 1,434백만lb(바이오디젤 747/재생디젤 687) · 우지 796 · UCO 605 · 옥수수유 457 · 카놀라유 293
