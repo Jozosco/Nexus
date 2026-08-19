@@ -96,24 +96,24 @@ class Axis:
 
 # ── 축별 산출 ────────────────────────────────────────────────────────────────
 def axis_timing(r: LandedCostResult) -> Axis:
-    """①시점 — 지금 매입 vs 2·4주 대기: 도착가 밴드의 꼬리 비대칭으로 비교.
+    """①시점 — 지금 매입 vs 2·4주 대기.
 
-    v0 가정: G2 모델 전이라 기대 경로는 무추세(P50 유지). 대기의 손익은 밴드
-    비대칭으로 근사 — 상방 리스크(P90−P50) vs 하방 기회(P50−P10).
-    리드타임(§3c) 때문에 '지금'도 도착은 40~50일 후 — 대기는 그 위에 가산된다.
+    8/19 판정 [치명] 반영: 현재 시점의 참고 밴드는 **2·4주 후의 조건부 가격분포가
+    아니며**, P50은 기대값이 아닌 중앙값이고, 꼬리 비대칭은 기대 하락·대기 이익의
+    근거가 아니다. 따라서 대기 손익의 방향 판단은 **G2 분위수 모델(h-스텝 조건부
+    분포) 산출 전까지 제공하지 않는다** — 현황 기술만 제공.
     """
-    up_risk = r.band_p90 - r.band_p50
-    down_opp = r.band_p50 - r.band_p10
-    asym = up_risk - down_opp
-    tilt = "상방 꼬리 우세(대기 리스크 큼)" if asym > 0 else "하방 꼬리 우세(대기 여지 있음)"
+    up_dist = r.band_p90 - r.band_p50
+    down_dist = r.band_p50 - r.band_p10
     return Axis(
         name="①시점 (지금 vs 2·4주 대기)",
-        signal=f"도착가 P50 {r.band_p50:,.0f} $/MT · 밴드 [{r.band_p10:,.0f}, "
-               f"{r.band_p90:,.0f}] · 무추세 가정(G2 모델 전)",
-        delta=f"상방 리스크 +{up_risk:,.0f} vs 하방 기회 −{down_opp:,.0f} $/MT "
-              f"(비대칭 {asym:+,.0f} → {tilt})",
-        guidance=f"대기 {WAIT_WEEKS[0]}·{WAIT_WEEKS[1]}주 시 기대비용은 P50 유지 가정 — "
-                 "비대칭 부호가 대기 손익의 방향 신호",
+        signal=f"현재 도착가 참고 밴드 P50 {r.band_p50:,.0f} $/MT · "
+               f"[{r.band_p10:,.0f}, {r.band_p90:,.0f}] — 현황 기술(예측 아님)",
+        delta=f"밴드 꼬리 거리: 상방 {up_dist:,.0f} · 하방 {down_dist:,.0f} $/MT — "
+              "**대기 손익 방향 판단 불가**(현재 밴드는 2·4주 후 조건부 분포가 아님 — 8/19 판정)",
+        guidance=f"대기 {WAIT_WEEKS[0]}·{WAIT_WEEKS[1]}주 판단은 G2 분위수 모델(horizon별 "
+                 "P10~P90) 산출 후 제공 — 그 전에는 재고·입고 예정·필요 납기 대비 "
+                 "리드타임(40~50일) 충족 여부만 점검",
         causal_refs="CE-001(45Z 상방) · CE-021(BRL 약세 하방) · CE-008(WASDE 이벤트 단기)")
 
 
@@ -121,14 +121,14 @@ def axis_coverage(r: LandedCostResult, cfg: ProcurementConfig) -> Axis:
     """②커버리지 — 운임 레짐(z-score)별 권장 선매입 개월(§3c 2021~22 실증 범위)."""
     lo, hi = COVERAGE_BY_REGIME[r.scenario]
     ext = max(0.0, lo - cfg.coverage_months)
-    up_protect = r.band_p90 - r.band_p50
     z_label = f"{r.bdi_z:+.2f}" if r.bdi_z is not None else "미확보"
     return Axis(
         name="②커버리지 (선매입 개월수)",
         signal=f"운임 레짐 **{r.scenario}** (BDI z={z_label}) → 권장 {lo:.0f}~{hi:.0f}개월 "
                f"(현재 입력값 {cfg.coverage_months:.1f}개월)",
-        delta=f"1개월 연장 시 단위 물량당 선확정 {r.band_p50:,.0f} $/MT · "
-              f"상방 보호 기대 최대 +{up_protect:,.0f} $/MT (권장 하한까지 부족 {ext:.1f}개월)",
+        delta=f"권장 하한까지 부족 {ext:.1f}개월 · 참고: 현 P50 수준 {r.band_p50:,.0f} $/MT는 "
+              "가격 수준이지 연장의 비교 델타가 아님 — 연장 델타(선매입가+금융·보관비−"
+              "1개월 후 기대 구매가)는 G2 모델 전 산출 불가(8/19 판정)",
         guidance="레짐 악화(경계→급등) 시 커버리지 연장이 §3c 실수요자 대응 1순위였음(2021~22)",
         causal_refs="CE-010(해협→운임→CIF) · CE-016(BDI→수출 채산성) · CE-006(라니냐 공급)")
 
@@ -142,14 +142,16 @@ def axis_incoterms(r: LandedCostResult, cfg: ProcurementConfig) -> Axis:
     elif r.bdi_z is not None and r.bdi_z > BDI_Z_WATCH:
         judgement = "경계 레짐: CFR 유지 + FOB 견적 병행 수집(급등 대비 협상 준비)"
     else:
-        judgement = ("평시 레짐: FOB+운임 직접 계약 검토 — basis·운임 각층 최저가 조합 "
-                     "절감 여지(§3d 평시 복귀 분기)")
+        judgement = ("평시 레짐: FOB+운임 직접 계약 검토 — 단 **동시점 실행 가능 견적**으로 "
+                     "비교할 것(서로 다른 원산지·laycan·신용조건의 최저가를 독립 결합하면 "
+                     "합성 최저가 오류 — 8/19 판정)")
     return Axis(
         name="③Incoterms (CFR 유지 vs FOB+스팟)",
         signal=f"운임 레짐 {r.scenario} · 임계 z>{BDI_Z_WATCH:.0f} 경계 / "
                f"z>{BDI_Z_SURGE:.0f} 급등 (§3d)",
-        delta=f"내재층 P90−P50 = +{freight_exposure:,.0f} $/MT — 급등 레짐 전환 시 "
-              f"신규 CFR 호가에 가산될 운임 프리미엄 근사 (계약유형 입력: {cfg.contract_type} · "
+        delta=f"내재층 P90−P50 = +{freight_exposure:,.0f} $/MT — ⚠️ 원재료·FX·품질·공분산이 "
+              "혼재된 잔차 분위 차이로 **운임만의 프리미엄이 아님**(분해 불가 — 8/19 판정). "
+              f"규모감 참고 전용 (계약유형 입력: {cfg.contract_type} · "
               f"가격고정 입력: {cfg.price_fixing})",
         guidance=judgement + " — BCAA 실측(§5 유료 승인) 전 BDI 프록시 판정임",
         causal_refs="CE-010(호르무즈·말라카) · CE-013(수에즈 우회 선복) — "
@@ -198,10 +200,13 @@ def axis_substitutes(cfg: ProcurementConfig) -> tuple[Axis, list[dict]]:
                 spread_txt = "환산 미확보(FX parquet 부재 — CI 재실행 시 산출)"
             gap = (f"{sub_z - cbot_z:+.2f}" if sub_z is not None and cbot_z is not None
                    else "표본 부족")
+            lag_days = (pd.Timestamp.today().normalize() - s.index[-1]).days
+            fresh = (f"{s.index[-1].date()}"
+                     + (f" ⚠️{lag_days}일 지연" if lag_days > 30 else ""))
             rows.append({"대체유지": label,
                          "상태": f"단위 {sub.iloc[-1]['unit']}",
                          "z격차": gap, "스프레드": spread_txt,
-                         "최종관측": str(s.index[-1].date())})
+                         "최종관측": fresh})
     spread_note = ("USD/MT 스프레드 산출 가능" if spread_available
                    else "USD/MT 스프레드 전량 환산 대기(D8 FX 미확보) — z격차(무차원)로 대체")
     axis = Axis(
@@ -211,7 +216,8 @@ def axis_substitutes(cfg: ProcurementConfig) -> tuple[Axis, list[dict]]:
               f"(SBO가 팜유 대비 임계 이상 고평가 시 배합 전환 검토 — GPT 교차검증 부호 정정)"
               "(CE-015 — 통계 검증 대기) · 관세청 대체유 9품목 실측 CIF는 GW 확장수집 "
               "완료 후 병행(A-161: 현재 템플릿만 존재)",
-        guidance="z격차 음수(대체유가 SBO보다 약세)가 지속되면 배합 전환 검토 신호 — "
+        guidance="⚠️ z격차는 각 시장 내 상대 모멘텀(무차원)일 뿐 **USD/MT 경제성이 아님** — "
+                 "배합 전환 판단은 FX 환산 스프레드(converted 행) 산출 후에만 가능(8/19 판정). "
                  "실제 전환은 품질 규격(§3b)·정제 설비 제약 확인 필요",
         causal_refs="CE-015(CPO 대체압력) · CE-002(B40→스프레드 축소) · CE-014(해바라기 차단)")
     return axis, rows
