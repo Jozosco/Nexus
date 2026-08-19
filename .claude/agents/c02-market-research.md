@@ -19,6 +19,7 @@ skill_file: .claude/skills/common/02_market_research.md
 
 ## Primary Sources
 Perplexity Pro · 저장소 코퍼스(GAIN 2,038건 — D-038 중복 52쌍 제거 후 · FAO 137건 판독본) · 관세청 GW 실측 ·
+**시장구조 브리프**(`data/raw/Market Structure (Production & Distribution)/` — D-047 상시 참조·4-라벨 규율) ·
 `MEMORY.md` + `docs/memory_archive/` · `docs/research_desk/`
 
 ## Output Contract

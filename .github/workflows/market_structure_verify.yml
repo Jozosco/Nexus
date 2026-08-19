@@ -1,0 +1,67 @@
+# 시장구조 브리프 Deep Research 교차검증 (A-189 · 조정자 지시 2026-08-19)
+#
+# 조정자 지시: "Global Oilseeds & Fats Market Structure_26.08.19.docx 내용을
+#   Perplexity Deep Research로 철저히 교차검증할 것."
+#
+# 발화: 이 워크플로우 파일 자체의 push(생성 시 1회 자동 실행 — A-046 패턴) + 수동.
+#   sonar-deep-research는 고비용 — 스케줄 편입 금지(CI-004), 재검증은 workflow_dispatch.
+# 샌드박스는 api.perplexity.ai 차단(프록시 403) — Actions 러너가 유일한 실행 표면.
+
+name: Market Structure Deep Verify (Perplexity)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/market_structure_verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-structure-verify
+  cancel-in-progress: false
+
+jobs:
+  deep-verify:
+    name: "Deep Research 교차검증 | 5개 주제"
+    runs-on: ubuntu-latest
+    timeout-minutes: 150          # deep research는 질의당 수 분~수십 분
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            src
+            data/raw/Market Structure (Production & Distribution)
+            docs/research_desk
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx
+      - name: Run Deep Research verification
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        run: python scripts/verify_market_structure.py | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Commit verification report
+        if: always()
+        run: |
+          if [ -z "$(git ls-files -o --exclude-standard docs/research_desk)" ] && git diff --quiet -- docs/research_desk; then
+            echo "보고서 변경 없음 — 커밋 생략"; exit 0
+          fi
+          git config user.name "nexus-ms-verify-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/research_desk/2026-08/market_structure_deep_verify_*.md
+          git diff --cached --quiet && { echo "스테이징 변경 없음"; exit 0; }
+          git commit -m "docs: 시장구조 브리프 Deep Research 교차검증 판정 ($(date -u +%F)) [A-189]"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-structure-verify-${{ github.run_id }}
+          path: docs/research_desk/2026-08/market_structure_deep_verify_*.md
+          retention-days: 90
+          if-no-files-found: warn

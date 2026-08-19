@@ -26,7 +26,8 @@ CFR optimization, chokepoint risk pricing, ABCD supplier monitoring, freight ind
 
 ## CIF Lead Times (Standard)
 US Gulf: 45–50 days · Brazil Santos/Paranaguá: 40–45 days · Argentina Rosario: 40–45 days
-(관세청 실측 역산으로 갱신 예정 — D-041 · 공급 측 구조는 D-044 ABCD 거래구조 조사 참조)
+(관세청 실측 역산으로 갱신 예정 — D-041 · 공급 측 구조는 D-044 + **시장구조 브리프**(D-047,
+`data/raw/Market Structure (Production & Distribution)/`) 상시 참조 — capacity≠throughput·DJVE≠선적 규율)
 
 ## Data Gaps (2026-08-19 갱신)
 - 해소: BDI(B-003) → TE 9개년+BDIY:IND(V-001) · 수출 검사 → FAS ESR API(FGIS는 대두유 미취급 — A-009) · 해협 신호 → AISstream(A-042)+GeoIntel
