@@ -37,14 +37,17 @@ RETRIES_PER_THEME = 2                  # RemoteProtocolError(서버 절단) 1회
 
 # 주제별 검증 질의 — 문서의 핵심 수치·사실 주장을 명시적으로 나열해 반증을 요구
 THEMES: list[tuple[str, str]] = [
-    ("글로벌 수급·수출 집중도", """다음 주장들을 최신 공식 출처(USDA FAS Oilseeds WMT 2026-08 등)로 검증하라:
-① 2026/27 전망 생산량: 팜유 81.44Mt · 대두유 75.03Mt · 유채유 37.60Mt · 해바라기유 23.57Mt (주요 식물성유지 244.95Mt의 88.9%)
-② 수출 집중도(2026/27): 팜유 인도네시아 23.70Mt+말레이시아 15.90Mt=세계 수출 45.31Mt의 87.4% · 대두유 아르헨티나 6.65Mt=세계 14.64Mt의 45.4% · 카놀라유 캐나다 4.00Mt=8.71Mt의 45.9% · 해바라기유 러시아 5.00Mt+우크라이나 4.95Mt=15.67Mt의 63.5%
-③ FAO 식물성유지 가격지수 2026-07 = 195.7 (전월비 +2.0%, 2022-06 이후 최고)"""),
-    ("한국 수입 구조", """다음 한국 수입 통계 주장을 검증하라(USDA FAS Seoul Oilseeds Annual 2026-03, UN Comtrade, 관세청):
-① 한국 MY2024/25 완결연도 수입: 팜유 586kt(CIF 1,087$/t) · 대두유 482kt(1,120$/t) · 유채유 152kt(1,103$/t) · 해바라기유 37kt(1,718$/t)
-② 대두유 원산지(MY24/25): 미국 84,686t(17.6%) · 아르헨티나 153,122t(31.7%) · 베트남 132,764t(27.5%); MY25/26 10~1월 부분기간은 베트남 45.9%
-③ UN Comtrade 2024 CY: 조대두유(HS150710) 277,913t — 아르헨 195,655t·베트남 62,397t·미국 12,003t; 정제팜유(HS151190) 625,192t — 말레이 395,608t·인니 229,203t"""),
+    # 1차 실행 실측: 아래 두 주제의 원형(광범위 질의)은 45분+에도 미완 — 소주제 분할(수렴성)
+    ("글로벌 생산 전망 (USDA 2026/27)", """다음 주장을 USDA FAS Oilseeds: World Markets and Trade (2026-08)로 검증하라:
+2026/27 전망 생산량 — 팜유 81.44Mt · 대두유 75.03Mt · 유채유 37.60Mt · 해바라기유 23.57Mt, 4종 합계는 주요 식물성유지 244.95Mt의 88.9%"""),
+    ("수출 집중도·FAO 가격지수", """다음 주장을 USDA WMT 2026-08과 FAO 발표로 검증하라:
+① 2026/27 수출 집중도: 팜유 인도네시아 23.70Mt+말레이시아 15.90Mt=세계 45.31Mt의 87.4% · 대두유 아르헨티나 6.65Mt=세계 14.64Mt의 45.4% · 카놀라유 캐나다 4.00Mt=8.71Mt의 45.9% · 해바라기유 러시아 5.00Mt+우크라이나 4.95Mt=15.67Mt의 63.5%
+② FAO 식물성유지 가격지수 2026-07 = 195.7 (전월비 +2.0%, 2022-06 이후 최고)"""),
+    ("한국 MY 수입 (FAS Seoul)", """다음 주장을 USDA FAS Seoul Oilseeds and Products Annual (2026-03)로 검증하라:
+① 한국 MY2024/25 수입: 팜유 586kt(CIF 1,087$/t) · 대두유 482kt(1,120$/t) · 유채유 152kt(1,103$/t) · 해바라기유 37kt(1,718$/t)
+② 대두유 원산지(MY24/25): 미국 84,686t(17.6%) · 아르헨티나 153,122t(31.7%) · 베트남 132,764t(27.5%); MY25/26 10~1월 부분기간은 베트남 45.9%"""),
+    ("한국 수입 교차검증 (UN Comtrade 2024)", """다음 주장을 UN Comtrade 2024년 한국 수입 데이터로 검증하라:
+조대두유(HS150710) 277,913t — 아르헨티나 195,655t·베트남 62,397t·미국 12,003t; 정제팜유(HS151190) 625,192t — 말레이시아 395,608t·인도네시아 229,203t"""),
     ("ABCD·COFCO 기업 자산", """다음 기업 자산·공시 주장을 각사 최신 공시(10-K·연차보고서 등)로 검증하라:
 ① ADM 2025: AS&O 가공능력 169kt/day · 2025년 유지종자 36.324Mt 가공 · 저장 16.590Mt
 ② Bunge(Viterra 포함, 2025-12-31): 대두 가공 35개소·정제 22개소·193,165 t/day · 대두 항만터미널 17 · Viterra 합병 2025-07-02 종결 · 캐나다 시정조치(엘리베이터 6개 매각 등)
@@ -126,6 +129,17 @@ def main() -> int:
         if existing:
             print(f"[재개] 기존 판정 {len(existing)}개 주제 보존 — 실패분만 재실행")
 
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    def _flush(sections: list[str], ok: int, fail: int) -> None:
+        """주제 1개 끝날 때마다 즉시 저장 — 잡 타임아웃에도 완료분 보존(A-189 보완)."""
+        out.write_text(
+            f"# 시장구조 브리프 Deep Research 교차검증 — {date.today()}\n\n"
+            f"- **대상**: `{DOCX.name}` (조정자 업로드 · 컷오프 2026-08-19 17:41 KST)\n"
+            f"- **모델**: Perplexity `{MODEL}` · 주제 {len(THEMES)}개 중 판정 {ok} · 실패 {fail}\n"
+            f"- **지시**: 조정자 2026-08-19 — 브리프 내용의 철저한 교차검증\n\n---\n\n"
+            + "\n---\n\n".join(sections), encoding="utf-8")
+
     sections, ok, fail = [], 0, 0
     with httpx.Client() as client:
         for theme, claims in THEMES:
@@ -133,8 +147,9 @@ def main() -> int:
                 sections.append(existing[theme])
                 ok += 1
                 print(f"[재개] 보존: {theme}")
+                _flush(sections, ok, fail)
                 continue
-            print(f"[진행] Deep Research: {theme} …")
+            print(f"[진행] Deep Research: {theme} …", flush=True)
             try:
                 verdict = _deep_research(client, key, theme, claims)
                 sections.append(f"## {theme}\n\n{verdict}\n")
@@ -145,14 +160,8 @@ def main() -> int:
                                 f"이 주제는 검증되지 않았습니다. 재실행 필요.\n")
                 fail += 1
                 print(f"  ❌ 실패({type(e).__name__}): {e}")
+            _flush(sections, ok, fail)
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out.write_text(
-        f"# 시장구조 브리프 Deep Research 교차검증 — {date.today()}\n\n"
-        f"- **대상**: `{DOCX.name}` (조정자 업로드 · 컷오프 2026-08-19 17:41 KST)\n"
-        f"- **모델**: Perplexity `{MODEL}` · 주제 {len(THEMES)}개 중 판정 {ok} · 실패 {fail}\n"
-        f"- **지시**: 조정자 2026-08-19 — 브리프 내용의 철저한 교차검증\n\n---\n\n"
-        + "\n---\n\n".join(sections), encoding="utf-8")
     print(f"[완료] 보고서 → {out} (판정 {ok}/{len(THEMES)})")
     return 0 if ok > 0 else 1
 
