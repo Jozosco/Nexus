@@ -8,7 +8,7 @@
 
 | # | 항목 | 배경 | 선택지 | 비용 | 기한 감도 |
 |---|---|---|---|---|---|
-| DQ-1 | **basis 호가 구독** (Platts 또는 Fastmarkets) | CFR 아시아 실측 basis 부재가 도착가 밴드의 최대 갭. 현행은 관세청 CIF 역산(월별·후행)으로 근사 — 실측 호가는 일별·선행. CME 남아시아 식용유 선물의 기초 지수가 Fastmarkets CFR India | ①Platts ②Fastmarkets ③현행 무료 역산 유지 | 견적 필요 (통상 연간 구독) | G2 Preview 이후 — 9월 중 결정이면 충분 |
+| DQ-1 | **basis 호가 구독** (Platts 또는 Fastmarkets — 견적 요청 시 **해바라기·팜 CFR 포함 묶음**으로 확장, 유지류 확충 계획 3순위) | CFR 아시아 실측 basis 부재가 도착가 밴드의 최대 갭. 현행은 관세청 CIF 역산(월별·후행)으로 근사 — 실측 호가는 일별·선행. CME 남아시아 식용유 선물의 기초 지수가 Fastmarkets CFR India | ①Platts ②Fastmarkets ③현행 무료 역산 유지 | 견적 필요 (통상 연간 구독) | G2 Preview 이후 — 9월 중 결정이면 충분 |
 | DQ-2 | **Baltic Exchange BCAA 구독** | 식물성유지 탱커 40,000mt 실측 운임 — Incoterms 동적 전환 판정(G3 확장)의 정밀 입력. 현행은 BDI(건화물 대리)+Perplexity 프록시 | ①구독 ②현행 프록시 유지 | 견적 필요 (기업 구독) | 동상 |
 | ~~DQ-3~~ | ✅**해소**(A-166 — 모델 ID는 유효했고 effort=max 미지원이 원인) ~~GPT 교차검증 모델 ID~~ | cross_verify.yml 기본값 `gpt-5.6-sol` — OpenAI API 정확한 식별자와 다르면 검증이 경고 후 skip(비차단) | Actions → Variables → `GPT_XVERIFY_MODEL`에 정확한 ID 입력 | 무료 | **즉시** — 입력 전까지 교차검증이 실호출되지 않을 수 있음 |
 | DQ-4 | **BFG 히스토리 재작성 승인** (D-038·D-039) | GAIN·FAO 원문 Blob 이관 후 clone 1.39GiB→수십 MB. 파괴적(기존 clone·열린 PR 무효) | ①9월 이관 직후 실행 ②보류 | 무료 | 9/11 이후 실행 창 |

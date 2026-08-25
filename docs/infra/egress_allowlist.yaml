@@ -24,7 +24,7 @@
 #        폴백(policyuncertainty.com)만 있었음. 미신청 시 G1 핵심 변수 GPR 전면 차단
 #     ③ apis.datos.gob.ar 누락 — INDEC 아르헨 생산통계
 #   각 항목에 `impact_if_blocked`(차단 시 영향) 추가 — 방화벽 심사자가 필요성을 판단하는 근거.
-version: '2.3'                   # v2.3: 일별·거시 매체 5종 추가(조정자 지시 8/25 2차) — 누적 47건
+version: '2.4'                   # v2.4: 유지류 확충 계획 선등재 4종(MPOB·Eurostat·JRC·CFTC) — 누적 51건
 updated: 2026-08-25
 owner: C-04
 submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수집 중단 방지)
@@ -33,16 +33,16 @@ submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수
 # §1 제출 요약 — 신청서 상단에 그대로 기재
 # ════════════════════════════════════════════════════════════════════════════
 submission:
-  total_requested: 47          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.3: 매체 5종 추가(8/25 2차)
+  total_requested: 51          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.4: 유지류 확충 4종 선등재
   by_criticality:
     critical: 6                # 차단 시 파이프라인·모델 전면 중단
     high: 9                    # 차단 시 핵심 변수 결손
-    medium: 14                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.3: OFI 추가
-    low: 18                    # 폴백·부가 기능 — v2.3: grain·igc·soygrowers·climatepol 추가
+    medium: 16                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.4: MPOB·CFTC 추가
+    low: 20                    # 폴백·부가 기능 — v2.4: Eurostat·JRC 추가
   exceptions_requiring_approval: 3   # §2 참조 (평문 HTTP 1 · WebSocket 1 · 조건부 신규 1)
   excluded: 1                  # cds.climate.copernicus.eu — 미사용 확정, 신청 불요
   protocol_note: >
-    47건 중 45건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
+    51건 중 49건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
     프로토콜·포트가 표준과 다른 항목만 별도 승인이 필요하며, 나머지는 일괄 처리 가능하다.
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -289,6 +289,34 @@ hosts:
     connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
     impact_if_blocked: 보조 신호 결손 — 비치명
     note: 2026-08-25 조정자 지시 2차 — v2.3 신규
+
+  - host: bepi.mpob.gov.my
+    port: 443
+    criticality: medium
+    purpose: 말레이시아 MPOB 월간 팜유 통계(생산·재고·수출 — 세계 유지 가격 단기 앵커, 매월 ~10일)
+    connector: (9월 신규 mpob_connector.py — oils_fats_data_expansion_plan 1~2순위)
+    impact_if_blocked: 팜 재고 축 결손 — CE-015 스프레드 레짐 판별력 저하
+    note: 2026-08-25 유지류 확충 계획 선등재(v2.4) — 코드보다 등재 선행 원칙(A-069 전례)
+  - host: ec.europa.eu
+    port: 443
+    criticality: low
+    purpose: Eurostat API — EU 유채 생산·압착·교역(무료·키 불요)
+    connector: (9월 신규 — oils_fats_data_expansion_plan 2순위)
+    impact_if_blocked: EU 유채 축 결손 — 보조
+    note: 2026-08-25 v2.4 선등재
+  - host: agri4cast.jrc.ec.europa.eu
+    port: 443
+    criticality: low
+    purpose: JRC MARS 작황 회보(유채·해바라기 — 월간 PDF, FAO AMIS 요약 파이프라인 재사용)
+    impact_if_blocked: EU 작황 정성 신호 결손 — 보조
+    note: 2026-08-25 v2.4 선등재 — 회보 실제 배포 호스트는 첫 수집에서 확정(❓ 시 ec.europa.eu로 커버 가능)
+  - host: www.cftc.gov
+    port: 443
+    criticality: medium
+    purpose: CFTC COT 포지셔닝 주간 CSV(ZL 등 — D-002 이래 미구현 갭, G3 레짐 포지션 축)
+    connector: (신규 소형 — oils_fats_data_expansion_plan 1순위)
+    impact_if_blocked: 시장 포지셔닝 축 결손
+    note: 2026-08-25 v2.4 선등재
 
   # ── [LOW] 폴백·부가 기능 ─────────────────────────────────────────────────
   - host: query1.finance.yahoo.com

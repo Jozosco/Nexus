@@ -1,11 +1,11 @@
 # 아웃바운드 방화벽 허용 신청서 (제출용) — Project Nexus
 
-**신청 부서**: 구매/조달 · **작성**: 2026-08-25 (v2.3 — 일별·거시 매체 5종 추가) · **제출 목표**: 2026-08-29
-**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.3)
+**신청 부서**: 구매/조달 · **작성**: 2026-08-25 (v2.4 — 유지류 확충 4종 선등재) · **제출 목표**: 2026-08-29
+**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.4)
 
 ## 신청 개요
 
-- 총 **47개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
+- 총 **51개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
 - 사유: 대두유 조달 의사결정 AI(Project Nexus)의 외부 데이터 수집
 - 미승인 시: 11월 통합 시점에 해당 데이터 수집이 즉시 중단됨
 
@@ -54,20 +54,24 @@
 | 31 | `igc.int` | 443 | 낮음 | 국제곡물이사회 |
 | 32 | `soygrowers.com` | 443 | 낮음 | 미 대두협회 |
 | 33 | `www.climatepol.com` | 443 | 낮음 | 크라이미트폴 RSS |
-| 34 | `query1.finance.yahoo.com` | 443 | 낮음 | yfinance ZL=F 정산가 |
-| 35 | `query2.finance.yahoo.com` | 443 | 낮음 | 동일 |
-| 36 | `comtradeapi.un.org` | 443 | 낮음 | UN Comtrade |
-| 37 | `apps.fas.usda.gov` | 443 | 낮음 | USDA 구 OpenData 호스트 |
-| 38 | `api.ers.usda.gov` | 443 | 낮음 | ERS ARMS 생산비용 |
-| 39 | `data.ers.usda.gov` | 443 | 낮음 | ARMS 구 호스트 |
-| 40 | `apis.datos.gob.ar` | 443 | 낮음 | 아르헨티나 INDEC 생산 시계열 |
-| 41 | `api.openweathermap.org` | 443 | 낮음 | 현재 기상 |
-| 42 | `earthquake.usgs.gov` | 443 | 낮음 | USGS 지진 |
-| 43 | `firms.modaps.eosdis.nasa.gov` | 443 | 낮음 | NASA FIRMS 산불 |
-| 44 | `data.nasdaq.com` | 443 | 낮음 | 레거시 조회 |
-| 45 | `fonts.googleapis.com` | 443 | 낮음 | 리포트 웹폰트 |
-| 46 | `huggingface.co` | 443 | 낮음 | 임베딩 모델 메타데이터 |
-| 47 | `cdn-lfs.huggingface.co` | 443 | 낮음 | 모델 가중치 파일 |
+| 34 | `bepi.mpob.gov.my` | 443 | 보통 | 말레이시아 MPOB 월간 팜유 통계 |
+| 35 | `ec.europa.eu` | 443 | 낮음 | Eurostat API |
+| 36 | `agri4cast.jrc.ec.europa.eu` | 443 | 낮음 | JRC MARS 작황 회보 |
+| 37 | `www.cftc.gov` | 443 | 보통 | CFTC COT 포지셔닝 주간 CSV |
+| 38 | `query1.finance.yahoo.com` | 443 | 낮음 | yfinance ZL=F 정산가 |
+| 39 | `query2.finance.yahoo.com` | 443 | 낮음 | 동일 |
+| 40 | `comtradeapi.un.org` | 443 | 낮음 | UN Comtrade |
+| 41 | `apps.fas.usda.gov` | 443 | 낮음 | USDA 구 OpenData 호스트 |
+| 42 | `api.ers.usda.gov` | 443 | 낮음 | ERS ARMS 생산비용 |
+| 43 | `data.ers.usda.gov` | 443 | 낮음 | ARMS 구 호스트 |
+| 44 | `apis.datos.gob.ar` | 443 | 낮음 | 아르헨티나 INDEC 생산 시계열 |
+| 45 | `api.openweathermap.org` | 443 | 낮음 | 현재 기상 |
+| 46 | `earthquake.usgs.gov` | 443 | 낮음 | USGS 지진 |
+| 47 | `firms.modaps.eosdis.nasa.gov` | 443 | 낮음 | NASA FIRMS 산불 |
+| 48 | `data.nasdaq.com` | 443 | 낮음 | 레거시 조회 |
+| 49 | `fonts.googleapis.com` | 443 | 낮음 | 리포트 웹폰트 |
+| 50 | `huggingface.co` | 443 | 낮음 | 임베딩 모델 메타데이터 |
+| 51 | `cdn-lfs.huggingface.co` | 443 | 낮음 | 모델 가중치 파일 |
 
 ## 텍스트 목록 (시스템 입력용)
 
@@ -105,6 +109,10 @@ grain.org:443
 igc.int:443
 soygrowers.com:443
 www.climatepol.com:443
+bepi.mpob.gov.my:443
+ec.europa.eu:443
+agri4cast.jrc.ec.europa.eu:443
+www.cftc.gov:443
 query1.finance.yahoo.com:443
 query2.finance.yahoo.com:443
 comtradeapi.un.org:443
