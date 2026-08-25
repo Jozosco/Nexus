@@ -83,7 +83,7 @@ perm = permutation_importance(model, X_test, y_test, n_repeats=20, random_state=
 **Structural Break Triggers**:
 | Variable | Break Threshold | Alert Type |
 |---|---|---|
-| GPR Index (normalized 0–1) | **분포 P90** (레거시 절대값 0.022는 재현 불가로 폐기 — A-062) | Geopolitical structural break |
+| GPR Index (normalized 0–1) | **분포 P90** (레거시 절대값 P90(분포 기준)는 재현 불가로 폐기 — A-062) | Geopolitical structural break |
 | BDI z-score | > 2.0 σ (90-day rolling) | Shipping cost spike |
 | WASDE stock-to-use | < 10% | Supply stress |
 | CPO–SBO spread | > USD 175/MT | Substitution pressure |
@@ -107,7 +107,7 @@ perm = permutation_importance(model, X_test, y_test, n_repeats=20, random_state=
   (e.g., BDI spike today → CFR cost impact in 45–50 days for US Gulf origin)
 - Alert output format (Korean):
   ```
-  [경보] GPR 지수 임계값 초과: 현재값 0.031 (임계값 0.022)
+  [경보] GPR 지수 임계값 초과: 현재값 0.031 (임계값 분포 P90)
   주요 기여 변수: 호르무즈 AWRP 승수 (SHAP +0.14), 미-중 관세 지수 (+0.09)
   조달 영향: 3개월 CFR 비용 약 +$18/MT 상승 예상 (90% 신뢰구간)
   ```

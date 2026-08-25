@@ -135,7 +135,6 @@ Monitor the following variables against defined alert thresholds.
 | 🟡 WATCH | GPR monthly value 150–199 | Include in Risk Alert Dashboard |
 | 🟢 NORMAL | GPR monthly value < 150 | Note in Executive Summary |
 
-> **Scale note**: The Caldara & Iacoviello GPR Index is normalized to a baseline of ~100 (2000–2019 average). Values in the 150–200+ range indicate elevated geopolitical risk. If the user's system uses a 0–1 normalized variant (`0.022` threshold = elevated daily change), map accordingly and document the scale in use.
 
 #### EPU Index (Economic Policy Uncertainty)
 | Level | Threshold | Action |

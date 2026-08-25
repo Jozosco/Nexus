@@ -12,7 +12,7 @@ Phase A 구현 (Snowflake 연동 전):
 출력 계약 (C-03 Output Contract):
   - 변수 중요도 테이블 [변수 | 피어슨 r | LASSO 계수 | 포함 여부]
   - 데이터 상태 매트릭스 [커넥터 | 파일 | 행수 | 날짜 범위 | 신선도]
-  - 구조적 단절 임계값 현황 (C-03 임계값: GPR 0.022 / BDI 2σ / WASDE STU 10% / CPO $175)
+  - 구조적 단절 임계값 현황 (C-03 임계값: GPR 분포 P90 / BDI 2σ / WASDE STU 10% / CPO $175)
   - 품질 경보 (결측치 5% 초과, STALE 판정 5영업일 초과)
 """
 from __future__ import annotations
@@ -125,8 +125,8 @@ VARIABLE_CATALOG: list[dict] = [
     # ── 지정학 ──
     {"code": "GPR", "category": "지정학", "name_ko": "지정학 리스크 지수 (GPR)",
      "name_en": "Geopolitical Risk Index (GPR)",
-     "desc_ko": "Caldara & Iacoviello GPR 지수. 전쟁·테러·정치 위기 뉴스 기반. 정규화 값 >0.022 → C-03 구조적 단절 경보.",
-     "desc_en": "Caldara & Iacoviello GPR. Based on war/terror/political crisis news. Normalized >0.022 triggers C-03 alert.",
+     "desc_ko": "Caldara & Iacoviello GPR 지수. 전쟁·테러·정치 위기 뉴스 기반. 정규화 값이 분포 P90 초과 시 C-03 구조적 단절 경보(D-3: 구 0.022 폐기).",
+     "desc_en": "Caldara & Iacoviello GPR. Based on war/terror/political crisis news. Alert when normalized value exceeds distributional P90 (legacy 0.022 retired — D-3).",
      "source": "policyuncertainty.com", "freq": "월간", "unit": "index (≈100 baseline)"},
     {"code": "HORMUZ_THREAT_LEVEL", "category": "지정학", "name_ko": "호르무즈 해협 위협 수준",
      "name_en": "Strait of Hormuz Threat Level",
@@ -190,14 +190,11 @@ VARIABLE_CATALOG: list[dict] = [
 ]
 
 # ── C-03 구조적 단절 임계값 (c03-data-scientist.md) ──────────────────────────
-# ⚠️ 문서 모순(2026-08-14 · D-041 감사): 아래 GPR 0.022 상수는
-#   .claude/skills/phase1/04_supply_chain_analyst.md:68-69 (MEMORY P-002)의
-#   "legacy 0.022 scale은 deprecated — never use it, 현행 기준은 GPR≥200(baseline≈100)"과
-#   모순됨. 런타임 경보는 이미 P90 분포 임계로 대체됐으나(A-062, 아래 gpr 경보 로직 참조)
-#   이 상수·THRESHOLD_RATIONALE 문구는 잔존 상태 — 척도 통일은 조정자 결정 대기.
-#   본 주석은 모순 표기만 하며 코드 로직은 변경하지 않음.
+# ✅ 척도 통일 완료(2026-08-25 · D-3 처분 — 조정자 확정): 레거시 0.022 절대 임계는
+#   폐기됐다(A-062에서 재현 불가 판정·판정 미사용 확인). **공식 판정 = 분포 P90 단일
+#   기준**(아래 gpr 경보 로직). 스킬의 GPR≥200(원지수)은 소통용 직관 기준으로만 병기.
 THRESHOLDS: dict[str, dict] = {
-    "GPR_NORMALIZED":   {"alert": 0.022,  "dir": ">",  "label": "지정학 구조적 단절"},
+    "GPR_NORMALIZED":   {"alert": None,   "dir": "P90", "label": "지정학 구조적 단절 (분포 P90 초과)"},
     "BDI":              {"alert": None,    "dir": "z",  "label": "해운비용 급등 (90일 rolling z>2σ)"},
     "WASDE_STU":        {"alert": 0.10,   "dir": "<",  "label": "공급 스트레스"},
     "CPO_SBO_SPREAD":   {"alert": 175.0,  "dir": ">",  "label": "CPO 대체압력"},
@@ -207,21 +204,18 @@ THRESHOLDS: dict[str, dict] = {
 # ── C-03 임계값 산출 근거 설명 ─────────────────────────────────────────────────
 THRESHOLD_RATIONALE: list[dict] = [
     {
-        # ⚠️ 문서 모순: 0.022 척도는 04_supply_chain_analyst.md:68-69에서 deprecated·사용 금지
-        #   (현행 GPR≥200 기준). 아래 서술은 레거시 잔존 — 척도 통일은 조정자 결정 대기(D-041).
         "variable": "GPR (Geopolitical Risk Index)",
-        "threshold": "> 0.022 (정규화)",
+        "threshold": "분포 P90 초과 (정규화 지수 기준)",
         "rationale_ko": (
-            "Caldara & Iacoviello(2022) 연구 기반. 정규화 GPR 지수가 0.022를 초과하면 "
-            "역사적으로 원자재 선물시장 변동성이 95th 퍼센타일 이상으로 상승. "
-            "2022년 러시아-우크라이나 전쟁 당시 GPR=0.035 → 대두유 +38% 급등(3개월 내). "
-            "0.022는 2σ 상방 기준의 비선형 변곡점."
+            "정규화 GPR([0,1] min-max)이 전기간 분포의 P90을 넘으면 경보 — 절대 임계가 아닌 "
+            "분포 기준이라 스케일 변경에 강건하다(A-062). 구 절대 임계 0.022는 재현 불가로 "
+            "폐기(D-3 처분, 2026-08-25). 소통용 직관 기준으로 원지수 GPR≥200(평시≈100)을 병기."
         ),
         "rationale_en": (
-            "Based on Caldara & Iacoviello (2022). Normalized GPR >0.022 historically corresponds "
-            "to commodity futures volatility at or above the 95th percentile. "
-            "During the 2022 Russia-Ukraine war, GPR=0.035 preceded +38% soybean oil price surge (3-month). "
-            "0.022 marks the nonlinear inflection above 2σ."
+            "Alert when normalized GPR ([0,1] min-max) exceeds the P90 of its full-sample "
+            "distribution — a distributional threshold robust to scale changes (A-062). "
+            "The legacy absolute cutoff 0.022 was retired as non-reproducible (D-3, 2026-08-25). "
+            "Raw-index GPR>=200 (baseline~100) is quoted only as an intuitive communication aid."
         ),
         "action": "Buy 포지션 축소 / 선물 헤지 검토 / 조달처 다변화 가속",
     },
@@ -1074,7 +1068,7 @@ def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
     else:
         alerts.append({
             "변수": "GPR_NORMALIZED", "현재값": "N/A",
-            "임계값": THRESHOLDS["GPR_NORMALIZED"]["alert"], "상태": "❓ 데이터 미수집",
+            "임계값": "P90 (분포 기준)", "상태": "❓ 데이터 미수집",
             "설명": "지정학 리스크 지수 — geopolitical_indices GPR parquet 없음/부족",
             "데이터신선도": "❌ parquet 없음",
         })

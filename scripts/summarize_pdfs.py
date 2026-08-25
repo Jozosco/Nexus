@@ -43,6 +43,10 @@ _SIGNALS = {
     r"biodiesel|renewable\s+diesel|\bSAF\b|blend|\bB3[05]\b|\bRFS\b|RVO": "바이오연료수요",
     r"drought|la\s*ni[nñ]a|el\s*ni[nñ]o|excessive\s+rain|heat\s*wave":   "기상이변",
     r"crush(ing)?\b":                                               "압착",
+    # R-022(조정자 승인 8/25): 압착 sub-aspect 3분류 — GAIN 신호 최다 부류(54.0%) 세분화
+    r"crush\w* (capacity|expansion|plant)|new (crush|processing) (plant|facility)": "압착·증설",
+    r"crush(ing)? margin|board crush|crush spread":                  "압착·채산성",
+    r"(solvent|hexane|expeller|enzym\w+|extraction) (extract|process|technolog)\w*": "압착·기술",
     r"ending\s+stock|carryover|stocks?-to-use|inventor":            "재고",
     r"production\s+(up|down|increase|decrease|revis|forecast)":     "생산변동",
     r"freight|hormuz|red\s+sea|black\s+sea|panama|port\s+congestion": "물류충격",

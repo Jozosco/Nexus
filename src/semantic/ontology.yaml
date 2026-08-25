@@ -517,6 +517,15 @@ indicator_bindings:
   - indicator: ENSO_ONI
     defined_in: data/schemas/
     entities: [TERM-016, TERM-017]
+  - indicator: WASDE_USDOM_SBO_STU        # R-022 — 미국 국내표(A-126 네임스페이스)
+    defined_in: data/schemas/
+    entities: [TERM-036, TERM-039]
+  - indicator: BIODIESEL_MANDATE_NEWS     # R-022 — gpr_connector 정책 프록시(A-029)
+    defined_in: data/schemas/
+    entities: [TERM-071]
+  - indicator: KR_CUSTOMS_SBO_IMPORT      # R-022 — 관세청 대두유 수입 대표 라벨
+    defined_in: data/schemas/
+    entities: [TERM-100]
   - indicator: PSD_SOY_CRUSH
     defined_in: data/schemas/
     entities: [TERM-033]
@@ -1170,6 +1179,78 @@ causal_edges:
     note: 헤알 약세가 수출 가속을 유발하는 공급 측 경로
 
 # ── 비인과 상관 (허위상관 방어 — 인과엣지 등록 금지 목록) ────────────────────
+# ── R-022 채유 기술 조사 후보 3건 (조정자 승인 2026-08-25 · status: candidate —
+#    P1-06 검증(도메인 서명+evidence) 후 validated 승격, S-1 준수) ──────────────
+- edge_id: CE-022
+  label_ko: "미국 재생디젤 압착 증설(45Z CI 최적화) → 미국 SBO 내수 전용화 → 수출 여력 축소 → 한국 US 채널 CIF 프리미엄"
+  category: "시장 구조"
+  cause:
+    node: US_RD_CRUSH_EXPANSION
+    entity_terms: ["TERM-033", "TERM-065"]
+  mechanisms:
+    - node: US_SBO_DOMESTIC_ABSORPTION_UP
+      relation: CAUSES_MECHANISM
+    - node: US_EXPORT_AVAILABILITY_DOWN
+      relation: PROPAGATES_TO
+  outcome:
+    node: SBO_INTL_PRICE
+    relation: MECHANISM_AFFECTS_OUTCOME
+  direction: UP
+  lag_trading_days: {min: 60, max: 250}
+  lag_basis: "증설 발표 → 가동 → 수출 통계 반영까지 분기~연 단위"
+  indicators: ["WASDE_USDOM_SBO_STU", "GATS_US_SBO_EXPORT_KOREA"]
+  status: candidate
+  evidence:
+    - source_type: research_doc
+      ref: docs/research_desk/2026-08/extraction_technology_by_country_2026_08_25.md
+      locator: "§핵심 결론 — 미국(수출 24/25 25억lb→26/27 4억lb 전망)"
+- edge_id: CE-023
+  label_ko: "브라질 바이오디젤 의무 인상(B15→B16) → 내수 압착 흡수 → 수출 잉여 축소 → 국제가 상승"
+  category: "정책·규제"
+  cause:
+    node: BR_BIODIESEL_MANDATE_UP
+    entity_terms: ["TERM-071", "TERM-033"]
+  mechanisms:
+    - node: BR_DOMESTIC_CRUSH_ABSORPTION_UP
+      relation: CAUSES_MECHANISM
+    - node: BR_EXPORT_SURPLUS_DOWN
+      relation: PROPAGATES_TO
+  outcome:
+    node: SBO_INTL_PRICE
+    relation: MECHANISM_AFFECTS_OUTCOME
+  direction: UP
+  lag_trading_days: {min: 20, max: 120}
+  lag_basis: "의무 비율 발효 → 원료 수요 반영 1~6개월"
+  indicators: ["BIODIESEL_MANDATE_NEWS"]
+  status: candidate
+  evidence:
+    - source_type: research_doc
+      ref: docs/research_desk/2026-08/extraction_technology_by_country_2026_08_25.md
+      locator: "§핵심 결론 — 브라질(B15 SBO 60만t 내수 소비)"
+- edge_id: CE-024
+  label_ko: "한국 압착 채산성 악화(대두박가 압박) → 국내 압착 축소 → 조유 수입 수요 증가 → 한국 수입 CIF 상방"
+  category: "시장 구조"
+  cause:
+    node: KR_CRUSH_PROFITABILITY_DOWN
+    entity_terms: ["TERM-033", "TERM-034"]
+  mechanisms:
+    - node: KR_CRUSH_UTILIZATION_DOWN
+      relation: CAUSES_MECHANISM
+    - node: KR_CRUDE_IMPORT_DEMAND_UP
+      relation: PROPAGATES_TO
+  outcome:
+    node: KR_IMPORT_CIF
+    relation: MECHANISM_AFFECTS_OUTCOME
+  direction: UP
+  lag_trading_days: {min: 60, max: 250}
+  lag_basis: "채산성 → 가동률 조정 → 수입 계약 반영 분기 단위. ⚠️ capacity≠throughput(D-047 규율①)"
+  indicators: ["PSD_SOY_CRUSH", "KR_CUSTOMS_SBO_IMPORT"]
+  status: candidate
+  evidence:
+    - source_type: research_doc
+      ref: docs/research_desk/2026-08/extraction_technology_by_country_2026_08_25.md
+      locator: "§핵심 결론 — 한국(가동률 66~75%·MY26/27 압착 80만t)"
+
 non_causal_correlations:
   note: 상관은 높으나 인과 경로가 없는 것으로 확정된 조합 — 인과엣지 등록 금지(S-1)
   pairs:

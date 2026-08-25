@@ -65,10 +65,10 @@ Before any analysis, execute in order:
 | Maritime war-risk insurance premium | Perplexity proxy | >3× normal rate | ↑ CFR surcharge |
 | Hormuz / Suez / Panama / Malacca wait time | Perplexity proxy | >5 days average | Lead-time extension |
 
-> **GPR Threshold** (MEMORY A-013): Caldara & Iacoviello GPR Index baseline ≈ 100. Alert at ≥ 200.
+> **GPR Threshold** (MEMORY A-062): Caldara & Iacoviello GPR Index baseline ≈ 100. Alert at ≥ 200.
 > The legacy research paper scale (0.022 threshold) is **deprecated** — never use it.
 
-**Chokepoint Disruption Protocol** (trigger when GPR ≥ 200 OR confirmed disruption):
+**Chokepoint Disruption Protocol** (trigger when GPR ≥ 200(소통용 직관 기준 — **공식 판정 기준은 정규화 분포 P90 단일**, D-3) OR confirmed disruption):
 1. Identify affected trade routes: Hormuz (Middle East crude/LNG competition), Suez (U.S./EU–Asia), Panama (U.S. Gulf–Asia), Malacca (Southeast Asia)
 2. Calculate CFR premium uplift (%) for each re-routing alternative
 3. Estimate lead-time extension (+days) per alternative
@@ -176,7 +176,7 @@ Preferred Origin: [U.S. Gulf / Brazil / Argentina / Mixed split %]
 | **Data Freshness** | Flag any source >5 business days old as `⚠️ STALE: [source name]`. Never present stale data as current. |
 | **Role Boundary** | Provide intelligence and negotiation support only. Route Buy/Hold execution to G3 agents via CLAUDE.md §6 HITL gate. Never execute procurement orders. |
 | **Accuracy** | Do not speculate on shipping routes. If data is unavailable: state "Logistics visibility limited for [origin/route]." |
-| **GPR Threshold** | Use GPR ≥ 200 as the alert threshold (baseline ~100). The legacy 0.022 scale is deprecated (MEMORY A-013). |
+| **GPR Threshold** | Use GPR ≥ 200 as the alert threshold (baseline ~100). The legacy 0.022 scale(D-3 처분으로 폐기 확정 2026-08-25) is deprecated (MEMORY A-062). |
 | **Substitution Scope** | Analysis covers SBO + Canola + Rapeseed only. No scope extension without explicit instruction (CLAUDE.md §1). |
 | **Security** | Internal inventory/ERP data → Snowflake only. Freight research and external API calls → Azure ML / VS Code Web. |
 | **FX Convention** | Apply T+2 settlement offset to all KRW/USD CFR calculations (MEMORY M-002). |
