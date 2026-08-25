@@ -1216,6 +1216,12 @@ causal_edges:
     - source_type: research_doc
       ref: docs/research_desk/references/farmdoc_2026_RFS_playbook_final_RVO_BBD_feedstock.pdf
       locator: "Hubbs·Irwin 2026-06-24 — 최종 RVO(BBD 5.4/5.7십억 gal 확정)의 26/27 BBD 원료 사용 정량. 정책 단계 구분(제안 5.61/5.86 vs 최종 확정)의 최종 확정 측 원문 (A-203)"
+    - source_type: research_doc
+      ref: docs/research_desk/references/farmdoc_2025_RD_boom_P2_squeezing_more_oil_crush.pdf
+      locator: "메커니즘 보정 — 유지 추출률 ~20% 구조 상승(보드 18.3% 상회, 2020/21~) · 2020 이후 SBO 증산분의 ~40%가 압착 구성 변화. 압착량 불변에도 오일 증산 가능 → 내수 흡수 압력 일부 완충, 방향은 불변 (A-204)"
+    - source_type: research_doc
+      ref: docs/research_desk/references/farmdoc_2026_RFS_playbook_no_halfRIN_higher_RVOs.pdf
+      locator: "해석 뉘앙스 — half-RIN 철회 시 국내 원료(SBO 포함) 수요 연 −8십억 lb(−20%)가 수입 원료로 이전(총수요 2027년 61십억 lb·+53%는 유지). half-RIN·수입 원료 RIN 정책이 본 엣지 강도의 스위치 — SBO 단독 전용 극단 시나리오 과대평가 경계 (A-204)"
 - edge_id: CE-023
   label_ko: "브라질 바이오디젤 의무 인상(B15→B16) → 내수 압착 흡수 → 수출 잉여 축소 → 국제가 상승"
   category: "정책·규제"
