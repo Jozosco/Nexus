@@ -39,7 +39,79 @@ DAILY_UNSTRUCTURED = {
     "GeoIntel 복합": ["GEOINTEL_RISK_COMPOSITE", "SEISMIC_RISK", "GDELT_EVENT_SCORE"],
     "운임(실시간)":  ["BCAA", "BCTI_PROXY"],
     "기상 특보":     ["WEATHER_ALERT_COUNT", "WEATHER_ANOMALY_SCORE"],
+    "전문 매체":     ["RSS_FARMDOC_DAILY", "RSS_WORLD_GRAIN"],
 }
+
+# ── 전문 매체 RSS (조정자 지시 8/25 — farmdoc daily·World Grain 일별 수집) ──────
+# egress_allowlist v2.2 등재 호스트만. RSS 실패는 다이제스트를 죽이지 않는다(비치명).
+RSS_SOURCES = {
+    # farmdoc daily(일리노이대) — 작황·바이오연료·무역 실증 분석 (A-201 farmdoc 논문 계열)
+    "RSS_FARMDOC_DAILY": ["https://farmdocdaily.illinois.edu/feed"],
+    # World Grain — 곡물·유지 산업 전문지 (한국 압착·생산 기사 다수 — 부록 3차)
+    "RSS_WORLD_GRAIN": ["https://www.world-grain.com/rss/articles",
+                        "https://www.world-grain.com/rss"],
+}
+# SBO·유지 관련 기사만 통과 (제목+요약 소문자 매칭)
+_RSS_KEYWORDS = (
+    "soybean", "soy oil", "soyoil", "soybean oil", "vegetable oil", "oilseed",
+    "palm oil", "canola", "rapeseed", "sunflower", "crush", "biodiesel",
+    "renewable diesel", "wasde", "export tax", "tariff", "south korea",
+)
+
+
+def _fetch_specialist_media() -> list[dict]:
+    """전문 매체 RSS → 일자·소스별 1행(값=관련 기사 수, note=제목+링크 — S-5 출처 보존).
+
+    파싱은 stdlib XML만 사용(신규 의존성 없음 — httpx는 커넥터 공통 의존).
+    항목이 임계 대상이 아니므로 온톨로지 후보 큐에는 넣지 않는다 — 태그 매칭·시계열화는
+    build_unstructured_timeseries 편입 시(30일+ 축적 후) 판단.
+    """
+    try:
+        import httpx
+    except ImportError:
+        print("[경고] httpx 미설치 — 전문 매체 RSS 수집 건너뜀")
+        return []
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+
+    cutoff = pd.Timestamp(date.today()) - pd.Timedelta(days=2)
+    rows: list[dict] = []
+    for indicator, urls in RSS_SOURCES.items():
+        items: list = []
+        for url in urls:
+            try:
+                r = httpx.get(url, timeout=30, follow_redirects=True,
+                              headers={"User-Agent": "Mozilla/5.0 (Nexus data pipeline)"})
+                r.raise_for_status()
+                items = ET.fromstring(r.content).findall(".//item")
+                if items:
+                    break
+            except Exception as e:   # 네트워크·파싱 어느 쪽이든 비치명
+                print(f"[경고] RSS 수집 실패({url}): {type(e).__name__} — 다음 후보로")
+        by_date: dict[str, list[str]] = {}
+        for it in items:
+            title = (it.findtext("title") or "").strip()
+            desc = it.findtext("description") or ""
+            link = (it.findtext("link") or "").strip()
+            pub = it.findtext("pubDate")
+            try:
+                pub_d = pd.Timestamp(parsedate_to_datetime(pub).date()) if pub \
+                    else pd.Timestamp(date.today())
+            except Exception:
+                pub_d = pd.Timestamp(date.today())
+            if pub_d < cutoff:
+                continue
+            if not any(k in f"{title} {desc}".lower() for k in _RSS_KEYWORDS):
+                continue
+            by_date.setdefault(str(pub_d.date()), []).append(f"{title} ({link})")
+        for d, notes in sorted(by_date.items()):
+            rows.append({"indicator": indicator, "date": d, "value": len(notes),
+                         "note": " ⋅ ".join(notes)[:500],
+                         "source": indicator.lower()})
+    if rows:
+        print(f"[전문 매체] RSS 신호 {len(rows)}행 수집 "
+              f"({', '.join(sorted({r['indicator'] for r in rows}))})")
+    return rows
 
 
 def main() -> int:
@@ -64,6 +136,12 @@ def main() -> int:
                 "note": str(r.get("note", "") or "")[:400],
                 "source": str(r.get("source_name", "") or ""),
             })
+
+    # 전문 매체 RSS (조정자 지시 8/25) — 실패해도 다이제스트는 계속
+    try:
+        rows += _fetch_specialist_media()
+    except Exception as e:
+        print(f"[경고] 전문 매체 RSS 단계 실패(비치명): {e}")
 
     got = {r["indicator"] for r in rows}
     lines = [f"# 일별 비정형 신호 다이제스트 — {date.today()}", "",
@@ -121,7 +199,7 @@ def _append_archive(rows: list[dict]) -> None:
         "value": r["value"],
         "note": r["note"][:500].replace("\n", " "),
         "source_name": r["source"],
-        "appended_at": pd.Timestamp.utcnow().isoformat(timespec="seconds"),
+        "appended_at": pd.Timestamp.now("UTC").isoformat(timespec="seconds"),
     } for r in rows if r["indicator"] in targets])
     if new.empty:
         print("[아카이브] 신규 비정형 신호 없음 — append 생략")

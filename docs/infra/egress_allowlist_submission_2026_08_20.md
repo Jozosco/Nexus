@@ -1,11 +1,11 @@
 # 아웃바운드 방화벽 허용 신청서 (제출용) — Project Nexus
 
-**신청 부서**: 구매/조달 · **작성**: 2026-08-25 (v2.1 — HF 2종 추가) · **제출 목표**: 2026-08-29
-**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.1)
+**신청 부서**: 구매/조달 · **작성**: 2026-08-25 (v2.2 — 전문 매체 RSS 2종 추가) · **제출 목표**: 2026-08-29
+**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.2)
 
 ## 신청 개요
 
-- 총 **40개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
+- 총 **42개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
 - 사유: 대두유 조달 의사결정 AI(Project Nexus)의 외부 데이터 수집
 - 미승인 시: 11월 통합 시점에 해당 데이터 수집이 즉시 중단됨
 
@@ -47,20 +47,22 @@
 | 24 | `stream.aisstream.io` | 443 (wss) | 보통 | 해협 탱커 추적(호르무즈·말라카·파나마) |
 | 25 | `www.policyuncertainty.com` | 443 | 보통 | GPR 최후 폴백 · EPU 지수(EPU는 수집 미구현) |
 | 26 | `stooq.com` | 443 | 보통 | BDI 폴백(CSV 직접 다운로드) |
-| 27 | `query1.finance.yahoo.com` | 443 | 낮음 | yfinance ZL=F 정산가 |
-| 28 | `query2.finance.yahoo.com` | 443 | 낮음 | 동일(yfinance 이중화) |
-| 29 | `comtradeapi.un.org` | 443 | 낮음 | UN Comtrade |
-| 30 | `apps.fas.usda.gov` | 443 | 낮음 | USDA 구 OpenData 호스트(폴백) |
-| 31 | `api.ers.usda.gov` | 443 | 낮음 | ERS ARMS 생산비용(보조 지표) |
-| 32 | `data.ers.usda.gov` | 443 | 낮음 | ARMS 구 호스트(폴백) |
-| 33 | `apis.datos.gob.ar` | 443 | 낮음 | 아르헨티나 INDEC 생산 시계열(공개 API) |
-| 34 | `api.openweathermap.org` | 443 | 낮음 | 현재 기상(레거시 3개 원산지) |
-| 35 | `earthquake.usgs.gov` | 443 | 낮음 | USGS 지진(공급망 6개 지역) |
-| 36 | `firms.modaps.eosdis.nasa.gov` | 443 | 낮음 | NASA FIRMS 산불 |
-| 37 | `data.nasdaq.com` | 443 | 낮음 | 레거시 조회(B-003으로 용도 축소) |
-| 38 | `fonts.googleapis.com` | 443 | 낮음 | 리포트 웹폰트 |
-| 39 | `huggingface.co` | 443 | 낮음 | 임베딩 모델 메타데이터(sentence-transformers |
-| 40 | `cdn-lfs.huggingface.co` | 443 | 낮음 | 모델 가중치 파일(LFS) 다운로드 |
+| 27 | `farmdocdaily.illinois.edu` | 443 | 보통 | farmdoc daily RSS(작황·바이오연료·무역 전문 분석 — 일별 비정형 수집) |
+| 28 | `www.world-grain.com` | 443 | 보통 | World Grain RSS(곡물·유지 산업 전문지 — 일별 비정형 수집) |
+| 29 | `query1.finance.yahoo.com` | 443 | 낮음 | yfinance ZL=F 정산가 |
+| 30 | `query2.finance.yahoo.com` | 443 | 낮음 | 동일(yfinance 이중화) |
+| 31 | `comtradeapi.un.org` | 443 | 낮음 | UN Comtrade |
+| 32 | `apps.fas.usda.gov` | 443 | 낮음 | USDA 구 OpenData 호스트(폴백) |
+| 33 | `api.ers.usda.gov` | 443 | 낮음 | ERS ARMS 생산비용(보조 지표) |
+| 34 | `data.ers.usda.gov` | 443 | 낮음 | ARMS 구 호스트(폴백) |
+| 35 | `apis.datos.gob.ar` | 443 | 낮음 | 아르헨티나 INDEC 생산 시계열(공개 API) |
+| 36 | `api.openweathermap.org` | 443 | 낮음 | 현재 기상(레거시 3개 원산지) |
+| 37 | `earthquake.usgs.gov` | 443 | 낮음 | USGS 지진(공급망 6개 지역) |
+| 38 | `firms.modaps.eosdis.nasa.gov` | 443 | 낮음 | NASA FIRMS 산불 |
+| 39 | `data.nasdaq.com` | 443 | 낮음 | 레거시 조회(B-003으로 용도 축소) |
+| 40 | `fonts.googleapis.com` | 443 | 낮음 | 리포트 웹폰트 |
+| 41 | `huggingface.co` | 443 | 낮음 | 임베딩 모델 메타데이터(sentence-transformers |
+| 42 | `cdn-lfs.huggingface.co` | 443 | 낮음 | 모델 가중치 파일(LFS) 다운로드 |
 
 ## 텍스트 목록 (시스템 입력용)
 
@@ -91,6 +93,8 @@ api.gdeltproject.org:443
 stream.aisstream.io:443
 www.policyuncertainty.com:443
 stooq.com:443
+farmdocdaily.illinois.edu:443
+www.world-grain.com:443
 query1.finance.yahoo.com:443
 query2.finance.yahoo.com:443
 comtradeapi.un.org:443

@@ -397,7 +397,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pandas pyarrow
+        run: pip install pandas pyarrow httpx
       - uses: actions/download-artifact@v4
         with:
           path: data/raw/
@@ -904,6 +904,65 @@ jobs:
             reports/pipeline/run_${{ github.run_id }}/g1_alert_*.md
           retention-days: ${{ steps.pubmode.outputs.mode == 'monthly' && 90 || 30 }}
           if-no-files-found: ${{ steps.pubmode.outputs.mode == 'alert' && 'ignore' || 'error' }}
+
+  # ── E1: 서명된 무소식 (차별화 6선 1순위 · D-048 · A-202) ─────────────────────
+  # '침묵'과 '검사된 무소식'을 구분한다 — fail-open 3회(A-160·A-168·A-169) 교훈.
+  # 게이트 상태·경보 수·준비도·교차검증 원장을 모아 일별 서명 스탬프를 발행하고
+  # data/processed/signed_daily_stamps.csv에 영구 축적(A-181 커밋 패턴).
+  signed-daily-stamp:
+    name: "E1 | 서명된 무소식 — 일별 검사 스탬프"
+    runs-on: ubuntu-latest
+    needs: [c08-dq-validation, model-readiness, g1-analysis]
+    # 체인 어디서 멈췄든 스탬프는 남긴다(그게 E1의 존재 이유) — 취소만 존중
+    if: "!cancelled() && (github.event_name == 'schedule' || github.event.inputs.connector == 'all')"
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            data/processed
+            docs/research_desk
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pandas
+      - name: Restore readiness report
+        # model-readiness 잡이 skip/실패면 아티팩트가 없다 — 스크립트가 '미확인'으로 정직 표기
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: model-readiness-${{ github.run_id }}
+          path: .
+      - name: Restore G1 alert files
+        # alert 모드 무경보면 아티팩트 자체가 없다(if-no-files-found: ignore) — 경보 0건으로 판정
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: g1-variable-importance-${{ github.run_id }}
+          path: reports/pipeline/run_${{ github.run_id }}
+      - name: Build signed daily stamp
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          # C-08 게이트 판정은 잡 output으로 직접 전달(파일은 잡 간 미공유)
+          E1_GATE_STATUS: ${{ needs.c08-dq-validation.outputs.overall_status }}
+        run: python scripts/signed_daily_stamp.py
+      - name: Commit stamp archive (A-181 패턴)
+        run: |
+          if git diff --quiet -- data/processed/signed_daily_stamps.csv 2>/dev/null \
+             && git ls-files --error-unmatch data/processed/signed_daily_stamps.csv >/dev/null 2>&1; then
+            echo "스탬프 무변경 — 커밋 생략"
+            exit 0
+          fi
+          git config user.name "nexus-daily-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/processed/signed_daily_stamps.csv
+          git commit -m "data: E1 서명된 무소식 스탬프 append ($(date -u +%F)) [A-202]" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
 
   # ── WBS 1.1.19: pytest 데이터 품질 테스트 (C-08 검증 후 실행) ────────────────────
   pipeline-tests:
