@@ -1,6 +1,6 @@
 # GPT-5.6-Sol 교차검증 누적 원장
 
-**갱신**: 2026-08-19 · **자동 생성**: `scripts/build_cross_verify_log.py`
+**갱신**: 2026-08-25 · **자동 생성**: `scripts/build_cross_verify_log.py`
 
 > 조정자 상시 지시(2026-08-13): 인프라·분석·코드 작업은 GPT-5.6-Sol로 교차검증한다.
 > 이 파일은 그 **실행 이력과 판정을 한곳에 모은 원장**이다. 개별 판정 전문은
@@ -8,14 +8,22 @@
 
 ## 요약
 
-- 총 검증 기록 **21건** — 판정 산출 18 · 실패(미판정) 3
-- 누적 지적: **[치명] 16건 · [높음] 174건**
+- 총 검증 기록 **29건** — 판정 산출 26 · 실패(미판정) 3
+- 누적 지적: **[치명] 19건 · [높음] 258건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-25 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_git_diff_HEAD_1_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 1 | 17 | [높음] 요약과 인덱스의 건수가 불일치하며 조인 완전성이 입증되지 않았다. | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 0 | 22 | [높음] 분석 기간의 연수 표기가 틀림 | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 1 | 25 | [높음] 아이디어 건수가 일치하지 않는다. | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 1 | 20 | [높음] 조유 추정량의 범위 판정 오류 (§4b) | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-19 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-08-19 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 3 | 10 | [치명] 예측 분위로 해석할 수 없는 값을 P10/P50/P90 도착가 밴드로 제시 — 양 문서 | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-08-19 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 9 | [치명] 알려진 오규격 밴드를 제거하지 않고 핵심 수치로 계속 노출·재사용한다. | 32251935391 | [xverify_2026-08-19_322519353…](../../reports/cross_verify/xverify_2026-08-19_32251935391_git_diff_HEAD_1_1.md) |
