@@ -26,6 +26,23 @@
 | `MOF_CaO_ZnO_room_temp_biodiesel_catalyst_soybean.pdf` | Sharifi et al. (학술지 ❓ 원문 표기 미확인) | 2026-08-25 | ⚠️ **가격 예측 무관** — MOF 유래 CaO/ZnO 촉매로 상온 대두유→바이오디젤 전환 99%(촉매 화학). 채유·전환 기술 축 참고로만 보관(정직 분류) |
 | `econovill_biodiesel_deforestation_paradox_ko.md` | 이코노믹리뷰(idxno=652674, 게재일 ❓ 2024 추정) — **조정자 원문 공유로 회수**(A-200 미회수 3건 중 1건 해소) | 2026-08-25 | 한국 정유 4사 바이오연료 축(HD현대오일뱅크 13만t 초임계·S-Oil co-processing·GS/SK SAF·롯데웰푸드 UCO 제휴) — 국내 BD 원료는 팜계·UCO 중심(D-045 정합, SBO 직접 견인 제한). EU 팜유 퇴출 2030 = CE-015 장기 구조 요인 |
 
+### 자체 회수분 (2026-08-25 · fetch_reference_docs.yml 1회 실행 — 9건 전량 성공 · A-209)
+
+| 파일 | 출처 | 연결 |
+|---|---|---|
+| `farmdoc_2025_RD_boom_P3_value_of_soybean_oil_in_crush.pdf` | Janzen & Wang, farmdoc (15):188, 2025-10-13 | ★RD붐 P3(시리즈 종결편) — SBO 압착 산출 가치 비중 **25~35%→35~50% 상승·변동성 확대**, 유·박·대두 3요소 가격 상관 구조 붕괴. CE-022 보강 후보 |
+| `farmdoc_2025_RFS_playbook_revised_D4_RIN_generation.pdf` | Hubbs & Irwin, (15):204, 2025-11-05 | Revised RVO 단계 — D4 RIN 2023~25 평균 7.84→2026~27 10.56십억 gal(+22%) |
+| `farmdoc_2025_RFS_playbook_revised_production_feedstock.pdf` | (15):209, 2025-11-12 | Revised RVO 하 생산·원료 사용 |
+| `farmdoc_2025_RFS_playbook_revised_backload_2027.pdf` | (15):217, 2025-11-24 | 원료 수요 2026 +19%·2027 +48% — **국내 원료 2027년 +113% 백로딩** |
+| `farmdoc_2024_BBD_feedstock_trends_2011_2023.pdf` | Gerveni et al., (14):71, 2024-04-12 | RD붐 원료 사용 초기 정량(2023년 RD 원료 +9십억 lb) — P1·P2 인용 기준점 |
+| `farmdoc_2025_winter_oilseeds_biofuel_feedstock.pdf` | farmdoc, 2025-12-23 | 겨울 유지작물의 원료 공급 반응 — 공급 측 완충 후보 |
+| `farmdoc_2026_newcrop_SBO_export_projection_volatility.pdf` | farmdoc, 2026-05 | 신곡 SBO 수출 전망과 가격 변동성 확대 |
+| `USDA_ERS_2026_05_OCS_vegoils_biofuels_special.pdf` | Bukowski & Swearingen, ERS Oil Crops Outlook 특별기사, 2026-05 | 16:101 인용 원문 — 바이오연료용 유지 사용 전망(갭 B-3 해소) |
+| `USDA_FAS_WMT_oilseeds_latest.pdf` | USDA FAS Oilseeds: World Markets and Trade(회수 시점 최신호) | 갭 B-1 해소 — 해바라기 러/우 배분 원표 대조용(검토 대기) |
+
+⚠️ 위 3건(P3·204·209·217·backload)의 'Revised RVO' 수치는 2025-11 시점 단계 —
+**최종 인용 기준은 RIN 갤런(16:66·A-205)**. 단계 혼용 금지.
+
 보관 원칙: 조정자 선별 자료의 원문은 요약과 별도로 보존(근거 재검증 가능성 — S-5·EvidenceSpan 정합).
 분류 원칙: 프로젝트 목적(가격·조달)과의 관련성을 정직하게 표기한다 — 관련성이 낮은 자료를
 관련 있는 것처럼 등재하지 않는다(ML_2025_WCO가 그 예).
