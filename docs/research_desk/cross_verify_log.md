@@ -8,14 +8,23 @@
 
 ## 요약
 
-- 총 검증 기록 **29건** — 판정 산출 26 · 실패(미판정) 3
-- 누적 지적: **[치명] 19건 · [높음] 258건**
+- 총 검증 기록 **38건** — 판정 산출 35 · 실패(미판정) 3
+- 누적 지적: **[치명] 25건 · [높음] 339건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-25 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_git_diff_HEAD_1_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 2 | 14 | [높음] “문서 ~5천”은 중복 계상이다.** 권장안의 실제 정규화 대상은 `2,175 + 300+ + 66 + 152 = 약 2,693건`이다. 약 5천은 인덱스 CSV 2,22 | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/hs_code_classification_20` | ⚠️ 지적 | 0 | 12 | [높음] HSK 연도 버전과 누적기간이 불일치한다. | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 1 | 20 | [높음] 분석 기간이 “15개년”이라는 표기와 실제 기간이 불일치 | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 3 | 17 | [높음] B1·B2의 원화/kg 변환에 필요한 단위 변환이 누락됨 | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 0 | 18 | [높음] 잔차 부호 서술이 수치와 모순됨. | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-08-25 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 32804710386 | [xverify_2026-08-25_328047103…](../../reports/cross_verify/xverify_2026-08-25_32804710386_git_diff_HEAD_1_1.md) |
