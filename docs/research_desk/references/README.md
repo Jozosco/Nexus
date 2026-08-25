@@ -18,6 +18,9 @@
 | `MDPI_2025_soybean_GHG_landuse_systematic_review.pdf` | Lucić et al., Sustainability 17:3396, 2025 | 2026-08-25 | 대두 GWP 조화 비교(126농장·6개국): **0.27~1.53 kgCO2e/kg** — 미국·이란 상위(비료·관개·에너지), 브라질 non-LUC 낮음. CI 점수·45Z 원산지 프리미엄·EUDR 맥락 참고(P1-04) — 가격 모델 직접 입력 아님 |
 | `Embrapa_2024_Brazil_drought_soybean_yield_losses_5decades.pdf` | Ferreira et al., Agriculture 14:2144, 2024 (Embrapa Soja) | 2026-08-25 | ★브라질 가뭄 단수 손실 50년 정량(1976/77~2022/23): **시즌 50%+에서 손실 발생 · 누적 11.65% = 2.8억t = $152B · 남부 최대 74% vs 중서부 안정**. CE-006 evidence — 기후→작황 채널·지역 가중 근거(Open-Meteo BR 지역 선정 정합) |
 | `IISD_2024_soybean_prices_sustainability_market_report.pdf` | IISD Global Market Report, 2024-02 | 2026-08-25 | 대두 사용 구조(사료 76%·식용 20%·산업 4%)·지속가능 인증 시장 개관 — 시장 구조 배경 참고(2024 초 기준이라 최신 수치 인용은 WASDE·PSD 우선) |
+| `JEEM_COFCO_Mengniu_sustainability_China_Brazil_soy.pdf` | Yi & Zhang, J. Ecoinnovation & Env. Mgmt (연도 미상 — 원문 미표기) | 2026-08-25 | COFCO·Mengniu 지속가능성 정책 비교(중-브 대두 공급망): 제로 삼림파괴·추적가능성·외부 감사·공급자 거버넌스 — **시장구조 브리프 COFCO 폴더 참고자료**(D-047). 가격 모델 무관 — 거버넌스 배경 |
+| `Sociologias_2023_Amazon_soy_moratorium_SAF.pdf` | Candido, Sociologias 25, 2023 | 2026-08-25 | 아마존 대두 모라토리엄 성립 과정(전략적 행동장 이론) — 유럽 압력 경유로 대형 트레이더 관행 변화. EUDR·모라토리엄 정책 배경 참고 — 가격 모델 무관 |
+| `ARS_2023_soybean_RS_Brazil_China_food_regimes.pdf` | Belletti & Schneider, Agri. & Rural Studies 1(2), 2023 | 2026-08-25 | 브라질 RS(남부)-중국 대두 무역의 역사·제도 분석(2000~20년 RS 생산 2.38억t·수출 중심) — RS는 Embrapa 가뭄 논문의 최대 손실 지역이자 對중 수출 축. 배경 참고 — 가격 모델 무관 |
 
 보관 원칙: 조정자 선별 자료의 원문은 요약과 별도로 보존(근거 재검증 가능성 — S-5·EvidenceSpan 정합).
 분류 원칙: 프로젝트 목적(가격·조달)과의 관련성을 정직하게 표기한다 — 관련성이 낮은 자료를
