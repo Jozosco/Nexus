@@ -8,14 +8,23 @@
 
 ## 요약
 
-- 총 검증 기록 **47건** — 판정 산출 43 · 실패(미판정) 4
-- 누적 지적: **[치명] 27건 · [높음] 378건**
+- 총 검증 기록 **56건** — 판정 산출 52 · 실패(미판정) 4
+- 누적 지적: **[치명] 33건 · [높음] 458건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-25 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 0 | [치명][재현 불가능] 검증 대상 코드가 제공되지 않음**: 현재 대화에는 `git diff HEAD~1`의 출력, 커밋 해시, 저장소 접근 정보가 없어 변경 내용을 재현·검증할  | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_git_diff_HEAD_1_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 1 | 13 | [높음] EvidenceSpan 준수 주장과 저장 스키마가 모순된다. | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/hs_code_classification_20` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 2 | 23 | [높음] 분석창 연수가 잘못 표기됨.** `2010-01~2025-12`를 양끝 포함하면 192개월, 즉 **16개년**이다. “15개년 추정창”과 실제 시작·종료월 중 어느 쪽이 | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 1 | 26 | [높음] 아이디어 개수가 맞지 않음 | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 1 | 18 | [높음] 조유 추정량의 범위 판정이 산술적으로 틀림 | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-08-25 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_git_diff_HEAD_1_1.md) |
