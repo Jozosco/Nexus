@@ -8,14 +8,23 @@
 
 ## 요약
 
-- 총 검증 기록 **38건** — 판정 산출 35 · 실패(미판정) 3
-- 누적 지적: **[치명] 25건 · [높음] 339건**
+- 총 검증 기록 **47건** — 판정 산출 43 · 실패(미판정) 4
+- 누적 지적: **[치명] 27건 · [높음] 378건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-25 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_git_diff_HEAD_1_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/knowledge_repository_opti` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/hs_code_classification_20` | ⚠️ 지적 | 1 | 15 | [치명] 대두유 HSK 코드가 6개가 아니라 7개다. | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 1 | 24 | [높음] 분석 기간 연수 계산 오류 및 표본비율 근거 불일치** — §1·§2.2의 `2010-01~2025-12`는 192개월, 즉 **16개년**이지 15개년이 아니다. `하루 | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/differentiation_brainstor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 32814173562 | [xverify_2026-08-25_328141735…](../../reports/cross_verify/xverify_2026-08-25_32814173562_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-08-25 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32809857474 | [xverify_2026-08-25_328098574…](../../reports/cross_verify/xverify_2026-08-25_32809857474_git_diff_HEAD_1_1.md) |
