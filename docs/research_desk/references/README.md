@@ -25,6 +25,8 @@
 | `farmdoc_2026_RFS_playbook_final_production_imports.pdf` | Hubbs & Irwin, farmdoc daily (16):101, 2026-06-10 | 2026-08-25 | ★최종 룰 하 생산·수입: 가동률 **90%(2026)→95%(2027)**(2025년 ~60%) · 수입 600M gal 가정은 **45Z로 근제로 붕괴에서의 회복 전제** — 수입 미회복 시 명판 초과 가동 또는 컴플라이언스 적자. CE-022 evidence |
 | `MOF_CaO_ZnO_room_temp_biodiesel_catalyst_soybean.pdf` | Sharifi et al. (학술지 ❓ 원문 표기 미확인) | 2026-08-25 | ⚠️ **가격 예측 무관** — MOF 유래 CaO/ZnO 촉매로 상온 대두유→바이오디젤 전환 99%(촉매 화학). 채유·전환 기술 축 참고로만 보관(정직 분류) |
 | `econovill_biodiesel_deforestation_paradox_ko.md` | 이코노믹리뷰(idxno=652674, 게재일 ❓ 2024 추정) — **조정자 원문 공유로 회수**(A-200 미회수 3건 중 1건 해소) | 2026-08-25 | 한국 정유 4사 바이오연료 축(HD현대오일뱅크 13만t 초임계·S-Oil co-processing·GS/SK SAF·롯데웰푸드 UCO 제휴) — 국내 BD 원료는 팜계·UCO 중심(D-045 정합, SBO 직접 견인 제한). EU 팜유 퇴출 2030 = CE-015 장기 구조 요인 |
+| `climatepol_SAF_food_vs_fuel_ko.md` | 크라이미트폴(idxno=27682, 게재일 ❓) — 조정자 원문 공유로 회수 | 2026-08-25 | ★아르헨 Decree 423/2026(수출세 24%→15%) = CE-003 역방향 신호 · SAF HEFA 점유 48~62% = CE-022 두 번째 엔진 · FAO 유지 지수 195.7 |
+| `MDPI_2026_Korea_biodiesel_mandate_public_acceptance.pdf` | Jeon·Hyun·Yoo, MDPI 2026-03-11 (서울과기대) | 2026-08-25 | 한국 **바이오디젤 의무혼합 인상 대중 수용성(WTP)** — D-045 RFS 3.5→8.0% 경로의 정책 수용성 근거. 배경 참고(가격 모델 직접 입력 아님) |
 
 ### 자체 회수분 (2026-08-25 · fetch_reference_docs.yml 1회 실행 — 9건 전량 성공 · A-209)
 

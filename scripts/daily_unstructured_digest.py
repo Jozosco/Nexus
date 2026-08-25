@@ -42,20 +42,37 @@ DAILY_UNSTRUCTURED = {
     "전문 매체":     ["RSS_FARMDOC_DAILY", "RSS_WORLD_GRAIN"],
 }
 
-# ── 전문 매체 RSS (조정자 지시 8/25 — farmdoc daily·World Grain 일별 수집) ──────
-# egress_allowlist v2.2 등재 호스트만. RSS 실패는 다이제스트를 죽이지 않는다(비치명).
+# ── 전문 매체 RSS (조정자 지시 8/25 · 확장 8/25 2차 — 일별·거시 시황 소스) ──────
+# egress_allowlist 등재 호스트만. RSS 실패는 다이제스트를 죽이지 않는다(비치명).
+# URL 후보는 폴백 순서 — 실제 피드 경로는 Actions 런 로그로 판정(샌드박스 열람 차단).
+# ⚠️ IGC(igc.int)는 RSS 부재 추정 — 월별 Grain Market Report는 수동/추후 경로(미편입).
 RSS_SOURCES = {
     # farmdoc daily(일리노이대) — 작황·바이오연료·무역 실증 분석 (A-201 farmdoc 논문 계열)
     "RSS_FARMDOC_DAILY": ["https://farmdocdaily.illinois.edu/feed"],
     # World Grain — 곡물·유지 산업 전문지 (한국 압착·생산 기사 다수 — 부록 3차)
     "RSS_WORLD_GRAIN": ["https://www.world-grain.com/rss/articles",
                         "https://www.world-grain.com/rss"],
+    # OFI(Oils & Fats International) — 유지 산업 전문지 (한국 압착·중국 순수출 기사)
+    "RSS_OFI_MAGAZINE": ["https://www.ofimagazine.com/news/rss",
+                         "https://www.ofimagazine.com/rss"],
+    # GRAIN — 농업·식량 체계 NGO (토지·정책 신호)
+    "RSS_GRAIN_ORG": ["https://grain.org/en/rss",
+                      "https://grain.org/system/articles.rss"],
+    # ASA(미 대두협회) — 미 대두 정책·업계 신호 (부록 2차 #6 Iowa Soy 계열)
+    "RSS_SOYGROWERS": ["https://soygrowers.com/feed/",
+                       "https://soygrowers.com/category/news-releases/feed/"],
+    # 크라이미트폴 — 한국 기후·에너지 매체 (SAF·바이오연료 국문 — 부록 8차 원문 소스)
+    "RSS_CLIMATEPOL": ["https://www.climatepol.com/rss/allArticle.xml",
+                       "https://www.climatepol.com/rss/S1N2.xml"],
 }
-# SBO·유지 관련 기사만 통과 (제목+요약 소문자 매칭)
+# SBO·유지 관련 기사만 통과 (제목+요약 매칭 — 영문 소문자·국문 원형)
 _RSS_KEYWORDS = (
     "soybean", "soy oil", "soyoil", "soybean oil", "vegetable oil", "oilseed",
     "palm oil", "canola", "rapeseed", "sunflower", "crush", "biodiesel",
     "renewable diesel", "wasde", "export tax", "tariff", "south korea",
+    # 국문 (climatepol 등 한국 매체용)
+    "대두", "대두유", "팜유", "식용유", "유지", "바이오디젤", "바이오연료",
+    "항공유", "saf", "곡물", "수출세", "관세",
 )
 
 

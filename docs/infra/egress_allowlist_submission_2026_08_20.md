@@ -1,11 +1,11 @@
 # 아웃바운드 방화벽 허용 신청서 (제출용) — Project Nexus
 
-**신청 부서**: 구매/조달 · **작성**: 2026-08-25 (v2.2 — 전문 매체 RSS 2종 추가) · **제출 목표**: 2026-08-29
-**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.2)
+**신청 부서**: 구매/조달 · **작성**: 2026-08-25 (v2.3 — 일별·거시 매체 5종 추가) · **제출 목표**: 2026-08-29
+**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.3)
 
 ## 신청 개요
 
-- 총 **42개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
+- 총 **47개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
 - 사유: 대두유 조달 의사결정 AI(Project Nexus)의 외부 데이터 수집
 - 미승인 시: 11월 통합 시점에 해당 데이터 수집이 즉시 중단됨
 
@@ -21,48 +21,53 @@
 
 | # | 호스트 | 포트 | 중요도 | 용도 |
 |---|---|---|---|---|
-| 1 | `hist.databento.com` | 443 | 필수 | CBOT 대두유 선물(ZL) 15개년 |
+| 1 | `hist.databento.com` | 443 | 필수 | CBOT 대두유 선물 |
 | 2 | `api.stlouisfed.org` | 443 | 필수 | FRED |
-| 3 | `apis.data.go.kr` | 80 ⚠️평문 | 필수 | 관세청 GW 수출입실적(대두유 + 대체·보완재 16 HS × 10개국) |
-| 4 | `archive-api.open-meteo.com` | 443 | 필수 | ERA5-Land 12개 생산지역 일별 기후(daily + hourly 토양수분) |
-| 5 | `pypi.org` | 443 | 필수 | Python 패키지 설치(파이프라인 실행 전제) |
+| 3 | `apis.data.go.kr` | 80 ⚠️평문 | 필수 | 관세청 GW 수출입실적 |
+| 4 | `archive-api.open-meteo.com` | 443 | 필수 | ERA5-Land 12개 생산지역 일별 기후 |
+| 5 | `pypi.org` | 443 | 필수 | Python 패키지 설치 |
 | 6 | `files.pythonhosted.org` | 443 | 필수 | PyPI 아티팩트 다운로드 |
 | 7 | `www.matteoiacoviello.com` | 443 | 높음 | Caldara-Iacoviello GPR 지수 |
 | 8 | `api.tradingeconomics.com` | 443 | 높음 | BDI · CPO 실시간 갱신 |
 | 9 | `api.eia.gov` | 443 | 높음 | Brent 원유 |
-| 10 | `api.fas.usda.gov` | 443 | 높음 | USDA FAS PSD · ESR (신규 호스트 |
+| 10 | `api.fas.usda.gov` | 443 | 높음 | USDA FAS PSD · ESR |
 | 11 | `quickstats.nass.usda.gov` | 443 | 높음 | NASS 미국 대두 생산·수확 실적 |
 | 12 | `www.cpc.ncep.noaa.gov` | 443 | 높음 | NOAA CPC ENSO ONI |
-| 13 | `power.larc.nasa.gov` | 443 | 높음 | NASA POWER 농업기상(6개 생산지역) |
-| 14 | `api.openai.com` | 443 | 높음 | 교차검증(gpt-5.6-sol) · P1-05/06 secondary |
+| 13 | `power.larc.nasa.gov` | 443 | 높음 | NASA POWER 농업기상 |
+| 14 | `api.openai.com` | 443 | 높음 | 교차검증 |
 | 15 | `api.anthropic.com` | 443 | 높음 | 에이전트 오케스트레이션 · LLM 모델 모니터 |
-| 16 | `api.perplexity.ai` | 443 | 보통 | 실시간 비정형 프록시(BCAA · 호르무즈 · 정책 뉴스) · Deep Resear |
+| 16 | `api.perplexity.ai` | 443 | 보통 | 실시간 비정형 프록시 |
 | 17 | `ecos.bok.or.kr` | 443 | 보통 | 한국은행 ECOS |
-| 18 | `kosis.kr` | 443 | 보통 | 한국 CPI(총지수·품목성질별) |
-| 19 | `api.bcra.gob.ar` | 443 | 보통 | 아르헨티나 ARS 환율(수출세·채산성 경로) |
+| 18 | `kosis.kr` | 443 | 보통 | 한국 CPI |
+| 19 | `api.bcra.gob.ar` | 443 | 보통 | 아르헨티나 ARS 환율 |
 | 20 | `fenixservices.fao.org` | 443 | 보통 | FAOSTAT 생산·교역 장기 시계열 |
-| 21 | `usdmdataservices.unl.edu` | 443 | 보통 | US Drought Monitor D0–D4(주별) |
-| 22 | `api.weather.gov` | 443 | 보통 | NOAA 기상경보(중서부 생산 주) |
-| 23 | `api.gdeltproject.org` | 443 | 보통 | GDELT 이벤트(5개 SBO 쿼리) |
-| 24 | `stream.aisstream.io` | 443 (wss) | 보통 | 해협 탱커 추적(호르무즈·말라카·파나마) |
-| 25 | `www.policyuncertainty.com` | 443 | 보통 | GPR 최후 폴백 · EPU 지수(EPU는 수집 미구현) |
-| 26 | `stooq.com` | 443 | 보통 | BDI 폴백(CSV 직접 다운로드) |
-| 27 | `farmdocdaily.illinois.edu` | 443 | 보통 | farmdoc daily RSS(작황·바이오연료·무역 전문 분석 — 일별 비정형 수집) |
-| 28 | `www.world-grain.com` | 443 | 보통 | World Grain RSS(곡물·유지 산업 전문지 — 일별 비정형 수집) |
-| 29 | `query1.finance.yahoo.com` | 443 | 낮음 | yfinance ZL=F 정산가 |
-| 30 | `query2.finance.yahoo.com` | 443 | 낮음 | 동일(yfinance 이중화) |
-| 31 | `comtradeapi.un.org` | 443 | 낮음 | UN Comtrade |
-| 32 | `apps.fas.usda.gov` | 443 | 낮음 | USDA 구 OpenData 호스트(폴백) |
-| 33 | `api.ers.usda.gov` | 443 | 낮음 | ERS ARMS 생산비용(보조 지표) |
-| 34 | `data.ers.usda.gov` | 443 | 낮음 | ARMS 구 호스트(폴백) |
-| 35 | `apis.datos.gob.ar` | 443 | 낮음 | 아르헨티나 INDEC 생산 시계열(공개 API) |
-| 36 | `api.openweathermap.org` | 443 | 낮음 | 현재 기상(레거시 3개 원산지) |
-| 37 | `earthquake.usgs.gov` | 443 | 낮음 | USGS 지진(공급망 6개 지역) |
-| 38 | `firms.modaps.eosdis.nasa.gov` | 443 | 낮음 | NASA FIRMS 산불 |
-| 39 | `data.nasdaq.com` | 443 | 낮음 | 레거시 조회(B-003으로 용도 축소) |
-| 40 | `fonts.googleapis.com` | 443 | 낮음 | 리포트 웹폰트 |
-| 41 | `huggingface.co` | 443 | 낮음 | 임베딩 모델 메타데이터(sentence-transformers |
-| 42 | `cdn-lfs.huggingface.co` | 443 | 낮음 | 모델 가중치 파일(LFS) 다운로드 |
+| 21 | `usdmdataservices.unl.edu` | 443 | 보통 | US Drought Monitor D0–D4 |
+| 22 | `api.weather.gov` | 443 | 보통 | NOAA 기상경보 |
+| 23 | `api.gdeltproject.org` | 443 | 보통 | GDELT 이벤트 |
+| 24 | `stream.aisstream.io` | 443 (wss) | 보통 | 해협 탱커 추적 |
+| 25 | `www.policyuncertainty.com` | 443 | 보통 | GPR 최후 폴백 · EPU 지수 |
+| 26 | `stooq.com` | 443 | 보통 | BDI 폴백 |
+| 27 | `farmdocdaily.illinois.edu` | 443 | 보통 | farmdoc daily RSS |
+| 28 | `www.world-grain.com` | 443 | 보통 | World Grain RSS |
+| 29 | `www.ofimagazine.com` | 443 | 보통 | OFI |
+| 30 | `grain.org` | 443 | 낮음 | GRAIN RSS |
+| 31 | `igc.int` | 443 | 낮음 | 국제곡물이사회 |
+| 32 | `soygrowers.com` | 443 | 낮음 | 미 대두협회 |
+| 33 | `www.climatepol.com` | 443 | 낮음 | 크라이미트폴 RSS |
+| 34 | `query1.finance.yahoo.com` | 443 | 낮음 | yfinance ZL=F 정산가 |
+| 35 | `query2.finance.yahoo.com` | 443 | 낮음 | 동일 |
+| 36 | `comtradeapi.un.org` | 443 | 낮음 | UN Comtrade |
+| 37 | `apps.fas.usda.gov` | 443 | 낮음 | USDA 구 OpenData 호스트 |
+| 38 | `api.ers.usda.gov` | 443 | 낮음 | ERS ARMS 생산비용 |
+| 39 | `data.ers.usda.gov` | 443 | 낮음 | ARMS 구 호스트 |
+| 40 | `apis.datos.gob.ar` | 443 | 낮음 | 아르헨티나 INDEC 생산 시계열 |
+| 41 | `api.openweathermap.org` | 443 | 낮음 | 현재 기상 |
+| 42 | `earthquake.usgs.gov` | 443 | 낮음 | USGS 지진 |
+| 43 | `firms.modaps.eosdis.nasa.gov` | 443 | 낮음 | NASA FIRMS 산불 |
+| 44 | `data.nasdaq.com` | 443 | 낮음 | 레거시 조회 |
+| 45 | `fonts.googleapis.com` | 443 | 낮음 | 리포트 웹폰트 |
+| 46 | `huggingface.co` | 443 | 낮음 | 임베딩 모델 메타데이터 |
+| 47 | `cdn-lfs.huggingface.co` | 443 | 낮음 | 모델 가중치 파일 |
 
 ## 텍스트 목록 (시스템 입력용)
 
@@ -95,6 +100,11 @@ www.policyuncertainty.com:443
 stooq.com:443
 farmdocdaily.illinois.edu:443
 www.world-grain.com:443
+www.ofimagazine.com:443
+grain.org:443
+igc.int:443
+soygrowers.com:443
+www.climatepol.com:443
 query1.finance.yahoo.com:443
 query2.finance.yahoo.com:443
 comtradeapi.un.org:443

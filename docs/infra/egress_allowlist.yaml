@@ -24,7 +24,7 @@
 #        폴백(policyuncertainty.com)만 있었음. 미신청 시 G1 핵심 변수 GPR 전면 차단
 #     ③ apis.datos.gob.ar 누락 — INDEC 아르헨 생산통계
 #   각 항목에 `impact_if_blocked`(차단 시 영향) 추가 — 방화벽 심사자가 필요성을 판단하는 근거.
-version: '2.2'                   # v2.2: 전문 매체 RSS 2종 추가(조정자 지시 8/25 — 일별 수집원)
+version: '2.3'                   # v2.3: 일별·거시 매체 5종 추가(조정자 지시 8/25 2차) — 누적 47건
 updated: 2026-08-25
 owner: C-04
 submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수집 중단 방지)
@@ -33,16 +33,16 @@ submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수
 # §1 제출 요약 — 신청서 상단에 그대로 기재
 # ════════════════════════════════════════════════════════════════════════════
 submission:
-  total_requested: 42          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.2: 전문 매체 RSS 2종 추가(8/25)
+  total_requested: 47          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.3: 매체 5종 추가(8/25 2차)
   by_criticality:
     critical: 6                # 차단 시 파이프라인·모델 전면 중단
     high: 9                    # 차단 시 핵심 변수 결손
-    medium: 13                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.2: RSS 2종 추가
-    low: 14                    # 폴백·부가 기능
+    medium: 14                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.3: OFI 추가
+    low: 18                    # 폴백·부가 기능 — v2.3: grain·igc·soygrowers·climatepol 추가
   exceptions_requiring_approval: 3   # §2 참조 (평문 HTTP 1 · WebSocket 1 · 조건부 신규 1)
   excluded: 1                  # cds.climate.copernicus.eu — 미사용 확정, 신청 불요
   protocol_note: >
-    42건 중 40건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
+    47건 중 45건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
     프로토콜·포트가 표준과 다른 항목만 별도 승인이 필요하며, 나머지는 일괄 처리 가능하다.
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -254,6 +254,41 @@ hosts:
     connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
     impact_if_blocked: 전문 매체 신호(RSS_WORLD_GRAIN) 결손 — 다이제스트는 비치명 계속
     note: 2026-08-25 조정자 지시로 일별 소스 추가 — v2.2 신규
+
+  - host: www.ofimagazine.com
+    port: 443
+    criticality: medium
+    purpose: OFI(Oils & Fats International) RSS — 유지 산업 전문지 일별 수집(한국 압착·중국 순수출 기사)
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
+    impact_if_blocked: 전문 매체 신호(RSS_OFI_MAGAZINE) 결손 — 비치명
+    note: 2026-08-25 조정자 지시 2차 — v2.3 신규
+  - host: grain.org
+    port: 443
+    criticality: low
+    purpose: GRAIN RSS — 농업·식량 체계 정책 신호 일별 수집
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
+    impact_if_blocked: 보조 신호 결손 — 비치명
+    note: 2026-08-25 조정자 지시 2차 — v2.3 신규
+  - host: igc.int
+    port: 443
+    criticality: low
+    purpose: 국제곡물이사회(IGC) — 곡물 시황·GMR 열람(RSS 부재 추정, 수동·추후 수집 경로)
+    impact_if_blocked: 보조 열람 결손 — 비치명
+    note: 2026-08-25 조정자 지시 2차 — v2.3 신규
+  - host: soygrowers.com
+    port: 443
+    criticality: low
+    purpose: 미 대두협회(ASA) RSS — 미 대두 정책·업계 신호 일별 수집
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
+    impact_if_blocked: 보조 신호 결손 — 비치명
+    note: 2026-08-25 조정자 지시 2차 — v2.3 신규
+  - host: www.climatepol.com
+    port: 443
+    criticality: low
+    purpose: 크라이미트폴 RSS — 한국 기후·에너지 매체(SAF·바이오연료 국문) 일별 수집
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
+    impact_if_blocked: 보조 신호 결손 — 비치명
+    note: 2026-08-25 조정자 지시 2차 — v2.3 신규
 
   # ── [LOW] 폴백·부가 기능 ─────────────────────────────────────────────────
   - host: query1.finance.yahoo.com
