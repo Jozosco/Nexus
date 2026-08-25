@@ -1229,6 +1229,12 @@ causal_edges:
     - source_type: research_doc
       ref: docs/research_desk/references/farmdoc_2026_RFS_playbook_final_set2_RVOs_review.pdf
       locator: "최종 Set 2 룰(16:66, 2026-04-16) — BBD RVO 사상 첫 RIN 갤런 고시 8.86/8.95십억(적용 9.07/9.20, 2025 대비 +67/+70%). half-RIN은 2028년 시행 예고(철회 아님) → 2028 시행 시 압력 SBO 재집중. SRE 재배분 70% · 실제 SRE > 7.55십억 gal 시 실효 물량 하향 리스크 (A-205)"
+    - source_type: research_doc
+      ref: docs/research_desk/references/farmdoc_2026_RFS_playbook_final_D4_RIN_generation.pdf
+      locator: "16:73(2026-04-27) — D4/D5 RIN 뱅크가 2027년 시작 시 사실상 소진(2024말 2.43십억→0). 생산 차질 흡수 완충 부재 = SBO 수요 경직성·상방 꼬리위험. D6 pull 1.42십억이 BBD RVO 위에 추가 (A-207)"
+    - source_type: research_doc
+      ref: docs/research_desk/references/farmdoc_2026_RFS_playbook_final_production_imports.pdf
+      locator: "16:101(2026-06-10) — 가동률 90%(2026)→95%(2027) 요구(2025년 ~60%). 수입 회복(600M gal)은 45Z 부적격으로 근제로 붕괴한 흐름의 회복 전제 — 수입·국내 마진 비독립: 수입 억제 정책일수록 국내 원료(SBO) 부담 가중 (A-207)"
 - edge_id: CE-023
   label_ko: "브라질 바이오디젤 의무 인상(B15→B16) → 내수 압착 흡수 → 수출 잉여 축소 → 국제가 상승"
   category: "정책·규제"

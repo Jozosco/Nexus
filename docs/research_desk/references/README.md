@@ -21,6 +21,10 @@
 | `JEEM_COFCO_Mengniu_sustainability_China_Brazil_soy.pdf` | Yi & Zhang, J. Ecoinnovation & Env. Mgmt (연도 미상 — 원문 미표기) | 2026-08-25 | COFCO·Mengniu 지속가능성 정책 비교(중-브 대두 공급망): 제로 삼림파괴·추적가능성·외부 감사·공급자 거버넌스 — **시장구조 브리프 COFCO 폴더 참고자료**(D-047). 가격 모델 무관 — 거버넌스 배경 |
 | `Sociologias_2023_Amazon_soy_moratorium_SAF.pdf` | Candido, Sociologias 25, 2023 | 2026-08-25 | 아마존 대두 모라토리엄 성립 과정(전략적 행동장 이론) — 유럽 압력 경유로 대형 트레이더 관행 변화. EUDR·모라토리엄 정책 배경 참고 — 가격 모델 무관 |
 | `ARS_2023_soybean_RS_Brazil_China_food_regimes.pdf` | Belletti & Schneider, Agri. & Rural Studies 1(2), 2023 | 2026-08-25 | 브라질 RS(남부)-중국 대두 무역의 역사·제도 분석(2000~20년 RS 생산 2.38억t·수출 중심) — RS는 Embrapa 가뭄 논문의 최대 손실 지역이자 對중 수출 축. 배경 참고 — 가격 모델 무관 |
+| `farmdoc_2026_RFS_playbook_final_D4_RIN_generation.pdf` | Hubbs & Irwin, farmdoc daily (16):73, 2026-04-27 | 2026-08-25 | ★최종 룰 하 D4 RIN 수지: 필요 순생성 7.10→10.99→11.89십억 gal(+55/+67%) · D6 pull 1.42십억 추가 · **D4/D5 RIN 뱅크 2027년 시작 시 사실상 소진 — 무완충 국면**. CE-022 evidence |
+| `farmdoc_2026_RFS_playbook_final_production_imports.pdf` | Hubbs & Irwin, farmdoc daily (16):101, 2026-06-10 | 2026-08-25 | ★최종 룰 하 생산·수입: 가동률 **90%(2026)→95%(2027)**(2025년 ~60%) · 수입 600M gal 가정은 **45Z로 근제로 붕괴에서의 회복 전제** — 수입 미회복 시 명판 초과 가동 또는 컴플라이언스 적자. CE-022 evidence |
+| `MOF_CaO_ZnO_room_temp_biodiesel_catalyst_soybean.pdf` | Sharifi et al. (학술지 ❓ 원문 표기 미확인) | 2026-08-25 | ⚠️ **가격 예측 무관** — MOF 유래 CaO/ZnO 촉매로 상온 대두유→바이오디젤 전환 99%(촉매 화학). 채유·전환 기술 축 참고로만 보관(정직 분류) |
+| `econovill_biodiesel_deforestation_paradox_ko.md` | 이코노믹리뷰(idxno=652674, 게재일 ❓ 2024 추정) — **조정자 원문 공유로 회수**(A-200 미회수 3건 중 1건 해소) | 2026-08-25 | 한국 정유 4사 바이오연료 축(HD현대오일뱅크 13만t 초임계·S-Oil co-processing·GS/SK SAF·롯데웰푸드 UCO 제휴) — 국내 BD 원료는 팜계·UCO 중심(D-045 정합, SBO 직접 견인 제한). EU 팜유 퇴출 2030 = CE-015 장기 구조 요인 |
 
 보관 원칙: 조정자 선별 자료의 원문은 요약과 별도로 보존(근거 재검증 가능성 — S-5·EvidenceSpan 정합).
 분류 원칙: 프로젝트 목적(가격·조달)과의 관련성을 정직하게 표기한다 — 관련성이 낮은 자료를
