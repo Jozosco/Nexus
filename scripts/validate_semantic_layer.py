@@ -352,6 +352,36 @@ def check_event_instances(report: Report) -> None:
                 report.violation("C10", f"{eid} — review_status '{status}' 어휘 위반")
 
 
+def check_daily_codes(ont: dict, rep: "Report") -> None:
+    """C12(A-198): signal_tag_mapping.daily_codes ↔ 일별 아카이브 지표 정합.
+
+    daily_codes는 일별 비정형 신호(DAILY_UNSTRUCTURED)를 온톨로지 태그에 잇는
+    브리지다 — 코드 중복·미배정 일별 지표를 점검한다(승격은 여전히 수동 — S-1).
+    """
+    tags = (ont.get("signal_tag_mapping") or {}).get("tags") or []
+    assigned: list[str] = []
+    for t in tags:
+        assigned.extend(t.get("daily_codes") or [])
+    dups = {c for c in assigned if assigned.count(c) > 1}
+    if dups:
+        rep.violation("C12", f"daily_codes 중복 배정: {sorted(dups)}")
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+        from daily_unstructured_digest import DAILY_UNSTRUCTURED  # type: ignore
+        all_daily = set(sum(DAILY_UNSTRUCTURED.values(), []))
+        unmapped = sorted(all_daily - set(assigned))
+        if unmapped:
+            rep.warning("C12", f"온톨로지 태그 미배정 일별 지표 {len(unmapped)}종: {unmapped[:8]}…"
+                               if len(unmapped) > 8 else
+                               f"온톨로지 태그 미배정 일별 지표 {len(unmapped)}종: {unmapped}")
+        unknown = sorted(set(assigned) - all_daily)
+        if unknown:
+            rep.violation("C12", f"daily_codes에 실존하지 않는 지표: {unknown}")
+    except ImportError:
+        rep.warning("C12", "daily_unstructured_digest 임포트 불가 — 교차 검사 생략")
+
+
 def check_signal_tag_mapping(
     ontology: dict[str, Any],
     metrics: dict[str, Any],
@@ -414,6 +444,7 @@ def run_checks() -> Report:
     check_provenance_contract(provenance, report)
     check_event_instances(report)
     check_signal_tag_mapping(ontology, metrics, term_ids, report)
+    check_daily_codes(ontology, report)
     return report
 
 

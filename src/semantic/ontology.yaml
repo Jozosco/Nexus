@@ -564,14 +564,17 @@ signal_tag_mapping:
     unstr_codes: [UNSTR_GAIN_수출규제, UNSTR_FAO_수출규제]
     absa_indicator: ARG_EXPORT_TAX_SENTIMENT
     entities: [TERM-104, TERM-105, TERM-107]
+    daily_codes: ['ARG_EXPORT_TAX_NEWS', 'UKRAINE_GRAIN_CORRIDOR']   # A-198: 일별 아카이브 지표 연결(브리지 확장)
   - tag_ko: 수입관세
     unstr_codes: [UNSTR_GAIN_수입관세, UNSTR_FAO_수입관세]
     absa_indicator: INDIA_DUTY_SENTIMENT
     entities: [TERM-103]
+    daily_codes: ['INDIA_DUTY_NEWS', 'US_CHINA_TARIFF_STATUS']   # A-198: 일별 아카이브 지표 연결(브리지 확장)
   - tag_ko: 바이오연료수요
     unstr_codes: [UNSTR_GAIN_바이오연료수요, UNSTR_FAO_바이오연료수요]
     absa_indicator: BIODIESEL_POLICY_SENTIMENT
     entities: [TERM-066, TERM-067, TERM-068]
+    daily_codes: ['BIODIESEL_MANDATE_NEWS']   # A-198: 일별 아카이브 지표 연결(브리지 확장)
   - tag_ko: 기상이변
     unstr_codes: [UNSTR_GAIN_기상이변, UNSTR_FAO_기상이변]
     absa_indicator: null                 # 기상은 정형 ENSO_ONI·기상 커넥터 담당 — ABSA aspect 후보(Phase B)
@@ -584,14 +587,17 @@ signal_tag_mapping:
     unstr_codes: [UNSTR_GAIN_재고, UNSTR_FAO_재고]
     absa_indicator: WASDE_CONSENSUS_SCORE
     entities: [TERM-035, TERM-036]
+    daily_codes: ['WASDE_CONSENSUS_SCORE']   # A-198: 일별 아카이브 지표 연결(브리지 확장)
   - tag_ko: 생산변동
     unstr_codes: [UNSTR_GAIN_생산변동, UNSTR_FAO_생산변동]
     absa_indicator: WASDE_CONSENSUS_SCORE
     entities: [TERM-032, TERM-040]
+    daily_codes: ['BRAZIL_HARVEST_PROGRESS']   # A-198: 일별 아카이브 지표 연결(브리지 확장)
   - tag_ko: 물류충격
     unstr_codes: [UNSTR_GAIN_물류충격, UNSTR_FAO_물류충격]
     absa_indicator: LOGISTICS_DISRUPTION_FLAG
     entities: [TERM-081, TERM-083, TERM-087, TERM-089]
+    daily_codes: ['SUEZ_RED_SEA_RISK', 'HORMUZ_THREAT_LEVEL', 'HORMUZ_AWRP_MULTIPLIER', 'GPR_REALTIME', 'GEOINTEL_RISK_COMPOSITE']   # A-198: 일별 아카이브 지표 연결(브리지 확장)
   - tag_ko: TONE
     unstr_codes: [UNSTR_GAIN_TONE, UNSTR_FAO_TONE]
     absa_indicator: SBO_NEWS_SENTIMENT   # 키워드 톤은 LLM 정밀 ABSA의 Phase A 프록시

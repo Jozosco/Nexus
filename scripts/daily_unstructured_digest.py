@@ -106,6 +106,7 @@ def main() -> int:
     print(f"[완료] → {out}")
 
     _append_archive(rows)
+    _emit_ontology_candidates(rows)
     return 0
 
 
@@ -140,6 +141,61 @@ def _append_archive(rows: list[dict]) -> None:
         return
     merged.to_csv(ARCHIVE, index=False, encoding="utf-8")
     print(f"[아카이브] 신규 {max(n_new, 0)}건 append → {ARCHIVE} (누적 {len(merged)}행)")
+
+
+# ── 온톨로지 후보 큐 (A-198 · 조정자 재확인 후속) ────────────────────────────
+# 일별 신호가 임계를 넘으면 event_schema.json의 MarketEvent 후보(review_status=
+# extracted)로 대기열에 적재한다 — **자동화는 후보 발견·적재까지만**이며, causal_edges
+# 승격은 P1-06 검증 계약(S-1: 도메인 검증 서명+evidence 필수)을 그대로 따른다.
+# 기존 C10 게이트(validate_semantic_layer.py)가 이 파일을 무료로 검증한다.
+CANDIDATE_DIR = Path("data/semantic/events")
+# 임계: (지표, 판정 함수) — 값 파싱 실패는 후보 미적재(추측 금지)
+_CANDIDATE_RULES = {
+    "HORMUZ_THREAT_LEVEL":   lambda v: v >= 2,
+    "SUEZ_RED_SEA_RISK":     lambda v: v >= 2,
+    "US_CHINA_TARIFF_STATUS": lambda v: v >= 2,
+    "GEOINTEL_RISK_COMPOSITE": lambda v: v >= 60,
+    "GPR_REALTIME":          lambda v: v >= 200,   # 소통용 직관 기준(스킬 정합)
+}
+
+
+def _emit_ontology_candidates(rows: list[dict]) -> None:
+    """임계 초과 일별 신호 → MarketEvent 후보 JSON (P1-06 검증 입구)."""
+    import json
+    cands = []
+    for r in rows:
+        rule = _CANDIDATE_RULES.get(r["indicator"])
+        if rule is None:
+            continue
+        try:
+            val = float(str(r["value"]).replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+        if not rule(val):
+            continue
+        cands.append({
+            "event_id": f"EVT-{r['date']}-{r['indicator']}",
+            "event_type": "MarketEvent",
+            "event_date": r["date"],
+            "region": "GLOBAL",
+            "confidence": "LOW",                     # 프록시 단일 출처 — 검증 전
+            "review_status": "extracted",            # S-1: 자동 승격 금지 — P1-06 검증 대기
+            "indicator": r["indicator"],
+            "value": val,
+            "evidence": [{
+                "document_id": f"daily_digest_{r['date']}",
+                "page": 1,                            # 다이제스트 단일 페이지 산출물
+                "exact_quote": (r.get("note") or "")[:300],
+            }],
+            "source_name": r.get("source", "perplexity_proxy"),
+        })
+    if not cands:
+        print("[후보 큐] 임계 초과 신호 없음 — 온톨로지 후보 미생성")
+        return
+    CANDIDATE_DIR.mkdir(parents=True, exist_ok=True)
+    out = CANDIDATE_DIR / f"candidates_{cands[0]['event_date']}.json"
+    out.write_text(json.dumps(cands, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"[후보 큐] MarketEvent 후보 {len(cands)}건 → {out} (P1-06 검증 대기 — 자동 승격 없음)")
 
 
 if __name__ == "__main__":
