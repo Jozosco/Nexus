@@ -28,6 +28,10 @@ from pathlib import Path
 
 import pandas as pd
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # 스크립트 직접 실행 지원
+from src.pipeline.asof import leak_inversions                   # noqa: E402
+
 RAW_DIR = os.environ.get("NEXUS_DATA_ROOT", "data/raw")
 OUT_DIR = Path("reports/market")
 
@@ -159,7 +163,7 @@ def _load_index() -> tuple[dict[str, list[str]], dict[str, dict]]:
                 "end": d.max() if len(d) else pd.NaT,
                 "months_in_window": in_win.dt.to_period("M").nunique() if len(in_win) else 0,
                 "asof": bool(has_asof and available.notna().all()),
-                "asof_inversions": int((available < event).fillna(False).sum()),
+                "asof_inversions": int(leak_inversions(g).sum()),   # A-195: 전망 라벨 역전 예외
                 "target_eligible": bool(len(eligible) and eligible.all()),
                 "time_basis": bases,
                 "units": units,
@@ -201,14 +205,23 @@ def main() -> int:
     blockers: list[str] = []
     requirements = [(True, TARGET_REQUIREMENT)] + [(False, item) for item in REQUIRED_FEATURES]
     for is_target, (label, cands, how) in requirements:
-        hit = next((c for c in cands if c in stats), None)
-        if hit is None:
+        present = [c for c in cands if c in stats]
+        if not present:
             lines.append(f"| {label} | 🚨 **미보유** | — | — | — | — | {how} |")
             blockers.append(f"{label} → {how}")
             continue
+
+        def _cov(c: str) -> float:
+            return (stats[c]["daily_coverage"] if is_target
+                    else stats[c]["months_in_window"] / total_months)
+
+        # A-195: 구 코드는 후보 **순서**로 첫 매칭을 채택 — CI에서 API 수집 BDI(56%)가
+        #   수동 TE_BDI(100%)를 가려 허위 blocker를 냈다(2런 연속). 피처는 **커버리지
+        #   최대** 후보를 채택한다(동률이면 앞선 후보 유지 — max의 안정성).
+        #   타깃은 canonical 계약 검증이 목적이므로 순서 우선을 유지한다.
+        hit = present[0] if is_target else max(present, key=_cov)
         s = stats[hit]
-        cov = (s["daily_coverage"] if is_target
-               else s["months_in_window"] / total_months)
+        cov = _cov(hit)
         threshold = TARGET_MIN_COVERAGE if is_target else FEATURE_MIN_COVERAGE
         target_contract_ok = (
             not is_target

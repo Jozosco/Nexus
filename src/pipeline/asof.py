@@ -379,7 +379,19 @@ def attach_asof(
 
     # available_at = release_time + 수집 지연. 누수 방지를 위해 event_time보다 이르지 않게 강제
     avail = pd.to_datetime(out["release_time"]) + pd.Timedelta(days=ingest_lag_days)
-    out["available_at"] = avail.where(avail >= out["event_time"], out["event_time"])
+    avail = avail.where(avail >= out["event_time"], out["event_time"])   # 관측형 floor 유지
+    # A-195: 미래 기간 라벨(마케팅연도 **전망** 행: event_time > ingested_at)은 규칙이
+    # 기간에서 발표일을 앞으로 파생해 **미래 available_at**을 만든다(pytest 게이트 871건의
+    # 원인). 이미 보유한 데이터의 available_at은 수집 시점보다 늦을 수 없다 — 전망 행만
+    # ingested_at으로 캡한다. 조건부이므로 일별 관측 행(VIXCLS 등 lag_days=1 장중누수
+    # 방지 — M-012③)은 절대 건드리지 않는다.
+    if "ingested_at" in out.columns:
+        ing = pd.to_datetime(out["ingested_at"], errors="coerce")
+        if hasattr(ing.dtype, "tz") and ing.dt.tz is not None:
+            ing = ing.dt.tz_localize(None)
+        forecast = ing.notna() & (out["event_time"] > ing)
+        avail = avail.mask(forecast, ing)          # 타임스탬프 그대로(normalize 금지)
+    out["available_at"] = avail
 
     # ── vintage: "모른다"를 "안다"로 위장하지 않는다 (D-034) ────────────────────
     # 구 코드는 개정 소스에 **수집일을 일괄 스탬프**했다. 그 결과 2010년 WASDE 값도
@@ -401,6 +413,26 @@ def attach_asof(
     return out
 
 
+def leak_inversions(df: pd.DataFrame) -> "pd.Series":
+    """누수 의심 역전(available_at < event_time) 행 마스크 — 게이트 공용 판정 (A-195).
+
+    **전망 라벨 행은 예외**: 마케팅연도 전망(event_time > ingested_at)은 기간보다
+    발표가 앞서는 것이 정상이므로 역전이 누수가 아니다. 이 판정을 게이트 3곳
+    (validate_asof · missing_asof · data_readiness)이 공유한다 — 복제 금지(A-103 교훈).
+    """
+    ev = pd.to_datetime(df["event_time"], errors="coerce")
+    if hasattr(ev.dtype, "tz") and ev.dt.tz is not None:
+        ev = ev.dt.tz_localize(None)
+    av = pd.to_datetime(df["available_at"], errors="coerce")
+    if hasattr(av.dtype, "tz") and av.dt.tz is not None:
+        av = av.dt.tz_localize(None)
+    inv = av < ev
+    if "ingested_at" in df.columns:
+        ing = pd.to_datetime(df["ingested_at"], utc=True, errors="coerce").dt.tz_localize(None)
+        inv &= ~(ev > ing)   # 전망 라벨: 역전이 정상 — 누수 판정에서 제외
+    return inv.fillna(False)
+
+
 def missing_asof(df: pd.DataFrame) -> list[str]:
     """모델 게이트 위반 항목을 반환한다(빈 리스트 = 통과)."""
     problems: list[str] = []
@@ -410,7 +442,7 @@ def missing_asof(df: pd.DataFrame) -> list[str]:
         elif df[f].isna().any():
             problems.append(f"{f} 결측 {int(df[f].isna().sum()):,}건")
     if {"available_at", "event_time"} <= set(df.columns):
-        inverted = (pd.to_datetime(df["available_at"]) < pd.to_datetime(df["event_time"])).sum()
+        inverted = int(leak_inversions(df).sum())
         if inverted:
             problems.append(f"available_at < event_time 역전 {int(inverted):,}건")
     return problems

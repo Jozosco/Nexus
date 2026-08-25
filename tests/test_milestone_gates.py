@@ -303,3 +303,28 @@ def test_elasticnet_uses_walk_forward_splits() -> None:
     assert not result.empty
     for train, test in TimeSeriesSplit(n_splits=5, gap=20).split(wide):
         assert dates[train].max() < dates[test].min()
+
+def test_forecast_rows_available_at_capped_at_ingestion():
+    """A-195: 마케팅연도 전망 행의 available_at은 수집 시점을 넘을 수 없다.
+
+    구 결함: same_month 규칙이 기간 라벨(미래 MY)에서 발표일을 앞으로 파생해
+    미래 available_at 871건 생성 — 이미 보유한 데이터가 '미래에 가용'으로 표기됨.
+    """
+    import pandas as pd
+    from src.pipeline.asof import attach_asof, leak_inversions
+
+    now = pd.Timestamp.utcnow().tz_localize(None)
+    df = pd.DataFrame({
+        "price_date": pd.to_datetime(["2025-10-01", "2026-10-01"]),   # 과거 MY · 전망 MY
+        "indicator_code": ["PSD_Production"] * 2,
+        "value": [1.0, 2.0],
+        "ingested_at": [now, now],
+    })
+    out = attach_asof(df, source="WASDE_")
+    # 과거 행: same_month 규칙 유지 (해당 월 12일 발표)
+    assert out.loc[0, "available_at"] == pd.Timestamp("2025-10-12")
+    # 전망 행: 수집 시점으로 캡 — 미래 금지
+    assert out.loc[1, "available_at"] <= now + pd.Timedelta(seconds=1)
+    # 전망 행의 available_at < event_time 역전은 공용 판정에서 누수로 세지 않는다
+    assert int(leak_inversions(out).sum()) == 0
+

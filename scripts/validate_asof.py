@@ -30,7 +30,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.pipeline.asof import (ASOF_FIELDS, ASOF_REQUIRED,  # noqa: E402
-                               revision_status)
+                               leak_inversions, revision_status)
 
 RAW_DIR = os.environ.get("NEXUS_DATA_ROOT", "data/raw")
 SCHEMA_DIR = Path("data/schemas")
@@ -57,9 +57,11 @@ def _check_frame(path: str, df: pd.DataFrame) -> list[str]:
 
     ev = pd.to_datetime(df["event_time"], errors="coerce")
     av = pd.to_datetime(df["available_at"], errors="coerce")
-    inverted = int((av < ev).sum())
+    # A-195: 전망 라벨 행(event_time > ingested_at)의 역전은 정상 — 공용 판정 사용
+    inv_mask = leak_inversions(df)
+    inverted = int(inv_mask.sum())
     if inverted:
-        worst = (ev - av).max()
+        worst = (ev - av)[inv_mask].max()
         issues.append(f"{name}: available_at < event_time 역전 {inverted:,}행 (최대 {worst})")
 
     future = int((av > pd.Timestamp(date.today())).sum())
