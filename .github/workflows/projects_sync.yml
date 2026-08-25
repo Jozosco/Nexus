@@ -1,0 +1,39 @@
+# GitHub Projects v2 동기화 실행 (조정자 PAT 등록 완료 2026-08-25 · A-214)
+#
+# 세션은 Secrets를 읽을 수 없으므로(PROJECTS_PAT) Actions가 실행 표면.
+# 발화: 이 파일 push 1회(A-046 패턴) + workflow_dispatch + decision-request/
+# pipeline-failure 이슈 생성 시(issues.opened — 라벨은 스크립트가 필터).
+name: Projects Sync
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/projects_sync.yml", "scripts/github_projects_sync.py"]
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  sync:
+    name: "이슈 → Projects 보드 동기화 (GraphQL)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx
+      - name: Sync issues to project board
+        env:
+          PROJECTS_PAT: ${{ secrets.PROJECTS_PAT }}
+          PROJECT_NUMBER: ${{ vars.PROJECT_NUMBER || '7' }}
+        run: python scripts/github_projects_sync.py | tee -a "$GITHUB_STEP_SUMMARY"

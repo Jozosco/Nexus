@@ -28,6 +28,7 @@ on:
       - "docs/research_desk/*/glossary_*.md"
       - "docs/research_desk/*/knowledge_repository_*.md"
       - "docs/research_desk/*/hs_code_classification_*.md"
+      - "docs/research_desk/*/hybrid_methodology_design_*.md"
   workflow_dispatch:
 
 permissions:
@@ -74,7 +75,8 @@ jobs:
                    "docs/research_desk/*/differentiation_brainstorm_*.md" \
                    "docs/research_desk/*/glossary_*.md" \
                    "docs/research_desk/*/knowledge_repository_*.md" \
-                   "docs/research_desk/*/hs_code_classification_*.md"; do
+                   "docs/research_desk/*/hs_code_classification_*.md" \
+                   "docs/research_desk/*/hybrid_methodology_design_*.md"; do
             python scripts/cross_verify_gpt.py "$g"
           done
       - name: Build ledger & commit verdicts (A-186 · A-208 — 저장소 보존·단일 열람 지점)

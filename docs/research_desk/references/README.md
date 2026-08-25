@@ -29,6 +29,8 @@
 | `MDPI_2026_Korea_biodiesel_mandate_public_acceptance.pdf` | Jeon·Hyun·Yoo, MDPI 2026-03-11 (서울과기대) | 2026-08-25 | 한국 **바이오디젤 의무혼합 인상 대중 수용성(WTP)** — D-045 RFS 3.5→8.0% 경로의 정책 수용성 근거. 배경 참고(가격 모델 직접 입력 아님) |
 | `IEEE_2025_MTGPR_soybean_oil_futures_forecasting.pdf` | Yin & Li, IEEE Access 2025-06 (상하이공정기술대) | 2026-08-25 | ★**가격 예측 방법론 — G2 Challenger 검토 대상**: Bayesian 최적화 Multi-Task GPR(Matérn 2.5×ESS 커널·30종 비교), 중국 도매 대두유 지수에서 LSTM·GRU·SVR·XGBoost 대비 우위 주장. **posterior predictive interval 내장 = G2 확률 밴드 계약과 정합**. ⚠️평가 유보: 중국 도매지수(CBOT 아님)·GPR O(n³) 확장성·우리 승격 게이트(C-014 §4) 미적용 — M-009 검토 목록 등재, 무단 채택 금지 |
 | `Heliyon_2024_soybean_quantile_VAR_connectedness.pdf` | Barboza Martignone et al., Heliyon 10:e34669, 2024-07 | 2026-08-25 | ★Quantile VAR 연결성 — **대두 복합체가 국제 상품시장 가격 전이의 주도 원천**. 극단 분위수(0.1/0.9)에서 연결성 91%/87%로 급등(중위 0.5는 낮음) = **꼬리에서 시장이 동조화**·위기 시 crude oil이 충격 전달자. G2 레짐별 커버리지·G3 레짐 설계·CE-015 해석의 학술 근거 |
+| `CIKM_2025_LLM_enhanced_BlackLitterman.pdf` | Lee et al., CIKM'25 FinAI (Elice·Meritz·미래에셋·UNIST) | 2026-08-25 | ★**하이브리드 설계의 참고 원문**(hybrid_methodology_design) — LLM 예측+불확실성을 BL 뷰(Q)·신뢰도(Ω)로 변환하는 체계·look-ahead 차단 설계·"LLM 선택=매니저 선택" 실증. ⚠️S&P 주식 2주 리밸런싱 대상 — 뷰 1차 소스는 검증된 CE 엣지 우선(무단 채택 금지) |
+| `VNIIS_2024_world_soybean_production_trends_Russia.pdf` | Volkova & Smolyaninova, 러시아 전연방대두연구소(아무르주 Blagoveshchensk) | 2026-08-25 | 세계 대두 생산 추세 2014~23(2023년 398.2Mt·브라질+미국+아르헨 80%·러시아 1.71%) — **아무르 소재 연구기관** 저작: 러시아→한국 채널(부록 3차 #5) 배후 지역의 자체 생산 전망 시각. 배경 참고 |
 
 ### 자체 회수분 (2026-08-25 · fetch_reference_docs.yml 1회 실행 — 9건 전량 성공 · A-209)
 
