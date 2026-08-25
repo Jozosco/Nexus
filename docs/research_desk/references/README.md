@@ -27,6 +27,8 @@
 | `econovill_biodiesel_deforestation_paradox_ko.md` | 이코노믹리뷰(idxno=652674, 게재일 ❓ 2024 추정) — **조정자 원문 공유로 회수**(A-200 미회수 3건 중 1건 해소) | 2026-08-25 | 한국 정유 4사 바이오연료 축(HD현대오일뱅크 13만t 초임계·S-Oil co-processing·GS/SK SAF·롯데웰푸드 UCO 제휴) — 국내 BD 원료는 팜계·UCO 중심(D-045 정합, SBO 직접 견인 제한). EU 팜유 퇴출 2030 = CE-015 장기 구조 요인 |
 | `climatepol_SAF_food_vs_fuel_ko.md` | 크라이미트폴(idxno=27682, 게재일 ❓) — 조정자 원문 공유로 회수 | 2026-08-25 | ★아르헨 Decree 423/2026(수출세 24%→15%) = CE-003 역방향 신호 · SAF HEFA 점유 48~62% = CE-022 두 번째 엔진 · FAO 유지 지수 195.7 |
 | `MDPI_2026_Korea_biodiesel_mandate_public_acceptance.pdf` | Jeon·Hyun·Yoo, MDPI 2026-03-11 (서울과기대) | 2026-08-25 | 한국 **바이오디젤 의무혼합 인상 대중 수용성(WTP)** — D-045 RFS 3.5→8.0% 경로의 정책 수용성 근거. 배경 참고(가격 모델 직접 입력 아님) |
+| `IEEE_2025_MTGPR_soybean_oil_futures_forecasting.pdf` | Yin & Li, IEEE Access 2025-06 (상하이공정기술대) | 2026-08-25 | ★**가격 예측 방법론 — G2 Challenger 검토 대상**: Bayesian 최적화 Multi-Task GPR(Matérn 2.5×ESS 커널·30종 비교), 중국 도매 대두유 지수에서 LSTM·GRU·SVR·XGBoost 대비 우위 주장. **posterior predictive interval 내장 = G2 확률 밴드 계약과 정합**. ⚠️평가 유보: 중국 도매지수(CBOT 아님)·GPR O(n³) 확장성·우리 승격 게이트(C-014 §4) 미적용 — M-009 검토 목록 등재, 무단 채택 금지 |
+| `Heliyon_2024_soybean_quantile_VAR_connectedness.pdf` | Barboza Martignone et al., Heliyon 10:e34669, 2024-07 | 2026-08-25 | ★Quantile VAR 연결성 — **대두 복합체가 국제 상품시장 가격 전이의 주도 원천**. 극단 분위수(0.1/0.9)에서 연결성 91%/87%로 급등(중위 0.5는 낮음) = **꼬리에서 시장이 동조화**·위기 시 crude oil이 충격 전달자. G2 레짐별 커버리지·G3 레짐 설계·CE-015 해석의 학술 근거 |
 
 ### 자체 회수분 (2026-08-25 · fetch_reference_docs.yml 1회 실행 — 9건 전량 성공 · A-209)
 
