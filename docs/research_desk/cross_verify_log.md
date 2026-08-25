@@ -8,14 +8,23 @@
 
 ## 요약
 
-- 총 검증 기록 **56건** — 판정 산출 52 · 실패(미판정) 4
-- 누적 지적: **[치명] 33건 · [높음] 458건**
+- 총 검증 기록 **65건** — 판정 산출 61 · 실패(미판정) 4
+- 누적 지적: **[치명] 42건 · [높음] 566건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32846791404 | [xverify_2026-08-25_328467914…](../../reports/cross_verify/xverify_2026-08-25_32846791404_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 3 | 14 | [치명] `2026-08-14` — 주 밴드를 CIF 예측 분위로 해석할 수 없음. | 32846791404 | [xverify_2026-08-25_328467914…](../../reports/cross_verify/xverify_2026-08-25_32846791404_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-25 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 0 | [치명][재현 불가능]** `git diff HEAD~1`의 실제 출력과 저장소 접근 권한이 없어 변경 내용을 검증할 수 없다. 또한 `HEAD~1`은 현재 체크아웃 상태에 따라  | 32846791404 | [xverify_2026-08-25_328467914…](../../reports/cross_verify/xverify_2026-08-25_32846791404_git_diff_HEAD_1_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 0 | 14 | [높음] 문서 규모 `~5천`의 산정이 제안된 색인 대상과 일치하지 않는다. | 32846791404 | [xverify_2026-08-25_328467914…](../../reports/cross_verify/xverify_2026-08-25_32846791404_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/hs_code_classification_20` | ⚠️ 지적 | 0 | 13 | [높음] `1512.19-9010` 품목 분류 오류** — §2는 `1512.19-1020 / -9010 / -9020`을 모두 “잇꽃 정제·기타”로 묶었지만, HSK 구조상 `- | 32846791404 | [xverify_2026-08-25_328467914…](../../reports/cross_verify/xverify_2026-08-25_32846791404_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 32846791404 | [xverify_2026-08-25_328467914…](../../reports/cross_verify/xverify_2026-08-25_32846791404_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 2 | 21 | [높음] 분석창 연수 계산 오류 | 32846791404 | [xverify_2026-08-25_328467914…](../../reports/cross_verify/xverify_2026-08-25_32846791404_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 2 | 27 | [높음] 대표 아이디어 건수 불일치 | 32846791404 | [xverify_2026-08-25_328467914…](../../reports/cross_verify/xverify_2026-08-25_32846791404_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-25 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 1 | 19 | [높음] 조유 수입량 범위 판정이 산술적으로 틀림. | 32846791404 | [xverify_2026-08-25_328467914…](../../reports/cross_verify/xverify_2026-08-25_32846791404_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-08-25 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 0 | [치명][재현 불가능] 검증 대상 코드가 제공되지 않음**: 현재 대화에는 `git diff HEAD~1`의 출력, 커밋 해시, 저장소 접근 정보가 없어 변경 내용을 재현·검증할  | 32841524051 | [xverify_2026-08-25_328415240…](../../reports/cross_verify/xverify_2026-08-25_32841524051_git_diff_HEAD_1_1.md) |
