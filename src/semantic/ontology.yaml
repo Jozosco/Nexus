@@ -797,6 +797,10 @@ causal_edges:
     ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
     locator: '§5'
     note: 아르헨티나는 수출세(현행 ~26%)가 공식 환율보다 실질 신호 — 최대 수출국 공급 전가
+  - source_type: research_doc
+    ref: docs/research_desk/references/climatepol_SAF_food_vs_fuel_ko.md
+    locator: '아르헨 Decree 423/2026'
+    note: '★역방향 작동 신호 — 수출세 인하 법령(대두 24%→2028년 말 15%, 2027년부터 월 0.25~0.5%p 단계 인하, 최종 목표 0%). 채산성 개선→공급 확대→하방 압력·AR 채널 CIF 할인 구조 변화. 관보 원문(B-4) 확보 시 승격, 월별 인하는 정책 캘린더(C4) 대상 (A-210)'
 - edge_id: CE-004
   label_ko: EUDR 팜유 규제 강화 → EU 팜유 접근 차단 → EU 내 SBO 대체 수요 증가 → 국제가 상승
   category: 정책·규제
@@ -1235,6 +1239,10 @@ causal_edges:
     - source_type: research_doc
       ref: docs/research_desk/references/farmdoc_2026_RFS_playbook_final_production_imports.pdf
       locator: "16:101(2026-06-10) — 가동률 90%(2026)→95%(2027) 요구(2025년 ~60%). 수입 회복(600M gal)은 45Z 부적격으로 근제로 붕괴한 흐름의 회복 전제 — 수입·국내 마진 비독립: 수입 억제 정책일수록 국내 원료(SBO) 부담 가중 (A-207)"
+    - source_type: research_doc
+      ref: docs/research_desk/references/climatepol_SAF_food_vs_fuel_ko.md
+      locator: 'SAF 표·WASDE 2026-08'
+      note: 'SAF 축 확인 — 대두유 HEFA가 SAF 시장 48~62%(TRL 9, 정유사 즉시 구현 유일 대안)·미 압착 2.78십억 bu 사상 최대. RVO(도로)와 SAF(항공)가 같은 SBO 원료 풀 경쟁 = 흡수 압력의 두 번째 엔진. 45Z 최대 $1.75/gal (A-210)'
 - edge_id: CE-023
   label_ko: "브라질 바이오디젤 의무 인상(B15→B16) → 내수 압착 흡수 → 수출 잉여 축소 → 국제가 상승"
   category: "정책·규제"
