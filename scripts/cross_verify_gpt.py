@@ -54,8 +54,10 @@ def _gather(args: list[str]) -> tuple[str, str]:
     for a in args:
         paths.extend(glob.glob(a))
     if not paths:
-        print("[오류] 검증 대상 없음 — 파일 경로 또는 --diff 를 지정하세요.")
-        sys.exit(2)
+        # A-208: CI에서 글로브 등재가 대상 파일 커밋보다 먼저 push되면 매칭 0건이 정상 —
+        # sys.exit(2) hard-fail이 "검증 실패가 파이프라인을 막지 않는다" 설계를 우회했다(런 #14).
+        print(f"[경고] 검증 대상 없음(매칭 0건) — 건너뜀: {' '.join(args) or '(인자 없음)'}")
+        sys.exit(0)
     parts = [Path(p).read_text(encoding="utf-8", errors="replace") for p in sorted(paths)]
     return ", ".join(sorted(paths)), "\n\n=====\n\n".join(parts)
 

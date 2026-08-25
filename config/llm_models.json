@@ -8,10 +8,6 @@
     "o1",
     "o3-mini"
   ],
-  "gemini": [
-    "models/gemini-2.5-pro",
-    "models/gemini-2.5-flash"
-  ],
   "anthropic": [
     "claude-opus-4-7-20251101",
     "claude-sonnet-4-6-20251022",
@@ -27,7 +23,7 @@
     "_comment": "에이전트별 역할 최적 모델 매핑 (llm_router.py 기준)",
     "REAL_TIME_RESEARCH": "sonar-pro",
     "DEEP_RESEARCH": "sonar-deep-research",
-    "LARGE_DOCUMENT": "models/gemini-2.5-pro",
+    "LARGE_DOCUMENT": "gpt-5.6-sol",
     "STRUCTURED_EXTRACT": "gpt-4o-mini",
     "CLAUDE_NATIVE": "claude-sonnet-4-6-20251022"
   }

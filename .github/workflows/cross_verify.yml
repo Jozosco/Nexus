@@ -77,22 +77,54 @@ jobs:
                    "docs/research_desk/*/hs_code_classification_*.md"; do
             python scripts/cross_verify_gpt.py "$g"
           done
-      - name: Build ledger & commit verdicts (A-186 — 저장소 보존·단일 열람 지점)
+      - name: Build ledger & commit verdicts (A-186 · A-208 — 저장소 보존·단일 열람 지점)
         if: always()
+        # A-208 재배열: 구 순서(원장 재생성 → pull --rebase)는 체크아웃이 트리거 SHA에
+        #   고정된 채 낡은 트리 기준으로 원장을 통째로 재생성해, 장시간 런(40~60분)이
+        #   연쇄되는 날 선행 런의 원장 커밋과 반드시 충돌했다(8/25 런 #15·#17·#21).
+        #   신 순서: ①판정문만 선커밋(run_id 신규 파일 — 무충돌) ②rebase로 최신 원장
+        #   확보 ③최신 트리 기준 원장 재생성·커밋 ④push, 경합 시 원장 커밋만 되돌려
+        #   유한 재시도. 최종 실패도 비치명 — 판정문은 아티팩트(if always)로 보존.
         run: |
-          python scripts/build_cross_verify_log.py | tee -a "$GITHUB_STEP_SUMMARY"
-          if git diff --quiet -- reports/cross_verify docs/research_desk/cross_verify_log.md \
-             && [ -z "$(git ls-files -o --exclude-standard reports/cross_verify)" ]; then
-            echo "검증 산출물 변경 없음 — 커밋 생략"; exit 0
-          fi
           git config user.name "nexus-xverify-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add reports/cross_verify docs/research_desk/cross_verify_log.md
-          git diff --cached --quiet && { echo "스테이징 변경 없음"; exit 0; }
-          git commit -m "docs: GPT 교차검증 판정 기록 ($(date -u +%F)) [A-186]"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git add reports/cross_verify 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: GPT 교차검증 판정문 ($(date -u +%F) run ${{ github.run_id }}) [A-186]"
+          fi
+          success=0
+          for i in 1 2 3; do
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              echo "[경고] rebase 실패(시도 $i) — 재시도"; sleep $((i*5)); continue
+            fi
+            if [ "$i" = "1" ]; then
+              python scripts/build_cross_verify_log.py | tee -a "$GITHUB_STEP_SUMMARY" >/dev/null
+            else
+              python scripts/build_cross_verify_log.py >/dev/null
+            fi
+            git add docs/research_desk/cross_verify_log.md
+            ledger_committed=0
+            if ! git diff --cached --quiet; then
+              git commit -m "docs: GPT 교차검증 원장 갱신 ($(date -u +%F)) [A-186]"
+              ledger_committed=1
+            fi
+            if [ "$(git rev-list origin/main..HEAD --count)" = "0" ]; then
+              echo "푸시할 변경 없음 — 종료"; success=1; break
+            fi
+            if git push origin HEAD:main; then success=1; break; fi
+            # push 경합 — 원장 커밋만 되돌리고(판정문 커밋은 유지) 다음 루프에서 재생성
+            [ "$ledger_committed" = "1" ] && git reset --hard HEAD~1
+            sleep $((i*5))
+          done
+          if [ "$success" != "1" ]; then
+            echo "::warning::[경고] 원장 push 3회 실패 — 판정문은 아티팩트로 보존(비치명 종료)"
+          fi
+          exit 0
       - name: Upload verification artifacts
+        # A-208: 커밋 스텝 실패 시에도 판정문 보존 — 유실 차단(런 #15·#17·#21에서 소실 실증)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gpt-xverify-g2-${{ github.run_id }}

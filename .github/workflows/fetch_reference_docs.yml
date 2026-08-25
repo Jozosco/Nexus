@@ -1,0 +1,102 @@
+# 참고자료 자체 회수 — farmdoc 결번·USDA 원자료 (조정자 지시 2026-08-25 · A-209)
+#
+# 샌드박스는 farmdocdaily.illinois.edu 직접 열람이 차단(EGRESS_BLOCKED 실측)이라
+# Actions 러너가 유일한 다운로드 표면. URL은 WebSearch 색인으로 사전 확정(A-209 조사).
+# 발화: 이 파일을 수정하는 push에서 1회 자동 실행(A-046 패턴 — integration 토큰의
+# actions:write 부재로 dispatch 403이기 때문. A-146) + workflow_dispatch(사용자 UI용).
+# 멱등: 이미 존재하는 파일은 건너뜀. 검증: %PDF 매직바이트 + 50KB 최소 크기.
+name: Fetch Reference Docs
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/fetch_reference_docs.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-references:
+    name: "참고자료 회수 → docs/research_desk/references/"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            docs/research_desk/references
+          sparse-checkout-cone-mode: true
+      - name: Download and verify
+        shell: bash
+        run: |
+          DEST=docs/research_desk/references
+          UA="Mozilla/5.0 (Nexus reference archiver)"
+          ok=0; fail=0; skip=0
+          fetch() {  # fetch <저장파일명> <URL...>  (복수 URL = 폴백 순서)
+            local out="$DEST/$1"; shift
+            if [ -f "$out" ]; then echo "[생략] $out 기존재"; skip=$((skip+1)); return 0; fi
+            for url in "$@"; do
+              echo "[시도] $url"
+              if curl -fsSL -A "$UA" --max-time 120 -o /tmp/dl.bin "$url"; then
+                if [ "$(head -c 4 /tmp/dl.bin)" = "%PDF" ] && [ "$(stat -c%s /tmp/dl.bin)" -gt 51200 ]; then
+                  mv /tmp/dl.bin "$out"; echo "[완료] $out ($(stat -c%s "$out") bytes)"
+                  ok=$((ok+1)); return 0
+                else
+                  echo "[경고] PDF 검증 실패(매직바이트/크기) — 다음 후보"
+                fi
+              fi
+            done
+            echo "[실패] $1 — 전 후보 실패"; fail=$((fail+1)); return 0
+          }
+          # permalink HTML에서 wp-content PDF 링크를 추출하는 폴백
+          html_pdf() {  # html_pdf <permalink> → stdout에 PDF URL 또는 공백
+            curl -fsSL -A "$UA" --max-time 60 "$1" 2>/dev/null \
+              | grep -oE 'https://farmdocdaily\.illinois\.edu/wp-content/uploads/[^"]+\.pdf' | head -1
+          }
+
+          # ① RD붐 P3 (15):188 — SBO 압착 가치 비중 35~50% (CE-022 직결)
+          fetch farmdoc_2025_RD_boom_P3_value_of_soybean_oil_in_crush.pdf \
+            "https://farmdocdaily.illinois.edu/wp-content/uploads/2025/10/fdd101325.pdf" \
+            "$(html_pdf https://farmdocdaily.illinois.edu/2025/10/the-soybean-industry-response-to-the-renewable-diesel-boom-part-3-the-value-of-soybean-oil-in-the-soybean-crush.html)"
+          # ② RFS Playbook 11월 3부작 (Revised RVO 단계 — 타임라인 1→2 사이)
+          fetch farmdoc_2025_RFS_playbook_revised_D4_RIN_generation.pdf \
+            "https://farmdocdaily.illinois.edu/wp-content/uploads/2025/11/fdd110525.pdf" \
+            "$(html_pdf https://farmdocdaily.illinois.edu/2025/11/rewriting-the-rfs-playbook-the-impact-of-revised-rvos-on-projected-d4-biomass-based-diesel-rin-generation-for-2026-2027.html)"
+          fetch farmdoc_2025_RFS_playbook_revised_production_feedstock.pdf \
+            "https://farmdocdaily.illinois.edu/wp-content/uploads/2025/11/fdd111225.pdf" \
+            "$(html_pdf https://farmdocdaily.illinois.edu/2025/11/rewriting-the-rfs-playbook-the-impact-of-revised-rvos-on-projected-biomass-based-diesel-production-and-feedstock-use-for-2026-2027.html)"
+          fetch farmdoc_2025_RFS_playbook_revised_backload_2027.pdf \
+            "https://farmdocdaily.illinois.edu/wp-content/uploads/2025/11/fdd112425.pdf" \
+            "$(html_pdf https://farmdocdaily.illinois.edu/2025/11/rewriting-the-rfs-playbook-revised-rvos-backload-projected-biomass-based-diesel-production-and-feedstock-use-into-2027.html)"
+          # ③ (14):71 — RD붐 원료 사용 초기 정량 (P1·P2 인용 기준점)
+          fetch farmdoc_2024_BBD_feedstock_trends_2011_2023.pdf \
+            "https://farmdocdaily.illinois.edu/wp-content/uploads/2024/04/fdd041224.pdf" \
+            "$(html_pdf https://farmdocdaily.illinois.edu/2024/04/fame-biodiesel-renewable-diesel-and-biomass-based-diesel-feedstock-trends-over-2011-2023.html)"
+          # ④ 후속 관련 2건 (P3 조사에서 발견)
+          fetch farmdoc_2025_winter_oilseeds_biofuel_feedstock.pdf \
+            "https://farmdocdaily.illinois.edu/wp-content/uploads/2025/12/fdd122325.pdf"
+          fetch farmdoc_2026_newcrop_SBO_export_projection_volatility.pdf \
+            "$(html_pdf https://farmdocdaily.illinois.edu/2026/05/new-crop-soybean-oil-export-projection-suggests-greater-price-volatility.html)"
+          # ⑤ USDA ERS Oil Crops Outlook 2026-05 특별기사 (갭 B-3 — 16:101 인용)
+          fetch USDA_ERS_2026_05_OCS_vegoils_biofuels_special.pdf \
+            "https://ers.usda.gov/media/20879/ocs-26e.pdf?v=68086" \
+            "https://ers.usda.gov/media/20879/ocs-26e.pdf"
+          # ⑥ USDA FAS Oilseeds: World Markets and Trade 최신호 (갭 B-1 — 해바라기 러/우 배분 판정)
+          fetch USDA_FAS_WMT_oilseeds_latest.pdf \
+            "https://apps.fas.usda.gov/psdonline/circulars/oilseeds.pdf"
+
+          echo "## 참고자료 회수 결과 — 성공 $ok · 실패 $fail · 기존재 $skip" >> "$GITHUB_STEP_SUMMARY"
+          ls -la "$DEST"/*.pdf | tail -12
+      - name: Commit recovered files
+        shell: bash
+        run: |
+          git config user.name "nexus-reference-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/research_desk/references/
+          git diff --cached --quiet && { echo "신규 회수 없음 — 커밋 생략"; exit 0; }
+          git commit -m "docs: 참고자료 자체 회수 — farmdoc 결번·USDA 원자료 ($(date -u +%F)) [A-209]"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep $((i*5))
+          done
+          echo "::warning::push 3회 실패 — 다음 실행에서 재시도"

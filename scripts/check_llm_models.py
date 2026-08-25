@@ -125,7 +125,8 @@ def _fetch_perplexity() -> list[str]:
 
 FETCHERS: dict[str, Any] = {
     "openai":     _fetch_openai,
-    "gemini":     _fetch_gemini,
+    # "gemini" 제거 (C-012/C-013 — 조정자 지시로 Gemini 전면 배제, 2026-08-12).
+    # _fetch_gemini 함수는 재도입 대비 보존하되 모니터 대상에서 제외.
     "anthropic":  _fetch_anthropic,
     "perplexity": _fetch_perplexity,
 }
@@ -181,7 +182,7 @@ def _build_diff_report(
         "| 역할 | 선택 기준 |",
         "|---|---|",
         "| `REAL_TIME_RESEARCH` | 최신 웹 검색 포함 모델 (Perplexity sonar 계열) |",
-        "| `LARGE_DOCUMENT` | 컨텍스트 윈도우 최대 모델 (Gemini 2M ctx 계열) |",
+        "| `LARGE_DOCUMENT` | 컨텍스트 윈도우 최대 모델 (C-012 이후 OpenAI 라인) |",
         "| `STRUCTURED_EXTRACT` | JSON 출력 신뢰도 최고 모델 (GPT-4o 계열) |",
         "| `CLAUDE_NATIVE` | 코드·추론 최강 모델 (Claude Opus/Sonnet 최신) |",
         "",
