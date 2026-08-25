@@ -218,7 +218,9 @@ def axis_substitutes(cfg: ProcurementConfig) -> tuple[Axis, list[dict]]:
               "완료 후 병행(A-161: 현재 템플릿만 존재)",
         guidance="⚠️ z격차는 각 시장 내 상대 모멘텀(무차원)일 뿐 **USD/MT 경제성이 아님** — "
                  "배합 전환 판단은 FX 환산 스프레드(converted 행) 산출 후에만 가능(8/19 판정). "
-                 "실제 전환은 품질 규격(§3b)·정제 설비 제약 확인 필요",
+                 "실제 전환은 품질 규격(§3b)·정제 설비 제약 확인 필요. "
+                 "⚠️ 공행성 붕괴(farmdoc 2025·A-201): 2020 이후 SBO-팜유 다이버전스가 "
+                 "장기화(최대 +113%) — 스프레드 평균회귀 가정 금지, 레짐 인지 필요",
         causal_refs="CE-015(CPO 대체압력) · CE-002(B40→스프레드 축소) · CE-014(해바라기 차단)")
     return axis, rows
 

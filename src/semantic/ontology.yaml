@@ -1204,6 +1204,15 @@ causal_edges:
     - source_type: research_doc
       ref: docs/research_desk/2026-08/extraction_technology_by_country_2026_08_25.md
       locator: "§핵심 결론 — 미국(수출 24/25 25억lb→26/27 4억lb 전망)"
+    - source_type: research_doc
+      ref: docs/research_desk/references/farmdoc_2025_soy_palm_price_relationship.pdf
+      locator: "2021 다이버전스 에피소드 — 미 RD 설비 급증기 SBO가 팜유 대비 +68% (A-201)"
+    - source_type: web
+      ref: https://biomassmagazine.com/articles/may-wasde-forecasts-25-increase-in-soybean-oil-use-in-biofuel-for-2026-27
+      locator: "WASDE 26/27 — 바이오연료 SBO 투입 17.8십억 lb(+25%) · 수출 -8억 lb (2026-05, 7월호 유지)"
+    - source_type: web
+      ref: https://www.foodnavigator-asia.com/Article/2025/08/07/us-biofuel-plan-may-disrupt-asias-soy-supply/
+      locator: "아시아 전이 메커니즘 — 수출 가용물량 축소 경유(가격 아닌 물량 채널) · 한국 명시 지목"
 - edge_id: CE-023
   label_ko: "브라질 바이오디젤 의무 인상(B15→B16) → 내수 압착 흡수 → 수출 잉여 축소 → 국제가 상승"
   category: "정책·규제"
