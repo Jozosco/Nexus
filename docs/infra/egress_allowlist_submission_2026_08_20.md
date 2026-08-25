@@ -1,11 +1,11 @@
 # 아웃바운드 방화벽 허용 신청서 (제출용) — Project Nexus
 
-**신청 부서**: 구매/조달 · **작성**: 2026-08-20 · **제출 목표**: 2026-08-29
-**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.0)
+**신청 부서**: 구매/조달 · **작성**: 2026-08-25 (v2.1 — HF 2종 추가) · **제출 목표**: 2026-08-29
+**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.1)
 
 ## 신청 개요
 
-- 총 **38개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
+- 총 **40개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
 - 사유: 대두유 조달 의사결정 AI(Project Nexus)의 외부 데이터 수집
 - 미승인 시: 11월 통합 시점에 해당 데이터 수집이 즉시 중단됨
 
@@ -59,6 +59,8 @@
 | 36 | `firms.modaps.eosdis.nasa.gov` | 443 | 낮음 | NASA FIRMS 산불 |
 | 37 | `data.nasdaq.com` | 443 | 낮음 | 레거시 조회(B-003으로 용도 축소) |
 | 38 | `fonts.googleapis.com` | 443 | 낮음 | 리포트 웹폰트 |
+| 39 | `huggingface.co` | 443 | 낮음 | 임베딩 모델 메타데이터(sentence-transformers |
+| 40 | `cdn-lfs.huggingface.co` | 443 | 낮음 | 모델 가중치 파일(LFS) 다운로드 |
 
 ## 텍스트 목록 (시스템 입력용)
 
@@ -101,6 +103,8 @@ earthquake.usgs.gov:443
 firms.modaps.eosdis.nasa.gov:443
 data.nasdaq.com:443
 fonts.googleapis.com:443
+huggingface.co:443
+cdn-lfs.huggingface.co:443
 ```
 
 ## 추후 추가 예정 (9월 Azure 이관 확정 시)

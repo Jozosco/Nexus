@@ -24,8 +24,8 @@
 #        폴백(policyuncertainty.com)만 있었음. 미신청 시 G1 핵심 변수 GPR 전면 차단
 #     ③ apis.datos.gob.ar 누락 — INDEC 아르헨 생산통계
 #   각 항목에 `impact_if_blocked`(차단 시 영향) 추가 — 방화벽 심사자가 필요성을 판단하는 근거.
-version: '2.0'
-updated: 2026-08-20
+version: '2.1'
+updated: 2026-08-25
 owner: C-04
 submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수집 중단 방지)
 
@@ -33,16 +33,16 @@ submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수
 # §1 제출 요약 — 신청서 상단에 그대로 기재
 # ════════════════════════════════════════════════════════════════════════════
 submission:
-  total_requested: 38          # 신청 대상 호스트 수 (제외 1건 미포함)
+  total_requested: 40          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.1: HF 2종 추가(조정자 승인 8/25)
   by_criticality:
     critical: 6                # 차단 시 파이프라인·모델 전면 중단
     high: 9                    # 차단 시 핵심 변수 결손
     medium: 11                 # 차단 시 보조 신호 결손(대체 경로 존재)
-    low: 12                    # 폴백·부가 기능
+    low: 14                    # 폴백·부가 기능
   exceptions_requiring_approval: 3   # §2 참조 (평문 HTTP 1 · WebSocket 1 · 조건부 신규 1)
   excluded: 1                  # cds.climate.copernicus.eu — 미사용 확정, 신청 불요
   protocol_note: >
-    38건 중 36건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
+    40건 중 38건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
     프로토콜·포트가 표준과 다른 항목만 별도 승인이 필요하며, 나머지는 일괄 처리 가능하다.
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -308,6 +308,17 @@ hosts:
     criticality: low
     purpose: 리포트 웹폰트
     impact_if_blocked: 없음 — 오프라인 폰트 폴백 존재(A-056)
+  - host: huggingface.co
+    port: 443
+    criticality: low
+    purpose: 임베딩 모델 메타데이터(sentence-transformers — 승인 라이브러리) 1회성 다운로드
+    impact_if_blocked: 지식 저장소 Phase 2(의미 검색) 불가 — Phase 1(TF-IDF)은 무영향
+    note: 2026-08-25 조정자 승인 — Knowledge Mart Phase 2 경로. 모델 확보 후 Blob 캐시 예정
+  - host: cdn-lfs.huggingface.co
+    port: 443
+    criticality: low
+    purpose: 모델 가중치 파일(LFS) 다운로드 — huggingface.co와 쌍
+    impact_if_blocked: 동상 — 둘 중 하나만 허용되면 무의미
 
 # ════════════════════════════════════════════════════════════════════════════
 # §4 신청 제외 — 미사용 확정
