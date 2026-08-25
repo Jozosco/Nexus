@@ -860,6 +860,10 @@ causal_edges:
     ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
     locator: '§4'
     note: 아르헨티나가 대두유 수출 ~40% — 생산 충격이 수출 물량에 그대로 전가 (2018·2023 실증)
+  - source_type: research_doc
+    ref: docs/research_desk/references/Embrapa_2024_Brazil_drought_soybean_yield_losses_5decades.pdf
+    locator: 'Conclusions — 브라질 1976/77~2022/23'
+    note: 가뭄→단수 채널 50년 정량 — 시즌 50%+에서 손실·누적 11.65%=2.8억t=$152B. 지역 이질성(남부 최대 74% vs 중서부 안정) → BR 기후 신호는 지역 분리 해석 (A-205)
 - edge_id: CE-007
   label_ko: 브라질 파종기(9~11월) 토양 수분 부족 → 발아율 저하·면적 축소 우려 → 선물 선반영 상승
   category: 기후·작황
@@ -1221,7 +1225,10 @@ causal_edges:
       locator: "메커니즘 보정 — 유지 추출률 ~20% 구조 상승(보드 18.3% 상회, 2020/21~) · 2020 이후 SBO 증산분의 ~40%가 압착 구성 변화. 압착량 불변에도 오일 증산 가능 → 내수 흡수 압력 일부 완충, 방향은 불변 (A-204)"
     - source_type: research_doc
       ref: docs/research_desk/references/farmdoc_2026_RFS_playbook_no_halfRIN_higher_RVOs.pdf
-      locator: "해석 뉘앙스 — half-RIN 철회 시 국내 원료(SBO 포함) 수요 연 −8십억 lb(−20%)가 수입 원료로 이전(총수요 2027년 61십억 lb·+53%는 유지). half-RIN·수입 원료 RIN 정책이 본 엣지 강도의 스위치 — SBO 단독 전용 극단 시나리오 과대평가 경계 (A-204)"
+      locator: "해석 뉘앙스 — half-RIN 미적용(2026-27) 시 국내 원료(SBO 포함) 수요 연 −8십억 lb(−20%)가 수입 원료로 이전(총수요 2027년 61십억 lb·+53%는 유지). half-RIN 정책이 본 엣지 강도의 스위치 — SBO 단독 전용 극단 시나리오 과대평가 경계 (A-204·A-205 정정: 철회 아닌 2028 연기)"
+    - source_type: research_doc
+      ref: docs/research_desk/references/farmdoc_2026_RFS_playbook_final_set2_RVOs_review.pdf
+      locator: "최종 Set 2 룰(16:66, 2026-04-16) — BBD RVO 사상 첫 RIN 갤런 고시 8.86/8.95십억(적용 9.07/9.20, 2025 대비 +67/+70%). half-RIN은 2028년 시행 예고(철회 아님) → 2028 시행 시 압력 SBO 재집중. SRE 재배분 70% · 실제 SRE > 7.55십억 gal 시 실효 물량 하향 리스크 (A-205)"
 - edge_id: CE-023
   label_ko: "브라질 바이오디젤 의무 인상(B15→B16) → 내수 압착 흡수 → 수출 잉여 축소 → 국제가 상승"
   category: "정책·규제"

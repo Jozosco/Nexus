@@ -14,6 +14,10 @@
 | `farmdoc_2025_RFS_playbook_EPA_decisions_2023_2027_RVOs.pdf` | Hubbs & Irwin, farmdoc daily (15):199, 2025-10-29 | 2026-08-25 | RFS Playbook 시리즈 1편 — EPA 3대 결정(제안 RVO·SRE 일괄 처리·재배분 프레임) 통합 분석. 정책 타임라인의 **중간 결정** 단계 |
 | `farmdoc_2026_RFS_playbook_no_halfRIN_higher_RVOs.pdf` | Hubbs & Irwin, farmdoc daily (16):31, 2026-02-25 | 2026-08-25 | ★RFS Playbook — half-RIN 철회+상향 RVO 시나리오(당시 보도 기반 5.25/5.61십억 gal 가정). **half-RIN 철회 시 국내 원료 수요 −8십억 lb/년(−20%)이 수입 원료로 이전** — CE-022 해석 뉘앙스(evidence 등재) |
 | `farmdoc_2026_US_soybean_yield_2026_pre_post_report.pdf` | farmdoc daily, 2026-08-19 | 2026-08-25 | 2026 미국 대두 단수 — USDA 8월 52.7bu/ac·생산 4,519M bu(+6.0%) vs 독립 컨디션 모델 53.4bu/ac. 당해 시즌 공급 측 컨텍스트(WASDE 대조용) |
+| `farmdoc_2026_RFS_playbook_final_set2_RVOs_review.pdf` | Hubbs & Irwin, farmdoc daily (16):66, 2026-04-16 | 2026-08-25 | ★최종 Set 2 룰(3/27) 정밀 리뷰 — **RVO 사상 첫 RIN 갤런 고시**(BBD 8.86/8.95십억 RIN gal·재배분 포함 9.07/9.20) = 물리 갤런 출처 혼선의 원인 규명. **half-RIN은 철회 아닌 2028년 이후 연기** · SRE 재배분 70% · RD 등가 1.5로 인하(2027~). CE-022 evidence |
+| `MDPI_2025_soybean_GHG_landuse_systematic_review.pdf` | Lucić et al., Sustainability 17:3396, 2025 | 2026-08-25 | 대두 GWP 조화 비교(126농장·6개국): **0.27~1.53 kgCO2e/kg** — 미국·이란 상위(비료·관개·에너지), 브라질 non-LUC 낮음. CI 점수·45Z 원산지 프리미엄·EUDR 맥락 참고(P1-04) — 가격 모델 직접 입력 아님 |
+| `Embrapa_2024_Brazil_drought_soybean_yield_losses_5decades.pdf` | Ferreira et al., Agriculture 14:2144, 2024 (Embrapa Soja) | 2026-08-25 | ★브라질 가뭄 단수 손실 50년 정량(1976/77~2022/23): **시즌 50%+에서 손실 발생 · 누적 11.65% = 2.8억t = $152B · 남부 최대 74% vs 중서부 안정**. CE-006 evidence — 기후→작황 채널·지역 가중 근거(Open-Meteo BR 지역 선정 정합) |
+| `IISD_2024_soybean_prices_sustainability_market_report.pdf` | IISD Global Market Report, 2024-02 | 2026-08-25 | 대두 사용 구조(사료 76%·식용 20%·산업 4%)·지속가능 인증 시장 개관 — 시장 구조 배경 참고(2024 초 기준이라 최신 수치 인용은 WASDE·PSD 우선) |
 
 보관 원칙: 조정자 선별 자료의 원문은 요약과 별도로 보존(근거 재검증 가능성 — S-5·EvidenceSpan 정합).
 분류 원칙: 프로젝트 목적(가격·조달)과의 관련성을 정직하게 표기한다 — 관련성이 낮은 자료를
