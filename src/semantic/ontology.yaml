@@ -1213,6 +1213,9 @@ causal_edges:
     - source_type: web
       ref: https://www.foodnavigator-asia.com/Article/2025/08/07/us-biofuel-plan-may-disrupt-asias-soy-supply/
       locator: "아시아 전이 메커니즘 — 수출 가용물량 축소 경유(가격 아닌 물량 채널) · 한국 명시 지목"
+    - source_type: research_doc
+      ref: docs/research_desk/references/farmdoc_2026_RFS_playbook_final_RVO_BBD_feedstock.pdf
+      locator: "Hubbs·Irwin 2026-06-24 — 최종 RVO(BBD 5.4/5.7십억 gal 확정)의 26/27 BBD 원료 사용 정량. 정책 단계 구분(제안 5.61/5.86 vs 최종 확정)의 최종 확정 측 원문 (A-203)"
 - edge_id: CE-023
   label_ko: "브라질 바이오디젤 의무 인상(B15→B16) → 내수 압착 흡수 → 수출 잉여 축소 → 국제가 상승"
   category: "정책·규제"
