@@ -1,0 +1,45 @@
+# Wiki 미러 발행 — docs/wiki/ → Nexus.wiki (조정자 지시 2026-08-25 · A-212)
+#
+# 배경: 세션 git 프록시가 wiki 저장소에 credential을 주입하지 않아(403 실측) 세션
+# 직접 push 불가. Actions의 GITHUB_TOKEN은 wiki push 가능(공식 커뮤니티 검증 패턴).
+# 설계: **수동 발화 미러**(스케줄 없음 — D-026 정합) — docs/wiki/가 단일 진실 원천이고
+# wiki는 열람용 사본. 페이지를 수정한 push(docs/wiki/ 경로)에서만 발화 + dispatch.
+name: Publish Wiki Mirror
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/wiki/**", ".github/workflows/publish_wiki.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-wiki:
+    name: "docs/wiki → GitHub Wiki 미러"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            docs/wiki
+          sparse-checkout-cone-mode: true
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+      - name: Sync pages and push
+        shell: bash
+        run: |
+          cp docs/wiki/*.md wiki-repo/
+          cd wiki-repo
+          git config user.name "nexus-wiki-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "위키 변경 없음 — 발행 생략"; exit 0
+          fi
+          git commit -m "docs: wiki 미러 갱신 ($(date -u +%F)) — 원천 docs/wiki/ [A-212]"
+          git push
+          echo "## 위키 발행 완료 — $(git ls-files '*.md' | wc -l)개 페이지" >> "$GITHUB_STEP_SUMMARY"
