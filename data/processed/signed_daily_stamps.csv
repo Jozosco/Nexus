@@ -1,0 +1,2 @@
+date,verdict,gate,alerts,readiness,xverify_fatal,run_id,stamped_at
+2026-08-26,✅ 검사된 무소식,PASS,0,미확인,미해소 있음(G2 대체유 z격차 방향 해석(작업 대기열 등재) · 개정 확정치 94종…),32898132191,2026-08-26T03:03:58+00:00
