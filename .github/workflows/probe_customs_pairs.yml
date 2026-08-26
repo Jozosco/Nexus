@@ -1,0 +1,55 @@
+# 관세청 무역 부재 쌍 교차검증 원샷 (조정자 요청 2026-08-26 · A-215)
+# 샌드박스는 apis.data.go.kr 차단(A-069) — Actions가 유일 실행 표면.
+# 발화: 이 파일 push 1회(A-046 패턴) + workflow_dispatch. 결과 md·csv를 커밋.
+name: Probe Customs Absent Pairs
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/probe_customs_pairs.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    name: "부재 13쌍 전 기간 프로빙 (2010~2026)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            reports/market
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx
+      - name: Run probe
+        env:
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+        run: python scripts/probe_customs_absent_pairs.py | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Commit verification report
+        run: |
+          git config user.name "nexus-customs-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add reports/market/customs_absent_pairs_*
+          git diff --cached --quiet && { echo "산출물 없음 — 커밋 생략"; exit 0; }
+          git commit -m "docs: 관세청 무역 부재 13쌍 교차검증 결과 ($(date -u +%F)) [A-215]"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep $((i*5))
+          done
+          echo "::warning::push 실패 — 아티팩트로만 보존"
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: customs-absent-pairs-${{ github.run_id }}
+          path: reports/market/customs_absent_pairs_*
+          retention-days: 90
+          if-no-files-found: warn

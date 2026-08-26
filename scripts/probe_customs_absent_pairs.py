@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""관세청 무역 부재 쌍 교차검증 프로빙 (조정자 요청 2026-08-26 · A-215).
+
+조정자 수작업에서 '조회 데이터 없음'으로 파일이 생성되지 않은 (10단위 세번 × 국가)
+13쌍을 관세청 API로 전 기간(2010~2026) 실측해 무역 부재를 확정하거나, 데이터가
+있으면 연·월·값을 정리한다. XML 응답 대응(A-152)·10단위 hsSgn(A-196).
+
+산출: reports/market/customs_absent_pairs_verification_{날짜}.md
+      + 데이터 발견 시 reports/market/customs_absent_pairs_found_{날짜}.csv
+"""
+from __future__ import annotations
+
+import os
+import sys
+import time
+import xml.etree.ElementTree as ET
+from datetime import date
+from pathlib import Path
+
+import httpx
+
+BASE = "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList"
+YEARS = range(2010, 2027)
+# 조정자 부재 목록 (2026-08-26) — 세번 10자리 × ISO 국가코드
+ABSENT_PAIRS: dict[str, list[str]] = {
+    "1201901000": ["ID", "NL", "ES"],            # 채유·탈지대두박용
+    "1201902000": ["ID", "NL", "MY"],            # 사료용
+    "1201903000": ["AR", "BR", "ID", "NL", "PY", "ES"],  # 콩나물용
+    "1201909000": ["ES"],                        # 기타 식용·일반
+}
+CODE_LABEL = {"1201901000": "채유·탈지대두박용(.1000)", "1201902000": "사료용(.2000)",
+              "1201903000": "콩나물용(.3000)", "1201909000": "기타 식용·일반(.9000)"}
+
+
+def _fetch_year(client: httpx.Client, key: str, hs: str, cc: str, year: int) -> list[dict]:
+    params = {"serviceKey": key, "strtYymm": f"{year}01", "endYymm": f"{year}12",
+              "hsSgn": hs, "cntyCd": cc}
+    for attempt in range(3):
+        try:
+            r = client.get(BASE, params=params, timeout=httpx.Timeout(30, connect=10))
+            r.raise_for_status()
+            break
+        except Exception as e:
+            if attempt == 2:
+                print(f"[경고] {hs}×{cc} {year}: 호출 실패 — {type(e).__name__}")
+                return [{"_error": str(e)}]
+            time.sleep(3 * (attempt + 1))
+    try:
+        root = ET.fromstring(r.content)
+    except ET.ParseError:
+        print(f"[경고] {hs}×{cc} {year}: XML 파싱 실패")
+        return [{"_error": "xml_parse"}]
+    rc = root.findtext(".//resultCode")
+    if rc not in (None, "00"):
+        msg = root.findtext(".//resultMsg") or ""
+        print(f"[경고] {hs}×{cc} {year}: resultCode={rc} {msg[:60]}")
+        return [{"_error": f"rc={rc}"}]
+    rows = []
+    for item in root.iter("item"):
+        d = {ch.tag: (ch.text or "").strip() for ch in item}
+        # 합계(국가명 '총계' 류)·헤더성 행 제외 — 실 데이터 행만
+        if d.get("year") and any(d.get(k) for k in ("impWgt", "impDlr", "expWgt", "expDlr")):
+            rows.append(d)
+    return rows
+
+
+def main() -> int:
+    key = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
+    if not key:
+        print("[오류] DATA_GO_KR_SERVICE_KEY 미설정 — 프로빙 불가")
+        return 1
+    from urllib.parse import unquote
+    if "%" in key:
+        key = unquote(key)
+
+    results: list[dict] = []
+    found_rows: list[dict] = []
+    errors = 0
+    with httpx.Client() as client:
+        for hs, ccs in ABSENT_PAIRS.items():
+            for cc in ccs:
+                recs_all: list[dict] = []
+                pair_err = 0
+                for yr in YEARS:
+                    recs = _fetch_year(client, key, hs, cc, yr)
+                    if recs and "_error" in recs[0]:
+                        pair_err += 1
+                    else:
+                        recs_all += recs
+                    time.sleep(0.4)
+                imp_wgt = sum(float(r.get("impWgt", 0) or 0) for r in recs_all)
+                imp_dlr = sum(float(r.get("impDlr", 0) or 0) for r in recs_all)
+                exp_wgt = sum(float(r.get("expWgt", 0) or 0) for r in recs_all)
+                verdict = ("⚠️ 호출 실패 다수 — 재실행 필요" if pair_err >= 9 else
+                           "✅ 무역 부재 확인" if imp_wgt == 0 and imp_dlr == 0 and exp_wgt == 0 else
+                           "🚨 데이터 존재 — 보완 필요")
+                results.append({"hs": hs, "cc": cc, "records": len(recs_all),
+                                "imp_wgt": imp_wgt, "imp_dlr": imp_dlr,
+                                "exp_wgt": exp_wgt, "errors": pair_err, "verdict": verdict})
+                if imp_wgt or imp_dlr or exp_wgt:
+                    for r in recs_all:
+                        if any(float(r.get(k, 0) or 0) for k in ("impWgt", "impDlr", "expWgt", "expDlr")):
+                            found_rows.append({"hs": hs, "cc": cc, **r})
+                errors += pair_err
+                print(f"[완료] {hs}×{cc}: 레코드 {len(recs_all)} · 수입 {imp_wgt:,.0f}kg/${imp_dlr:,.0f} · {verdict}")
+
+    today = date.today()
+    out = Path(f"reports/market/customs_absent_pairs_verification_{today}.md")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f"# 관세청 무역 부재 쌍 교차검증 — {today} (A-215)", "",
+             "조정자 수작업에서 파일이 생성되지 않은 13쌍의 API 전 기간(2010~2026) 실측.", "",
+             "| 세번 | 품명 | 국가 | 레코드 | 수입중량(kg) | 수입금액($) | 수출중량(kg) | 판정 |",
+             "|---|---|---|---|---|---|---|---|"]
+    for r in results:
+        lines.append(f"| {r['hs']} | {CODE_LABEL[r['hs']]} | {r['cc']} | {r['records']} | "
+                     f"{r['imp_wgt']:,.0f} | {r['imp_dlr']:,.0f} | {r['exp_wgt']:,.0f} | {r['verdict']} |")
+    n_absent = sum(1 for r in results if "무역 부재" in r["verdict"])
+    n_found = sum(1 for r in results if "데이터 존재" in r["verdict"])
+    n_fail = sum(1 for r in results if "호출 실패" in r["verdict"])
+    lines += ["", f"**요약**: 무역 부재 확인 {n_absent} · 데이터 존재(보완 필요) {n_found} · "
+              f"호출 실패 {n_fail} / 총 {len(results)}쌍 (호출 오류 연도 {errors}건)",
+              "", "무역 부재 = 전 기간 수입·수출 실적 0 (A-086 원칙: 부재는 정보 — 파일 미생성이 정확)."]
+    if found_rows:
+        import csv
+        fp = Path(f"reports/market/customs_absent_pairs_found_{today}.csv")
+        with open(fp, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=sorted({k for r in found_rows for k in r}))
+            w.writeheader()
+            w.writerows(found_rows)
+        lines.append(f"\n발견 데이터 상세: `{fp.name}` ({len(found_rows)}행) — 조정자 템플릿 형식 삽입 대상.")
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"[완료] → {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
