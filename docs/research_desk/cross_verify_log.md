@@ -1,6 +1,6 @@
 # GPT-5.6-Sol 교차검증 누적 원장
 
-**갱신**: 2026-08-25 · **자동 생성**: `scripts/build_cross_verify_log.py`
+**갱신**: 2026-08-28 · **자동 생성**: `scripts/build_cross_verify_log.py`
 
 > 조정자 상시 지시(2026-08-13): 인프라·분석·코드 작업은 GPT-5.6-Sol로 교차검증한다.
 > 이 파일은 그 **실행 이력과 판정을 한곳에 모은 원장**이다. 개별 판정 전문은
@@ -8,14 +8,24 @@
 
 ## 요약
 
-- 총 검증 기록 **75건** — 판정 산출 70 · 실패(미판정) 5
-- 누적 지적: **[치명] 51건 · [높음] 676건**
+- 총 검증 기록 **85건** — 판정 산출 80 · 실패(미판정) 5
+- 누적 지적: **[치명] 66건 · [높음] 785건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-28 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-28 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 0 | 10 | [높음] 예측 시점·도착 월이 없어 P10/P50/P90의 예측 의미가 성립하지 않음 | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-28 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 0 | [치명][재현 불가]** 현재 저장소나 Git 실행 환경에 접근할 수 없어 `git diff HEAD~1`의 실제 변경 내용을 확인할 수 없습니다. 따라서 수치·단위·논리 오류,  | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_git_diff_HEAD_1_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 1 | 17 | [높음] 문서 규모 산정이 서로 맞지 않는다. | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/hybrid_methodology_design` | ⚠️ 지적 | 6 | 16 | [치명] BL 뷰가 수학적으로 정의되지 않았다. | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_docs_research_desk_2026-08_hybrid_methodology_design_2026_08_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/hs_code_classification_20` | ⚠️ 지적 | 1 | 12 | [높음] `1512.19-9010` 품명 오분류 | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 1 | 19 | [높음] 분석창 연수 계산 오류 | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 3 | 16 | [높음] A2의 SHA256+런 ID만으로는 발행 시점과 불변성을 증명할 수 없다.** 원본과 해시·런 ID를 함께 교체할 수 있으므로, 외부 신뢰 타임스탬프나 서명된 append | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 2 | 19 | [치명] 검증되지 않은 175 임계값을 운영 규칙으로 사용 | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-25 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 0 | 17 | [높음] 8/14 — 현재 밴드로 2·4주 대기 방향을 추론 | 32865934701 | [xverify_2026-08-25_328659347…](../../reports/cross_verify/xverify_2026-08-25_32865934701_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-08-25 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 1 | 16 | [치명] 두 보고서 — 독립 컨볼루션의 P10/P50/P90을 CIF 확률 밴드로 해석할 수 없음. | 32865934701 | [xverify_2026-08-25_328659347…](../../reports/cross_verify/xverify_2026-08-25_32865934701_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-08-25 | `git diff HEAD~1` | ⚠️ 지적 | 0 | 1 | [높음][재현 불가능] 실행 환경과 의존성이 고정되지 않음.** `runs-on: ubuntu-latest`, `actions/checkout@v4`, `actions/setup- | 32865934701 | [xverify_2026-08-25_328659347…](../../reports/cross_verify/xverify_2026-08-25_32865934701_git_diff_HEAD_1_1.md) |
