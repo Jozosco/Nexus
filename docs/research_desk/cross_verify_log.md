@@ -8,14 +8,24 @@
 
 ## 요약
 
-- 총 검증 기록 **85건** — 판정 산출 80 · 실패(미판정) 5
-- 누적 지적: **[치명] 66건 · [높음] 785건**
+- 총 검증 기록 **95건** — 판정 산출 90 · 실패(미판정) 5
+- 누적 지적: **[치명] 74건 · [높음] 882건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-28 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 1 | 17 | [치명] 2026-08-14 — 현재 밴드를 2·4주 대기 손익으로 오용 | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-28 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-28 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_git_diff_HEAD_1_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 1 | 8 | [치명] 시점가용성(point-in-time) 통제가 설계에 없다. | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/hybrid_methodology_design` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_docs_research_desk_2026-08_hybrid_methodology_design_2026_08_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/hs_code_classification_20` | ⚠️ 지적 | 1 | 15 | [치명] 2010~2026 누계를 단일 HSK 10단위 체계로 합산한 근거가 없다.** 출처는 HSK2021·2022·2023·2024가 혼재하고 2010~2020 및 2025~2 | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 1 | 18 | [높음] 분석창 연수와 표본 비율이 불일치한다. | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 3 | 22 | [높음] 대표 아이디어 개수 불일치 | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-28 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 1 | 17 | [높음] §4b 조유 수입량의 범위 판정이 산술적으로 틀림. | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-28 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-08-28 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 0 | 10 | [높음] 예측 시점·도착 월이 없어 P10/P50/P90의 예측 의미가 성립하지 않음 | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-08-28 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 0 | [치명][재현 불가]** 현재 저장소나 Git 실행 환경에 접근할 수 없어 `git diff HEAD~1`의 실제 변경 내용을 확인할 수 없습니다. 따라서 수치·단위·논리 오류,  | 33170861953 | [xverify_2026-08-28_331708619…](../../reports/cross_verify/xverify_2026-08-28_33170861953_git_diff_HEAD_1_1.md) |
