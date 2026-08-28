@@ -32,6 +32,7 @@ jobs:
       - name: Run probe
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+          PROBE_SUFFIX: "_r2"
         run: python scripts/probe_customs_absent_pairs.py | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Commit verification report
         run: |

@@ -22,14 +22,17 @@ import httpx
 BASE = "http://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList"
 YEARS = range(2010, 2027)
 # 조정자 부재 목록 (2026-08-26) — 세번 10자리 × ISO 국가코드
+# 1차(1201.90 13쌍)는 2026-08-26 검증 완결(전건 부재 확인) — 2차: 팜·유채·바이오디젤
 ABSENT_PAIRS: dict[str, list[str]] = {
-    "1201901000": ["ID", "NL", "ES"],            # 채유·탈지대두박용
-    "1201902000": ["ID", "NL", "MY"],            # 사료용
-    "1201903000": ["AR", "BR", "ID", "NL", "PY", "ES"],  # 콩나물용
-    "1201909000": ["ES"],                        # 기타 식용·일반
+    "1511901000": ["AR", "NL", "PY", "ES"],      # 팜 올레인
+    "1511902000": ["US", "AR", "BR", "PY"],      # 팜 스테아린
+    "1511909000": ["PY"],                        # 팜 기타(RBD 포함)
+    "1514111000": ["BR", "PY"],                  # 유채 조유(저에루크산)
+    "3826000000": ["AR", "PY"],                  # 바이오디젤
 }
-CODE_LABEL = {"1201901000": "채유·탈지대두박용(.1000)", "1201902000": "사료용(.2000)",
-              "1201903000": "콩나물용(.3000)", "1201909000": "기타 식용·일반(.9000)"}
+CODE_LABEL = {"1511901000": "팜 올레인(.1000)", "1511902000": "팜 스테아린(.2000)",
+              "1511909000": "팜 기타(.9000)", "1514111000": "유채 조유(1514.11)",
+              "3826000000": "바이오디젤(3826.00)"}
 
 
 def _fetch_year(client: httpx.Client, key: str, hs: str, cc: str, year: int) -> list[dict]:
@@ -105,7 +108,8 @@ def main() -> int:
                 print(f"[완료] {hs}×{cc}: 레코드 {len(recs_all)} · 수입 {imp_wgt:,.0f}kg/${imp_dlr:,.0f} · {verdict}")
 
     today = date.today()
-    out = Path(f"reports/market/customs_absent_pairs_verification_{today}.md")
+    suffix = os.environ.get("PROBE_SUFFIX", "")
+    out = Path(f"reports/market/customs_absent_pairs_verification_{today}{suffix}.md")
     out.parent.mkdir(parents=True, exist_ok=True)
     lines = [f"# 관세청 무역 부재 쌍 교차검증 — {today} (A-215)", "",
              "조정자 수작업에서 파일이 생성되지 않은 13쌍의 API 전 기간(2010~2026) 실측.", "",
@@ -122,7 +126,7 @@ def main() -> int:
               "", "무역 부재 = 전 기간 수입·수출 실적 0 (A-086 원칙: 부재는 정보 — 파일 미생성이 정확)."]
     if found_rows:
         import csv
-        fp = Path(f"reports/market/customs_absent_pairs_found_{today}.csv")
+        fp = Path(f"reports/market/customs_absent_pairs_found_{today}{suffix}.csv")
         with open(fp, "w", newline="", encoding="utf-8") as fh:
             w = csv.DictWriter(fh, fieldnames=sorted({k for r in found_rows for k in r}))
             w.writeheader()

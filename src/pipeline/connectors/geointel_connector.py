@@ -143,7 +143,22 @@ def fetch_usgs_earthquakes() -> pd.DataFrame:
             f"SEISMIC_{region}_MAG", mag, "magnitude",
             f"[GEOINTEL:USGS] {props.get('place', region)} M{mag} — SBO 공급망 리스크",
         ))
-    print(f"[완료] USGS 지진 {len(rows)}건 (SBO 반경 내)")
+    # A-216 예방: 같은 지역에 하루 복수 지진이면 동일 코드 복수 행 → mart 값충돌.
+    # 지역별 최대 규모 1행으로 집계(리스크 지표 의미론), 건수는 note에 보존.
+    if rows:
+        best: dict[str, dict] = {}
+        counts: dict[str, int] = {}
+        for r in rows:
+            code = r["indicator_code"]
+            counts[code] = counts.get(code, 0) + 1
+            if code not in best or r["value"] > best[code]["value"]:
+                best[code] = r
+        rows = []
+        for code, r in best.items():
+            if counts[code] > 1:
+                r["note"] = f"[집계 {counts[code]}건·최대 규모] " + str(r.get("note", ""))[:300]
+            rows.append(r)
+    print(f"[완료] USGS 지진 — 지역별 최대 규모 {len(rows)}행 (SBO 반경 내)")
     return _to_df(rows)
 
 
@@ -159,18 +174,27 @@ def fetch_noaa_weather_alerts() -> pd.DataFrame:
         print(f"[경고] NOAA 기상경보 수집 실패: {e}")
         return pd.DataFrame()
 
-    rows = []
+    # A-216: 같은 날 복수 경보가 하나의 지표코드로 복수 행 발행 → mart 값충돌 하드 실패
+    # (런 #79·#80 Readiness RuntimeError — D-033 게이트 정당 차단). 일 단위 1행으로 집계:
+    # 값 = 최대 심각도(경보 지표의 의미론), 건수·이벤트 목록은 note에 보존(S-5).
+    alerts = []
     for f in features[:20]:
         props    = f.get("properties", {})
         severity = ALERT_SEVERITY.get(props.get("severity", "Unknown"), 0)
         if severity < 2:
             continue
-        rows.append(_make_row(
-            "NOAA_WEATHER_ALERT_SEVERITY", float(severity),
-            "1=Minor/2=Mod/3=Sev/4=Ext",
-            f"[GEOINTEL:NOAA] {props.get('event','경보')} — {props.get('areaDesc','중서부')}",
-        ))
-    print(f"[완료] NOAA 기상경보 {len(rows)}건 (Moderate+)")
+        alerts.append((severity, props.get("event", "경보"), props.get("areaDesc", "중서부")))
+    if not alerts:
+        print("[완료] NOAA 기상경보 0건 (Moderate+)")
+        return pd.DataFrame()
+    max_sev = max(a[0] for a in alerts)
+    events = " · ".join(f"{e}({a[:40]})" for _, e, a in alerts[:5])
+    rows = [_make_row(
+        "NOAA_WEATHER_ALERT_SEVERITY", float(max_sev),
+        "1=Minor/2=Mod/3=Sev/4=Ext",
+        f"[GEOINTEL:NOAA] 경보 {len(alerts)}건 · 최대 심각도 {max_sev} — {events}",
+    )]
+    print(f"[완료] NOAA 기상경보 {len(alerts)}건 → 일 단위 최대 심각도 1행 집계 (Moderate+)")
     return _to_df(rows)
 
 

@@ -579,8 +579,15 @@ def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today_str  = date.today().strftime("%Y%m%d")
 
-    start_year = int(os.environ.get("HISTORICAL_START_YEAR", "2017"))
-    end_year   = int(os.environ.get("HISTORICAL_END_YEAR",   str(date.today().year)))
+    end_year = int(os.environ.get("HISTORICAL_END_YEAR", str(date.today().year)))
+    # A-216(조정자 확인 8/28): 히스토리는 수동 업로드 GW xlsx가 2010~2026.07을 커버 —
+    # 일별 런이 매일 2017~전체를 재수집할 필요가 없고(잡 4~6h 지연·429의 원인),
+    # 최신분 갱신만 하면 된다. 비백필은 **당년만** 수집(A-110 climate 증분화 동일 패턴).
+    if os.environ.get("BACKFILL_MODE", "").lower() == "true":
+        start_year = int(os.environ.get("HISTORICAL_START_YEAR", "2017"))
+    else:
+        start_year = int(os.environ.get("CUSTOMS_INCREMENTAL_START_YEAR", str(end_year)))
+        print("[정보] 증분 모드 — 당년만 수집(히스토리는 수동 업로드 GW가 커버, A-216)")
 
     print(f"[정보] 관세청 수집 범위: {start_year}년 ~ {end_year}년 · HS {len(HS_CODES_ALL)}종 "
           f"(대두유 {len(HS_CODES_SOYBEAN_OIL)} · 대체재 {len(HS_CODES_SUBSTITUTES)} · "
