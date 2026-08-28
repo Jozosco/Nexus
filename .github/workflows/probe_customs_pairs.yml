@@ -16,7 +16,9 @@ jobs:
   probe:
     name: "부재 13쌍 전 기간 프로빙 (2010~2026)"
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A-222: 2차가 30분 정각 취소(저녁 data.go.kr 장애로 재시도 대기 누적) —
+    # 스크립트 시간 예산(PROBE_TIME_BUDGET_S=1500s)이 잡 종료 전 부분 저장을 보장
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:

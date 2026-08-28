@@ -76,12 +76,22 @@ def main() -> int:
     if "%" in key:
         key = unquote(key)
 
+    # A-222: 2차 프로빙이 잡 timeout-minutes 30에 30분 정각 취소(런 33169143433 —
+    # KST 20:57 저녁 발화 = data.go.kr 저녁 장애 시간대, A-161 패턴). 실패 시 재시도
+    # 대기가 누적돼 잡 강제 종료 → 커밋 스텝 skip으로 수집분 전량 유실.
+    # 스크립트 자체 시간 예산으로 잡 종료 전에 부분 결과를 저장한다.
+    budget_s = int(os.environ.get("PROBE_TIME_BUDGET_S", "1500"))
+    t0 = time.monotonic()
     results: list[dict] = []
     found_rows: list[dict] = []
+    untried: list[tuple[str, str]] = []
     errors = 0
     with httpx.Client() as client:
         for hs, ccs in ABSENT_PAIRS.items():
             for cc in ccs:
+                if time.monotonic() - t0 > budget_s:
+                    untried.append((hs, cc))
+                    continue
                 recs_all: list[dict] = []
                 pair_err = 0
                 for yr in YEARS:
@@ -124,6 +134,11 @@ def main() -> int:
     lines += ["", f"**요약**: 무역 부재 확인 {n_absent} · 데이터 존재(보완 필요) {n_found} · "
               f"호출 실패 {n_fail} / 총 {len(results)}쌍 (호출 오류 연도 {errors}건)",
               "", "무역 부재 = 전 기간 수입·수출 실적 0 (A-086 원칙: 부재는 정보 — 파일 미생성이 정확)."]
+    if untried:
+        pairs_txt = " · ".join(f"{h}×{c}" for h, c in untried)
+        lines += ["", f"⏳ **시간 예산({budget_s}s) 소진으로 미시도 {len(untried)}쌍**: {pairs_txt}",
+                  "재실행(workflow_dispatch — KST 주간 권장: data.go.kr 저녁 장애 시간대 회피, A-161)으로 잔여 확정 필요."]
+        print(f"[경고] 시간 예산 소진 — 미시도 {len(untried)}쌍(부분 결과는 저장됨)")
     if found_rows:
         import csv
         fp = Path(f"reports/market/customs_absent_pairs_found_{today}{suffix}.csv")
