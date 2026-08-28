@@ -178,8 +178,17 @@ def fetch_bok_krw_usd(start: str, end: str) -> pd.DataFrame:
         raise EnvironmentError("[오류] BOK_ECOS_API_KEY 환경변수가 설정되지 않았습니다.")
     start_fmt = start.replace("-", "")
     end_fmt   = end.replace("-", "")
-    url = f"{BOK_BASE}/{api_key}/json/kr/1/100000/731Y001/DD/{start_fmt}/{end_fmt}/0000001"
-    data = _fetch(url, {})
+    # A-220: ERROR-100(필수값 누락) 재발의 유력 원인 — 주기 코드. ECOS 공식 주기는
+    # A/S/Q/M/SM/'D'(일별)인데 구 코드가 'DD'를 사용 → 주기 후보를 순회해 실측 확정.
+    data = None
+    for cycle in ("D", "DD"):
+        url = f"{BOK_BASE}/{api_key}/json/kr/1/100000/731Y001/{cycle}/{start_fmt}/{end_fmt}/0000001"
+        data = _fetch(url, {})
+        if data and "StatisticSearch" in data:
+            print(f"[정보] BOK ECOS 주기 코드 '{cycle}' 성공")
+            break
+        rc = (data or {}).get("RESULT", {}).get("CODE", "EMPTY")
+        print(f"[정보] BOK ECOS 주기 '{cycle}' 실패({rc}) — 다음 후보 시도")
 
     # BOK ECOS 오류 응답: 정상이면 "StatisticSearch" 키, 오류이면 "RESULT" 키
     if not data or "RESULT" in data:
@@ -188,7 +197,8 @@ def fetch_bok_krw_usd(start: str, end: str) -> pd.DataFrame:
         msg  = result_info.get("MESSAGE", "응답 없음")
         print(
             f"[경고] BOK ECOS API 오류 — 코드: {code}, 메시지: {msg}. "
-            f"BOK_ECOS_API_KEY 또는 시리즈 코드(731Y001/0000001) 확인 필요."
+            f"주기 D/DD 모두 실패 — 원/달러는 FRED DEXKOUS로 이중화돼 있어 비치명(A-129). "
+            f"잔여 확인: ecos.bok.or.kr 키 상태·731Y001 통계표 개편 여부."
         )
         return pd.DataFrame()
 

@@ -205,8 +205,11 @@ def fetch_gdelt_sbo_events() -> pd.DataFrame:
     """
     import time
 
-    # A-142: GDELT 무료 API는 초당/분당 레이트리밋이 엄격 — 연속 쿼리 시 429 발생.
-    #        쿼리 사이 6초 대기 + 429 수신 시 30초 대기 후 1회 재시도로 해소.
+    # A-142: GDELT 무료 API는 초당/분당 레이트리밋이 엄격 — 쿼리 간 6초 + 429 재시도.
+    # A-220: 런 #80·#81에서 5쿼리 중 4개가 'SSL handshake timed out'으로 누락 —
+    #   구 코드는 timeout=20 + 예외 시 즉시 break(타임아웃 무재시도). GDELT는 부하
+    #   시간대에 응답이 느린 것으로 실측 → timeout 60s + 타임아웃·전송오류에도
+    #   최대 3회 재시도(10→20s 백오프, 매 시도 새 커넥션).
     rows = []
     for i, query in enumerate(GDELT_QUERIES):
         if i > 0:
@@ -215,12 +218,14 @@ def fetch_gdelt_sbo_events() -> pd.DataFrame:
             "query": query, "mode": "artlist",
             "maxrecords": "5", "format": "json", "timespan": "1d",
         }
-        for attempt in range(2):
+        for attempt in range(3):
             try:
-                r = httpx.get(GDELT_URL, params=params, timeout=20)
+                # 매 시도 새 클라이언트 — SSL 핸드셰이크 타임아웃 시 커넥션 재사용 방지
+                with httpx.Client(timeout=httpx.Timeout(60, connect=20)) as _c:
+                    r = _c.get(GDELT_URL, params=params)
                 if r.status_code == 429:
-                    if attempt == 0:
-                        print(f"[정보] GDELT 429 ('{query[:30]}') — 30초 대기 후 1회 재시도")
+                    if attempt < 2:
+                        print(f"[정보] GDELT 429 ('{query[:30]}') — 30초 대기 후 재시도")
                         time.sleep(30)
                         continue
                     print(f"[경고] GDELT '{query[:30]}' 재시도 후에도 429 — 건너뜀")
@@ -234,9 +239,14 @@ def fetch_gdelt_sbo_events() -> pd.DataFrame:
                     ))
                 break
             except (httpx.HTTPStatusError, httpx.RequestError, ValueError) as e:
-                print(f"[경고] GDELT '{query[:30]}' 실패: {e}")
+                if attempt < 2:
+                    wait = 10 * (attempt + 1)
+                    print(f"[정보] GDELT '{query[:30]}' 오류({type(e).__name__}) — {wait}s 후 재시도")
+                    time.sleep(wait)
+                    continue
+                print(f"[경고] GDELT '{query[:30]}' 3회 실패: {e}")
                 break
-    print(f"[완료] GDELT 이벤트 {len(rows)}개 쿼리")
+    print(f"[완료] GDELT 이벤트 {len(rows)}개 쿼리 (대상 {len(GDELT_QUERIES)}개)")
     return _to_df(rows)
 
 
