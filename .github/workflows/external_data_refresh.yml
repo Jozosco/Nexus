@@ -769,7 +769,8 @@ jobs:
   g1-analysis:
     name: "C-03 | G1 Variable Importance Analysis (P1-01~04 통합)"
     runs-on: ubuntu-latest
-    needs: [model-readiness]
+    # A-227: c08 output을 일별 브리프 E1 스트립에 주입(체인상 선행 잡이라 대기 비용 없음)
+    needs: [model-readiness, c08-dq-validation]
     if: "!cancelled() && needs.model-readiness.result == 'success'"
     steps:
       - uses: actions/checkout@v4
@@ -867,6 +868,7 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           G1_PUBLISH_MODE: ${{ steps.pubmode.outputs.mode }}
+          E1_GATE_STATUS: ${{ needs.c08-dq-validation.outputs.overall_status }}
           # 실행별 격리 디렉터리 — 과거 산출물 재발행 차단 (GPT 교차검증 정정)
           G1_REPORT_DIR: reports/pipeline/run_${{ github.run_id }}
         run: python src/forecasting/variable_importance_g1.py 7
@@ -905,6 +907,7 @@ jobs:
         with:
           name: g1-variable-importance-${{ github.run_id }}
           path: |
+            reports/pipeline/run_${{ github.run_id }}/g1_daily_brief_*.html
             reports/pipeline/run_${{ github.run_id }}/g1_variable_importance_*.html
             reports/pipeline/run_${{ github.run_id }}/g1_variable_importance_*.pdf
             reports/pipeline/run_${{ github.run_id }}/g1_variable_importance_*.md

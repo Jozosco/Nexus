@@ -2134,10 +2134,26 @@ def run(days: int = 7) -> None:
         publish_mode = "full"
     print(f"[C-03] 발행 모드: {publish_mode}")
 
+    # ── 일별 브리프 (A-227 목업 v2 실통합 — 조정자 승인 2026-08-28) ──────────────
+    # 전 모드에서 발행: alert/weekly = 일별 산출물의 본체, full/monthly = 열람 보조.
+    # 실패는 비치명(기존 보고서 경로를 죽이지 않음) — 원인은 로그로 노출.
+    try:
+        from src.reporting.daily_brief import build_daily_brief
+        brief_html = build_daily_brief(
+            frames, importance_df, alerts, status_df, run_ts, run_id, target_label,
+            n_features=wide.shape[1] - 1)
+        brief_path = f"{REPORT_DIR}/g1_daily_brief_{tag}.html"
+        with open(brief_path, "w", encoding="utf-8") as fh:
+            fh.write(brief_html)
+        print(f"[완료] G1 일별 브리프 → {brief_path}")
+    except Exception as e:                                    # noqa: BLE001 — 비치명
+        print(f"[경고] 일별 브리프 생성 실패(비치명 — 기존 보고서 경로 계속): "
+              f"{type(e).__name__}: {e}")
+
     if publish_mode == "alert":
         breach = [a for a in alerts if "🚨" in a.get("상태", "")]
         if not breach:
-            print("[C-03] 경보판 — 구조적 단절 임계값 초과 없음. 보고서 미발행(이상 없음).")
+            print("[C-03] 경보판 — 임계값 초과 없음. 일별 브리프(서명된 무소식)로 발행 완료.")
             return
         alert_lines = [
             f"# G1 일별 경보판 — {run_ts[:10]}",

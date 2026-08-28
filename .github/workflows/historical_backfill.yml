@@ -1074,6 +1074,7 @@ jobs:
         with:
           name: g1-backfill-report-${{ github.run_id }}
           path: |
+            reports/pipeline/g1_daily_brief_*.html
             reports/pipeline/g1_variable_importance_*.html
             reports/pipeline/g1_variable_importance_*.pdf
           retention-days: 90
