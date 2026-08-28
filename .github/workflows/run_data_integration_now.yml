@@ -1,0 +1,27 @@
+# Data Integration 수동 발사 런처 (조정자 승인 2026-08-28 · A-218)
+# 세션 통합 토큰은 dispatch 403(A-146) — Actions 내부 GITHUB_TOKEN은 workflow_dispatch
+# 가능(재귀 방지 규칙의 명시적 예외). 이 파일 push 1회로 Data Integration을 발사한다.
+name: Run Data Integration Now
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/run_data_integration_now.yml"]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch:
+    name: "Data Integration dispatch (connector=all)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch external_data_refresh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST \
+            "/repos/${{ github.repository }}/actions/workflows/external_data_refresh.yml/dispatches" \
+            -f ref=main -f "inputs[connector]=all"
+          echo "## Data Integration 발사 완료 (connector=all)" >> "$GITHUB_STEP_SUMMARY"
