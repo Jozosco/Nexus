@@ -64,6 +64,22 @@ RSS_SOURCES = {
     # 크라이미트폴 — 한국 기후·에너지 매체 (SAF·바이오연료 국문 — 부록 8차 원문 소스)
     "RSS_CLIMATEPOL": ["https://www.climatepol.com/rss/allArticle.xml",
                        "https://www.climatepol.com/rss/S1N2.xml"],
+    # ── 2026-08-28 조정자 추가 지시 4계열 (egress v2.5) — WordPress /feed 관행,
+    #    실피드 URL은 샌드박스 차단으로 미검증: 첫 Actions 런 로그로 확정(비치명 설계) ──
+    # AgMarket.Net — 조간·마감 시장 분석
+    "RSS_AGMARKET": ["https://www.agmarket.net/feed/",
+                     "https://www.agmarket.net/category/daily/pm-report/feed/"],
+    # Grain Central(호주) — 무역·작황·기상
+    "RSS_GRAINCENTRAL": ["https://www.graincentral.com/feed/",
+                         "https://www.graincentral.com/trade/feed/"],
+    # Total Farm Marketing — TFM 360° 곡물 리포트 (시세 페이지는 yfinance·TE로 기수집)
+    "RSS_TFM": ["https://www.totalfarmmarketing.com/feed/",
+                "https://www.totalfarmmarketing.com/tfm-reports/tfm-360-grain/feed/"],
+    # UkrAgroConsult — 흑해 유지작물·곡물·물류 (해바라기유 축 — D-049 정합)
+    "RSS_UKRAGRO": ["https://ukragroconsult.com/en/feed/",
+                    "https://ukragroconsult.com/feed/"],
+    # S&P Global Commodity Insights: 공개 RSS 부재 추정 — 자동 수집 미등재(실패 소음 방지).
+    # 부록 인사이트는 Perplexity 프록시 경유 요약으로 커버 (egress에는 열람용 등재)
 }
 # SBO·유지 관련 기사만 통과 (제목+요약 매칭 — 영문 소문자·국문 원형)
 _RSS_KEYWORDS = (

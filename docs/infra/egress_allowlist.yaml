@@ -24,8 +24,8 @@
 #        폴백(policyuncertainty.com)만 있었음. 미신청 시 G1 핵심 변수 GPR 전면 차단
 #     ③ apis.datos.gob.ar 누락 — INDEC 아르헨 생산통계
 #   각 항목에 `impact_if_blocked`(차단 시 영향) 추가 — 방화벽 심사자가 필요성을 판단하는 근거.
-version: '2.4'                   # v2.4: 유지류 확충 계획 선등재 4종(MPOB·Eurostat·JRC·CFTC) — 누적 51건
-updated: 2026-08-25
+version: '2.5'                   # v2.5: 조정자 일별 소스 5계열(S&P Global·AgMarket·GrainCentral·TFM·UkrAgroConsult) — 누적 56건
+updated: 2026-08-28
 owner: C-04
 submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수집 중단 방지)
 
@@ -33,16 +33,16 @@ submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수
 # §1 제출 요약 — 신청서 상단에 그대로 기재
 # ════════════════════════════════════════════════════════════════════════════
 submission:
-  total_requested: 51          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.4: 유지류 확충 4종 선등재
+  total_requested: 56          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.5: 일별 소스 5계열 추가
   by_criticality:
     critical: 6                # 차단 시 파이프라인·모델 전면 중단
     high: 9                    # 차단 시 핵심 변수 결손
-    medium: 16                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.4: MPOB·CFTC 추가
+    medium: 21                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.4: MPOB·CFTC 추가
     low: 20                    # 폴백·부가 기능 — v2.4: Eurostat·JRC 추가
   exceptions_requiring_approval: 3   # §2 참조 (평문 HTTP 1 · WebSocket 1 · 조건부 신규 1)
   excluded: 1                  # cds.climate.copernicus.eu — 미사용 확정, 신청 불요
   protocol_note: >
-    51건 중 49건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
+    56건 중 54건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
     프로토콜·포트가 표준과 다른 항목만 별도 승인이 필요하며, 나머지는 일괄 처리 가능하다.
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -400,6 +400,43 @@ hosts:
 # ════════════════════════════════════════════════════════════════════════════
 # §4 신청 제외 — 미사용 확정
 # ════════════════════════════════════════════════════════════════════════════
+  # ── v2.5 (2026-08-28): 조정자 지시 일별 소스 5계열 추가 ──
+  - host: www.spglobal.com
+    port: 443
+    criticality: medium
+    purpose: S&P Global Commodity Insights 최신 뉴스 — 에너지·바이오연료·유지 시황(전문 기관 부록 소스)
+    connector: scripts/daily_unstructured_digest.py (열람·요약 대상 — RSS 미제공 추정으로 자동 수집은 미등재)
+    impact_if_blocked: 전문 기관 인사이트 부록의 S&P 축 결손 — 다이제스트는 비치명 계속
+    note: 2026-08-28 조정자 지시 — v2.5 신규. RSS 부재 시 Perplexity 프록시 경유 요약으로 커버
+  - host: www.agmarket.net
+    port: 443
+    criticality: medium
+    purpose: AgMarket.Net 조간·마감 시장 분석(Early Morning/PM Report) RSS 일별 수집
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
+    impact_if_blocked: 전문 매체 신호(RSS_AGMARKET) 결손 — 비치명
+    note: 2026-08-28 조정자 지시 — v2.5 신규
+  - host: www.graincentral.com
+    port: 443
+    criticality: medium
+    purpose: Grain Central(호주) 무역·작황·기상 뉴스 RSS 일별 수집
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
+    impact_if_blocked: 전문 매체 신호(RSS_GRAINCENTRAL) 결손 — 비치명
+    note: 2026-08-28 조정자 지시 — v2.5 신규
+  - host: www.totalfarmmarketing.com
+    port: 443
+    criticality: medium
+    purpose: Total Farm Marketing — TFM 360° 곡물 리포트·시세 페이지(ZS·ZM·ZC·ZW)
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
+    impact_if_blocked: 전문 매체 신호(RSS_TFM) 결손 — 비치명. 시세 자체는 yfinance·TE로 기수집(중복 아님 — 리포트가 대상)
+    note: 2026-08-28 조정자 지시 — v2.5 신규
+  - host: ukragroconsult.com
+    port: 443
+    criticality: medium
+    purpose: UkrAgroConsult — 흑해 유지작물·곡물·물류 뉴스 RSS 일별 수집(해바라기유 축 — D-049 정합)
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
+    impact_if_blocked: 흑해 축 전문 신호(RSS_UKRAGRO) 결손 — 비치명
+    note: 2026-08-28 조정자 지시 — v2.5 신규
+
 excluded:
   - host: cds.climate.copernicus.eu
     reason: >

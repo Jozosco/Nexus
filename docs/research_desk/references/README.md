@@ -76,3 +76,5 @@
 | `ACK_2024_tree_based_raw_material_price_pipeline_KR.pdf` | 이은지·유헌창, ACK 2024 (고려대) | 니켈 XGBoost 자동화 파이프라인 — 배경(자동화 구성은 기보유가 상회). ⚠️MAPE 0.2%는 기준선 비교·누수 방지 서술 부재 — 수치 인용 금지 |
 | `Sustainability_2024_GCN_supply_chain_demand_forecasting.pdf` | Niu et al., Sustainability 16:9608, 2024 (쓰촨대) | 기업 그래프 수요예측 — Phase B 배경(요구 데이터 부존재·SC-RIHN 동일 판정) |
 | `FAPM_2025_physics_informed_GNN_supply_chain_disruption.pdf` | Petrova & Hughes, Frontiers APM 2025 | ⚠️**인용 주의**(저널 신뢰도 검증 불가) — '도메인 제약 주입' 원리는 as-of 게이트·물리 범위 가드로 기구현. 이 원리 확인용으로만 보관 |
+| `ApplSci_2025_VMD_SSA_LSTM_construction_material_price.pdf` | Xiong et al., Appl. Sci. 15:2005, 2025 | 2026-08-28 | ⚠️**M-010 누수 구조 실증** — 전체 시계열 VMD 일괄 분해 후 70/30 분할(원문 p.9 Step2 확인) = 시험 구간 정보의 학습 유입. VMD 재도입 제안 반박 근거 문헌. SSA 이득 −2.68%로 미미 — 채용 없음 |
+| `EDAI_2025_GAT_TCN_supply_chain_demand.pdf` | Li, EDAI 2025(학회 단문) | 2026-08-28 | GAT+TCN+적응형 게이트 융합 — 데이터 부존재로 Phase B 배경. 유일 개념: 교란 시 관계 정보·평시 시간 패턴 가중 전환 = G3 레짐별 가중 발상과 동형(개념 참조만·수치 인용 금지) |
