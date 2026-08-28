@@ -66,3 +66,13 @@
 | `SCRIHN_2025_supply_chain_resilience_hypergraph_NN.pdf` | Shen et al.(Jilin·U.Tokyo·PolyU), AAAI 계열 2025 | 공급망 복원력 추론(SC-RIHN) — 하이퍼그래프+재고 궤적으로 복원력 이진 분류, GNN 대비 우위. ⚠️요구 데이터(기업-제품 재고 궤적·하이퍼그래프 토폴로지)가 Nexus에 부존재·합성 벤치마크 단계 — **Phase B 배경 참고**(D-025 Neo4j 보류와 동일 선행조건 논리). 모델 이식 부적합 |
 | `JEA_2026_who_sits_where_network_theory_global_production.pdf` | Salamanca, J. Economic Analysis 5(1):133-160, 2026(케임브리지) | DAG 일반균형 이론 — 가격이 생산 아키텍처에서 재귀 형성·업스트림 충격의 병목 전파·국가의 가치사슬 위치 내생 결정. **CE 인과체인·D-050 채널 관점의 이론 배경**(실증 모델 아님 — 직접 이식 없음) |
 | `BIOconf_2026_powdered_honey_ELPSM_ensemble.pdf` | Saputra et al., BIO Web Conf. 218, 2026(브라위자야대) | 분말 꿀 제형 최적화 XGB/RF/SVM 앙상블 — **가격 예측 무관(식품 공정 ML)**. ML_2025_WCO와 동류 정직 분류: M-009 인용 금지 |
+
+### 예측 방법론 선례 5건 (2026-08-28 · 조정자 공유 — 부록 12차, 해시 중복 0)
+
+| 파일 | 출처 | 연결 |
+|---|---|---|
+| `TGL_2023_temporal_edge_regression_UN_agriculture_trade.pdf` | Jiang·Zhang·Poursafaei·Huang (Cambridge·McGill·Mila) | ★**도메인 직접 선례** — UN 농산물 무역액 엣지 회귀: **Persistence(마지막 관측값)가 모든 GNN을 이김**(MSE 38배·분류 61% vs 32%) = 기준선 독트린(C-014 §4)의 도메인 실증·GNN 보류 3중 정합. log 정규화·비중 관점(D-050 접점). → forecasting_precedents_notes |
+| `Mathematics_2025_GAS_ATT_LSTM_nonstationary_financial.pdf` | Astudillo et al., Mathematics 13:2300, 2025 | G2 참고 — GAS 변동성→피처 concat→attention→(Bi)LSTM. **채용 아이디어: EGARCH-X σ̂를 Quantile LGBM 피처로 주입**(저비용). GAS-t는 Challenger 목록(구현 비용 유의). 7일 창에선 단순 모델 우위 = M-010 정합. 상품 미검증 |
+| `ACK_2024_tree_based_raw_material_price_pipeline_KR.pdf` | 이은지·유헌창, ACK 2024 (고려대) | 니켈 XGBoost 자동화 파이프라인 — 배경(자동화 구성은 기보유가 상회). ⚠️MAPE 0.2%는 기준선 비교·누수 방지 서술 부재 — 수치 인용 금지 |
+| `Sustainability_2024_GCN_supply_chain_demand_forecasting.pdf` | Niu et al., Sustainability 16:9608, 2024 (쓰촨대) | 기업 그래프 수요예측 — Phase B 배경(요구 데이터 부존재·SC-RIHN 동일 판정) |
+| `FAPM_2025_physics_informed_GNN_supply_chain_disruption.pdf` | Petrova & Hughes, Frontiers APM 2025 | ⚠️**인용 주의**(저널 신뢰도 검증 불가) — '도메인 제약 주입' 원리는 as-of 게이트·물리 범위 가드로 기구현. 이 원리 확인용으로만 보관 |
