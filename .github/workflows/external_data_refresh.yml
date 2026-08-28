@@ -18,6 +18,9 @@ on:
   schedule:
     # 일~목 20:30 UTC = KST 월~금 05:30, 시장 개장 45분 전
     - cron: "30 20 * * 0-4"
+    # A-223 임시(8/31 이후 제거): G1 8/31 리허설 — 토·일 KST 05:30 주말 런.
+    # 런 #81이 관세청 6h 소진으로 체인 미완주 → 주말 2회가 월요일 전 마지막 검증 창
+    - cron: "30 20 * * 5,6"
   workflow_dispatch:
     # 스케줄 실행: 모든 커넥터 자동 실행 (connector 입력값 무시 — github.event_name == 'schedule' 조건 적용)
     # 수동 실행: connector 선택 가능 (기본값: all). 특정 커넥터만 재실행할 때 사용.
@@ -309,6 +312,7 @@ jobs:
   customs-import-stats:
     name: "1.1.2+ | Korea Customs HS 1507 Import Stats (data.go.kr · UN Comtrade fallback)"
     runs-on: ubuntu-latest
+    timeout-minutes: 45   # A-223: 예산(1800s)+여유 — 6h 러너 소진 재발 방지
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs' || github.event_name == 'schedule' }}
     steps:
       # A-136: API 커넥터 잡 — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
@@ -329,6 +333,9 @@ jobs:
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
           UN_COMTRADE_API_KEY:    ${{ secrets.UN_COMTRADE_API_KEY }}
+          # A-223: 일별 잡에 예산 미설정(기본 0=무제한) → 런 #81에서 저녁 data.go.kr
+          # 장애로 6h 소진·런 전체 취소. 30분 예산 — 초과 시 수집분 저장 후 정상 종료
+          CUSTOMS_TIME_BUDGET_S: "1800"
         run: python src/pipeline/connectors/customs_connector.py
       - name: Upload raw output
         uses: actions/upload-artifact@v4
