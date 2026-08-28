@@ -1021,6 +1021,10 @@ causal_edges:
     ref: docs/research_desk/2026-08/domain_mechanisms_sbo_2026_08_13.md
     locator: '§3'
     note: 수에즈 우회로 유효 선복 감소 — 2023-12~2024 운임 재급등 실증
+  - source_type: research_doc
+    ref: docs/research_desk/references/Adaptation_2025_grain_traders_geopolitical_shocks.pdf
+    locator: 'p.557'
+    note: '임펄스 참고치 — 수에즈 회피·아프리카 우회 시 운송 +12~15일·운임률 +30~40%(2023말~2024 실측 서술). ⚠️곡물 벌커 기준 — 유지 탱커(BCAA) 수치 아님·지역 학술지 출처 등급 병기 (A-219)'
 - edge_id: CE-014
   label_ko: 우크라이나 흑해 회랑 붕괴 → 해바라기유 수출 차단 → 식물성유지 공급 부족 → SBO 대체 수요 급증
   category: 지정학·무역
@@ -1042,6 +1046,10 @@ causal_edges:
     ref: src/semantic/causal_chains.md
     locator: 지정학·무역
     note: BLACKSEA_RISK_SENTIMENT 지표는 metrics.yaml 미등록(잔여 갭) — P1-02 검증 대기
+  - source_type: research_doc
+    ref: docs/research_desk/references/Adaptation_2025_grain_traders_geopolitical_shocks.pdf
+    locator: 'p.556·558'
+    note: '회랑 상태 전이의 정량 스텝(2022~25 실측 서술) — open 월 500~600만t → blocked 월 20~30만t(−95%) → 대체 육로 상한 월 200~250만t(+80~120$/t) → 적응 후 회복 400~450만t(75~80%). ★현물-선물 스프레드 100~150$/t 확대·하이브리드 가격 공식(선물+물류+전쟁리스크 층) = D-041 도착가 층 분해와 동형 — 지정학 스트레스는 잔차층을 팽창시킨다는 해석 근거. ⚠️곡물 기준·지역 학술지 (A-219)'
 # — 시장 구조 —
 - edge_id: CE-015
   label_ko: CPO-SBO 스프레드 확대(>$175/MT) → 팜유 대체 → SBO 수요 감소 → 하락 압력

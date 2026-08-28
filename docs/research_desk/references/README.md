@@ -49,9 +49,9 @@
 ⚠️ 위 3건(P3·204·209·217·backload)의 'Revised RVO' 수치는 2025-11 시점 단계 —
 **최종 인용 기준은 RIN 갤런(16:66·A-205)**. 단계 혼용 금지.
 
-| `Transparency_2024_Brazil_soy_supply_chain_accountability.pdf` | 학술(브라질 대두 공급망 투명성·기업 책무) | 2026-08-28 | 시장구조 브리프(D-047) 보강 — 기업 책무·추적가능성 축. Cargill 연차·COFCO 비교 논문과 3각 대조 가능 |
-| `Adaptation_2025_grain_traders_geopolitical_shocks.pdf` | 학술(초국적 곡물 트레이더의 지정학 충격 적응 — 금융·물류 인프라·에너지) | 2026-08-28 | ★**차별화 축 ③(지정학) 직결** — ABCD의 충격 적응 전략 유형화. CE 지정학 엣지 해석·D-044 거래구조 보강 |
-| `China_2024_financialized_soybeans_food_regime.pdf` | 학술(중국 대두 금융화·신중상주의 서사 비판) | 2026-08-28 | COFCO·중국 수입 구조의 학술 맥락 — 부록 9차 '중국 순수출 전환'의 배경 층위. 배경 참고 |
+| `Transparency_2021_Brazil_soy_supply_chain_accountability.pdf` | Medina & Thomé, Logistics 2021(파일명 2024 오기 정정) | 2026-08-28 | ★전문 판독(부록 10차) — 외국 다국적 65.4% 통제·브라질 트레이딩 점유 2020(Cargill 11.4·Bunge 9.4·ADM 7.8·LDC 7.5·COFCO 3.8%) = D-047 브라질 축 정량 교차검증. 이행 지표(DCF 등)는 부재 — Cargill 연차와 축이 다름(점유율 vs 이행) |
+| `Adaptation_2025_grain_traders_geopolitical_shocks.pdf` | Tatarenko & Nabok, Herald of Khmelnytskyi NU 2025-12(우크라이나·2022~25 분석) | 2026-08-28 | ★전문 판독(부록 10차) — **CE-013·CE-014 evidence 등재**: 흑해 회랑 정량 스텝(−95%→회복 75~80%)·수에즈 우회 +12~15일/+30~40%·현물-선물 스프레드 100~150$/t·하이브리드 가격 공식 = **D-041 층 분해와 동형**. ⚠️곡물 기준·지역 학술지·호르무즈 미취급 |
+| `China_2024_financialized_soybeans_food_regime.pdf` | Fares, J. Agrarian Change 2023(SOAS·데이터 2009~21) | 2026-08-28 | ★전문 판독(부록 10차) — COFCO 금융화 실증(비중국행 41%·해외 압착 1/3·CIL 주주 구조). **P1-05/06 해석 규율**: 중국 구매 신호를 '국가 매집'으로 단정 금지(국가 수요 vs 상업 채널 분리). COFCO 폴더 자본 축 원천 |
 
 보관 원칙: 조정자 선별 자료의 원문은 요약과 별도로 보존(근거 재검증 가능성 — S-5·EvidenceSpan 정합).
 분류 원칙: 프로젝트 목적(가격·조달)과의 관련성을 정직하게 표기한다 — 관련성이 낮은 자료를
