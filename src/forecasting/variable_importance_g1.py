@@ -2137,6 +2137,13 @@ def run(days: int = 7) -> None:
     # ── 일별 브리프 (A-227 목업 v2 실통합 — 조정자 승인 2026-08-28) ──────────────
     # 전 모드에서 발행: alert/weekly = 일별 산출물의 본체, full/monthly = 열람 보조.
     # 실패는 비치명(기존 보고서 경로를 죽이지 않음) — 원인은 로그로 노출.
+    # A-234: 스크립트 직접 실행(python src/...py) 시 sys.path에 repo 루트가 없어
+    # 'No module named src'로 브리프가 조용히 강등되던 결함(런 #82 실증) —
+    # 파일 위치 기준 루트를 보정해 실행 방식과 무관하게 import 가능하게 함.
+    import sys as _sys
+    _repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if _repo_root not in _sys.path:
+        _sys.path.insert(0, _repo_root)
     try:
         from src.reporting.daily_brief import build_daily_brief
         brief_html = build_daily_brief(
