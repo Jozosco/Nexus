@@ -21,11 +21,14 @@
 | **Human Gate** | AI recommends; procurement team approves. No autonomous execution. |
 
 ### Goal Labels (used throughout all project files)
+> 2026-08-28 조정자 최종 재정립 반영 — 과거 연도 데이터의 하이브리드 분석(정량+정성)
+> 위에서 단계별 목표를 구축하는 구매 의사결정 지원 솔루션.
+
 | ID | Goal | Primary Output |
 |---|---|---|
-| **G1** | Identify and rank price-driving variables | Feature importance rankings + automated risk alerts |
-| **G2** | Forecast futures price volatility band in real time | 1·5·20·60일 확률 가격밴드 (P10/P50/P90 + 상승확률) |
-| **G3** | Generate scenario-based Bear/Bull/Hold signals | Regime label + P&L impact estimate per scenario |
+| **G1** | 가격 동인 변수 식별·순위 + **과거 유사국면 실측 참조** | 변수 중요도·자동 경보 + 특정 변수가 현재와 유사했던 과거 연도들의 이후 1주/1개월/3개월 **수급·가격 실측 분포**(예측 주장 아님 — A-191) → 주의 변수 통지 |
+| **G2** | 퀀트 로직 기반 확률 가격밴드 | 1·5·20·60거래일(≈1일·1주·1개월·3개월) 확률 가격밴드 (P10/P50/P90 + 상승확률) |
+| **G3** | 구매 시점·물량 **3-시뮬레이션** | ①현시점 구매 ②사전 그리드 대안 시점 ③분할 구매 — 각각 시장가 기준 근사 손익(**per-MT regret** · D-021: 회사 P&L 아님·물량은 런타임 입력) + 레짐 확률 |
 
 ---
 
@@ -49,17 +52,24 @@ An F&B manufacturer importing soybean oil faces three structural procurement fai
 
 > Goal IDs G1/G2/G3 are used as shorthand throughout CLAUDE.md, Skills.md, and all code modules. Always resolve ambiguous references against §QR.
 
-### G1 — Variable Importance & Risk Alerts
+### G1 — Variable Importance & Risk Alerts + 과거 유사국면 참조
 Identify which macro/micro factors most influence soybean oil prices and build automated alert triggers when those factors breach thresholds.
+**유사국면 참조(2026-08-28 재정립)**: 실무자는 모든 변수를 상시 주시할 수 없으므로,
+특정 변수의 상태가 현재와 유사했던 과거 연도들에서 이후 수급·가격이 어떻게 변했는지를
+실측 분포로 제공해 참조하게 한다 — 과거 관측의 요약이며 전망 주장이 아니다(A-191).
 
 ### G2 — Price Band Forecasting `[M]`
 1·5·20·60 거래일 지평의 **확률 가격밴드**를 산출한다. 출력은 점추정이 아니라
 P10/P25/P50/P75/P90 · 50/80/95% 구간 · 상승확률 · 임계가격 초과확률이며,
 구간의 실측 coverage를 레짐별로 함께 보고한다.
 
-### G3 — Bear/Bull/Hold Regime Signal `[M]`
+### G3 — Bear/Bull/Hold Regime Signal + 3-시뮬레이션 `[M]`
 시장을 Bear/Neutral/Bull로 분류하되 **하드 라벨이 아닌 레짐 확률**로 출력하고,
 G2 예측분포와 결합해 Buy/Hold를 제안한다.
+**3-시뮬레이션(2026-08-28 재정립)**: 실무자의 "내 구매 시점·물량이 적절한가" 질문에
+①현시점 구매 ②사전 고정 그리드 대안 시점(n주 전/후) ③분할 구매 — 3가지 시나리오의
+근사 손익 분포(per-MT regret)로 답한다. G2 분위수 모델 가동 전에는 과거 실측 백테스트
+서술까지만 제공한다(A-191).
 > **D-021 경계**: 내부 구매량·재고·마진이 없으므로 실제 회사 P&L 최적화를 주장하지 않는다.
 > 공개 시장가 기준 **market-cost proxy와 regret**로 대체한다.
 

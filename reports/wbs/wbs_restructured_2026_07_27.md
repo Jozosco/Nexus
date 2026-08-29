@@ -38,7 +38,7 @@
 | 시각화 | G1 대시보드·인과체인 리포트 |
 | 아키텍처 | (준비) Azure ML 이관 설계 착수 |
 
-## Phase 3 — G2 가격 밴드  *(Preview, 2026-08-31)*
+## Phase 3 — G2 가격 밴드  *(Preview, 2026-09-10 — 구 8-31 표기는 오기, 정본: docs/operations/g1_g2_preview_release_gates.md)*
 | 카테고리 | 작업 |
 |---|---|
 | 분석 | VMD·GARCH·LSTM/TFT·CQR **개념검증(Preview)** 만 |
