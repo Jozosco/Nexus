@@ -17,6 +17,8 @@
 ## G1 — Variable Importance & Risk Alert System
 
 **Objective**: Identify which macro/micro factors most drive soybean oil price movements.
+**+ 유사국면 참조(D-051)**: 변수 상태가 현재와 유사했던 과거 연도들의 이후 실측 분포를
+참조로 제공한다(`src/forecasting/analogue_g1.py` — 과거 관측 요약까지만, A-191).
 
 ### Method Stack (2026-08-12 조사 패키지 반영)
 | Step | Method | Library | Output |
@@ -117,6 +119,8 @@ GRU/LSTM (`torch`) · N-BEATSx/N-HiTS · TFT (`pytorch-forecasting`) · PatchTST
 ## G3 — Bear/Bull/Hold Regime Signal
 
 **Objective**: Classify current market regime and translate into Buy / Hold procurement recommendation.
+**+ 3-시뮬레이션(D-051)**: ①현시점 구매 ②사전 그리드 대안 시점 ③분할 구매의 근사 손익
+(per-MT regret — D-021). G2 분위수 모델 전에는 과거 실측 백테스트 서술까지만(A-191).
 **Output contract**: Regime label (Bear/Bull/Neutral) · Confidence · P&L impact estimate · Recommended action
 
 ### Method Stack `[M]`
