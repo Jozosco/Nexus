@@ -225,6 +225,9 @@ def load_customs_sbo_cif() -> tuple[pd.Series, pd.DataFrame, str]:
     bulk = allc[(allc["imp_kg"] >= MIN_BULK_KG) & (allc["imp_usd"] > 0)].copy()
     if bulk.empty:
         raise RuntimeError("[오류] 벌크 화물(≥100 MT) 관측 0건 — 원천 데이터를 확인하세요.")
+    # 원천별 일자 관행(월초·월중·연초)이 달라도 CBOT 월평균(MS)과 정렬되도록
+    # 월초로 정규화한다 — 미정규화 시 차감 조인이 조용히 전부 결측이 된다.
+    bulk["price_date"] = bulk["price_date"].values.astype("datetime64[M]")
     monthly = bulk.groupby("price_date")[["imp_usd", "imp_kg"]].sum()
     monthly_cif = (monthly["imp_usd"] / monthly["imp_kg"] * 1000).rename("cif_usd_mt")
     by_country = (bulk.groupby(["country", "price_date"])[["imp_usd", "imp_kg"]].sum()
@@ -294,7 +297,12 @@ def build_landed_band() -> LandedCostResult:
     cbot_monthly = cbot_daily.resample("MS").mean()
     basis_all = (monthly_cif - cbot_monthly).dropna()
     if basis_all.empty:
-        raise RuntimeError("[오류] CIF·CBOT 공통 월 0건 — 내재층 산출 불가.")
+        raise RuntimeError(
+            "[오류] CIF·CBOT 공통 월 0건 — 내재층 산출 불가. "
+            f"CIF {len(monthly_cif)}개월({monthly_cif.index.min().date()}~"
+            f"{monthly_cif.index.max().date()} · {customs_src}) vs "
+            f"CBOT {len(cbot_monthly)}개월({cbot_monthly.index.min().date()}~"
+            f"{cbot_monthly.index.max().date()})")
     basis_window = basis_all.tail(BASIS_WINDOW_MONTHS)
     basis = Layer(
         p10=float(basis_window.quantile(0.10)), p50=float(basis_window.quantile(0.50)),

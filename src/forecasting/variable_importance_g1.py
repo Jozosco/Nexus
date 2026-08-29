@@ -456,7 +456,12 @@ def _load_g1_feature_mart(
     if not predictor_columns:
         raise RuntimeError("[오류] G1에 사용할 비오염·시점 정합 피처가 없습니다.")
 
-    analysis = mart[[target_label] + predictor_columns].copy()
+    # 유사국면(analogue)이 1·5·20·60 지평의 실측 전방수익률을 모두 쓰므로
+    # target_ret* 전 컬럼을 보존한다 — 예측변수 선택 경로는 target_ 접두사를
+    # 일괄 제외해 누수를 차단한다(D-033: 타깃은 target_ 접두사 단독).
+    extra_targets = [c for c in mart.columns
+                     if c.startswith("target_ret") and c != target_label]
+    analysis = mart[[target_label] + extra_targets + predictor_columns].copy()
     analysis = analysis.rename(
         columns={column: column.removeprefix("feat_") for column in predictor_columns}
     )
@@ -671,7 +676,8 @@ def _lasso_importance(wide: pd.DataFrame, target_col: str) -> pd.DataFrame:
     wide_clean = wide_clean.dropna(subset=[target_col])
     keep = [target_col] + [
         column for column in wide_clean.columns
-        if column != target_col and wide_clean[column].notna().mean() >= 0.60
+        if column != target_col and not column.startswith("target_")
+        and wide_clean[column].notna().mean() >= 0.60
     ]
     wide_clean = wide_clean[keep]
 
@@ -755,7 +761,7 @@ def _check_granger_conditions(
 
     rows: list[dict] = []
     for col in wide.columns:
-        if col == target_col:
+        if col == target_col or col.startswith("target_"):
             continue
 
         s_full  = wide[col]
