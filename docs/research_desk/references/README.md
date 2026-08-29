@@ -88,3 +88,5 @@
 | `JRD_2024_financialization_grain_price_volatility_KR.pdf` | 김우석, 농촌개발연구 47(1), 2024 | 금융화→곡물가 변동성 한국어 실증 — **COT 도입(G1-5) 학술 근거** |
 | `KR_2026_polycrisis_SCR_AHP_strategy.pdf` | 박승화·정종수, 2026-03 | 다중위기 SCR AHP — 한국 정책 배경(위기 모드 행동 옵션 어휘 참고) |
 | `AFE_2024_cereal_network_trade_communities.pdf` | Robu et al., Agr. & Food Econ. 12:24, 2024 | 곡물 무역 네트워크 커뮤니티 기준선 — 배경(Temporal Edge·D-050 정합) |
+| `KIIE_2025_wavelet_coherence_STGNN_agri_price_KR.pdf` | 제21회 한국대학생 산업공학 경진대회 발표자료 | 2026-08-29 | 부록 15차 #13 — Wavelet Coherence+Surrogate Test 동조화 탐지(★유지류 동조화 레짐·W0 보조 채용 후보)+STGNN(배경 — 검증 서술 부재·수치 인용 금지). 이미지 PDF — PyMuPDF 렌더 판독 |
+| `GAT_2025_global_indices_spillover_returns.pdf` | 발표자료(저자 불명) | 2026-08-29 | 부록 15차 #14 — GAT 지수 스필오버: 위기 구간 관계 정보 우위(개념 참조만·G3 레짐 가중 3번째 정합 관찰) |
