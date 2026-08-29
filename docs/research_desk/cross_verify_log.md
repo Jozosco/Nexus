@@ -1,6 +1,6 @@
 # GPT-5.6-Sol 교차검증 누적 원장
 
-**갱신**: 2026-08-28 · **자동 생성**: `scripts/build_cross_verify_log.py`
+**갱신**: 2026-08-29 · **자동 생성**: `scripts/build_cross_verify_log.py`
 
 > 조정자 상시 지시(2026-08-13): 인프라·분석·코드 작업은 GPT-5.6-Sol로 교차검증한다.
 > 이 파일은 그 **실행 이력과 판정을 한곳에 모은 원장**이다. 개별 판정 전문은
@@ -8,14 +8,24 @@
 
 ## 요약
 
-- 총 검증 기록 **95건** — 판정 산출 90 · 실패(미판정) 5
-- 누적 지적: **[치명] 74건 · [높음] 882건**
+- 총 검증 기록 **105건** — 판정 산출 100 · 실패(미판정) 5
+- 누적 지적: **[치명] 87건 · [높음] 996건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-29 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 2 | 15 | [치명] 8/14 — 현재 밴드의 비대칭을 2·4주 대기 손익으로 해석 | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-29 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 2 | 13 | [치명] 두 보고서의 P10/P50/P90을 CIF 확률 분위로 해석할 수 없다. | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-29 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 8 | [치명] `CPO_SBO_SPREAD`가 실제 스프레드가 아니라 팜유 가격 z-score로 계산될 수 있음 | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_git_diff_HEAD_1_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 1 | 16 | [높음] 자산 건수의 모집단이 서로 맞지 않는다. | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/hybrid_methodology_design` | ⚠️ 지적 | 4 | 15 | [치명] 적용 A의 BL prior가 수학적으로 정의되지 않았다.** 국가별 수입 비중은 무차원 배분 벡터 \(w\)이고 CIF는 통화/중량 단위의 비용 벡터인데, 이를 함께 “시 | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_docs_research_desk_2026-08_hybrid_methodology_design_2026_08_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/hs_code_classification_20` | ⚠️ 지적 | 2 | 14 | [치명] HSK 연도별 코드 정합성 없이 2010~2026을 합산했다.** §7의 세번 근거는 주로 HSK2021~2024인데, 물량은 고정된 현행 10단위 코드로 2010년부터  | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 1 | 16 | [높음] 분석창 연수와 표본 비율이 불일치 | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/differentiation_brainstor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 0 | 17 | [높음] §4b 조유 수입량의 범위 판정 오류 | 33240463766 | [xverify_2026-08-29_332404637…](../../reports/cross_verify/xverify_2026-08-29_33240463766_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-28 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 1 | 17 | [치명] 2026-08-14 — 현재 밴드를 2·4주 대기 손익으로 오용 | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-08-28 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-08-28 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33208016138 | [xverify_2026-08-28_332080161…](../../reports/cross_verify/xverify_2026-08-28_33208016138_git_diff_HEAD_1_1.md) |
