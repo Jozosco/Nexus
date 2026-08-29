@@ -2270,6 +2270,18 @@ def run(days: int = 7) -> None:
                 f"{row.get('행수', '?')} | {row.get('날짜범위', '?')} | "
                 f"{row.get('무결성', '?')} | {row.get('신선도', '?')} |"
             )
+    # 과거 유사국면 실측 참조 (D-051 — 월별 심층판에 md 섹션 편입, 실패는 비치명)
+    if publish_mode == "monthly":
+        try:
+            from src.forecasting.analogue_g1 import (build_analogue_context,
+                                                     render_analogue_md)
+            _ana = build_analogue_context(
+                [str(a.get("변수", "")) for a in breach],
+                [str(r["변수"]) for _, r in importance_df.head(4).iterrows()])
+            md_lines += [""] + render_analogue_md(_ana)
+        except Exception as _e:                               # noqa: BLE001
+            md_lines += ["", f"*유사국면 섹션 생성 불가(비치명): {type(_e).__name__}*"]
+
     md_lines += [
         "",
         "---",

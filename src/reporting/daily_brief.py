@@ -402,6 +402,55 @@ def _stars(n: int) -> str:
     return "★" * max(1, min(3, n))
 
 
+def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
+    """과거 유사국면 실측 참조 블록 — 경보 변수 우선, 중요도 상위로 보충.
+
+    A-191: 과거 관측의 요약까지만 — 전망·확률 주장 금지. mart 미가용 시 정직 강등.
+    """
+    try:
+        from src.forecasting.analogue_g1 import (build_analogue_context,
+                                                 format_result_line)
+        alert_codes = [str(a.get("변수", "")) for a in breach]
+        top_codes = ([str(r["변수"]) for _, r in importance_df.head(4).iterrows()]
+                     if not importance_df.empty else [])
+        results = build_analogue_context(alert_codes, top_codes)
+    except Exception as e:                                    # noqa: BLE001 — 비치명
+        print(f"[정보] 유사국면 블록 생성 불가(비치명): {type(e).__name__}: {e}")
+        results = []
+    if not results:
+        return ('<div class="card sig-item"><p>과거 유사국면 참조: mart 미가용 또는 '
+                '대상 변수 부재 — 산출 보류(정직 강등). 실산출은 CI 런에서 mart와 함께 '
+                '생성됨.</p></div>')
+    by_var: dict[str, list] = {}
+    for r in results:
+        by_var.setdefault(r.var_code, []).append(r)
+    cards = []
+    for var, rs in list(by_var.items())[:3]:
+        z_txt = f"{rs[0].current_z:+.1f}" if rs[0].current_z == rs[0].current_z else "?"
+        label = VAR_LABELS.get(var, var)
+        lines = "".join(f"<li>{_esc(format_result_line(r))}</li>"
+                        for r in sorted(rs, key=lambda x: x.horizon))
+        badges = sorted({b for r in rs for b in r.case_badges})
+        badge_html = (f'<div class="src">겹치는 위기 사례: {_esc(" · ".join(badges))} '
+                      f'— 상세는 위기 사례 문서(corrections 병독)</div>' if badges else "")
+        cards.append(f"""
+    <div class="card sig-item">
+      <span class="tag">{_esc(label)} <span style="color:var(--ink3)">현재 z {z_txt}</span></span>
+      <ul style="font-size:13px;margin:6px 0 0 18px;line-height:1.8">{lines}</ul>
+      {badge_html}</div>""")
+    mech = """
+    <details class="mech"><summary>산출 방식 (클릭)</summary>
+      변수의 90일 z-점수가 현재와 같은 분위 버킷(십분위)이었던 과거 거래일을 찾아,
+      그 날들로부터 1주/1개월/3개월 뒤의 <b>실측</b> 가격 변화를 집계함(2010~ 전 구간).
+      유사일 간 최소 간격을 두어 중복 에피소드를 제거하고, 최근 60거래일은 제외함
+      (전방 창 겹침 방지). 표본 8건 미만이면 산출을 보류함. <b>통계 검정 없음 —
+      기술 서술</b>이며, 감시 창(z90)은 기준 기간 캘리브레이션(W0) 전 잠정값임.</details>"""
+    return (f'<div class="signals">{"".join(cards)}</div>' + mech
+            + '<div class="cap" style="margin-top:8px">⚠️ 위 수치는 <b>과거 관측의 '
+              '요약이며 향후 전망·확률 주장이 아님</b>(A-191). 유사 상황의 참조 '
+              '정보로만 사용할 것.</div>')
+
+
 def _snapshot_specs() -> list[dict]:
     return [
         {"label": "CBOT ZL 종가", "codes": ["CBOT_BO_CLOSE"], "src": "CME", "fmt": "{:,.2f}"},
@@ -588,6 +637,9 @@ def build_daily_brief(
         ("전망", s_alert_out),
         ("유의", "미수집 항목은 경보 불가 상태이므로 '정상'과 구분해 표기함.")])
 
+    # ── 과거 유사국면 실측 참조 (D-051 — G1 재정립의 본질 블록) ──
+    analogue_html = _analogue_block(breach, importance_df)
+
     # ── 지표 스냅샷 ──
     snap_rows = []
     for spec in _snapshot_specs():
@@ -742,6 +794,10 @@ def build_daily_brief(
 <section><div class="sec-h"><h2>금일 경보 (유의 사항)</h2>
   <span class="note">임계 초과 변인만 카드 표시 — 무경보 시 서명된 무소식</span></div>
 {summary_alert}{alerts_html}</section>
+
+<section><div class="sec-h"><h2>과거 유사국면 실측 참조</h2>
+  <span class="note">현재와 유사했던 과거 연도들의 이후 실측 — 예측이 아닌 참조(A-191)</span></div>
+{analogue_html}</section>
 
 <section><div class="sec-h"><h2>글로벌 공급 경로 현황</h2>
   <span class="note">모식도(1단계) — 실지도·AIS 위치 연동은 2단계 로드맵</span></div>
