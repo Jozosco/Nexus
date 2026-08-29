@@ -214,8 +214,49 @@ def _match_articles(var_code: str, signals: pd.DataFrame) -> list[dict]:
 
 # ── SVG 생성 (서버측 — JS 0) ─────────────────────────────────────────────────
 
+_INFLECTION_MARKS = "①②③④⑤"
+
+
+def _inflection_points(kpi: CloseKpi, top_n: int = 4) -> list[dict]:
+    """표시 구간(최근 90관측) 내 |일간 변화율| 상위 급변일 검출 — 사실 기술 전용 (W-C).
+
+    기준: 표시 구간 일간 변화율 표준편차의 1.5배(최소 1.0%) 이상인 날 중 상위 top_n.
+    """
+    v = kpi.series["value"].astype(float)
+    ret = v.pct_change() * 100.0
+    if ret.notna().sum() < 20:
+        return []
+    sd = float(ret.std())
+    if not sd or sd <= 0:
+        return []
+    thr = max(1.5 * sd, 1.0)
+    cand = ret[ret.abs() >= thr]
+    picks = sorted(cand.abs().sort_values(ascending=False).head(top_n).index)
+    out = []
+    for k, i in enumerate(picks):
+        out.append({"i": int(i), "no": _INFLECTION_MARKS[k],
+                    "date": kpi.series["price_date"].iloc[int(i)],
+                    "chg": float(ret.iloc[int(i)]), "close": float(v.iloc[int(i)])})
+    return out
+
+
+def _signals_around(center: pd.Timestamp, window_days: int = 2) -> pd.DataFrame:
+    """일별 신호 아카이브에서 특정일 ±window 신호 로드 — 아카이브 밖 날짜는 빈 결과."""
+    if not SIGNALS_CSV.exists():
+        return pd.DataFrame()
+    try:
+        df = pd.read_csv(SIGNALS_CSV)
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        lo = center - pd.Timedelta(days=window_days)
+        hi = center + pd.Timedelta(days=window_days)
+        return df[(df["date"] >= lo) & (df["date"] <= hi)].sort_values("date")
+    except Exception as e:                                    # noqa: BLE001 — 비치명
+        print(f"[경고] 신호 아카이브 구간 조회 실패(비치명): {e}")
+        return pd.DataFrame()
+
+
 def _svg_price_chart(kpi: CloseKpi, rng: tuple[float, float, float] | None,
-                     horizon: int = 60) -> str:
+                     horizon: int = 60, marks: list[dict] | None = None) -> str:
     s = kpi.series
     hist = s["value"].tolist()
     n = len(hist)
@@ -281,7 +322,19 @@ def _svg_price_chart(kpi: CloseKpi, rng: tuple[float, float, float] | None,
         parts.append(f'<text x="{x(n - 1 + fwd / 2):.1f}" y="{padT + 10}" font-size="10" '
                      f'fill="var(--ink3)" text-anchor="middle">전망 약 90일({horizon}거래일)</text>')
     parts.append(f'<path d="{line}" fill="none" stroke="var(--accent)" stroke-width="2"/>')
-    parts.append(f'<circle cx="{x(n - 1):.1f}" cy="{y(hist[-1]):.1f}" r="4" fill="var(--accent)"/>')
+    # W-C: 급변일 마커 — 번호는 아래 '주요 변동일' 목록과 1:1 대응
+    for k, m in enumerate(marks or []):
+        mi = m["i"]
+        if not (0 <= mi < n):
+            continue
+        col = "var(--up)" if m["chg"] > 0 else "var(--down)"
+        mx, my = x(mi), y(hist[mi])
+        ly_off = -10 if (k % 2 == 0) else 18
+        parts.append(
+            f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="4.5" fill="{col}" '
+            f'stroke="var(--surface)" stroke-width="1.5"/>'
+            f'<text x="{mx:.1f}" y="{my + ly_off:.1f}" font-size="11" font-weight="700" '
+            f'fill="{col}" text-anchor="middle">{m["no"]}</text>')
     parts.append(f'<text x="{x(0):.1f}" y="{H - 8}" font-size="10" fill="var(--ink3)">{start_lbl}</text>'
                  f'<text x="{x(n - 1):.1f}" y="{H - 8}" font-size="10" fill="var(--ink3)" '
                  f'text-anchor="middle">{today_lbl} (기준일)</text>'
@@ -402,6 +455,83 @@ def _stars(n: int) -> str:
     return "★" * max(1, min(3, n))
 
 
+def _inflection_block(points: list[dict], importance_df: pd.DataFrame) -> str:
+    """주요 변동일 목록 — 날짜·변화율·당시 신호·변인 상태·온톨로지 체인 (W-C · R2).
+
+    신호 아카이브(2026-08-17~) 이전 날짜와 분석 데이터 미가용 상황은 정직 강등.
+    """
+    if not points:
+        return ""
+    top_codes = ([str(r["변수"]) for _, r in importance_df.head(3).iterrows()]
+                 if not importance_df.empty else [])
+    analysis = None
+    try:
+        from src.forecasting.variable_importance_g1 import _load_g1_feature_mart
+        analysis, _lv, _t = _load_g1_feature_mart()
+    except Exception:                                         # noqa: BLE001 — 비치명
+        analysis = None
+    try:
+        from src.forecasting.analogue_g1 import _resolve_z_column
+    except Exception:                                         # noqa: BLE001
+        _resolve_z_column = None                              # type: ignore[assignment]
+
+    cards = []
+    for p in points:
+        d: pd.Timestamp = p["date"]
+        chg = p["chg"]
+        cls = "up" if chg > 0 else "down"
+        arrow = "▲" if chg > 0 else "▼"
+        rows: list[str] = [
+            f'<li>일간 변화율 <span class="chg {cls} num">{arrow} {chg:+.2f}%</span> · '
+            f'종가 <span class="num">{p["close"]:.2f}</span> USc/lb</li>']
+        # ① 당시 수집 신호(±2일)
+        sig = _signals_around(d)
+        if not sig.empty:
+            shown = 0
+            for _, row in sig.iterrows():
+                if shown >= 2:
+                    break
+                note = str(row.get("note", ""))
+                title = _esc(note.split("]")[-1][:90].strip() or row.get("indicator", ""))
+                url = _first_url(note)
+                head = (f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>'
+                        if url else title)
+                rows.append(f'<li>당시 신호: {head} '
+                            f'<span class="src">{_esc(row.get("source_name", ""))}</span></li>')
+                chain = _ONTOLOGY_CHAINS.get(str(row.get("indicator", "")))
+                if chain and shown == 0:
+                    rows.append(f'<li>연결 경로: {_esc(" → ".join(chain))}</li>')
+                shown += 1
+        else:
+            rows.append('<li><span class="src">당시 수집 신호 없음(신호 아카이브는 '
+                        '2026-08-17부터) — 변인 상태만 표시</span></li>')
+        # ② 당시 변인 표준화 지수(분석 데이터 시점 조회)
+        z_parts: list[str] = []
+        if analysis is not None and _resolve_z_column is not None and top_codes:
+            idx = analysis.index[analysis.index <= d]
+            if len(idx):
+                row_z = analysis.loc[idx[-1]]
+                for c in top_codes:
+                    zc = _resolve_z_column(analysis.columns, c)
+                    if zc is not None and pd.notna(row_z.get(zc)):
+                        base = c.split("__")[0]
+                        z_parts.append(f'{_esc(VAR_LABELS.get(base, base))} '
+                                       f'{float(row_z[zc]):+.1f}')
+        if z_parts:
+            rows.append(f'<li>당시 상위 변인 표준화 지수(z): {" · ".join(z_parts)}</li>')
+        elif analysis is None:
+            rows.append('<li><span class="src">변인 상태: 분석 데이터 미가용 — CI 실행에서 '
+                        '자동 표시</span></li>')
+        cards.append(
+            f'<details class="mech"><summary>{p["no"]} {d.strftime("%Y-%m-%d")} '
+            f'<span class="chg {cls} num">{arrow} {chg:+.2f}%</span></summary>'
+            f'<ul style="margin:6px 0 0 16px;line-height:1.7">{"".join(rows)}</ul></details>')
+    return ('<div style="margin-top:8px"><b style="font-size:13px">주요 변동일 '
+            f'{len(points)}건</b> <span class="cap">— 차트의 번호 표시와 대응 · 클릭 시 '
+            '당시 신호·변인 상태 표시(과거 사실 기술)</span>'
+            + "".join(cards) + "</div>")
+
+
 def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
     """과거 유사국면 실측 참조 블록 — 경보 변수 우선, 중요도 상위로 보충.
 
@@ -409,6 +539,7 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
     """
     try:
         from src.forecasting.analogue_g1 import (build_analogue_context,
+                                                 case_narrative_lines,
                                                  format_result_line)
         alert_codes = [str(a.get("변수", "")) for a in breach]
         top_codes = ([str(r["변수"]) for _, r in importance_df.head(4).iterrows()]
@@ -431,8 +562,22 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
         lines = "".join(f"<li>{_esc(format_result_line(r))}</li>"
                         for r in sorted(rs, key=lambda x: x.horizon))
         badges = sorted({b for r in rs for b in r.case_badges})
-        badge_html = (f'<div class="src">겹치는 위기 사례: {_esc(" · ".join(badges))} '
-                      f'— 상세는 위기 사례 문서(corrections 병독)</div>' if badges else "")
+        badge_parts = []
+        if badges:
+            badge_parts.append(f'<div class="src">겹치는 위기 사례: '
+                               f'{_esc(" · ".join(badges))}</div>')
+            # W-B(조정자 R1): 배지 클릭 → 왜 유사한가 — 원인→경로→가격 실측→유사점/차이점
+            for b in badges:
+                narr = case_narrative_lines(b)
+                if narr:
+                    items = "".join(f"<li>{_esc(t)}</li>" for t in narr)
+                    badge_parts.append(
+                        f'<details class="mech"><summary>{_esc(b)} — 왜 유사한가 (클릭)'
+                        f'</summary><ul style="margin:6px 0 0 16px;line-height:1.7">'
+                        f'{items}</ul><div class="cap">과거 사실 기술과 구조 비교까지만 — '
+                        f'방향 판단 아님(A-191). 상세·수치는 위기 사례 문서(corrections '
+                        f'병독).</div></details>')
+        badge_html = "".join(badge_parts)
         cards.append(f"""
     <div class="card sig-item">
       <span class="tag">{_esc(label)} <span style="color:var(--ink3)">현재 z {z_txt}</span></span>
@@ -593,7 +738,9 @@ def build_daily_brief(
 
     # ── 차트 ──
     if kpi:
-        chart_svg = _svg_price_chart(kpi, rng)
+        inflections = _inflection_points(kpi)
+        chart_svg = _svg_price_chart(kpi, rng, marks=inflections)
+        inflection_html = _inflection_block(inflections, importance_df)
         chart_start = kpi.series["price_date"].iloc[0].strftime("%Y-%m-%d")
         chart_cap = (f"실적: {chart_start} ~ {kpi.last_date} ({len(kpi.series)}거래일 · "
                      f"CME 실측) · 참고 범위: 기준일 이후 약 90일(60거래일)")
@@ -605,7 +752,7 @@ def build_daily_brief(
                    '<div class="range-figures">참고 범위: 데이터 부족으로 미산출</div>')
     else:
         chart_svg = '<p class="cap">목표변수 미수집 — 차트를 생성하지 않음.</p>'
-        chart_cap, rng_fig = "", ""
+        chart_cap, rng_fig, inflection_html = "", "", ""
 
     mech = f"""
       <details class="mech"><summary>참고 범위 산출 근거 (클릭)</summary>
@@ -638,7 +785,7 @@ def build_daily_brief(
     else:
         alerts_html = ("""
     <div class="card" style="padding:14px 18px">
-      <b style="color:var(--ok)">✔ 서명된 무소식</b> — 감시 변인 전체가 임계 범위 내에 있음.
+      <b style="color:var(--ok)">✔ 서명된 무소식</b> — 감시 변인 전체가 기준 범위 내에 있음.
       침묵이 아니라 검사를 통과한 결과임 (게이트·검증 상태는 상단 신뢰 스트립 참조).</div>""")
         s_alert_now = f"{len(alerts)}개 감시 변인 전체가 기준 범위 안에 있음(미수집 {len(watch)}건 별도)."
         s_alert_out = "이상 징후 없음 — 정기 감시를 지속함."
@@ -761,7 +908,7 @@ def build_daily_brief(
     feat_txt = f"{n_features:,}" if n_features else "—"
 
     css = _CSS
-    breach_pill = (f'🚨 임계 초과 {len(breach)}건' if breach else '서명된 무소식')
+    breach_pill = (f'🚨 기준 초과 {len(breach)}건' if breach else '서명된 무소식')
     return f"""<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -797,7 +944,7 @@ def build_daily_brief(
     {chart_svg}
     <div class="legend"><span><i></i>종가 (USc/lb)</span>
       <span><i class="band"></i>참고 범위 P10–P90</span></div>
-    {rng_fig}{mech}
+    {rng_fig}{inflection_html}{mech}
   </div>
   <div class="card drivers"><h3>핵심 변인 Top 5</h3>
     <div class="cap">별점 = 최근 기사와 변인의 연관 매핑 (★~★★★) · 제목 클릭 시 원문</div>

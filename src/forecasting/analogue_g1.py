@@ -33,14 +33,81 @@ MIN_ANALOGUE_EPISODES = 8
 EXCLUDE_RECENT_TRADING_DAYS = 60                   # 전방 창 겹침 누수 가드
 MAX_ANALOGUE_VARS = 3                              # 브리프 렌더 상한(경보 우선)
 
-# 위기 사례 창 — docs/research_desk/_reference/soybean_oil_historical_crisis_analysis.md
+# 위기 사례 프로파일 — docs/research_desk/_reference/soybean_oil_historical_crisis_analysis.md
 # (수치는 corrections 문서 병독 전제 — 배지는 정성 연결일 뿐 처치 정의가 아님)
-CASE_WINDOWS: dict[str, tuple[str, str]] = {
-    "Case 1 · 2010-11 라니냐·러 수출금지": ("2010-06-01", "2011-09-30"),
-    "Case 2 · 2012 미국 대가뭄": ("2012-05-01", "2013-08-31"),
-    "Case 3 · 2021-22 복합 위기": ("2020-08-01", "2022-06-30"),
-    "Case 4 · 2022-23 아르헨 가뭄": ("2022-12-01", "2023-04-30"),
+# 서사 계약(A-191): 과거 사실 기술 + 구조 비교까지만 — 방향 주장·전망 문구 금지.
+@dataclass(frozen=True)
+class CaseProfile:
+    start: str
+    end: str
+    trigger: str        # 원인 사건(과거 사실)
+    channel: str        # 전달 경로(수급·물류·정책)
+    price_fact: str     # 가격 반응 실측
+    similarity: str     # 현재 국면과의 구조 유사점
+    difference: str     # 현재 국면과의 구조 차이점
+
+
+CASE_PROFILES: dict[str, CaseProfile] = {
+    "Case 1 · 2010-11 라니냐·러 수출금지": CaseProfile(
+        "2010-06-01", "2011-09-30",
+        "라니냐 최고조(ONI −1.4)로 남미 작황 취약성이 누적된 상태에서, 러시아가 폭염·"
+        "가뭄으로 밀 수출을 금지함(2010-08).",
+        "곡물 전반 급등 → 유지류로 대체 수요 집중 → 대두유 수급 압박.",
+        "저점 38.0 → 고점 57.4 USc/lb, 약 9개월 +51% 실측. ONI 전환이 가격에 "
+        "2~3개월 선행함.",
+        "기후 취약성이 깔린 상태에서 단일 정책 이벤트가 추가 충격으로 얹히는 중첩 구조.",
+        "당시 파급은 곡물發 대체 수요 경로였고, 물류(운임·해협) 요인의 비중은 크지 않았음."),
+    "Case 2 · 2012 미국 대가뭄": CaseProfile(
+        "2012-05-01", "2013-08-31",
+        "미국 중서부 대가뭄(예외적 가뭄 등급 면적 35%) — 7월 WASDE가 미국 대두 생산 "
+        "전망을 −14.4% 하향함.",
+        "생산 전망 하향 → 공급 우려 선반영 → 실제 수확 발표(우려 대비 양호)로 급반전.",
+        "8개월 +13.6% 뒤 9월 한 달 만에 되돌림 실측 — 단일 공급 충격의 가역성 사례.",
+        "발표 이벤트(WASDE) 전후로 가격이 빠르게 재평가되는 패턴.",
+        "당시는 운임(BDI) 저수준·수입 수요 부진의 삼중 부정 구조 — 고점이 지속되지 "
+        "못한 조건이 겹쳐 있었음."),
+    "Case 3 · 2021-22 복합 위기": CaseProfile(
+        "2020-08-01", "2022-06-30",
+        "2년 연속 라니냐(아르헨 감산) + 러시아-우크라이나 전쟁(해바라기유 공급 45~50% "
+        "붕괴) + 인도네시아 팜유 수출 금지 + 인도 수입 관세 인하.",
+        "기후·지정학·정책 3중 충격이 동시 발생 — 대체 수요 집중에 물류 차질(운임 지수 "
+        "+387%)이 도착 원가를 증폭함. COVID기 항만·항로 봉쇄로 선박이 우회하며 운임·"
+        "보험료가 도착가에 얹히는 경로가 형성됨.",
+        "저점 28.9 → 고점 82.5 USc/lb, 23개월 +185% 실측(당시 사상 최고가). 운임 급등이 "
+        "가격 고점에 6~18개월 선행함.",
+        "'요충 경로 불안 → 우회·보험료 → 도착가 상방'의 물류 증폭 구조가 현재 호르무즈 "
+        "국면과 동형임(당시는 COVID·흑해發 경로 차질).",
+        "당시는 수요 측 충격(바이오디젤·인도 수입)이 동반됨 — corrections 재평가에서 "
+        "유사도 7/10로 하향(우크라이나 요인 제외), 2024-25 미·중 관세 사례(Case D)가 "
+        "9/10로 더 유사 판정."),
+    "Case 4 · 2022-23 아르헨 가뭄": CaseProfile(
+        "2022-12-01", "2023-04-30",
+        "3년 연속(트리플딥) 라니냐로 아르헨티나 대두 생산 −42%(43.4→25.0 MMT), "
+        "로사리오 압착 허브 가동률 45%로 급락.",
+        "단일 원산지 공급 급감 — 그러나 브라질 기록 풍작(153 MMT)이 물량을 완전 상쇄함.",
+        "+11.4% 상승에 그친 뒤 되돌림 실측 — 대체 원산지(스윙 프로듀서) 완충 여부가 "
+        "충격 크기를 결정함.",
+        "주요 원산지 한 곳의 충격이 발생해도 대체 원산지 물량이 완충하는 구조 — 현재도 "
+        "브라질 생산이 역대 최고 수준이라는 점이 같은 완충 요인임.",
+        "당시는 기후 단일 요인 — 물류·정책 충격이 결합하지 않았음."),
 }
+
+# 하위 호환: 창(window)만 쓰는 기존 경로용 파생 뷰
+CASE_WINDOWS: dict[str, tuple[str, str]] = {
+    name: (p.start, p.end) for name, p in CASE_PROFILES.items()
+}
+
+
+def case_narrative_lines(name: str) -> list[str]:
+    """사례 배지 → 메커니즘 서사(원인→경로→가격 실측→유사점/차이점). 미등재 시 빈 목록."""
+    p = CASE_PROFILES.get(name)
+    if p is None:
+        return []
+    return [f"원인 사건: {p.trigger}",
+            f"전달 경로: {p.channel}",
+            f"가격 반응(실측): {p.price_fact}",
+            f"현재와의 유사점: {p.similarity}",
+            f"현재와의 차이점: {p.difference}"]
 
 # 경보 변수 코드 → mart 파생 z-컬럼 후보 (경보 코드는 mart 컬럼명과 다른 별칭 체계)
 _ALERT_Z_ALIASES: dict[str, list[str]] = {
@@ -253,6 +320,11 @@ def render_analogue_md(results: list[AnalogueResult]) -> list[str]:
             lines.append(f"- 겹치는 위기 사례: {' · '.join(badges)} "
                          f"(→ `_reference/soybean_oil_historical_crisis_analysis.md` — "
                          f"corrections 병독)")
+            for b in badges:
+                narr = case_narrative_lines(b)
+                if narr:
+                    lines.append(f"  - **{b} — 왜 유사한가**")
+                    lines.extend(f"    - {t}" for t in narr)
         lines.append("")
     return lines
 
@@ -288,6 +360,14 @@ def self_test() -> list[str]:
     res2 = build_analogue_context(["TESTVAR"], [], analysis=tiny)
     if not all(r.guard_note for r in res2):
         problems.append("표본 부족 시 산출 보류 미작동")
+    # 사례 서사 계약 검증(A-191) — 전 프로파일 금지어·필드 완전성
+    for name in CASE_PROFILES:
+        narr = "\n".join(case_narrative_lines(name))
+        if len(case_narrative_lines(name)) != 5:
+            problems.append(f"사례 서사 필드 불완전: {name}")
+        for w in _FORBIDDEN_WORDS:
+            if w in narr:
+                problems.append(f"사례 서사 금지어 '{w}': {name}")
     return problems
 
 
