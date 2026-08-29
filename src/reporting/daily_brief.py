@@ -461,6 +461,10 @@ def _snapshot_specs() -> list[dict]:
         {"label": "VIX 변동성", "codes": ["VIXCLS"], "src": "CBOE", "fmt": "{:.1f}"},
         {"label": "ENSO ONI", "codes": ["ONI", "ENSO_ONI"], "src": "NOAA", "fmt": "{:+.2f}",
          "monthly": True},
+        # D-051·A-229: 대두박(ZM)·대두(ZS) 반입(9/1~) 후 산출 — 그 전까지 예정 표기
+        {"label": "압착 마진 (Board Crush)", "codes": ["BOARD_CRUSH_MARGIN"],
+         "src": "CBOT ZL·ZM·ZS", "fmt": "{:+.2f}",
+         "pending_note": "수집 예정 — 대두박(ZM)·대두(ZS) 반입 후 산출(트레이더 관행 대표 지표)"},
     ]
 
 
@@ -543,7 +547,8 @@ def build_daily_brief(
         s_factor = "변인 중요도 산출이 비어 있어 요인 판단을 보류함."
     s_outlook = (f"60거래일 참고 범위는 {rng[0]:.2f}~{rng[2]:.2f} USc/lb"
                  + (f" (도착가 {band_mt[0]:,.2f}~{band_mt[2]:,.2f} $/MT)" if band_mt else "")
-                 + "." if rng else "참고 범위는 데이터 부족으로 산출하지 않음.")
+                 + ". 과거 유사국면 실측은 전용 블록 참조." if rng
+                 else "참고 범위는 데이터 부족으로 산출하지 않음.")
     s_care = (f"금일 임계 초과 {len(breach)}건 — 상세는 경보 블록 참조. 조달 결정은 휴먼 게이트 필수."
               if breach else "금일 임계 초과 없음(서명된 무소식) — 조달 결정은 휴먼 게이트 필수.")
     summary_top = _brief_box([("현황", s_now), ("요인", s_factor),
@@ -645,8 +650,10 @@ def build_daily_brief(
     for spec in _snapshot_specs():
         s = _dated_series(frames, spec["codes"])
         if s.empty:
+            missing = spec.get("pending_note", "미수집")
             snap_rows.append(f'<tr><td>{spec["label"]}<span class="src">{spec["src"]}</span></td>'
-                             '<td colspan="5" style="color:var(--ink3)">미수집</td></tr>')
+                             f'<td colspan="5" style="color:var(--ink3);text-align:left">'
+                             f'{missing}</td></tr>')
             continue
         v = s["value"]
         val = spec["fmt"].format(float(v.iloc[-1]))
@@ -759,7 +766,7 @@ def build_daily_brief(
 <div class="page">
 <header>
   <div class="masthead"><h1>Nexus 일일 브리프</h1>
-    <div class="sub">대두유 조달 신호 데스크 · G1 핵심 변인 — <b>Preview</b></div></div>
+    <div class="sub">대두유 조달 신호 데스크 · 핵심 변인 + <b>과거 유사국면 실측 참조</b> — <b>Preview</b></div></div>
   <div class="dateblock"><strong>{run_ts[:10]}</strong>
     KST 05:30 발행 체계 · 데이터 기준 {kpi.last_date if kpi else "미수집"} CME 마감</div>
 </header>
@@ -811,7 +818,7 @@ def build_daily_brief(
 </div></div></section>
 
 <section><div class="sec-h"><h2>지표 스냅샷</h2>
-  <span class="note">z = 90일 롤링 기준 · 상승 적색/하락 청색</span></div>
+  <span class="note">z = 90일 롤링 — 잠정(기준 기간 캘리브레이션 확정 전 · W0) · 상승 적색/하락 청색</span></div>
 <div class="card tablewrap"><table>
   <thead><tr><th>지표</th><th>값</th><th>일간</th><th>주간</th><th>90일 z</th><th>추세</th></tr></thead>
   <tbody>{"".join(snap_rows)}</tbody></table></div></section>
