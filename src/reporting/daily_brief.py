@@ -34,12 +34,12 @@ LEADTIME_DAYS = 50                # CIF 한국 리드타임 상단(40~50일) 보
 # 변인 코드 → 한국어 표시명 (미등재 코드는 원 코드 노출)
 VAR_LABELS: dict[str, str] = {
     "CBOT_BO_CLOSE": "CBOT 대두유(ZL) 종가",
-    "TE_BDI": "BDI 해상운임", "BDI": "BDI 해상운임", "BDI_ZSCORE": "BDI 해상운임 z",
+    "TE_BDI": "BDI 해상운임지수", "BDI": "BDI 해상운임지수", "BDI_ZSCORE": "BDI 해상운임지수",
     "DEXBZUS": "브라질 헤알 환율(BRL/USD)", "DEXCHUS": "위안 환율(CNY/USD)",
     "DEXKOUS": "원/달러 환율", "VIXCLS": "VIX 변동성",
     "GPR_NORMALIZED": "지정학 위험(GPR 정규화)", "GPR": "지정학 위험(GPR)",
     "ENSO_ONI": "ENSO ONI(엘니뇨 지수)", "ONI": "ENSO ONI(엘니뇨 지수)",
-    "CPO_SBO_SPREAD": "SBO−CPO 스프레드", "WASDE_SBO_STU": "WASDE 재고사용비율",
+    "CPO_SBO_SPREAD": "대두유−팜유 가격 차이", "WASDE_SBO_STU": "WASDE 재고사용비율",
     "TE_PALM_OIL": "CPO 팜유(TE)", "TE_SOYBEANS": "CBOT 대두(TE)",
     "FEDFUNDS": "미 기준금리", "CPIAUCSL": "미 CPI",
 }
@@ -279,7 +279,7 @@ def _svg_price_chart(kpi: CloseKpi, rng: tuple[float, float, float] | None,
                      f'<text x="{x(total) + 2:.1f}" y="{y(p10e) + 3:.1f}" font-size="10" '
                      f'fill="var(--ink3)">{p10e:.2f}</text>')
         parts.append(f'<text x="{x(n - 1 + fwd / 2):.1f}" y="{padT + 10}" font-size="10" '
-                     f'fill="var(--ink3)" text-anchor="middle">전망 {horizon}거래일</text>')
+                     f'fill="var(--ink3)" text-anchor="middle">전망 약 90일({horizon}거래일)</text>')
     parts.append(f'<path d="{line}" fill="none" stroke="var(--accent)" stroke-width="2"/>')
     parts.append(f'<circle cx="{x(n - 1):.1f}" cy="{y(hist[-1]):.1f}" r="4" fill="var(--accent)"/>')
     parts.append(f'<text x="{x(0):.1f}" y="{H - 8}" font-size="10" fill="var(--ink3)">{start_lbl}</text>'
@@ -418,8 +418,8 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
         print(f"[정보] 유사국면 블록 생성 불가(비치명): {type(e).__name__}: {e}")
         results = []
     if not results:
-        return ('<div class="card sig-item"><p>과거 유사국면 참조: mart 미가용 또는 '
-                '대상 변수 부재 — 산출 보류(정직 강등). 실산출은 CI 런에서 mart와 함께 '
+        return ('<div class="card sig-item"><p>과거 유사 시기 참조: 분석 데이터 미가용 '
+                '또는 대상 변수 부재 — 산출 보류. 실산출은 CI 실행에서 분석 데이터와 함께 '
                 '생성됨.</p></div>')
     by_var: dict[str, list] = {}
     for r in results:
@@ -440,22 +440,23 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
       {badge_html}</div>""")
     mech = """
     <details class="mech"><summary>산출 방식 (클릭)</summary>
-      변수의 90일 z-점수가 현재와 같은 분위 버킷(십분위)이었던 과거 거래일을 찾아,
-      그 날들로부터 1주/1개월/3개월 뒤의 <b>실측</b> 가격 변화를 집계함(2010~ 전 구간).
-      유사일 간 최소 간격을 두어 중복 에피소드를 제거하고, 최근 60거래일은 제외함
-      (전방 창 겹침 방지). 표본 8건 미만이면 산출을 보류함. <b>통계 검정 없음 —
-      기술 서술</b>이며, 감시 창(z90)은 기준 기간 캘리브레이션(W0) 전 잠정값임.</details>"""
+      변수의 90일 표준화 지수(z)가 현재와 같은 구간(십분위)이었던 과거 거래일을 찾아,
+      그 날들로부터 약 1주(5거래일)/약 1개월(20거래일)/약 3개월(60거래일) 뒤의
+      <b>실측</b> 가격 변화를 집계함(2010~ 전 구간). 유사일 사이에 최소 간격을 두어
+      중복 시기를 제거하고, 최근 60거래일은 집계에서 제외함(전방 구간 겹침 방지).
+      유사 시기가 8회 미만이면 산출을 보류함. <b>통계 검정 없음 — 기술 서술</b>이며,
+      감시 창(90일)은 기준 기간 확정 전 잠정값임.</details>"""
     return (f'<div class="signals">{"".join(cards)}</div>' + mech
             + '<div class="cap" style="margin-top:8px">⚠️ 위 수치는 <b>과거 관측의 '
-              '요약이며 향후 전망·확률 주장이 아님</b>(A-191). 유사 상황의 참조 '
-              '정보로만 사용할 것.</div>')
+              '요약이며 향후 전망·확률 주장이 아님</b>(A-191). 유사 상황에서 어떤 변수를 '
+              '주시할지 참고하는 자료로만 사용할 것.</div>')
 
 
 def _snapshot_specs() -> list[dict]:
     return [
-        {"label": "CBOT ZL 종가", "codes": ["CBOT_BO_CLOSE"], "src": "CME", "fmt": "{:,.2f}"},
+        {"label": "CBOT ZL 종가", "codes": ["CBOT_BO_CLOSE"], "src": "CME 정산가", "fmt": "{:,.2f}"},
         {"label": "CPO 팜유", "codes": ["TE_PALM_OIL", "CPO"], "src": "TE/Bursa", "fmt": "{:,.0f}"},
-        {"label": "BDI 운임지수", "codes": ["TE_BDI", "BDI"], "src": "Baltic", "fmt": "{:,.0f}"},
+        {"label": "BDI 해상운임지수", "codes": ["TE_BDI", "BDI"], "src": "Baltic", "fmt": "{:,.0f}"},
         {"label": "BRL/USD 환율", "codes": ["DEXBZUS"], "src": "FRED", "fmt": "{:.2f}"},
         {"label": "원/달러 환율", "codes": ["DEXKOUS", "KRW_USD"], "src": "FRED/BOK", "fmt": "{:,.0f}"},
         {"label": "VIX 변동성", "codes": ["VIXCLS"], "src": "CBOE", "fmt": "{:.1f}"},
@@ -464,7 +465,7 @@ def _snapshot_specs() -> list[dict]:
         # D-051·A-229: 대두박(ZM)·대두(ZS) 반입(9/1~) 후 산출 — 그 전까지 예정 표기
         {"label": "압착 마진 (Board Crush)", "codes": ["BOARD_CRUSH_MARGIN"],
          "src": "CBOT ZL·ZM·ZS", "fmt": "{:+.2f}",
-         "pending_note": "수집 예정 — 대두박(ZM)·대두(ZS) 반입 후 산출(트레이더 관행 대표 지표)"},
+         "pending_note": "수집 예정 — 대두박(ZM)·대두(ZS) 반입 후 산출(트레이더가 대두 복합체를 읽는 대표 지표)"},
     ]
 
 
@@ -503,15 +504,15 @@ def build_daily_brief(
       <div class="val num">{kpi.close:.2f} <span class="unit">USc/lb</span></div>
       {_chg_html(kpi.chg_pct)}
       <div class="foot num">주간 {f"{kpi.wk_pct:+.1f}%" if kpi.wk_pct is not None else "—"} ·
-        90일 z {f"{kpi.z90:+.1f}" if kpi.z90 is not None else "—"} · 기준일 {kpi.last_date}</div></div>""")
+        90일 z {f"{kpi.z90:+.1f}" if kpi.z90 is not None else "—"} · CME 정산가 기준 · 기준일 {kpi.last_date}</div></div>""")
     else:
         kpi_cards.append('<div class="card kpi"><div class="lbl">CBOT 대두유(ZL) 종가</div>'
                          '<div class="val">미수집</div><div class="foot">CBOT_BO_CLOSE 미발행 — '
                          '목표변수 잡 확인 필요</div></div>')
     if band_mt:
         kpi_cards.append(f"""
-    <div class="card kpi"><div class="lbl">참고 도착가 범위 · 60거래일</div>
-      <div class="val num">{band_mt[1]:,.2f} <span class="unit">$/MT</span></div>
+    <div class="card kpi"><div class="lbl">참고 도착가 범위 · 약 90일(60거래일)</div>
+      <div class="val num">{band_mt[1]:,.2f} <span class="unit">달러/MT</span></div>
       <div class="chg flat num">최소 {band_mt[0]:,.2f} — 최대 {band_mt[2]:,.2f}</div>
       <div class="foot">CIF 한국 · 실측 잔차층 반영 <span class="pill acc">참고 범위</span></div></div>""")
     else:
@@ -521,9 +522,9 @@ def build_daily_brief(
     kpi_cards.append(f"""
     <div class="card kpi"><div class="lbl">금일 경보 (유의 사항)</div>
       <div class="val num">{len(breach)}<span class="unit">건</span></div>
-      <div class="chg flat">{('<span class="pill warn">🚨 임계 초과</span>' if breach
+      <div class="chg flat">{('<span class="pill warn">🚨 기준 초과</span>' if breach
                               else '<span class="pill ok">서명된 무소식</span>')}</div>
-      <div class="foot">임계 초과 {len(breach)} · 관찰 {len(watch)} · 정상 {normal_n}</div></div>""")
+      <div class="foot">기준 초과 {len(breach)} · 관찰 {len(watch)} · 정상 {normal_n}</div></div>""")
     kpi_cards.append(f"""
     <div class="card kpi"><div class="lbl">데이터 적시성</div>
       <div class="val num">{fresh_ok}<span class="unit">/{fresh_total} 항목</span></div>
@@ -534,9 +535,13 @@ def build_daily_brief(
 
     # ── 한눈 요약 4단 문장 (규칙 기반) ──
     if kpi and kpi.wk_pct is not None:
-        trend = "상승" if kpi.wk_pct > 0.5 else ("하락" if kpi.wk_pct < -0.5 else "보합")
-        s_now = (f"대두유 선물은 주간 {kpi.wk_pct:+.1f}%의 {trend} 흐름이며, "
-                 f"종가 {kpi.close:.2f} USc/lb에서 거래를 마침.")
+        if kpi.wk_pct > 0.5:
+            trend = f"한 주간 {kpi.wk_pct:+.1f}% 상승했으며"
+        elif kpi.wk_pct < -0.5:
+            trend = f"한 주간 {kpi.wk_pct:+.1f}% 하락했으며"
+        else:
+            trend = "한 주간 보합권에서 움직였으며"
+        s_now = f"대두유 선물은 {trend}, 종가 {kpi.close:.2f} USc/lb로 마감함."
     else:
         s_now = "목표변수(CBOT ZL) 최신 관측이 부족해 현황 판단을 보류함."
     top2 = importance_df.head(2)
@@ -545,12 +550,12 @@ def build_daily_brief(
         s_factor = f"현재 중요도 상위 변인은 {names}임 (Elastic Net·상관 삼각검증)."
     else:
         s_factor = "변인 중요도 산출이 비어 있어 요인 판단을 보류함."
-    s_outlook = (f"60거래일 참고 범위는 {rng[0]:.2f}~{rng[2]:.2f} USc/lb"
-                 + (f" (도착가 {band_mt[0]:,.2f}~{band_mt[2]:,.2f} $/MT)" if band_mt else "")
-                 + ". 과거 유사국면 실측은 전용 블록 참조." if rng
+    s_outlook = (f"향후 약 3개월(60거래일)의 참고 범위는 {rng[0]:.2f}~{rng[2]:.2f} USc/lb"
+                 + (f"(도착가 {band_mt[0]:,.2f}~{band_mt[2]:,.2f}달러/MT)" if band_mt else "")
+                 + "임. 과거 유사 시기 실측은 전용 항목 참조." if rng
                  else "참고 범위는 데이터 부족으로 산출하지 않음.")
-    s_care = (f"금일 임계 초과 {len(breach)}건 — 상세는 경보 블록 참조. 조달 결정은 휴먼 게이트 필수."
-              if breach else "금일 임계 초과 없음(서명된 무소식) — 조달 결정은 휴먼 게이트 필수.")
+    s_care = (f"금일 기준 초과 {len(breach)}건 — 상세는 '금일 경보' 참조. 조달 결정은 담당자 승인 절차 필수."
+              if breach else "금일 기준 초과 없음(서명된 무소식) — 조달 결정은 담당자 승인 절차 필수.")
     summary_top = _brief_box([("현황", s_now), ("요인", s_factor),
                               ("전망", s_outlook), ("유의", s_care)])
 
@@ -590,8 +595,8 @@ def build_daily_brief(
     if kpi:
         chart_svg = _svg_price_chart(kpi, rng)
         chart_start = kpi.series["price_date"].iloc[0].strftime("%Y-%m-%d")
-        chart_cap = (f"실적: {chart_start} ~ {kpi.last_date} ({len(kpi.series)}거래일) · "
-                     f"참고 범위: 기준일 이후 60거래일 전망 구간")
+        chart_cap = (f"실적: {chart_start} ~ {kpi.last_date} ({len(kpi.series)}거래일 · "
+                     f"CME 실측) · 참고 범위: 기준일 이후 약 90일(60거래일)")
         rng_fig = (f"""
       <div class="range-figures num">
         <span>범위 중앙(P50) <b>{rng[1]:.2f}</b></span>
@@ -605,14 +610,15 @@ def build_daily_brief(
     mech = f"""
       <details class="mech"><summary>참고 범위 산출 근거 (클릭)</summary>
         <ol>
-          <li><b>기준 가격층</b>: CBOT ZL 종가의 과거 60거래일 변동 분포(전 검증 구간)
-            분위(P10/P50/P90)를 최근 종가에 적용.</li>
-          <li><b>실측 잔차층</b>: 관세청 수입 실적(벌크 ≥100 MT)의 CIF 단가 − 동월 CBOT
-            차이 최근 12개월 분포 — 운임·프리미엄 혼재 잔차층(분해 주장 안 함).</li>
-          <li><b>결합</b>: 몬테카를로 컨볼루션(20,000표본·시드 고정) — 분위 단순합은
-            통계적으로 부정확하여 사용하지 않음.</li>
-          <li><b>한계</b>: 과거 변동 이중계상 가능성 — <b>"확률 범위"가 아닌 "참고
-            범위"</b>로만 제공. G2 분위수 모델 가동 시 이 층이 교체됨.</li>
+          <li><b>가격 원천</b>: CME(CBOT) ZL 선물 — 정산가 교차검증을 거친 종가 계열.</li>
+          <li><b>기준 가격층</b>: 과거 60거래일 변동 분포(2010~ 전 구간)의 하위 10%·
+            중앙값·상위 10% 지점을 최근 종가에 적용함.</li>
+          <li><b>실측 잔차층</b>: 관세청 수입 실적(선적 100톤 이상)의 CIF 단가에서 같은 달
+            CBOT 가격을 뺀 차이 — 최근 12개월 분포(운임·프리미엄이 섞인 잔차층).</li>
+          <li><b>결합</b>: 두 층을 몬테카를로 방식으로 결합함(2만 회 추출·결과 재현 가능).
+            분위 수치의 단순 합산은 통계적으로 부정확하여 쓰지 않음.</li>
+          <li><b>한계</b>: 과거 변동이 이중으로 반영될 수 있어 <b>"확률 범위"가 아닌
+            "참고 범위"</b>로만 제공함. G2 모델 가동 시 이 층이 교체됨.</li>
         </ol></details>"""
 
     # ── 경보 블록 ──
@@ -623,22 +629,22 @@ def build_daily_brief(
             cards.append(f"""
     <div class="alert"><div class="stripe"></div><div class="body">
       <div class="head">🚨 <span>{_esc(VAR_LABELS.get(code, code))} — {_esc(a.get("설명", ""))}</span>
-        <span class="pill warn">임계 초과</span></div>
-      <div class="detail num">현재값 {_esc(a.get("현재값", "?"))} · 임계 {_esc(a.get("임계값", "?"))} ·
+        <span class="pill warn">기준 초과</span></div>
+      <div class="detail num">현재값 {_esc(a.get("현재값", "?"))} · 기준 {_esc(a.get("임계값", "?"))} ·
         신선도 {_esc(a.get("데이터신선도", "?"))}</div></div></div>""")
         alerts_html = "".join(cards)
-        s_alert_now = f"{len(alerts)}개 감시 변인 중 {len(breach)}건이 임계를 초과함."
-        s_alert_out = "임계 초과 변인의 지속 여부를 익일 브리프에서 재점검함."
+        s_alert_now = f"{len(alerts)}개 감시 변인 가운데 {len(breach)}건이 주의 기준을 넘어섬."
+        s_alert_out = "기준 초과 변인의 지속 여부를 다음 날 브리프에서 다시 점검함."
     else:
         alerts_html = ("""
     <div class="card" style="padding:14px 18px">
       <b style="color:var(--ok)">✔ 서명된 무소식</b> — 감시 변인 전체가 임계 범위 내에 있음.
       침묵이 아니라 검사를 통과한 결과임 (게이트·검증 상태는 상단 신뢰 스트립 참조).</div>""")
-        s_alert_now = f"{len(alerts)}개 감시 변인 전체가 임계 범위 내(미수집 {len(watch)}건 별도)."
+        s_alert_now = f"{len(alerts)}개 감시 변인 전체가 기준 범위 안에 있음(미수집 {len(watch)}건 별도)."
         s_alert_out = "이상 징후 없음 — 정기 감시를 지속함."
     summary_alert = _brief_box([
         ("현황", s_alert_now),
-        ("요인", "임계는 분포 기반(P90·z2σ) + 도메인 검증 절대 기준의 이중 체계임."),
+        ("요인", "판정 기준은 분포 기반(상위 10%·z 2σ)과 검증된 절대 기준의 이중 체계임."),
         ("전망", s_alert_out),
         ("유의", "미수집 항목은 경보 불가 상태이므로 '정상'과 구분해 표기함.")])
 
@@ -766,7 +772,7 @@ def build_daily_brief(
 <div class="page">
 <header>
   <div class="masthead"><h1>Nexus 일일 브리프</h1>
-    <div class="sub">대두유 조달 신호 데스크 · 핵심 변인 + <b>과거 유사국면 실측 참조</b> — <b>Preview</b></div></div>
+    <div class="sub">대두유 조달 신호 데스크 · 핵심 변인과 <b>과거 유사 시기 실측 참조</b> — <b>Preview</b></div></div>
   <div class="dateblock"><strong>{run_ts[:10]}</strong>
     KST 05:30 발행 체계 · 데이터 기준 {kpi.last_date if kpi else "미수집"} CME 마감</div>
 </header>
@@ -799,10 +805,10 @@ def build_daily_brief(
 </div></section>
 
 <section><div class="sec-h"><h2>금일 경보 (유의 사항)</h2>
-  <span class="note">임계 초과 변인만 카드 표시 — 무경보 시 서명된 무소식</span></div>
+  <span class="note">기준 초과 변인만 표시 — 이상이 없는 날은 서명된 무소식으로 대체함</span></div>
 {summary_alert}{alerts_html}</section>
 
-<section><div class="sec-h"><h2>과거 유사국면 실측 참조</h2>
+<section><div class="sec-h"><h2>과거 유사 시기 실측 참조</h2>
   <span class="note">현재와 유사했던 과거 연도들의 이후 실측 — 예측이 아닌 참조(A-191)</span></div>
 {analogue_html}</section>
 
@@ -818,7 +824,7 @@ def build_daily_brief(
 </div></div></section>
 
 <section><div class="sec-h"><h2>지표 스냅샷</h2>
-  <span class="note">z = 90일 롤링 — 잠정(기준 기간 캘리브레이션 확정 전 · W0) · 상승 적색/하락 청색</span></div>
+  <span class="note">z = 90일 기준(잠정 — 기준 기간 확정 전 · W0) · 상승 적색/하락 청색</span></div>
 <div class="card tablewrap"><table>
   <thead><tr><th>지표</th><th>값</th><th>일간</th><th>주간</th><th>90일 z</th><th>추세</th></tr></thead>
   <tbody>{"".join(snap_rows)}</tbody></table></div></section>
@@ -836,12 +842,12 @@ def build_daily_brief(
 <div class="appx">{appx_html}</div></section>
 
 <footer>
-  <div class="hitl">본 브리프는 판단 지원 정보이며, 조달(Buy/Hold) 결정은 반드시 휴먼 게이트
-    승인을 거침. Buy/Hold 신호와 레짐 판정(G3)은 정식판에서 제공 예정. 위기 국면에는
-    시나리오·행동 옵션을 담은 특별 브리프 체계로 전환됨.</div>
-  데이터 시점 규율: 모든 입력은 available_at ≤ 발행 시점 — 장 마감(14:20 ET) 이후 확정
-  지표는 1일 지연 적용. 산출: G1 파이프라인 (Elastic Net + SHAP 삼각검증 + Granger) ·
-  생성 {run_ts} UTC
+  <div class="hitl">본 브리프는 판단 지원 정보이며, 조달(구매/보류) 결정은 반드시 담당자
+    승인 절차를 거침. 구매/보류 신호와 국면 판정(G3)은 정식판에서 제공 예정. 위기 국면에는
+    시나리오와 행동 옵션을 담은 특별 브리프 체계로 전환됨.</div>
+  데이터 시점 규율: 모든 입력은 발행 시점 이전에 확정된 값만 사용함 — 장 마감(14:20 ET)
+  이후 확정되는 지표는 하루 지연해 반영함. 산출: G1 파이프라인 (Elastic Net + SHAP
+  삼각검증 + Granger) · 생성 {run_ts} UTC
 </footer>
 </div></body></html>"""
 

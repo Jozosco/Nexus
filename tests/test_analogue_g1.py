@@ -86,10 +86,10 @@ def test_relax_ladder_marked(synth_analysis: pd.DataFrame) -> None:
     for r in ok:
         assert r.relax_step in (0, 1)
         if r.relax_step == 1:
-            assert "오분위 완화" in format_result_line(r)
+            assert "오분위" in format_result_line(r)
 
 
 def test_unresolvable_variable_degrades(synth_analysis: pd.DataFrame) -> None:
     """mart에 없는 변수는 z-컬럼 미해석 강등."""
     res = build_analogue_context(["NO_SUCH_VAR"], [], analysis=synth_analysis)
-    assert res and all("미해석" in r.guard_note for r in res)
+    assert res and all("파생 지표 없음" in r.guard_note for r in res)

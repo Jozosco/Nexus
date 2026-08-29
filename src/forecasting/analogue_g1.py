@@ -161,7 +161,7 @@ def _analogue_for_var(analysis: pd.DataFrame, code: str,
     if z_col is None:
         return [AnalogueResult(base, "?", math.nan, "quantile_slice", h, 0, 0, 0, 0,
                                math.nan, math.nan, math.nan,
-                               guard_note="z-컬럼 미해석 — mart 파생 부재(산출 보류)")
+                               guard_note="분석용 파생 지표 없음 — 산출 보류")
                 for h in horizons]
     out: list[AnalogueResult] = []
     for h in horizons:
@@ -181,7 +181,7 @@ def _analogue_for_var(analysis: pd.DataFrame, code: str,
                                  cur_z if cur_z == cur_z else math.nan,
                                  "quantile_slice", h, int(len(days)), 0, 0, 0,
                                  math.nan, math.nan, math.nan,
-                                 guard_note=f"표본 부족(<{MIN_ANALOGUE_EPISODES} 에피소드)"
+                                 guard_note=f"유사 시기 {MIN_ANALOGUE_EPISODES}회 미만"
                                             " — 산출 보류")
         out.append(res)
     return out
@@ -218,7 +218,7 @@ def build_analogue_context(
     return results
 
 
-_H_LABEL = {5: "1주(5거래일)", 20: "1개월(20거래일)", 60: "3개월(60거래일)"}
+_H_LABEL = {5: "약 1주", 20: "약 1개월", 60: "약 3개월"}
 
 
 def format_result_line(r: AnalogueResult) -> str:
@@ -226,19 +226,19 @@ def format_result_line(r: AnalogueResult) -> str:
     if r.guard_note:
         return f"{_H_LABEL.get(r.horizon, r.horizon)}: {r.guard_note}"
     years = ", ".join(str(y) for y in r.years[:6]) + ("…" if len(r.years) > 6 else "")
-    relax = " · 오분위 완화 적용" if r.relax_step else ""
-    return (f"{_H_LABEL.get(r.horizon, r.horizon)} 후 실측: 에피소드 {r.n_episodes}건"
-            f"({years}) 중 상승 {r.n_up}·하락 {r.n_down} — 수익률 중앙 {r.ret_p50:+.1f}% · "
-            f"P10~P90 [{r.ret_p10:+.1f}%, {r.ret_p90:+.1f}%]{relax}")
+    relax = " · 비교 구간을 넓혀 산출(오분위)" if r.relax_step else ""
+    return (f"{_H_LABEL.get(r.horizon, r.horizon)} 후 실측: 유사 시기 {r.n_episodes}회"
+            f"({years}) 중 상승 {r.n_up}회·하락 {r.n_down}회 — 변화율 중앙 {r.ret_p50:+.1f}% · "
+            f"하위~상위 10% [{r.ret_p10:+.1f}%, {r.ret_p90:+.1f}%]{relax}")
 
 
 def render_analogue_md(results: list[AnalogueResult]) -> list[str]:
     """월별 심층판 md 섹션 (Stage 1 — 통계 검정 없음 명기)."""
     if not results:
-        return ["## 과거 유사국면 실측 참조", "",
-                "- mart 미가용 또는 대상 변수 부재 — 산출 보류(정직 강등).", ""]
-    lines = ["## 과거 유사국면 실측 참조 (Stage 1 — 분위 슬라이스)", "",
-             f"현재 변수 상태(z)가 같은 분위 버킷이었던 과거 거래일들의 이후 실측 분포. "
+        return ["## 과거 유사 시기 실측 참조", "",
+                "- 분석 데이터 미가용 또는 대상 변수 부재 — 산출 보류.", ""]
+    lines = ["## 과거 유사 시기 실측 참조", "",
+             f"변수의 표준화 지수(z)가 현재와 같은 구간이었던 과거 거래일들의 이후 실측 분포. "
              f"**{_REQUIRED_CAPTION}** (A-191 · 통계 검정 없음 — 기술 서술).", ""]
     by_var: dict[str, list[AnalogueResult]] = {}
     for r in results:
