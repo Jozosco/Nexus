@@ -78,3 +78,13 @@
 | `FAPM_2025_physics_informed_GNN_supply_chain_disruption.pdf` | Petrova & Hughes, Frontiers APM 2025 | ⚠️**인용 주의**(저널 신뢰도 검증 불가) — '도메인 제약 주입' 원리는 as-of 게이트·물리 범위 가드로 기구현. 이 원리 확인용으로만 보관 |
 | `ApplSci_2025_VMD_SSA_LSTM_construction_material_price.pdf` | Xiong et al., Appl. Sci. 15:2005, 2025 | 2026-08-28 | ⚠️**M-010 누수 구조 실증** — 전체 시계열 VMD 일괄 분해 후 70/30 분할(원문 p.9 Step2 확인) = 시험 구간 정보의 학습 유입. VMD 재도입 제안 반박 근거 문헌. SSA 이득 −2.68%로 미미 — 채용 없음 |
 | `EDAI_2025_GAT_TCN_supply_chain_demand.pdf` | Li, EDAI 2025(학회 단문) | 2026-08-28 | GAT+TCN+적응형 게이트 융합 — 데이터 부존재로 Phase B 배경. 유일 개념: 교란 시 관계 정보·평시 시간 패턴 가중 전환 = G3 레짐별 가중 발상과 동형(개념 참조만·수치 인용 금지) |
+
+### 부록 14차 반입분 (2026-08-29 · 조정자 공유 5건 — 해시 중복 0)
+
+| 파일 | 출처 | 연결 |
+|---|---|---|
+| `AOR_2026_procurement_portfolio_VoI_risk_averse.pdf` | Merzifonluoglu, Annals of OR 356:1059-1088, 2026 | ★**G3 3-시뮬레이션 설계 정본** — 선도+옵션+현물 3채널 위험회피 포트폴리오·정보 가치(VoI). purchase_timing_sim 설계 참조(부록 14차 #8) |
+| `Zenodo_2026_Hormuz_chokepoint_procurement_strategy.pdf` | Bell, Zenodo 프리프린트 2026-03 | ⚠️출처 등급 주의(동료심사 없음) — "봉쇄 전 취약성 발현" 개념은 CE-013 정합·위기 모드 임계 근거. 수치 인용 금지 |
+| `JRD_2024_financialization_grain_price_volatility_KR.pdf` | 김우석, 농촌개발연구 47(1), 2024 | 금융화→곡물가 변동성 한국어 실증 — **COT 도입(G1-5) 학술 근거** |
+| `KR_2026_polycrisis_SCR_AHP_strategy.pdf` | 박승화·정종수, 2026-03 | 다중위기 SCR AHP — 한국 정책 배경(위기 모드 행동 옵션 어휘 참고) |
+| `AFE_2024_cereal_network_trade_communities.pdf` | Robu et al., Agr. & Food Econ. 12:24, 2024 | 곡물 무역 네트워크 커뮤니티 기준선 — 배경(Temporal Edge·D-050 정합) |
