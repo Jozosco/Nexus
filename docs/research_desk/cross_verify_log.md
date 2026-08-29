@@ -8,7 +8,7 @@
 
 ## 요약
 
-- 총 검증 기록 **115건** — 판정 산출 106 · 실패(미판정) 9
+- 총 검증 기록 **125건** — 판정 산출 106 · 실패(미판정) 19
 - 누적 지적: **[치명] 95건 · [높음] 1078건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
@@ -16,6 +16,16 @@
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-08-29 | `reports/market/procurement_alternatives_2026-08-14.m` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-08-29 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-08-29 | `git diff HEAD~1` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_git_diff_HEAD_1_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/knowledge_repository_opti` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/hybrid_methodology_design` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_docs_research_desk_2026-08_hybrid_methodology_design_2026_08_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/hs_code_classification_20` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/differentiation_brainstor` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-08-29 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ❌ 실패 | 0 | 0 | 검증 실패 — 미판정 | 33250752011 | [xverify_2026-08-29_332507520…](../../reports/cross_verify/xverify_2026-08-29_33250752011_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-08-29 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33245684148 | [xverify_2026-08-29_332456841…](../../reports/cross_verify/xverify_2026-08-29_33245684148_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-08-29 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 1 | 14 | [치명] 두 보고서 — 독립 컨볼루션이 구조적으로 CBOT 변동을 이중계상 | 33245684148 | [xverify_2026-08-29_332456841…](../../reports/cross_verify/xverify_2026-08-29_33245684148_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-08-29 | `git diff HEAD~1` | ⚠️ 지적 | 1 | 4 | [치명] ① 미수집 항목이 있어도 ‘서명된 무소식’으로 판정됨 | 33245684148 | [xverify_2026-08-29_332456841…](../../reports/cross_verify/xverify_2026-08-29_33245684148_git_diff_HEAD_1_1.md) |
