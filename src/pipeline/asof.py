@@ -391,6 +391,14 @@ def attach_asof(
             ing = ing.dt.tz_localize(None)
         forecast = ing.notna() & (out["event_time"] > ing)
         avail = avail.mask(forecast, ing)          # 타임스탬프 그대로(normalize 금지)
+        # A-242: 관측 행(전망 아님)에서도 규칙 추정 발표일이 수집 시점을 1일 초과해
+        # 미래이면 추정 오류다 — API가 값을 반환했다는 것 자체가 이미 공표됐다는 뜻
+        # (ESR '최근 주' 행: 기준일+7일 추정이 실제 발표 이후에도 미래를 가리킴 —
+        # 런 #84 pytest 4건의 원인). ingested_at으로 캡한다. 1일 여유는 장중 확정
+        # 시각 설계(lag_days=1 — M-012③·M-013)를 보존하기 위한 것으로, VIXCLS류의
+        # 의도된 +1일 지연은 절대 건드리지 않는다.
+        overshoot = ing.notna() & ~forecast & (avail > ing + pd.Timedelta(days=1))
+        avail = avail.mask(overshoot, ing)
     out["available_at"] = avail
 
     # ── vintage: "모른다"를 "안다"로 위장하지 않는다 (D-034) ────────────────────

@@ -913,8 +913,10 @@ def build_daily_brief(
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Nexus 일일 브리프 — {run_ts[:10]}</title>
-<link rel="stylesheet"
+<link rel="stylesheet" media="print" onload="this.media='all'"
  href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<!-- 폰트 비차단 로드(A-241): 사내망이 fonts.googleapis.com을 차단·지연시켜도 렌더가
+     멈추지 않게 비동기 적용 — 실패 시 시스템 폰트(Malgun Gothic 등)로 즉시 표시 -->
 <style>{css}</style></head><body>
 <div class="page">
 <header>

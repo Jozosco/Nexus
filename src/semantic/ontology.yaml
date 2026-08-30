@@ -1032,6 +1032,11 @@ causal_edges:
     ref: docs/research_desk/references/Adaptation_2025_grain_traders_geopolitical_shocks.pdf
     locator: 'p.557'
     note: '임펄스 참고치 — 수에즈 회피·아프리카 우회 시 운송 +12~15일·운임률 +30~40%(2023말~2024 실측 서술). ⚠️곡물 벌커 기준 — 유지 탱커(BCAA) 수치 아님·지역 학술지 출처 등급 병기 (A-219)'
+  - source_type: research_doc
+    ref: docs/research_desk/references/Ukraine_grain_seed_trade_global_position.pdf
+    locator: "Scientific Horizons 28(5) p.9·p.13 — 우회·재편의 비용 축 실측: 물류비
+      +30~50%·운송비 20~25→70~100 USD/t·운송일 10~15→30~40일(곡물 기준·우크라
+      자국 저널 정직 병기). Adaptation 2025(가격 메커니즘 축)와 병렬 (A-241)"
 - edge_id: CE-014
   label_ko: 우크라이나 흑해 회랑 붕괴 → 해바라기유 수출 차단 → 식물성유지 공급 부족 → SBO 대체 수요 급증
   category: 지정학·무역
@@ -1057,7 +1062,11 @@ causal_edges:
     ref: docs/research_desk/references/Adaptation_2025_grain_traders_geopolitical_shocks.pdf
     locator: 'p.556·558'
     note: '회랑 상태 전이의 정량 스텝(2022~25 실측 서술) — open 월 500~600만t → blocked 월 20~30만t(−95%) → 대체 육로 상한 월 200~250만t(+80~120$/t) → 적응 후 회복 400~450만t(75~80%). ★현물-선물 스프레드 100~150$/t 확대·하이브리드 가격 공식(선물+물류+전쟁리스크 층) = D-041 도착가 층 분해와 동형 — 지정학 스트레스는 잔차층을 팽창시킨다는 해석 근거. ⚠️곡물 기준·지역 학술지 (A-219)'
-# — 시장 구조 —
+# — 시장 구조 —  - source_type: research_doc
+    ref: docs/research_desk/references/Ukraine_grain_seed_trade_global_position.pdf
+    locator: "Scientific Horizons 28(5) p.8~11 — 해바라기유 공급 병목은 씨(세계 21.1%
+      유지)가 아닌 압착 설비(피해 10억 USD+)+회랑(BSGI 32.9→자체 회랑 27백만 t):
+      회랑 상태가 물량보다 비용·잔차층에 작용. 유 수출 5.5~5.7백만 t/yr (A-241)"
 - edge_id: CE-015
   label_ko: CPO-SBO 스프레드 확대(>$175/MT) → 팜유 대체 → SBO 수요 감소 → 하락 압력
   category: 시장 구조
@@ -1090,6 +1099,12 @@ causal_edges:
       SBO +68%·2차 피크 +113%·3차는 2023 중반 시작→2024 중반 정상화), late 2024
       팜유>SBO 역전(1990년대 이후 처음). '단일 시장 신호 부재' (A-201 원문 재확인
       2026-08-29 — 구 기록의 '3차 +84%'는 원문에 없어 서술 정정)"
+  - source_type: research_doc
+    ref: docs/research_desk/references/PalmOil_2025_global_trade_complex_network.pdf
+    locator: "Sustainability 17:3062(2025) Tables 2·6·7 — MY+ID 수출 80%+ 집중 21년
+      불변·단일 커뮤니티 수렴. 팜유 공급 측은 2-노드 집중 구조라 MY/ID 단일 이벤트
+      (인니 2022 수출금지 전례)가 스프레드 레짐 전환을 촉발 가능 — 팜유 측 공급
+      집중의 구조 근거로 한정(SBO 미취급 논문) (A-241 부록 16차)"
   - source_type: research_doc
     ref: docs/research_desk/references/Heliyon_2024_soybean_quantile_VAR_connectedness.pdf
     locator: "Quantile VAR — 극단 분위수(0.1/0.9) 연결성 91%/87% vs 중위 낮음: 유지류

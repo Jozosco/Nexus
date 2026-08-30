@@ -211,6 +211,7 @@ def fetch_gdelt_sbo_events() -> pd.DataFrame:
     #   시간대에 응답이 느린 것으로 실측 → timeout 60s + 타임아웃·전송오류에도
     #   최대 3회 재시도(10→20s 백오프, 매 시도 새 커넥션).
     rows = []
+    query_counts: list[tuple[str, int]] = []
     for i, query in enumerate(GDELT_QUERIES):
         if i > 0:
             time.sleep(6)   # 쿼리 간 최소 간격 (GDELT 레이트리밋 회피)
@@ -233,10 +234,11 @@ def fetch_gdelt_sbo_events() -> pd.DataFrame:
                 r.raise_for_status()
                 count = len(r.json().get("articles", []))
                 if count > 0:
-                    rows.append(_make_row(
-                        "GDELT_SBO_EVENT_COUNT", float(count), "articles/day",
-                        f"[GEOINTEL:GDELT] '{query[:40]}' — {count}건",
-                    ))
+                    # A-242: 쿼리별 행을 그대로 append하면 같은 날 동일 코드에 복수 값
+                    # → mart 값충돌 하드 실패(런 #84 — A-220 재시도 수정으로 복수 쿼리
+                    # 성공이 처음 가능해지며 드러난 잠재 결함). 루프 밖에서 일 단위
+                    # 합산 1행으로 집계한다(쿼리별 내역은 note 보존 — A-216 NOAA 동일 원리).
+                    query_counts.append((query[:40], count))
                 break
             except (httpx.HTTPStatusError, httpx.RequestError, ValueError) as e:
                 if attempt < 2:
@@ -246,7 +248,15 @@ def fetch_gdelt_sbo_events() -> pd.DataFrame:
                     continue
                 print(f"[경고] GDELT '{query[:30]}' 3회 실패: {e}")
                 break
-    print(f"[완료] GDELT 이벤트 {len(rows)}개 쿼리 (대상 {len(GDELT_QUERIES)}개)")
+    if query_counts:
+        total = sum(c for _, c in query_counts)
+        detail = " · ".join(f"'{q}' {c}건" for q, c in query_counts)
+        rows.append(_make_row(
+            "GDELT_SBO_EVENT_COUNT", float(total), "articles/day",
+            f"[GEOINTEL:GDELT] {len(query_counts)}/{len(GDELT_QUERIES)}쿼리 합산 — {detail}",
+        ))
+    print(f"[완료] GDELT 이벤트 {len(query_counts)}개 쿼리 성공 → 일 합산 1행 "
+          f"(대상 {len(GDELT_QUERIES)}개)")
     return _to_df(rows)
 
 

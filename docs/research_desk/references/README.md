@@ -104,3 +104,13 @@
 |---|---|---|---|
 | `KIIE_2025_wavelet_coherence_STGNN_agri_price_KR.pdf` | 제21회 한국대학생 산업공학 경진대회 발표자료 | 2026-08-29 | 부록 15차 #13 — Wavelet Coherence+Surrogate Test 동조화 탐지(★유지류 동조화 레짐·W0 보조 채용 후보)+STGNN(배경 — 검증 서술 부재·수치 인용 금지). 이미지 PDF — PyMuPDF 렌더 판독 |
 | `GAT_2025_global_indices_spillover_returns.pdf` | 발표자료(저자 불명) | 2026-08-29 | 부록 15차 #14 — GAT 지수 스필오버: 위기 구간 관계 정보 우위(개념 참조만·G3 레짐 가중 3번째 정합 관찰) |
+
+### 부록 16차 — 시장구조·주산지 5건 (2026-08-30 조정자 공유 · 전문 판독)
+
+| 파일 | 출처 | 판독일 | 연결 |
+|---|---|---|---|
+| `Dynamics_2025_AEPP_grain_oilseed_trading_concentration.pdf` | Wilson·Bullock·Dubovoy, AEPP 47(4):1561-82, 2025 | 2026-08-30 | ★선적 실거래 CR4/HHI 첫 실측 — 세계 CR4 32/27%·대두 45%·'ABCD 70~90%' 통설 해체·COFCO CNF 1위. D-047 집중도 교정 정본·잔차층 귀속 해석 근거. ⚠️FOB/CNF·매출/물량 혼용 금지 |
+| `Brazil_policy_Missing_Target_foreign_investment_smallholders.pdf` | Corcioli 외, Front. Sustain. Food Syst. 5:796845, 2022 | 2026-08-30 | 브라질 대두 사슬 76.1% 외국계(투입재 포함)·트레이딩 점유 Transparency 2021과 완전 일치(제2 출처 교차검증) — 거버넌스 배경(가격 엣지 등재 금지 판정) |
+| `Competitiveness_drivers_soybean_exportation_supply_chain.pdf` | Filassi·Oliveira, RESR 60(3), 2022(데이터 2018~20) | 2026-08-30 | 브라질 물류 인프라 유일 마이너스 동인(도로 48%·저장 적자 7,600만 t)·ABCD MT주 80→50% — D-047 브라질 축. ⚠️대두유 조사 제외(전이는 INFERENCE) |
+| `PalmOil_2025_global_trade_complex_network.pdf` | Zhang 외, Sustainability 17:3062, 2025(파일명 연도 개명) | 2026-08-30 | ★MY+ID 80%+ 집중 21년 불변·단일 커뮤니티 — **CE-015 배경 evidence 등재**(팜유=2-노드 집중 리스크). 네트워크 지표 예측 사용 불가(TGL 전례) |
+| `Ukraine_grain_seed_trade_global_position.pdf` | Panfilova 외, Scientific Horizons 28(5), 2025 | 2026-08-30 | ★해바라기 취약점=압착+물류(씨 21.1% 유지·설비 피해 10억$·운송비 70~100$/t) — **CE-013·014 evidence 등재**(물량·비용 축, Adaptation 2025와 병렬). ⚠️우크라 자국 저널·전망치 혼용 금지 |
