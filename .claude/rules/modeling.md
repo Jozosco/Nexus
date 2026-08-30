@@ -80,6 +80,11 @@
 ### Challenger (동일 fold에서 비교 후 승격)
 GRU/LSTM (`torch`) · N-BEATSx/N-HiTS · TFT (`pytorch-forecasting`) · PatchTST · Chronos.
 승격 조건은 `.claude/agents/c03-data-scientist.md` §4를 따른다.
+**검토 대기(사전 평가 필요 — 2026-08-29 등재, A-213·A-224 이행)**:
+MTGPR(Bayesian Multi-Task GPR — posterior 구간 내장이 G2 분위 계약과 정합하나
+O(n³)·중국 도매지수 검증 한계, IEEE 2025 `references/`) ·
+GAS-t(관측 구동 변동성 — Python 구현 부재로 구현 비용 유의, Mathematics 2025).
+둘 다 §4 게이트 통과 전 후보 지위조차 아님 — 사전 평가 카드 작성이 선행 조건.
 
 > ⚠️ **VMD/EMD 분해는 기본 구성에서 제외**(2026-08-12 결정). 전체 시계열을 한 번에 분해하면
 > 미래 정보가 과거 fold로 유입된다. 사용 시 각 fold 학습 창 안에서 one-sided/rolling로만
@@ -111,7 +116,9 @@ GRU/LSTM (`torch`) · N-BEATSx/N-HiTS · TFT (`pytorch-forecasting`) · PatchTST
    레짐별 사례 수로 판단한다(구 M-004 단독 기준 폐기)
 6. G2 gate: 8개 외부 소스 C-08 DQSOps PASS + `available_at` 100% 존재
 7. **Stress slice 별도 보고**: 2012 가뭄 · 2018 미중 · 2020 팬데믹 · 2022 러우 · 2025 ·
-   2026(미완결 → shadow slice). 사건 구간을 이상치로 제거하지 않는다
+   2026(미완결 → shadow slice). 사건 구간을 이상치로 제거하지 않는다.
+   레짐별 coverage 분리 보고의 학술 근거: Heliyon 2024 Quantile VAR — 유지류 가격
+   전이가 극단 분위수(0.1/0.9)에서 91%/87%로 동조화(꼬리 ≠ 중위, `references/`)
 8. 최신 완전 기간은 **lockbox test**로 보존한다
 
 ---
@@ -121,6 +128,9 @@ GRU/LSTM (`torch`) · N-BEATSx/N-HiTS · TFT (`pytorch-forecasting`) · PatchTST
 **Objective**: Classify current market regime and translate into Buy / Hold procurement recommendation.
 **+ 3-시뮬레이션(D-051)**: ①현시점 구매 ②사전 그리드 대안 시점 ③분할 구매의 근사 손익
 (per-MT regret — D-021). G2 분위수 모델 전에는 과거 실측 백테스트 서술까지만(A-191).
+설계 정본은 **Annals of OR 2026 VoI**(Merzifonluoglu — 선도+옵션+현물 3채널 위험회피
+포트폴리오·정보 가치, `references/` · A-230): CVaR를 P&L simulation 보고 지표 후보로
+병기하고, 옵션형 계약은 §3c contract_type 확장 후보로 둔다(현행 spot|term — W2 P1).
 **Output contract**: Regime label (Bear/Bull/Neutral) · Confidence · P&L impact estimate · Recommended action
 
 ### Method Stack `[M]`

@@ -12,6 +12,7 @@
 2. **G2 가격·구간 예측:** SARIMAX, quantile LightGBM, EGARCH-X의 예측을 가중 결합하고 Ensemble Conformalized Quantile Regression(EnCQR)으로 구간을 보정한다.
 3. **G3 국면·의사결정:** Markov-switching 또는 HMM으로 Bear/Neutral/Bull 국면 확률을 산출하고, G2 분포와 결합해 Buy/Hold를 제안한다.
 4. **Challenger:** GRU/LSTM, N-BEATSx/N-HiTS, TFT, PatchTST, Chronos를 동일한 walk-forward 조건에서 비교한다. 데이터 양·정합성·설명력 기준을 통과한 모델만 승격한다.
+   - *검토 대기(2026-08-29 추가 등재 — 사전 평가 카드 선행)*: MTGPR(IEEE 2025 — posterior 구간 내장·O(n³)·중국 도매지수 검증 한계), GAS-t(Mathematics 2025 — Python 구현 부재로 구현 비용 유의). 정본 게이트는 c03 §4.
 5. **지식·인과 계층:** PDF 사건을 지식그래프에 적재하고, causal ML은 특정 충격의 조건부 효과와 시나리오 분석에 사용한다. LLM은 추출·요약·근거 연결을 담당하며 수치 예측기를 대체하지 않는다.
 
 ## 2. 모델군별 후보와 적용 판단

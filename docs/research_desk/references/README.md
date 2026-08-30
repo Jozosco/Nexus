@@ -36,22 +36,26 @@
 
 | 파일 | 출처 | 연결 |
 |---|---|---|
-| `farmdoc_2025_RD_boom_P3_value_of_soybean_oil_in_crush.pdf` | Janzen & Wang, farmdoc (15):188, 2025-10-13 | ★RD붐 P3(시리즈 종결편) — SBO 압착 산출 가치 비중 **25~35%→35~50% 상승·변동성 확대**, 유·박·대두 3요소 가격 상관 구조 붕괴. CE-022 보강 후보 |
-| `farmdoc_2025_RFS_playbook_revised_D4_RIN_generation.pdf` | Hubbs & Irwin, (15):204, 2025-11-05 | Revised RVO 단계 — D4 RIN 2023~25 평균 7.84→2026~27 10.56십억 gal(+22%) |
-| `farmdoc_2025_RFS_playbook_revised_production_feedstock.pdf` | (15):209, 2025-11-12 | Revised RVO 하 생산·원료 사용 |
-| `farmdoc_2025_RFS_playbook_revised_backload_2027.pdf` | (15):217, 2025-11-24 | 원료 수요 2026 +19%·2027 +48% — **국내 원료 2027년 +113% 백로딩** |
-| `farmdoc_2024_BBD_feedstock_trends_2011_2023.pdf` | Gerveni et al., (14):71, 2024-04-12 | RD붐 원료 사용 초기 정량(2023년 RD 원료 +9십억 lb) — P1·P2 인용 기준점 |
+| `farmdoc_2025_RD_boom_P3_value_of_soybean_oil_in_crush.pdf` | Janzen & Wang, farmdoc (15):188, 2025-10-13 | ★RD붐 P3(시리즈 종결편) — SBO 압착 산출 가치 비중 **25~35%→35~50% 상승·변동성 확대**, 유·박·대두 3요소 가격 상관 구조 붕괴. ✅**CE-022 evidence 등재+원문 판독 확정(2026-08-29 A-239)** — 25~35%(2013~20)→2020 이후 35% 미만 드묾·2021/2025 50% 도달·NOPA 오일 11→12 lb/bu |
+| `farmdoc_2025_RFS_playbook_revised_D4_RIN_generation.pdf` | Hubbs & Irwin, (15):204, 2025-11-05 | Revised RVO 단계 — D4 RIN 2023~25 평균 7.84→2026~27 10.56십억 gal(+22% · RVO 자체는 +50%) ✅원문 판독 확정(2026-08-29) — 타임라인 ①′ 편입 |
+| `farmdoc_2025_RFS_playbook_revised_production_feedstock.pdf` | (15):209, 2025-11-12 | Revised RVO 하 half-RIN 4시나리오 — 국내 원료 2026 +14~20·2027 +21~31십억 lb(기준 23십억) ✅원문 판독 확정(2026-08-29) |
+| `farmdoc_2025_RFS_playbook_revised_backload_2027.pdf` | (15):217, 2025-11-24 | 원료 수요 2026 +19%·2027 +48% — **국내 원료 2027년 +113% 백로딩** ✅원문 정합 확인(2026-08-29 — 2027 +21~31십억 lb ÷ 기준 23십억 = 평균 +113%·양년 평균 +88%) |
+| `farmdoc_2024_BBD_feedstock_trends_2011_2023.pdf` | Gerveni et al., (14):71, 2024-04-12 | RD붐 원료 사용 초기 정량 — ✅원문 판독 확정(2026-08-29 A-239): RD 원료 2023 단년 +9십억 lb·총 22십억(11배)·BBD 전체 7.8→34.9십억 lb, SBO FAME 8.6(2020)→7.3십억(2023)·점유 55.4%. P1·P2 인용 기준점 |
 | `farmdoc_2025_winter_oilseeds_biofuel_feedstock.pdf` | farmdoc, 2025-12-23 | 겨울 유지작물의 원료 공급 반응 — 공급 측 완충 후보 |
 | `farmdoc_2026_newcrop_SBO_export_projection_volatility.pdf` | farmdoc, 2026-05 | 신곡 SBO 수출 전망과 가격 변동성 확대 |
-| `USDA_ERS_2026_05_OCS_vegoils_biofuels_special.pdf` | Bukowski & Swearingen, ERS Oil Crops Outlook 특별기사, 2026-05 | 16:101 인용 원문 — 바이오연료용 유지 사용 전망(갭 B-3 해소) |
-| `USDA_FAS_WMT_oilseeds_latest.pdf` | USDA FAS Oilseeds: World Markets and Trade(회수 시점 최신호) | 갭 B-1 해소 — 해바라기 러/우 배분 원표 대조용(검토 대기) |
+| `USDA_ERS_2026_05_OCS_vegoils_biofuels_special.pdf` | Bukowski & Swearingen, ERS Oil Crops Outlook 특별기사, 2026-05 | 갭 B-3 해소+✅원문 판독(2026-08-29) — MY26/27 SBO 공급 +2.3십억 lb·캐놀라유 수입 8.5십억 lb 전망. 16:101의 가동률·수입 수치는 본 기사 아닌 EPA/EIA 산출(계보 분리) |
+| `USDA_FAS_WMT_oilseeds_latest.pdf` | USDA FAS Oilseeds: World Markets and Trade(회수 시점 최신호) | 갭 B-1 해소+✅**원표 대조 완료(2026-08-29 A-239)** — p.23: 러 5,000·우 4,950천 톤(2026/27) = 브리프 정확·errata 항목 해소 |
 
 ⚠️ 위 3건(P3·204·209·217·backload)의 'Revised RVO' 수치는 2025-11 시점 단계 —
 **최종 인용 기준은 RIN 갤런(16:66·A-205)**. 단계 혼용 금지.
 
+### 시장구조·거버넌스 논문 3건 (2026-08-28 전문 판독 — 부록 10차)
+
+| 파일 | 출처 | 판독일 | 연결 |
+|---|---|---|---|
 | `Transparency_2021_Brazil_soy_supply_chain_accountability.pdf` | Medina & Thomé, Logistics 2021(파일명 2024 오기 정정) | 2026-08-28 | ★전문 판독(부록 10차) — 외국 다국적 65.4% 통제·브라질 트레이딩 점유 2020(Cargill 11.4·Bunge 9.4·ADM 7.8·LDC 7.5·COFCO 3.8%) = D-047 브라질 축 정량 교차검증. 이행 지표(DCF 등)는 부재 — Cargill 연차와 축이 다름(점유율 vs 이행) |
 | `Adaptation_2025_grain_traders_geopolitical_shocks.pdf` | Tatarenko & Nabok, Herald of Khmelnytskyi NU 2025-12(우크라이나·2022~25 분석) | 2026-08-28 | ★전문 판독(부록 10차) — **CE-013·CE-014 evidence 등재**: 흑해 회랑 정량 스텝(−95%→회복 75~80%)·수에즈 우회 +12~15일/+30~40%·현물-선물 스프레드 100~150$/t·하이브리드 가격 공식 = **D-041 층 분해와 동형**. ⚠️곡물 기준·지역 학술지·호르무즈 미취급 |
-| `China_2024_financialized_soybeans_food_regime.pdf` | Fares, J. Agrarian Change 2023(SOAS·데이터 2009~21) | 2026-08-28 | ★전문 판독(부록 10차) — COFCO 금융화 실증(비중국행 41%·해외 압착 1/3·CIL 주주 구조). **P1-05/06 해석 규율**: 중국 구매 신호를 '국가 매집'으로 단정 금지(국가 수요 vs 상업 채널 분리). COFCO 폴더 자본 축 원천 |
+| `China_2023_financialized_soybeans_food_regime.pdf` | Fares, J. Agrarian Change 2023(SOAS·데이터 2009~21 — 파일명 연도 오기 개명 2026-08-29) | 2026-08-28 | ★전문 판독(부록 10차) — COFCO 금융화 실증(비중국행 41%·해외 압착 1/3·CIL 주주 구조). **P1-05/06 해석 규율**: 중국 구매 신호를 '국가 매집'으로 단정 금지(국가 수요 vs 상업 채널 분리). COFCO 폴더 자본 축 원천 |
 
 보관 원칙: 조정자 선별 자료의 원문은 요약과 별도로 보존(근거 재검증 가능성 — S-5·EvidenceSpan 정합).
 분류 원칙: 프로젝트 목적(가격·조달)과의 관련성을 정직하게 표기한다 — 관련성이 낮은 자료를
@@ -76,6 +80,11 @@
 | `ACK_2024_tree_based_raw_material_price_pipeline_KR.pdf` | 이은지·유헌창, ACK 2024 (고려대) | 니켈 XGBoost 자동화 파이프라인 — 배경(자동화 구성은 기보유가 상회). ⚠️MAPE 0.2%는 기준선 비교·누수 방지 서술 부재 — 수치 인용 금지 |
 | `Sustainability_2024_GCN_supply_chain_demand_forecasting.pdf` | Niu et al., Sustainability 16:9608, 2024 (쓰촨대) | 기업 그래프 수요예측 — Phase B 배경(요구 데이터 부존재·SC-RIHN 동일 판정) |
 | `FAPM_2025_physics_informed_GNN_supply_chain_disruption.pdf` | Petrova & Hughes, Frontiers APM 2025 | ⚠️**인용 주의**(저널 신뢰도 검증 불가) — '도메인 제약 주입' 원리는 as-of 게이트·물리 범위 가드로 기구현. 이 원리 확인용으로만 보관 |
+
+### 부록 13차 추가분 2건 (2026-08-28 2차 공유)
+
+| 파일 | 출처 | 판독일 | 연결 |
+|---|---|---|---|
 | `ApplSci_2025_VMD_SSA_LSTM_construction_material_price.pdf` | Xiong et al., Appl. Sci. 15:2005, 2025 | 2026-08-28 | ⚠️**M-010 누수 구조 실증** — 전체 시계열 VMD 일괄 분해 후 70/30 분할(원문 p.9 Step2 확인) = 시험 구간 정보의 학습 유입. VMD 재도입 제안 반박 근거 문헌. SSA 이득 −2.68%로 미미 — 채용 없음 |
 | `EDAI_2025_GAT_TCN_supply_chain_demand.pdf` | Li, EDAI 2025(학회 단문) | 2026-08-28 | GAT+TCN+적응형 게이트 융합 — 데이터 부존재로 Phase B 배경. 유일 개념: 교란 시 관계 정보·평시 시간 패턴 가중 전환 = G3 레짐별 가중 발상과 동형(개념 참조만·수치 인용 금지) |
 
@@ -88,5 +97,10 @@
 | `JRD_2024_financialization_grain_price_volatility_KR.pdf` | 김우석, 농촌개발연구 47(1), 2024 | 금융화→곡물가 변동성 한국어 실증 — **COT 도입(G1-5) 학술 근거** |
 | `KR_2026_polycrisis_SCR_AHP_strategy.pdf` | 박승화·정종수, 2026-03 | 다중위기 SCR AHP — 한국 정책 배경(위기 모드 행동 옵션 어휘 참고) |
 | `AFE_2024_cereal_network_trade_communities.pdf` | Robu et al., Agr. & Food Econ. 12:24, 2024 | 곡물 무역 네트워크 커뮤니티 기준선 — 배경(Temporal Edge·D-050 정합) |
+
+### 부록 15차 2건 (2026-08-29 공유 — 시장구조 아님 확정·A-235)
+
+| 파일 | 출처 | 판독일 | 연결 |
+|---|---|---|---|
 | `KIIE_2025_wavelet_coherence_STGNN_agri_price_KR.pdf` | 제21회 한국대학생 산업공학 경진대회 발표자료 | 2026-08-29 | 부록 15차 #13 — Wavelet Coherence+Surrogate Test 동조화 탐지(★유지류 동조화 레짐·W0 보조 채용 후보)+STGNN(배경 — 검증 서술 부재·수치 인용 금지). 이미지 PDF — PyMuPDF 렌더 판독 |
 | `GAT_2025_global_indices_spillover_returns.pdf` | 발표자료(저자 불명) | 2026-08-29 | 부록 15차 #14 — GAT 지수 스필오버: 위기 구간 관계 정보 우위(개념 참조만·G3 레짐 가중 3번째 정합 관찰) |

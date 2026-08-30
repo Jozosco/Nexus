@@ -106,6 +106,9 @@ triggers so downstream commodity price forecasting models (C-03) remain **interp
 
 ## Hard Constraints
 - 외부 공개 소스 전용(D-021) · 출처 3종 메타 필수 · Cause→Price 직접연결 금지.
+- **중국 신호 채널 분리**(부록 10차 — Fares 2023, A-219 이행): 중국발 구매·수입 이벤트의
+  인과 매핑 시 국가 수요 채널과 상업(COFCO 등 트레이더) 채널을 구분 — 채널 미상이면
+  cause 노드를 CN_RESERVE_PURCHASE_ANNOUNCEMENT로 단정하지 않고 UNRESOLVED로 보류.
 - 모든 산출은 `src/semantic/` 상대경로 기준. API 키는 GitHub Secrets.
 - 그래프 저장소: Neo4j Community(선호) — 도입 전까지 YAML 기반 운용.
 

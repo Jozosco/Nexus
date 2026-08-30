@@ -190,3 +190,4 @@ counterparty_profile:            # 실값은 실행 시에만 주입 — repo �
 - [KBEA 한국바이오에너지협회 — 바이오디젤](https://k-biofuels.or.kr/front/kor/bio/bio-diesel) · [에너지데일리 — 바이오디젤 의무혼합비율 2030년 8.0% 상향](https://www.energydaily.co.kr/news/articleView.html?idxno=131487)
 - KREI 「글로벌 식량 공급망 분석과 과제(1년차): 식용유」 P291 (2023-11) — repository.krei.re.kr (프록시 차단으로 참조만)
 - [aT FIS 식품산업통계 — 국제 원료가격(유지류)](https://www.atfis.or.kr/home/commodity.do?act=detail&cmdtSeCd=OIL&cmdtId=0602000001001103)
+- `docs/research_desk/references/review_ABCD_competitiveness_oilseed_trading.pdf` — ABCD 유지류 트레이딩 경쟁구조 리뷰(부록 1차 보관·해시 중복 차단 6회의 원본). 본 문서 §1 상하류 구조 서술의 참고 문헌 — 역참조 등재 2026-08-29(A-239)

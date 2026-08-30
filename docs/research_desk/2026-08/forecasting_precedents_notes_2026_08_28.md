@@ -113,13 +113,15 @@ Score — score-driven 변동성, Creal·Koopman·Lucas 2013) 출력을 원 피�
 
 ## 종합 — 알고리즘 개발 반영 우선순위
 
-| 순위 | 항목 | 비용 | 시점 |
-|---|---|---|---|
-| 1 | EGARCH-X σ̂ → Quantile LGBM 피처 주입 실험 | 낮음(피처 1개) | G2 개발(9월 초) |
-| 2 | 무역액 파생 피처 log1p 변환 기본 후보 | 낮음 | G1 피처 파생 시 |
-| 3 | Persistence 기준선의 무역 흐름 명시(승격 게이트 문서) | 문서만 | 즉시 |
-| 4 | GAS-t Challenger 등재(구현 비용 유의) | 중간 | Challenger 단계 |
-| 5 | 그래프 계열(GCN·PI-GNN·SC-RIHN) — Phase B 보류 통일 | — | 선행조건 충족 후 |
+| 순위 | 항목 | 비용 | 시점 | 이행(2026-08-29 감사 A-239) |
+|---|---|---|---|---|
+| 1 | EGARCH-X σ̂ → Quantile LGBM 피처 주입 실험 | 낮음(피처 1개) | G2 개발(9월 초) | ✅ data_requirements G2-3 등재 |
+| 2 | 무역액 파생 피처 log1p 변환 기본 후보 | 낮음 | G1 피처 파생 시 | ✅ data_requirements G1 절 등재 |
+| 3 | Persistence 기준선의 무역 흐름 명시(승격 게이트 문서) | 문서만 | 즉시 | ✅ c03 §5 특칙 설치 |
+| 4 | GAS-t Challenger 등재(구현 비용 유의) | 중간 | Challenger 단계 | ✅ modeling.md·c03 §4·포트폴리오 '검토 대기' 등재(MTGPR 동반) |
+| 5 | 그래프 계열(GCN·PI-GNN·SC-RIHN) — Phase B 보류 통일 | — | 선행조건 충족 후 | — (보류 유지) |
+| 6 | AOR VoI — W2 반영 3건(CVaR 병기·옵션형 계약 자리·정보 가치 프레임) | 문서→W2 P0/P1 | W2 착수(9월 초) | ✅ modeling.md §G3 설계 정본 인용 |
+| 7 | KIIE Wavelet Coherence — W0 보조 분석 | pywavelets 승인 선행 | W0 Stage 2 | ✅ W0 문서 Stage 2 절·DQ-13 표면화 |
 
 ---
 
@@ -222,3 +224,23 @@ Score — score-driven 변동성, Creal·Koopman·Lucas 2013) 출력을 원 피�
   (부록 13차 #7)의 적응형 게이트·G3 레짐별 가중 발상과 3번째 정합 관찰. 데이터
   (주가지수)와 도메인 상이·발표자료라 수치 인용 금지. 주가지수 스필오버 자체는
   우리 변수 풀(VIX·CRB 등)에 이미 간접 반영.
+
+
+---
+
+## 부록 13차 보충 — A-213 2건 본문 절 (2026-08-29 감사에서 '행만 존재' 갭 해소)
+
+### 15. MTGPR — Bayesian Multi-Task GPR 대두유 선물 예측 (IEEE Access 2025, Yin·Li)
+- Bayesian 최적화 Multi-Task GPR(Matérn 2.5×ESS 커널) — 중국 도매 대두유 지수에서
+  LSTM·XGBoost 대비 우위 주장. **posterior predictive interval 내장 = G2 분위
+  계약(P10~P90)과 구조 정합**이 유일한 채용 유인.
+- ⚠️정직 평가 유보 3건: ①검증 대상이 중국 도매지수(CBOT 아님) ②GPR O(n³) — 4,000+
+  거래일에 근사 필수 ③승격 게이트(c03 §4) 미적용 수치. **'검토 대기' 등재까지만** —
+  사전 평가 카드 작성 전 후보 지위 없음(modeling.md Challenger 절 반영 완료).
+
+### 16. Heliyon 2024 — 대두 복합체 Quantile VAR 연결성
+- 대두 복합체가 국제 상품시장 가격 전이의 주도 원천·**극단 분위수(0.1/0.9) 연결성
+  91%/87% vs 중위 낮음 = 꼬리 동조화**. 평시 공행성 붕괴(farmdoc)와 위기 시
+  동조화가 공존한다는 레짐 해석의 학술 근거.
+- 반영: CE-015 evidence 등재·G2 레짐별 empirical coverage 보고(modeling.md
+  Validation §7)·G3 레짐 설계 근거. 수치는 해석 근거로만 — 모델 이식 아님.

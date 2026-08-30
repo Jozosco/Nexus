@@ -974,6 +974,13 @@ causal_edges:
     ref: src/semantic/causal_chains.md
     locator: 지정학·무역
     note: 단기 하락·중기 혼조 이원 구조 — P1-02 도메인 검증 대기
+  - source_type: research_doc
+    ref: docs/research_desk/references/farmdoc_2024_US_Brazil_China_soybean_triangle_20yr.pdf
+    locator: "(14):35(2024-02-20, Colussi et al.) — 2018 무역전쟁 실측: 미국 대두 수출의
+      對중 비중 60%→18% 급락·브라질 對중 비중 82% 피크(중국 25% 보복관세). 이후 미국
+      ~50% 회복(완전 회복 못함)·브라질 2019~23 평균 73% vs 미국 51%. 20년간 브라질
+      수출 4배(705→3,744M bu)·미국의 2배 — 관세 충격의 무역 재편 지속성(Case D 구조
+      근거). 원문 판독 2026-08-29 (A-239)"
 - edge_id: CE-012
   label_ko: 중국 SBO 비축 발표 → 수입 기대 형성 → 재고 감소 우려 → 선물 단기 급등
   category: 지정학·무역
@@ -1066,11 +1073,28 @@ causal_edges:
   status: candidate
   validated_by: []
   domain_mechanism_ref: null
+  # A-201 기록 이행(2026-08-29 감사에서 미주입 발견 — 실물 주입):
+  interpretation_rules:
+  - 스프레드의 평균회귀를 가정하지 않는다 — 2020년 이후 SBO-팜유 공행성 구조가
+    붕괴함(farmdoc 실증). 다이버전스가 자동으로 좁혀진다는 통념은 성립하지 않음.
+  - $175/MT 임계는 레짐 인지 하에서만 사용한다(공행성 붕괴 이후 구간은 별도 레짐).
   evidence:
   - source_type: research_doc
     ref: src/semantic/causal_chains.md
     locator: 시장 구조
-    note: $175/MT 임계 근거는 통계 검증 대기 — P1-01 검증 대기
+    note: $175/MT 임계 근거는 통계 검증 대기 — P1-01 검증 대기(SBO−PO CIF Korea 9년
+      평균 $179는 D-045에서 독립 실증)
+  - source_type: research_doc
+    ref: docs/research_desk/references/farmdoc_2025_soy_palm_price_relationship.pdf
+    locator: "Wang·Janzen 2025-12 — 2020년 이후 공행성 붕괴: 다이버전스 3회(1차 피크
+      SBO +68%·2차 피크 +113%·3차는 2023 중반 시작→2024 중반 정상화), late 2024
+      팜유>SBO 역전(1990년대 이후 처음). '단일 시장 신호 부재' (A-201 원문 재확인
+      2026-08-29 — 구 기록의 '3차 +84%'는 원문에 없어 서술 정정)"
+  - source_type: research_doc
+    ref: docs/research_desk/references/Heliyon_2024_soybean_quantile_VAR_connectedness.pdf
+    locator: "Quantile VAR — 극단 분위수(0.1/0.9) 연결성 91%/87% vs 중위 낮음: 유지류
+      가격 전이가 꼬리에서 동조화. 공행성 붕괴 이후 레짐 판별·G2 레짐별 coverage
+      보고의 학술 근거 (A-213 이행 2026-08-29)"
 - edge_id: CE-016
   label_ko: BDI 급등 → 해운비 상승 → 남미 수출 채산성 악화 → 수출 감소 → 국제가 상승
   category: 시장 구조
@@ -1251,6 +1275,20 @@ causal_edges:
       ref: docs/research_desk/references/climatepol_SAF_food_vs_fuel_ko.md
       locator: 'SAF 표·WASDE 2026-08'
       note: 'SAF 축 확인 — 대두유 HEFA가 SAF 시장 48~62%(TRL 9, 정유사 즉시 구현 유일 대안)·미 압착 2.78십억 bu 사상 최대. RVO(도로)와 SAF(항공)가 같은 SBO 원료 풀 경쟁 = 흡수 압력의 두 번째 엔진. 45Z 최대 $1.75/gal (A-210)'
+    - source_type: research_doc
+      ref: docs/research_desk/references/farmdoc_2025_RD_boom_P3_value_of_soybean_oil_in_crush.pdf
+      locator: "(15):188(2025-10-13) — 압착 가치 중 오일 비중: 2013~2020년 25~35% →
+        2020년 이후 35% 미만이 드묾·2021/2025년 50% 도달(원문 판독 2026-08-29 확정).
+        3요소(대두·오일·박) 가격 상관 구조 붕괴·오일 비중 변동성 확대 — 압착 산출
+        오일 11→12 lb/bu(NOPA). CE-022 강도의 미시 기반: 오일이 압착 경제성의
+        지배 변수로 전환 (A-239 — README 'CE-022 보강 후보' 이행)"
+    - source_type: research_doc
+      ref: docs/research_desk/references/farmdoc_2024_BBD_feedstock_trends_2011_2023.pdf
+      locator: "(14):71(2024-04-12, Gerveni·Irwin·Hubbs) — P1·P2 인용 기준점 원문
+        판독 확정(2026-08-29): RD 원료 사용 2023년 단년 +9십억 lb·총 22십억 lb
+        초과(2017년 ~2십억의 11배), BBD 전체 7.8→34.9십억 lb(2011~23 4.5배).
+        SBO의 FAME 바이오디젤 투입은 8.6십억(2020 피크)→7.3십억 lb(2023)·평균
+        점유 55.4% — RD 붐 이전·이후 원료 구조의 기준선 (A-239)"
 - edge_id: CE-023
   label_ko: "브라질 바이오디젤 의무 인상(B15→B16) → 내수 압착 흡수 → 수출 잉여 축소 → 국제가 상승"
   category: "정책·규제"

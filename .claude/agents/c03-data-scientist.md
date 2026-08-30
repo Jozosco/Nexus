@@ -105,7 +105,8 @@ The sole agent authorized to commit to `src/forecasting/`, `src/risk/`, `src/eva
 ## §4 Challenger 승격 규칙 (조사 패키지 §5)
 
 Challenger 후보: GRU/LSTM · N-BEATSx/N-HiTS · TFT · PatchTST · Chronos.
-아래를 **모두** 통과해야 Champion이 된다.
+검토 대기(사전 평가 카드 선행 — 2026-08-29): MTGPR(IEEE 2025 — 확률구간 내장·O(n³)
+유의) · GAS-t(Mathematics 2025 — 구현 비용 유의). 아래를 **모두** 통과해야 Champion이 된다.
 
 - 동일 as-of snapshot·동일 walk-forward fold 사용
 - 4개 핵심 horizon 중 **최소 3개**에서 strongest baseline 대비 주 지표 개선
@@ -134,6 +135,10 @@ Challenger 후보: GRU/LSTM · N-BEATSx/N-HiTS · TFT · PatchTST · Chronos.
 | 운영 | 추론 지연 · 재학습 시간 · 실패율 · stale-data 비율 |
 
 **baseline 필수**: last value · seasonal naive · ETS. 이를 못 이기면 승격하지 않는다.
+**무역 흐름 파생 변수 특칙**(TGL 2023 도메인 실증 — `references/`): 농산물 무역
+액·물량 계열은 as-of 최근값 이월(Persistence)이 GNN류를 크게 이기는 기준선임이
+동일 도메인(UN 무역 데이터)에서 실증됨(MSE 38배 격차). 무역 파생 피처·모델은
+Persistence 기준선 명시 비교 없이는 채택하지 않는다.
 
 ---
 

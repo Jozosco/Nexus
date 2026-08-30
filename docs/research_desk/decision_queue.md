@@ -30,3 +30,5 @@
 |---|---|---|---|---|---|
 | DQ-11 | **클라우드 이관 예고 — Azure→AWS+Snowflake** | 조정자 예고(8/29): Azure ML Studio 기능 전부를 AWS+Snowflake로, Azure 저장 데이터를 **AWS S3**로 이관(Power BI 제외). 기존 결정과 정면 충돌 3건 — D-028(Azure Blob 우선 경로)·egress planned 2종(Azure Storage/ML 호스트)·DQ-8(Azure Storage 관문 실증). **상세는 8/30 수령 예정 — 오늘은 등재만, 상세 수령 후 이관 계획(D-028·D-026·egress) 일괄 개정** | 상세 공유 후 개정안 승인 | AWS 구독(회사) | 상세 수령 시 즉시 — DQ-8 실증은 상세 확인 전 보류 권고 |
 | DQ-12 | **Databento ZL 최신 구간 갱신 — dispatch 1회** | 저장소 커밋 CSV(교차검증 보강용)는 8/12 수집분(T-1=08-10)이 마지막. **일별 정본 종가(CME 정산가)는 매일 최신이라 차단 아님** — 다만 교차검증 계열의 공백 축소를 위해 9/1 ZM·ZS 반입 dispatch에 ZL 최신 구간을 함께 포함 권고 | 9/1 dispatch에 ZL 포함 / 보류 | 소액 종량(기존 구독) | 9/1 (승인 데이터 반입일과 동시) |
+| DQ-13 | **pywavelets 승인** (W0 Stage 2 전제) | KIIE 절차 차용 유지류 동조화 보조 분석(Wavelet Coherence+Surrogate)의 유일 의존성 — libraries.md 미등재. 무료 OSS(BSD). 미승인이어도 W0 Stage 1(기준 기간 확정)은 차단 없음 | ①승인(libraries.md 등재) ②Stage 2 생략 | 무료 | 낮음 — 9/1~5 캘리브레이션 창 내 결정이면 Stage 2 동행 가능 |
+| DQ-14 | **Honeycomb Model 출처 확인** (D-050 잔여) | 조정자 언급 'Honeycomb Model'이 첨부 2건(하이브리드 방법론 설계 시)에 부존재 — 검색 0건으로 추측 배제 원칙에 따라 미통합 상태. R-021 ③ 이행 지연분(감사 발견) | 정확한 출처/자료 공유 | — | 낮음 |

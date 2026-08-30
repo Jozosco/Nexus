@@ -56,3 +56,18 @@
 
 **소비 지점(단계 교체)**: analogue_g1(z-컬럼 선택) → daily_brief 스냅샷 z →
 landed_cost BDI z → G2 피처 창. 8/31 첫 발행은 현행 창 유지(잠정 라벨).
+
+## Stage 2 (선택 · 승인 조건부) — 유지류 동조화 보조 분석
+
+Wavelet Coherence + Surrogate Test(KIIE 2025 절차 차용 — `references/` · 부록 15차
+#13)로 유지류 4종(SBO·팜·해바라기·유채)의 동조화가 **언제·어느 주기에서** 유의한지
+측정한다. 목적: ①감시 창 길이 산정의 통계 근거 보강 ②CE-015 레짐 판별(공행성 붕괴
+farmdoc 실증의 자체 데이터 정량 재확인). Surrogate 검정은 본 문서의 '통계 검정 남발
+금지' 원칙과 정합(사전 등록 1회 검정).
+
+- **선행 조건**: `pywavelets` 승인(libraries.md 미등재 — decision_queue **DQ-13**
+  표면화, R-021 ③). 승인 전에는 Stage 1(ACF 반감기·경보 안정성·horizon 적합성)만
+  실행 — Stage 2 부재가 기준 기간 확정을 차단하지 않음.
+- 대상: TE 9개년 유지 4종 + CBOT ZL 정본 계열. 산출: 주기별 coherence 맵 1장 +
+  유의 구간 표 — 판정 기준에 새 지표를 추가하지 않고 **Stage 1 판정의 각주 근거로만**
+  사용(사전 등록 원칙 유지).
