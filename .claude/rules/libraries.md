@@ -34,6 +34,9 @@ sentence-transformers >= 2.5  # embedding-based document similarity
 # Signal Processing
 # ⚠️ vmdpy — 2026-08-12 기본 구성에서 제외. 전체 시계열 일괄 분해는 미래 정보 누수를 일으킴.
 #    사용 시 각 fold 학습 창 내 one-sided/rolling 재적합 필수 (modeling.md G2 참조).
+PyWavelets >= 1.5      # W0 Stage 2: Wavelet Coherence 유지류 동조화 보조 분석(DQ-13 승인 2026-08-29).
+                       # 용도 한정 — 사후 기술 분석 전용(예측 피처 파생 금지: VMD와 동일한 전체 계열
+                       # 분해 누수 경로 차단, M-010 정합). Surrogate 검정은 사전 등록 1회만.
 
 # Uncertainty Quantification
 mapie >= 0.8            # G2: EnCQR(Ensemble Conformalized QR) 구간 보정 — 2026-08-12 용도 갱신

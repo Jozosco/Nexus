@@ -65,9 +65,9 @@ Wavelet Coherence + Surrogate Test(KIIE 2025 절차 차용 — `references/` · 
 farmdoc 실증의 자체 데이터 정량 재확인). Surrogate 검정은 본 문서의 '통계 검정 남발
 금지' 원칙과 정합(사전 등록 1회 검정).
 
-- **선행 조건**: `pywavelets` 승인(libraries.md 미등재 — decision_queue **DQ-13**
-  표면화, R-021 ③). 승인 전에는 Stage 1(ACF 반감기·경보 안정성·horizon 적합성)만
-  실행 — Stage 2 부재가 기준 기간 확정을 차단하지 않음.
+- **선행 조건 충족**: `pywavelets` **승인 완료**(조정자 2026-08-29 — DQ-13 해소,
+  libraries.md 등재·용도 한정: 사후 기술 분석 전용). Stage 2는 9/1~5 캘리브레이션
+  창에서 Stage 1과 동행 실행.
 - 대상: TE 9개년 유지 4종 + CBOT ZL 정본 계열. 산출: 주기별 coherence 맵 1장 +
   유의 구간 표 — 판정 기준에 새 지표를 추가하지 않고 **Stage 1 판정의 각주 근거로만**
   사용(사전 등록 원칙 유지).
