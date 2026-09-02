@@ -24,6 +24,11 @@
 #        폴백(policyuncertainty.com)만 있었음. 미신청 시 G1 핵심 변수 GPR 전면 차단
 #     ③ apis.datos.gob.ar 누락 — INDEC 아르헨 생산통계
 #   각 항목에 `impact_if_blocked`(차단 시 영향) 추가 — 방화벽 심사자가 필요성을 판단하는 근거.
+# ── 2026-09-02 클라우드 대통합 상세 반영 ────────────────────────────────────
+#   신청 대상 방화벽 = **Palo Alto**(AWS ap-northeast-2). 기본 정책이 HTTPS·프록시 전용이면
+#   §2 예외 2건(apis.data.go.kr HTTP-80 · stream.aisstream.io wss)은 별도 승인 필요 — 1차
+#   파이프라인 등재 심사와 분리해 선신청. §5 planned의 Azure 2종은 **폐기**(Azure 저장 기능 폐지).
+#   판정 문서: docs/research_desk/2026-09/cloud_integration_impact_2026_09_02.md
 version: '2.5'                   # v2.5: 조정자 일별 소스 5계열(S&P Global·AgMarket·GrainCentral·TFM·UkrAgroConsult) — 누적 56건
 updated: 2026-08-28
 owner: C-04
@@ -446,7 +451,7 @@ excluded:
 # ════════════════════════════════════════════════════════════════════════════
 # §5 조건부 추가 신청 — 9월 Azure 이관 확정 시
 # ════════════════════════════════════════════════════════════════════════════
-planned:
+planned:   # ⛔ 2026-09-02: Azure 2종 폐기(클라우드 대통합) — S3 착지는 VPC 엔드포인트 경유라 egress 불요
   - host: login.microsoftonline.com
     port: 443
     purpose: Azure OIDC 인증(azure/login)

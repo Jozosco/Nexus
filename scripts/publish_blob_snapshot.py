@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ⛔ DEPRECATED 2026-09-02 — 2026-09-01 클라우드 대통합 상세 수령 — Azure 전면 폐지(Power BI 제외). S3 스냅샷 발행기로 교체 예정(삭제는 S3 실증 후).
 """검증된 외부 데이터 산출물을 Azure Blob immutable snapshot으로 발행한다.
 
 인증은 ``DefaultAzureCredential``을 사용한다. GitHub Actions에서는 OIDC 로그인, Azure ML에서는

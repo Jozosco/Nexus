@@ -61,11 +61,11 @@ openai >= 1.30              # OpenAI API + Perplexity (OpenAI-compatible endpoin
 google-genai >= 2.0         # Gemini API (⚠ google-generativeai 지원 종료 — MEMORY L-010 참조)
 
 # Cloud Connectors
-snowflake-connector-python >= 3.5   # Snowflake access
-azureml-sdk >= 1.56                 # Azure ML pipeline integration
+snowflake-connector-python >= 3.5   # Snowflake access (EDP 전용 DB — vintage append, MERGE 업서트 금지)
 mlflow >= 2.10                      # model tracking and registration (use over pickle)
-azure-identity >= 1.17              # OIDC / managed identity credential chain
-azure-storage-blob >= 12.20         # immutable model-ready snapshot publishing
+boto3 >= 1.34                       # S3 스냅샷·산출물 착지 (2026-09-02 등재 — 2026-09-01 클라우드 대통합 상세 수령 — Azure 전면 폐지(Power BI 제외))
+# ⛔ azureml-sdk · azure-identity · azure-storage-blob — 2026-09-02 제거(2026-09-01 클라우드 대통합 상세 수령 — Azure 전면 폐지(Power BI 제외)).
+#    잔존 코드(scripts/publish_blob_snapshot.py · azure_snapshot_publish.yml)는 DEPRECATED 표기, S3 실증 후 삭제.
 
 # Data Validation
 great-expectations >= 0.18  # schema and quality checks on pipeline inputs

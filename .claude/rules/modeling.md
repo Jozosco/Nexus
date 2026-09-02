@@ -52,9 +52,13 @@
 > **데이터 제약**: 상단 §Data Constraint(**D-021**) 참조 — 내부 데이터는 사후 검증에도
 > 사용하지 않는다. 구 D-006의 "Phase B 내부검증" 단서는 폐기됨.
 
-> **Compute Environment**: G2 is developed and trained in **Azure ML Studio**.
-> All training jobs must use Azure ML `ScriptRunConfig` or `Command` job objects.
-> Experiment tracking via `mlflow` (Azure ML autolog). Never run training locally or in GitHub Actions.
+> **Compute Environment (2026-09-02 개정 — 2026-09-01 클라우드 대통합 상세 수령 — Azure 전면 폐지(Power BI 제외))**: **컴퓨트 중립 계약**.
+> 학습 스크립트는 parquet 경로(로컬·S3) 입력의 순수 CLI이며 실행 표면을 가정하지 않는다. 산출은
+> 모델 아티팩트 + `metrics.json` + 매니페스트(입력 스냅샷 SHA256·git SHA·lockfile 해시 — 3중 동결).
+> 추적은 `mlflow`(추적 DB=EBS/EFS, 아티팩트 루트=S3), 레지스트리는 `OPS.MODEL_REGISTRY`(Snowflake Model
+> Registry는 포인터 후보). 운영 학습 표면은 ETL#2 Python 배치 또는 Dev EC2(결정 대기 DQ-16).
+> **9/10 G2 Preview는 현 표면(Actions CPU) 임시 예외** — 재현 조건 "동일 스냅샷에서 이관 표면 재실행 시
+> 지표 차 <0.5%". GPU가 필요한 Challenger는 GPU 표면 배정 시까지 **동결('미평가', 기각 아님)**.
 
 ### Data Sources (External Only — Phase A)
 | Category | Source | Connector | Indicator |
@@ -94,15 +98,15 @@ GAS-t(관측 구동 변동성 — Python 구현 부재로 구현 비용 유의, 
 **1 · 5 · 20 · 60 거래일**. 60일을 약 3개월 조달 의사결정 지평으로 사용한다.
 재귀 예측은 보조 실험으로만 둔다.
 
-### Azure ML Studio Workflow
+### Training Workflow (컴퓨트 중립 — 2026-09-02 개정, 구 Azure ML Studio 절 대체)
 ```
 1. strict gates → `data/gold/feature_mart.parquet` + contract
-2. immutable snapshot + SHA256 manifest → Azure Blob Storage
-3. Azure ML Data Asset → registered dataset (versioned)
-4. Command job → src/forecasting/price_band_g2.py (training script)
-5. mlflow.autolog() → experiment tracking (no manual log calls needed)
-6. mlflow.log_model() → Azure ML Model Registry (never pickle)
-7. Registered model → batch inference pipeline (daily score job)
+2. immutable snapshot + SHA256 manifest → S3 (`snapshot_date` 경로 · overwrite 금지)
+3. 스냅샷 매니페스트 등록 → OPS.SNAPSHOT_MANIFEST (Snowflake)
+4. 배치 잡(ETL#2 Python venv 또는 Dev EC2) → src/forecasting/price_band_g2.py (순수 CLI)
+5. mlflow 추적(추적 DB=EBS/EFS · 아티팩트=S3) — autolog 우선
+6. mlflow.log_model() → OPS.MODEL_REGISTRY (never pickle)
+7. Registered model → 일별 추론 배치 → MART(P10~P90) → Power BI 임포트
 ```
 
 ### Validation Protocol
@@ -177,7 +181,7 @@ GAS-t(관측 구동 변동성 — Python 구현 부재로 구현 비용 유의, 
 
 ### Model Serialization
 - Save all trained models with `mlflow.log_model()` or `joblib.dump()`. Never use `pickle`.
-- Register model version in Azure ML Model Registry after each production-quality fit.
+- Register model version in `OPS.MODEL_REGISTRY`(S3 아티팩트 포인터) after each production-quality fit — 2026-09-02 개정(구 Azure ML Model Registry).
 
 ### Interpretability Requirement
 - All G1/G2/G3 outputs must include a human-readable explanation alongside the numerical result.

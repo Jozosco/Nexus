@@ -1,3 +1,4 @@
+# ⛔ DEPRECATED 2026-09-02 — 2026-09-01 클라우드 대통합 상세 수령 — Azure 전면 폐지(Power BI 제외). 실행 이력 0 · S3 버전으로 교체 예정(삭제는 S3 실증 후).
 name: Azure Storage Model-Ready Snapshot
 
 on:

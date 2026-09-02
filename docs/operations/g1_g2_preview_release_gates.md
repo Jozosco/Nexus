@@ -6,7 +6,7 @@
 ## 현재 판정
 
 - **G1**: canonical CBOT 세션 타깃과 핵심 피처가 준비도 게이트를 통과한 뒤에만 실행한다.
-- **G2 Preview**: G1의 동일 snapshot을 사용하는 오프라인 Azure ML Command job으로 한정한다.
+- **G2 Preview**: G1의 동일 snapshot을 사용하는 오프라인 배치 잡으로 한정한다 — 2026-09-02 개정: 실행 표면은 **현 CI CPU 임시 예외**(재현 조건: 동일 스냅샷에서 이관 표면 재실행 시 지표 차 <0.5%). 구 'Azure ML Command job' 표기는 Azure 폐지로 무효.
 - **운영 G2/G3, 실시간 endpoint, Snowflake 전환**: Preview의 선행조건이 아니다.
 
 현재 Databento `ohlcv-1d` 산출물은 UTC 날짜 버킷이다. CME 거래 세션 종가나 공식 정산가가
@@ -61,12 +61,14 @@ G2 학습 스크립트·Command job은 외부 시스템 검증이 필요한 미�
 2. Historical/Data Integration workflow로 외부 데이터 아티팩트를 생성한다.
 3. workflow 내부의 Model Readiness job이 feature mart와 contract를 생성한다.
 4. G1 job은 raw 파일을 직접 피벗하지 않고 `data/gold/feature_mart.parquet`만 모델 입력으로 쓴다.
-5. `Azure Storage Model-Ready Snapshot` workflow에 원천 run ID를 전달한다.
-6. Azure ML은 `_SUCCESS.json`이 존재하고 manifest 해시가 일치하는 snapshot만 Data Asset으로 등록한다.
+5. 스냅샷 발행 잡(S3 — 구 Azure Storage 워크플로우는 DEPRECATED)에 원천 run ID를 전달한다.
+6. 학습 잡은 `_SUCCESS.json`이 존재하고 manifest 해시가 일치하는 snapshot만 입력으로 등록한다(2026-09-02: Azure ML Data Asset → S3 스냅샷 매니페스트).
 
-## Azure 인증 계약
+## 실행 표면·인증 계약 (2026-09-02 개정 — 구 'Azure 인증 계약')
 
-GitHub Actions는 OIDC federation을 사용한다. 저장소에는 값이 아닌 변수명만 둔다.
+실행 표면은 컴퓨트 중립이다(ETL#2 Python 배치 · Dev EC2 · 병행 운전 창의 Actions). 클라우드 인증은
+IAM 역할(OIDC federation 또는 인스턴스 프로파일)을 사용하며 저장소에는 값이 아닌 변수명만 둔다.
+시크릿은 AWS Secrets Manager `nexus/{prd,dev}/{api,llm,snowflake}/{ENV명}`에서 `os.environ` 규약으로 주입한다.
 
 | 종류 | 이름 | 용도 |
 |---|---|---|
@@ -85,7 +87,7 @@ GitHub Actions는 OIDC federation을 사용한다. 저장소에는 값이 아닌
 
 G2 Preview는 다음 최소 범위만 완료로 인정한다.
 
-- Azure ML 오프라인 Command job
+- 오프라인 배치 잡(컴퓨트 중립 — 2026-09-02 개정)
 - last-value·seasonal-naive baseline
 - 단일 quantile/conformal champion
 - 1·5·20일 P10/P50/P90; 60일은 데이터 게이트 통과 시 추가
@@ -104,4 +106,4 @@ G2 Preview는 다음 최소 범위만 완료로 인정한다.
 - raw parquet를 `price_date`로 직접 pivot하여 모델 입력으로 사용
 - UTC 일봉을 CME 세션/settlement로 표기
 - 생성 데이터·보고서를 workflow에서 main에 직접 push
-- `_SUCCESS.json` 없는 Blob prefix를 Azure ML이 소비
+- `_SUCCESS.json` 없는 스냅샷 prefix(S3)를 학습 잡이 소비

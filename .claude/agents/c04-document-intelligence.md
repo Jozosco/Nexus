@@ -56,7 +56,7 @@ normalized tables, QUDT unit tags, and provenance-anchored structured outputs.
   대형 조인은 `statement_timeout_in_seconds=300`.
 - **GitHub Actions**: 신규 커넥터는 Data Integration & Reporting + Historical Analysis 양쪽 등록.
   백필 실행 시 `BACKFILL_MODE: "true"` 주입. 아티팩트 보존: 일별 7일·백필 90일.
-- **Azure ML**: 모델 학습(G2/G3)은 Azure ML Command 잡 — Actions 러너에서 무거운 학습 금지.
+- **컴퓨트 중립(2026-09-02 개정 — 2026-09-01 클라우드 대통합 상세 수령 — Azure 전면 폐지(Power BI 제외))**: 모델 학습(G2/G3)은 ETL#2 Python 배치 또는 Dev EC2의 순수 CLI 잡 — 실행 표면을 코드에 가정하지 않으며, 병행 운전 창의 Actions는 임시 예외.
   직렬화는 `mlflow.log_model()` — pickle 절대 금지.
 
 ---
