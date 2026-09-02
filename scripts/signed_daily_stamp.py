@@ -43,9 +43,27 @@ def _gate_status() -> str:
     return DQ_STATUS.read_text(encoding="utf-8").strip() or "미확인(빈 파일)"
 
 
-def _alerts_today() -> int:
-    files = [f for f in glob.glob(ALERT_GLOB, recursive=True) if str(date.today()) in f]
-    return len(files)
+def _alerts_today(today: date | None = None) -> int:
+    """오늘 발행된 G1 경보판 수 — **파일명 태그(%Y%m%d)** 로 판정.
+
+    A-245(런 #87 실측): 구 코드는 파일명에 ISO 날짜(2026-09-01)를 찾았으나 실제 파일명은
+    g1_alert_20260901_0019.md(YYYYMMDD_HHMM)라 **항상 0건** → 경보 발생일에도
+    '✅ 검사된 무소식'을 커밋하는 fail-open(8/26~9/1 6행 오염). 런 격리 폴더
+    (run_{GITHUB_RUN_ID})를 우선 탐색하고, 없으면 재귀 글로브로 폴백한다. 경로가 서로
+    달라도 같은 파일은 한 번만 센다.
+    """
+    today = today or date.today()
+    tag = today.strftime("%Y%m%d")
+    iso = today.isoformat()
+    run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
+    patterns = ([f"reports/pipeline/run_{run_id}/g1_alert_*.md"] if run_id else []) + [ALERT_GLOB]
+    found: set[str] = set()
+    for pat in patterns:
+        for f in glob.glob(pat, recursive=True):
+            name = Path(f).name
+            if name.startswith(f"g1_alert_{tag}") or iso in name:
+                found.add(str(Path(f).resolve()))
+    return len(found)
 
 
 def _readiness() -> str:

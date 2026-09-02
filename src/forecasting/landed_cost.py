@@ -112,24 +112,27 @@ class LandedCostResult:
 def load_cbot_usd_mt() -> tuple[pd.Series, str, str]:
     """CBOT ZL 일별 종가(USD/MT) — 우선순위 체인.
 
-    ① mart feat_CBOT_BO_CLOSE(게이트 통과 정산가) → ② cbot_session_close.parquet →
-    ③ Databento UTC 일봉 CSV(**진단 계열 — 정산가 아님**. V-001 실측: 정산가 대비
-      중앙값 괴리 0.10%. 릴리스 게이트 문서상 CBOT_BO_UTC_* 진단 용도로만 표기).
+    ① cbot_session_close.parquet(정산가·target_eligible·**전 기간**) → ② mart
+      feat_CBOT_BO_CLOSE(게이트 통과 정산가 — 단 **분석창 캡**(M-008 DEFAULT_END 2025-12)이라
+      당년 월평균이 없음. A-245(런 #87): mart 1순위 시 CIF(당년)와 공통 월 0건으로 매일
+      강등 → 세션 parquet를 앞세운다) → ③ Databento UTC 일봉 CSV(**진단 계열 — 정산가
+      아님**. V-001 실측: 정산가 대비 중앙값 괴리 0.10%. CBOT_BO_UTC_* 진단 용도).
     """
-    if GOLD_MART.exists():
-        mart = pd.read_parquet(GOLD_MART)
-        if "feat_CBOT_BO_CLOSE" in mart.columns:
-            s = (mart.set_index(pd.to_datetime(mart["price_date"]))["feat_CBOT_BO_CLOSE"]
-                     .dropna().sort_index())
-            if len(s):
-                return s * USC_LB_TO_USD_MT, "feature mart(정산가·게이트 통과)", ""
     if CBOT_SESSION_PARQUET.exists():
         df = pd.read_parquet(CBOT_SESSION_PARQUET)
         df = df[df["indicator_code"] == "CBOT_BO_CLOSE"]
         if len(df):
             s = (df.assign(d=pd.to_datetime(df["event_time"]).dt.normalize())
                    .set_index("d")["value"].astype(float).sort_index())
-            return s * USC_LB_TO_USD_MT, "cbot_session_close.parquet(정산가)", ""
+            return s * USC_LB_TO_USD_MT, "cbot_session_close.parquet(정산가·전기간)", ""
+    if GOLD_MART.exists():
+        mart = pd.read_parquet(GOLD_MART)
+        if "feat_CBOT_BO_CLOSE" in mart.columns:
+            s = (mart.set_index(pd.to_datetime(mart["price_date"]))["feat_CBOT_BO_CLOSE"]
+                     .dropna().sort_index())
+            if len(s):
+                return (s * USC_LB_TO_USD_MT,
+                        "feature mart(정산가·게이트 통과 — 분석창 캡 2025-12)", "")
     csvs = sorted(glob.glob(DATABENTO_CSV_GLOB))
     if csvs:
         zl = pd.read_csv(csvs[-1], parse_dates=["price_date"])
@@ -180,58 +183,97 @@ def _parse_gw_xlsx(path: Path) -> pd.DataFrame:
     return df
 
 
-def load_customs_sbo_cif() -> tuple[pd.Series, pd.DataFrame, str]:
-    """한국 조대두유(HS 1507.10) 월별·국가별 실측 CIF(USD/MT).
-
-    반환: (월별 CIF 시계열[국가 합산·벌크 하한], 국가별 월 CIF 롱테이블, 소스 라벨)
-    CIF = 수입액(달러) ÷ 수입량(kg) × 1000. 벌크 하한(MIN_BULK_KG)으로
-    소량 샘플 수입($10,000+/MT로 왜곡)을 제거한다.
-    """
+def _read_customs_api_frames() -> list[pd.DataFrame]:
+    """관세청 API 커넥터 parquet(customs_import_*) — A-216 일별 증분화 후 **당년만** 담긴다."""
     frames: list[pd.DataFrame] = []
-    source = ""
-    for pattern in CUSTOMS_PARQUET_GLOBS:            # ① 커넥터 parquet 우선
+    for pattern in CUSTOMS_PARQUET_GLOBS:
         for f in sorted(glob.glob(pattern)):
             try:
                 df = pd.read_parquet(f)
             except Exception:
                 continue
             cols = set(df.columns)
-            if {"import_cif_usd", "import_weight_kg"}.issubset(cols):
-                sub = pd.DataFrame({
-                    "price_date": pd.to_datetime(df["price_date"]),
-                    "imp_usd": pd.to_numeric(df["import_cif_usd"], errors="coerce"),
-                    "imp_kg": pd.to_numeric(df["import_weight_kg"], errors="coerce"),
-                    "country": df.get("country_name", pd.Series("전체", index=df.index)),
-                })
-                if "hs_code" in cols:                # 조대두유(150710)만
-                    sub = sub[df["hs_code"].astype(str).str.startswith("150710")]
-                frames.append(sub)
-                source = "customs_import parquet(관세청 API)"
-    if not frames:                                   # ② GW 업로드 xlsx 폴백
-        for f in sorted(glob.glob(GW_SBO_GLOB)):
-            p = Path(f)
-            if "16years" in p.stem:                  # 통합본(전세계)은 검증 참조용 — 제외
+            if not {"import_cif_usd", "import_weight_kg"}.issubset(cols):
                 continue
-            df = _parse_gw_xlsx(p)
-            if df.empty:
-                continue
-            df["country"] = p.stem
-            frames.append(df[["price_date", "imp_usd", "imp_kg", "country"]])
-        source = "관세청 GW 업로드본(1507.10 조대두유 · 국가 파일 합산)"
+            sub = pd.DataFrame({
+                "price_date": pd.to_datetime(df["price_date"]),
+                "imp_usd": pd.to_numeric(df["import_cif_usd"], errors="coerce"),
+                "imp_kg": pd.to_numeric(df["import_weight_kg"], errors="coerce"),
+                "country": df.get("country_name", pd.Series("전체", index=df.index)),
+            })
+            if "hs_code" in cols:                    # 조대두유(150710)만
+                sub = sub[df["hs_code"].astype(str).str.startswith("150710")]
+            frames.append(sub)
+    return frames
+
+
+def _read_customs_gw_frames() -> list[pd.DataFrame]:
+    """관세청 GW 업로드본(2010~) — 국가 파일 합산. 통합본(16years)은 검증 참조용이라 제외."""
+    frames: list[pd.DataFrame] = []
+    for f in sorted(glob.glob(GW_SBO_GLOB)):
+        p = Path(f)
+        if "16years" in p.stem:
+            continue
+        df = _parse_gw_xlsx(p)
+        if df.empty:
+            continue
+        df["country"] = p.stem
+        frames.append(df[["price_date", "imp_usd", "imp_kg", "country"]])
+    return frames
+
+
+def _bulk_monthly(frames: list[pd.DataFrame]) -> pd.DataFrame:
+    """행 목록 → 벌크 하한 적용 후 (국가, 월초) 합산 표. 빈 입력이면 빈 표."""
     if not frames:
-        raise RuntimeError("[오류] 관세청 수입실적 원천 없음 — customs parquet 또는 "
-                           "GW xlsx(data/raw/관세청/...) 필요.")
+        return pd.DataFrame(columns=["country", "price_date", "imp_usd", "imp_kg"])
     allc = pd.concat(frames, ignore_index=True)
     bulk = allc[(allc["imp_kg"] >= MIN_BULK_KG) & (allc["imp_usd"] > 0)].copy()
     if bulk.empty:
-        raise RuntimeError("[오류] 벌크 화물(≥100 MT) 관측 0건 — 원천 데이터를 확인하세요.")
-    # 원천별 일자 관행(월초·월중·연초)이 달라도 CBOT 월평균(MS)과 정렬되도록
-    # 월초로 정규화한다 — 미정규화 시 차감 조인이 조용히 전부 결측이 된다.
-    bulk["price_date"] = bulk["price_date"].values.astype("datetime64[M]")
-    monthly = bulk.groupby("price_date")[["imp_usd", "imp_kg"]].sum()
+        return pd.DataFrame(columns=["country", "price_date", "imp_usd", "imp_kg"])
+    # 원천별 일자 관행(월초·월중·연초)이 달라도 CBOT 월평균(MS)과 정렬되도록 월초 정규화
+    bulk["price_date"] = pd.to_datetime(bulk["price_date"]).values.astype("datetime64[M]")
+    return (bulk.groupby(["country", "price_date"])[["imp_usd", "imp_kg"]].sum()
+                .reset_index())
+
+
+def combine_customs_sources(api_tbl: pd.DataFrame, gw_tbl: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """API 당년분 + GW 히스토리 **합집합** — 월 단위 우선순위(API가 있는 달은 API만).
+
+    A-245(런 #87): 구 코드는 API parquet가 있으면 GW를 아예 읽지 않는 either/or였고,
+    일별 증분화(당년만) 이후 API 7개월 vs 분석창 CBOT의 공통 월이 0건이 되어 매일 강등됐다.
+    (국가,월) 단위 덮어쓰기는 국가명 표기가 소스마다 달라(한글 vs 파일명) 같은 달을
+    이중 합산할 수 있으므로 **월 단위**로 API를 우선한다.
+    """
+    api_months = set(pd.to_datetime(api_tbl["price_date"])) if len(api_tbl) else set()
+    gw_keep = gw_tbl[~pd.to_datetime(gw_tbl["price_date"]).isin(api_months)] if len(gw_tbl) else gw_tbl
+    combined = pd.concat([api_tbl, gw_keep], ignore_index=True)
+    n_api = len(api_months)
+    n_gw = gw_keep["price_date"].nunique() if len(gw_keep) else 0
+    if n_api and n_gw:
+        label = f"관세청 API 당년 {n_api}개월 + GW 업로드본 {n_gw}개월(1507.10 조대두유)"
+    elif n_api:
+        label = "customs_import parquet(관세청 API)"
+    else:
+        label = "관세청 GW 업로드본(1507.10 조대두유 · 국가 파일 합산)"
+    return combined, label
+
+
+def load_customs_sbo_cif() -> tuple[pd.Series, pd.DataFrame, str]:
+    """한국 조대두유(HS 1507.10) 월별·국가별 실측 CIF(USD/MT).
+
+    반환: (월별 CIF 시계열[국가 합산·벌크 하한], 국가별 월 CIF 롱테이블, 소스 라벨)
+    CIF = 수입액(달러) ÷ 수입량(kg) × 1000. 벌크 하한(MIN_BULK_KG)으로
+    소량 샘플 수입($10,000+/MT로 왜곡)을 제거한다. 소스는 API(당년)+GW(히스토리) 합집합.
+    """
+    api_tbl = _bulk_monthly(_read_customs_api_frames())
+    gw_tbl = _bulk_monthly(_read_customs_gw_frames())
+    if api_tbl.empty and gw_tbl.empty:
+        raise RuntimeError("[오류] 관세청 수입실적 벌크(≥100 MT) 관측 0건 — customs parquet 또는 "
+                           "GW xlsx(data/raw/관세청/...) 필요.")
+    by_country, source = combine_customs_sources(api_tbl, gw_tbl)
+    by_country["price_date"] = pd.to_datetime(by_country["price_date"])
+    monthly = by_country.groupby("price_date")[["imp_usd", "imp_kg"]].sum()
     monthly_cif = (monthly["imp_usd"] / monthly["imp_kg"] * 1000).rename("cif_usd_mt")
-    by_country = (bulk.groupby(["country", "price_date"])[["imp_usd", "imp_kg"]].sum()
-                      .reset_index())
     by_country["cif_usd_mt"] = by_country["imp_usd"] / by_country["imp_kg"] * 1000
     by_country["volume_mt"] = by_country["imp_kg"] / 1000
     return monthly_cif.sort_index(), by_country, source
