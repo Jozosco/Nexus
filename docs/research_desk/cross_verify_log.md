@@ -1,6 +1,6 @@
 # GPT-5.6-Sol 교차검증 누적 원장
 
-**갱신**: 2026-09-02 · **자동 생성**: `scripts/build_cross_verify_log.py`
+**갱신**: 2026-09-07 · **자동 생성**: `scripts/build_cross_verify_log.py`
 
 > 조정자 상시 지시(2026-08-13): 인프라·분석·코드 작업은 GPT-5.6-Sol로 교차검증한다.
 > 이 파일은 그 **실행 이력과 판정을 한곳에 모은 원장**이다. 개별 판정 전문은
@@ -8,14 +8,24 @@
 
 ## 요약
 
-- 총 검증 기록 **175건** — 판정 산출 116 · 실패(미판정) 59
-- 누적 지적: **[치명] 108건 · [높음] 1205건**
+- 총 검증 기록 **185건** — 판정 산출 126 · 실패(미판정) 59
+- 누적 지적: **[치명] 122건 · [높음] 1305건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-09-07 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 1 | 13 | [치명] 현재 밴드로 2·4주 대기의 손익 방향을 추론 — 8/14 | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-09-07 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-09-07 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_git_diff_HEAD_1_1.md) |
+| 2026-09-07 | `docs/research_desk/2026-08/knowledge_repository_opti` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-09-07 | `docs/research_desk/2026-08/hybrid_methodology_design` | ⚠️ 지적 | 5 | 15 | [치명] BL prior·뷰의 수학적 대상과 단위가 정의되지 않았다. | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_docs_research_desk_2026-08_hybrid_methodology_design_2026_08_1.md) |
+| 2026-09-07 | `docs/research_desk/2026-08/hs_code_classification_20` | ⚠️ 지적 | 1 | 14 | [높음] 서로 다른 HSK 기준연도를 혼용해 2010~2026 누적치를 ‘확정 코드’로 집계했다.** 근거는 HSK2021·2022·2023·2024 FTA 양허표인데, 코드별 유 | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-09-07 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-09-07 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 1 | 23 | [높음] 분석기간 연수 오류 | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-09-07 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 5 | 20 | [높음] 대표 아이디어 수가 맞지 않는다. | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-09-07 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 1 | 15 | [높음] §4b의 조유 수입량 범위 판정이 산술적으로 틀림. | 34093081842 | [xverify_2026-09-07_340930818…](../../reports/cross_verify/xverify_2026-09-07_34093081842_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-09-02 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 33604346354 | [xverify_2026-09-02_336043463…](../../reports/cross_verify/xverify_2026-09-02_33604346354_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-09-02 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 1 | 14 | [치명] 8/14 — ‘basis+운임+보험’ 분해와 확률 밴드가 성립하지 않음. | 33604346354 | [xverify_2026-09-02_336043463…](../../reports/cross_verify/xverify_2026-09-02_33604346354_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-09-02 | `git diff HEAD~1` | ⚠️ 지적 | 0 | 1 | [높음][논리 오류] `DEPRECATED` 주석만 추가했을 뿐 Azure 발행이 비활성화되지 않았다. | 33604346354 | [xverify_2026-09-02_336043463…](../../reports/cross_verify/xverify_2026-09-02_33604346354_git_diff_HEAD_1_1.md) |
