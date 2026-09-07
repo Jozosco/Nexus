@@ -32,4 +32,4 @@ Trading Economics 상품 시세 히스토리. **수동 업로드본(2010-01-01~2
 ## 이력
 
 - 2026-07-01: 수동 업로드본(연도 시트) 26파일 — 기준선(A-061)
-- 2026-09-07: API 증분 갱신 체계 도입(A-248) · Industrial·CRB·GSCI·탄소·Drewry·Corn·Sugar·Wheat·Ethanol·Naphtha·Heating Oil 범위 명시
+- 2026-09-07: API 증분 갱신 체계 도입(A-248). **첫 실행 실측**: historical 응답이 2개월 창에 4~5행(월별 표본·당일 일자 스탬프 의심)+비현실적 점프 → 갱신분 전량 되돌림, 밀도(≥60% 영업일)·점프(≤30%) 게이트 추가(A-249). 일별 관측 확보 여부는 TE 지원 문의·엔드포인트 파라미터 확인 후 재실행(DQ-21) · Industrial·CRB·GSCI·탄소·Drewry·Corn·Sugar·Wheat·Ethanol·Naphtha·Heating Oil 범위 명시

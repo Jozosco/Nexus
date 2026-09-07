@@ -40,6 +40,8 @@ REPORT_DIR = Path("reports/market")
 _YEAR_SHEET_RE = re.compile(r"(\d{4})\s*년")
 HEADER = ["Month", "Day", "Open", "High", "Low", "Close"]
 THROTTLE = ("slow down", "throttle", "too many")
+MIN_DENSITY = 0.6      # 응답 행 수 / 요청 창 영업일 수 — 미만이면 일별 관측이 아니라고 판정(A-249)
+MAX_JUMP = 0.30        # 기존 마지막 종가 대비 첫 신규 종가 변동률 상한 — 초과 시 계약·집계 혼입 의심(A-249)
 
 # 파일명 품목 → (검색어, 이름 키워드, 고정 심볼 후보). 고정 심볼은 자기발견 실패 시 폴백.
 REGISTRY: dict[str, tuple[str, tuple[str, ...], tuple[str, ...]]] = {
@@ -91,6 +93,22 @@ def _read_last_date(path: Path) -> tuple[date | None, bool]:
     desc = (int(first[0]), int(first[1])) > (int(last[0]), int(last[1]))
     m, d = (first if desc else last)[:2]
     return date(years[-1][0], int(m), int(d)), desc
+
+
+def _read_last_close(path: Path) -> float | None:
+    """마지막 관측 행의 Close(정렬 방향 자동)."""
+    last, desc = _read_last_date(path)
+    if last is None:
+        return None
+    ws = load_workbook(path, read_only=True, data_only=True)[f"{last.year}년"]
+    rows = [r for r in ws.iter_rows(min_row=2, values_only=True) if r and r[0] is not None and r[1] is not None]
+    if not rows:
+        return None
+    row = rows[0] if desc else rows[-1]
+    try:
+        return float(row[5])
+    except (TypeError, ValueError, IndexError):
+        return None
 
 
 def _te_get(url: str, params: dict, timeout: int = 30) -> httpx.Response:
@@ -150,9 +168,20 @@ def fetch_history(te_key: str, symbols: list[str], d1: date, d2: date) -> tuple[
             "close": pd.to_numeric(raw[ccol], errors="coerce"),
         }).dropna(subset=["date", "close"])
         out = out[(out["date"].dt.date > d1) & (out["date"].dt.date <= d2)]   # 요청 창 밖·미래 행 차단(A-246)
-        if not out.empty:
-            print(f"[완료] TE historical {len(out)}행 ({sym}, {d1}~{d2})")
-            return out.sort_values("date").drop_duplicates("date"), "ok"
+        if out.empty:
+            continue
+        out = out.sort_values("date").drop_duplicates("date")
+        # A-249 밀도 게이트: 첫 실행(2026-09-07) 실측 — 2개월 창에 4~5행(7/7·7/8·8/7·9/7)만 반환되고
+        #   값이 하루 만에 BDI 735→2,875·Brent 71→97로 점프. 일별 관측이 아닌 표본(월별·다른 집계)을
+        #   연도 시트에 섞으면 표준화 지수 경보가 오염되므로, 영업일 대비 밀도가 낮으면 거부한다.
+        bdays = len(pd.bdate_range(d1, d2)) - 1
+        density = len(out) / max(bdays, 1)
+        if bdays >= 5 and density < MIN_DENSITY:
+            print(f"[경고] TE historical {sym}: 밀도 {density:.0%}({len(out)}/{bdays} 영업일) < {MIN_DENSITY:.0%} — "
+                  f"일별 관측 아님(표본/집계 의심) → 파일 미갱신")
+            return out, "sparse"
+        print(f"[완료] TE historical {len(out)}행 ({sym}, {d1}~{d2}, 밀도 {density:.0%})")
+        return out, "ok"
     return pd.DataFrame(), last_status
 
 
@@ -215,7 +244,14 @@ def run(dry_run: bool = False, only: set[str] | None = None) -> list[dict]:
         rec["symbol"] = ",".join(symbols[:3])
         hist, status = fetch_history(te_key, symbols, last, today)
         if status != "ok":
-            rec["status"] = {"plan": "플랜 미포함(409/403)", "empty": "응답 0행", "error": "HTTP 오류"}[status]
+            rec["status"] = {"plan": "플랜 미포함(409/403)", "empty": "응답 0행", "error": "HTTP 오류",
+                             "sparse": f"밀도 부족({len(hist)}행) — 미갱신"}[status]
+            results.append(rec); continue
+        last_close = _read_last_close(path)
+        first_new = float(hist["close"].iloc[0])
+        if last_close and abs(first_new / last_close - 1) > MAX_JUMP:
+            rec["status"] = f"점프 {first_new / last_close - 1:+.0%}(계약·집계 혼입 의심) — 미갱신"
+            print(f"[경고] {path.name}: 기존 종가 {last_close} → 신규 {first_new} — 미갱신")
             results.append(rec); continue
         with tempfile.TemporaryDirectory() as td:
             cand = Path(td) / path.name
