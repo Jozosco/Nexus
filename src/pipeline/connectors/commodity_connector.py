@@ -21,7 +21,7 @@ import pandas as pd
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[3]))
-from src.pipeline.asof import attach_asof  # noqa: E402
+from src.pipeline.asof import attach_asof, drop_future_observations  # noqa: E402
 
 OUTPUT_DIR = "data/raw"
 
@@ -501,6 +501,7 @@ def run() -> None:
         return
 
     combined = pd.concat(frames, ignore_index=True)
+    combined = drop_future_observations(combined, "commodity_data")   # A-246
     out = f"{OUTPUT_DIR}/commodity_data_{today}.parquet"
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
     combined = attach_asof(combined, source="COMMODITY")

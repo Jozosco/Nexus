@@ -27,7 +27,7 @@ from openai import OpenAI
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[3]))
-from src.pipeline.asof import attach_asof  # noqa: E402
+from src.pipeline.asof import attach_asof, drop_future_observations  # noqa: E402
 
 OUTPUT_DIR = "data/raw"
 PERPLEXITY_MODEL = "sonar-pro"  # MEMORY L-006/L-007: 상수 사용, 하드코딩 금지
@@ -359,6 +359,7 @@ def run() -> None:
         return
 
     df = pd.concat(frames, ignore_index=True)
+    df = drop_future_observations(df, "shipping_indices")   # A-246: 관측 계열 미래 행 차단
     out = f"{OUTPUT_DIR}/shipping_indices_{today}.parquet"
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
     df = attach_asof(df, source="SHIPPING")

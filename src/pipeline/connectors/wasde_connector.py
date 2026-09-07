@@ -91,7 +91,9 @@ def _fetch_arms(params: dict, api_key: str = "", max_retries: int = 4) -> list |
     delay = 2
     for attempt in range(max_retries):
         try:
-            r = httpx.get(ARMS_BASE, params=params, timeout=30)
+            # A-246: api.ers 302 리다이렉트를 따라가지 않으면 리다이렉트 본문을 JSON으로
+            #        해석하다 예외 → 상위에서 '수집 실패'로 삼켜져 조용히 0건이 됐다.
+            r = httpx.get(ARMS_BASE, params=params, timeout=30, follow_redirects=True)
             # A-080: ARMS 404 = 리포트/카테고리 조합 미존재(서비스 정상) → 치명 오류 아님.
             #        생산비용은 분석 보조 지표이므로 경고 후 빈 결과 반환.
             if r.status_code == 404:
@@ -219,7 +221,8 @@ def fetch_psd_bulk_csv(start_year: int = 2010) -> pd.DataFrame:
     print(f"[정보] PSD 벌크 CSV 폴백 시작 — {PSD_BULK_ZIP_URL} (수십 MB, 스트리밍)")
     buf = io.BytesIO()
     try:
-        with httpx.stream("GET", PSD_BULK_ZIP_URL, timeout=300,
+        # A-246: 벌크 zip은 방금 타임아웃 난 apps.fas와 같은 호스트 — 300s는 무의미한 대기.
+        with httpx.stream("GET", PSD_BULK_ZIP_URL, timeout=120,
                           follow_redirects=True) as r:
             r.raise_for_status()
             for chunk in r.iter_bytes():
@@ -367,6 +370,11 @@ def run() -> None:
         print(f"[정보] 일별 갱신 모드 — 현재 마케팅 연도({date.today().year}) 수집")
 
     frames = []
+    # A-246: 일별 모드는 당해 연도만 호출한다 — 2010~현재 17년 × 2호스트 × 3인증 × 재시도가
+    #        장애 시 최대 50분의 무의미한 대기를 만들었다(런 #93 1h30m). 히스토리는 수동
+    #        업로드 parquet(wasde_historical·psd_historical)이 커버한다(A-216 관세청과 동일 원리).
+    if not backfill_mode:
+        start_year = date.today().year
     psd_df = fetch_wasde_multi_year(start_year=start_year)
     if psd_df.empty:
         # A-141(b): API 전 연도 실패(403/500) → 키 불필요 공개 벌크 CSV로 폴백

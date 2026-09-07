@@ -421,6 +421,32 @@ def attach_asof(
     return out
 
 
+def drop_future_observations(df: pd.DataFrame, label: str,
+                             today: "date | None" = None) -> pd.DataFrame:
+    """관측(observation) 계열에서 price_date > 수집일 행을 제거하고 지표별 건수를 로그로 남긴다.
+
+    A-246(런 #88~#93 pytest 실측): shipping_indices·commodity_data에 미래 price_date가
+    19→21건으로 **날마다 늘어남** — 진짜 미래 일자라면 줄어야 하므로 수집일 기준 전방 창을
+    매일 생성하는 원천이 섞여 있다는 뜻. BDI·CPO·환율·가뭄은 전부 관측값이라 미래 일자는
+    정의상 존재할 수 없으니 저장 전에 잘라내고, 어느 지표에서 나왔는지 로그로 드러내
+    다음 런에서 원천을 확정한다(전망 행은 관측 계열에 섞지 않음 — D-023 원칙).
+    """
+    if df.empty or "price_date" not in df.columns:
+        return df
+    from datetime import date as _date
+    cutoff = pd.Timestamp(today or _date.today())
+    df = df.reset_index(drop=True)          # concat 잔여 중복 인덱스 방어
+    pdates = pd.to_datetime(df["price_date"], errors="coerce")
+    future = (pdates > cutoff).fillna(False)
+    n = int(future.sum())
+    if n:
+        codes = df["indicator_code"] if "indicator_code" in df.columns else pd.Series("?", index=df.index)
+        by_code = codes[future].value_counts()
+        detail = " · ".join(f"{k} {v}건" for k, v in by_code.head(8).items())
+        print(f"[경고] {label}: 수집일({cutoff.date()}) 이후 price_date {n}건 제거 — {detail}")
+    return df.loc[~future].reset_index(drop=True)
+
+
 def leak_inversions(df: pd.DataFrame) -> "pd.Series":
     """누수 의심 역전(available_at < event_time) 행 마스크 — 게이트 공용 판정 (A-195).
 

@@ -499,8 +499,13 @@ def main() -> None:
     expected = EXPECTED_ARTIFACTS
     _env_expected = [s.strip() for s in os.environ.get("DQ_EXPECTED", "").split(",") if s.strip()]
     if _env_expected:
-        expected = [(p, False) for p in _env_expected]
-        print(f"[정보] 이번 실행의 필수 산출물({len(expected)}종): {', '.join(_env_expected)}")
+        # A-246: 접미 '?'는 선택 산출물(부재 시 REJECTED 아님·[정보] 로그만). crop_data는 G1 입력이
+        #        아니고(핵심 8변수는 수동 WASDE·PSD parquet 소관 — feature_contract 438 피처 중 0건)
+        #        USDA 장애가 G1 발행을 막지 않게 하려는 것. 나머지는 fail-closed 유지.
+        expected = [(p.rstrip("?"), p.endswith("?")) for p in _env_expected]
+        req = [p for p, o in expected if not o]; opt = [p for p, o in expected if o]
+        print(f"[정보] 이번 실행의 필수 산출물({len(req)}종): {', '.join(req)}"
+              + (f" · 선택({len(opt)}종): {', '.join(opt)}" if opt else ""))
 
     present = {os.path.basename(f) for f in parquet_files}
     missing_required, missing_optional = [], []
