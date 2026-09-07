@@ -361,6 +361,7 @@ FILE_PATTERNS: dict[str, str] = {
     "te_commodities_historical": "상품가격(TE 대체재·에너지·해운 15개년)",
     "nasa_power_agroclimatology_historical": "작황기상(NASA POWER 12산지 15개년)",
     "customs_gw_historical": "수입통계(관세청 GW 확장 수집)",
+    "customs_gw_uploads":  "수입통계(관세청 GW 업로드본 — 16 HS·10자리·국가별, A-247)",
     "ice_monthly_volumes": "시장유동성(ICE 선물·옵션 거래량)",
     "gain_historical":     "정책신호(USDA FAS GAIN PDF)",
     "geointel":            "지정학 인텔리전스(USGS/NOAA/GDELT/FIRMS)",

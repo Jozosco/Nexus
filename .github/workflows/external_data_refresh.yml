@@ -743,6 +743,7 @@ jobs:
           python scripts/ingest_gats_data.py
           python scripts/ingest_ice_volumes.py
           python scripts/ingest_nasa_power_xlsx.py
+          python scripts/ingest_customs_gw_uploads.py   # A-247: 관세청 GW 업로드본 172파일 → 롱포맷(일별 편입)
       - name: Run model readiness gate
         run: python scripts/data_readiness.py
       - name: Build and independently verify feature mart

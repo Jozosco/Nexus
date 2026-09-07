@@ -1,0 +1,61 @@
+# A-248: Trading Economics API → 수동 xlsx(연도 시트) 증분 갱신 — 승인자 구독 연장(2026-09) 반영.
+# 샌드박스는 api.tradingeconomics.com 차단이라 Actions가 유일한 실행 표면.
+# 자기 파일 push 시 1회 자동 발화(A-046 패턴) + 수동 dispatch. 스케줄 없음(D-026 정합 — 월 1회 수동 권장).
+name: Trading Economics xlsx Update (API → 연도 시트 append)
+
+on:
+  push:
+    paths:
+      - ".github/workflows/te_xlsx_update.yml"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "갱신할 품목(쉼표 구분, 파일명 2번째 토큰 — 예: Soybeans,BDI). 비우면 전체"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: te-xlsx-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src
+            scripts
+            data/raw/Trading Economics
+            data/schemas
+            reports/market
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install httpx pandas pyarrow openpyxl
+      - name: Update xlsx from TE API
+        env:
+          TRADING_ECONOMICS_API_KEY: ${{ secrets.TRADING_ECONOMICS_API_KEY }}
+        run: python scripts/update_te_xlsx_from_api.py --only "${{ github.event.inputs.only }}"
+      - name: Rebuild TE parquet (검증 재판독)
+        run: python scripts/ingest_te_xlsx.py
+      - name: Commit updated xlsx + report
+        run: |
+          git config user.name "nexus-daily-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add "data/raw/Trading Economics" reports/market/te_api_update_*.md
+          git commit -m "data: Trading Economics xlsx API 증분 갱신 ($(date -u +%F)) [A-248]" || { echo "변경 없음"; exit 0; }
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
+      - name: Summary
+        if: always()
+        run: |
+          f=$(ls reports/market/te_api_update_*.md 2>/dev/null | tail -1)
+          [ -n "$f" ] && cat "$f" >> "$GITHUB_STEP_SUMMARY" || echo "보고서 없음" >> "$GITHUB_STEP_SUMMARY"
