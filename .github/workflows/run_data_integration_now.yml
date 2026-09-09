@@ -26,3 +26,5 @@ jobs:
             "/repos/${{ github.repository }}/actions/workflows/external_data_refresh.yml/dispatches" \
             -f ref=main -f "inputs[connector]=all"
           echo "## Data Integration 발사 완료 (connector=all)" >> "$GITHUB_STEP_SUMMARY"
+
+# 발사 기록: 2026-09-09 해상 위협 점수·배포 브리지 반영 후 1회 수동 발사 (A-250·DQ-23)
