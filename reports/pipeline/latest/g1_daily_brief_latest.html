@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nexus 일일 브리프 — 2026-09-09</title>
+<link rel="stylesheet" media="print" onload="this.media='all'"
+ href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<!-- 폰트 비차단 로드(A-241): 사내망이 fonts.googleapis.com을 차단·지연시켜도 렌더가
+     멈추지 않게 비동기 적용 — 실패 시 시스템 폰트(Malgun Gothic 등)로 즉시 표시 -->
+<style>
+:root{--paper:#F7F8FA;--surface:#FFFFFF;--ink:#182236;--ink2:#5A6478;--ink3:#8B93A5;
+--line:#DDE2EA;--accent:#1F4FA8;--accent-soft:#E8EEF9;--up:#C4382E;--down:#1D5FBF;
+--warn:#9C6A00;--warn-soft:#FBF3E0;--ok:#1E7A46;--ok-soft:#E7F3EC;--crit:#B3261E;
+--band2:rgba(31,79,168,.20)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#12161F;
+--surface:#1A2029;--ink:#E8ECF4;--ink2:#A6AEBF;--ink3:#727B8E;--line:#2A3242;
+--accent:#7BA3E8;--accent-soft:#22304A;--up:#E86A5E;--down:#6FA0E8;--warn:#D9A544;
+--warn-soft:#33290F;--ok:#5CB985;--ok-soft:#15301F;--crit:#E8756B;
+--band2:rgba(123,163,232,.26)}}
+:root[data-theme="dark"]{--paper:#12161F;--surface:#1A2029;--ink:#E8ECF4;--ink2:#A6AEBF;
+--ink3:#727B8E;--line:#2A3242;--accent:#7BA3E8;--accent-soft:#22304A;--up:#E86A5E;
+--down:#6FA0E8;--warn:#D9A544;--warn-soft:#33290F;--ok:#5CB985;--ok-soft:#15301F;
+--crit:#E8756B;--band2:rgba(123,163,232,.26)}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);
+font-family:"IBM Plex Sans KR","Noto Sans CJK KR",-apple-system,"Malgun Gothic",sans-serif;
+font-size:15px;line-height:1.65}
+.page{max-width:1060px;margin:0 auto;padding:0 24px 72px}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+header{border-bottom:3px solid var(--ink);padding:34px 0 18px;display:flex;flex-wrap:wrap;
+align-items:flex-end;justify-content:space-between;gap:12px}
+.masthead h1{font-family:"Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;
+font-size:30px;letter-spacing:-.01em;line-height:1.2}
+.masthead .sub{color:var(--ink2);font-size:13px;margin-top:4px}
+.dateblock{text-align:right;font-size:13px;color:var(--ink2)}
+.dateblock strong{display:block;font-size:17px;color:var(--ink);font-weight:700}
+.trust{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;background:var(--surface);
+border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;padding:10px 16px;
+font-size:12.5px;color:var(--ink2)}
+.trust .sig{font-weight:700;color:var(--ok)}
+.trust b{color:var(--ink);font-weight:500}
+section{margin-top:34px}
+.sec-h{display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line);
+padding-bottom:8px;margin-bottom:12px}
+.sec-h h2{font-size:16px;font-weight:700}
+.sec-h .note{font-size:12px;color:var(--ink3)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.brief{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);
+border-radius:8px;padding:12px 16px;font-size:13.5px;margin-bottom:14px;line-height:1.75}
+.brief .k{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);
+background:var(--accent-soft);border-radius:4px;padding:0 6px;margin-right:4px;
+letter-spacing:.03em;vertical-align:1px}
+.brief .k.warn{color:var(--warn);background:var(--warn-soft)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.kpi{padding:16px 18px}
+.kpi .lbl{font-size:12px;color:var(--ink2);letter-spacing:.04em}
+.kpi .val{font-size:26px;font-weight:700;margin-top:2px}
+.kpi .unit{font-size:13px;font-weight:400;color:var(--ink2)}
+.chg{font-size:13px;margin-top:2px;display:inline-block}
+.chg.up{color:var(--up)}.chg.down{color:var(--down)}.chg.flat{color:var(--ink2)}
+.kpi .foot{font-size:12px;color:var(--ink3);margin-top:6px}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.acc{background:var(--accent-soft);color:var(--accent)}
+.duo{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px}
+@media(max-width:820px){.duo{grid-template-columns:1fr}}
+.chartbox{padding:16px 18px 12px}
+.chartbox h3,.drivers h3{font-size:14px;font-weight:700;margin-bottom:2px}
+.chartbox .cap,.drivers .cap{font-size:12px;color:var(--ink3);margin-bottom:10px}
+.legend{display:flex;flex-wrap:wrap;gap:12px 16px;font-size:12px;color:var(--ink2);margin:6px 0 2px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--accent);
+vertical-align:middle;margin-right:5px}
+.legend i.band{height:10px;background:var(--band2)}
+svg text{font-family:"IBM Plex Sans KR",sans-serif}
+.range-figures{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:12.5px;color:var(--ink2);
+margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.range-figures b{color:var(--ink);font-weight:700}
+.mech{margin-top:10px;background:var(--paper);border:1px solid var(--line);border-radius:8px;
+padding:10px 14px;font-size:12.5px;line-height:1.8;color:var(--ink2)}
+.mech summary{cursor:pointer;font-weight:500;color:var(--accent)}
+.mech b{color:var(--ink)}.mech ol{padding-left:18px;margin-top:6px}
+.drivers{padding:16px 18px}
+.drv{display:grid;grid-template-columns:20px minmax(0,1fr);gap:0 10px;padding:9px 0;
+border-bottom:1px solid var(--line)}
+.drv:last-child{border-bottom:none}
+.drv .rank{font-weight:700;color:var(--ink3);font-size:13px;padding-top:1px}
+.drv .name{font-weight:500;font-size:13.5px}
+.dir{font-size:12px;margin-left:6px}.dir.up{color:var(--up)}.dir.down{color:var(--down)}
+.drv .barrow{display:flex;align-items:center;gap:8px;margin-top:4px}
+.drv .bar{height:8px;border-radius:2px;background:var(--accent)}
+.drv .shap{font-size:11.5px;color:var(--ink2);white-space:nowrap}
+.drv .news{font-size:12px;color:var(--ink2);margin-top:4px}
+.drv .news .stars{color:var(--warn);letter-spacing:1px}
+.alert{display:grid;grid-template-columns:4px minmax(0,1fr);border-radius:8px;overflow:hidden;
+border:1px solid var(--line);background:var(--surface);margin-bottom:10px}
+.alert .stripe{background:var(--warn)}
+.alert .body{padding:14px 18px}
+.alert .head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-weight:700;font-size:14px}
+.alert .detail{font-size:13px;color:var(--ink2);margin-top:4px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px}
+th{font-size:11.5px;color:var(--ink2);letter-spacing:.05em;font-weight:500;text-align:right;
+padding:8px 10px;border-bottom:1px solid var(--line)}
+th:first-child{text-align:left}
+td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right}
+td:first-child{text-align:left;font-weight:500}
+tr:last-child td{border-bottom:none}
+td .src{color:var(--ink3);font-size:11.5px;font-weight:400;margin-left:6px}
+.z-hot{background:var(--warn-soft);border-radius:4px;padding:1px 6px;color:var(--warn);
+font-weight:700}
+.mapbox{padding:16px 18px 12px}.mapbox h3{font-size:14px;font-weight:700;margin-bottom:8px}
+.cp-index{margin-top:12px;font-size:13.5px}.cp-index small{color:var(--ink3);margin-left:6px}
+.cp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:10px}
+.cp-card{padding:13px 16px;font-size:13px}.cp-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.cp-score{font-size:22px;font-weight:700;margin-left:auto}.cp-score small{font-size:11px;color:var(--ink3);font-weight:400}
+.cp-comp{display:grid;grid-template-columns:44px 52px minmax(0,1fr);gap:6px;font-size:12px;padding:2px 0;border-top:1px dashed var(--line)}
+.cp-comp span{color:var(--ink2)}.cp-comp small{color:var(--ink3)}
+.cp-meta{font-size:12px;margin-top:6px}.cp-meta span{display:inline-block;min-width:52px;color:var(--ink2);font-weight:500}.cp-meta small{color:var(--ink3)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
+.map-legend{display:flex;flex-wrap:wrap;gap:12px 18px;font-size:12px;color:var(--ink2);
+margin-top:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;
+margin-right:5px}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.crit{background:var(--crit)}
+.signals{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.sig-item{padding:13px 16px}
+.sig-item .tag{font-size:11.5px;font-weight:700;color:var(--accent);letter-spacing:.03em}
+.sig-item p{font-size:13px;margin-top:3px;overflow-wrap:anywhere}
+.sig-item .src{font-size:11.5px;color:var(--ink3);margin-top:6px}
+.chain{margin-top:10px;background:var(--paper);border:1px solid var(--line);border-radius:8px;
+padding:8px 12px;font-size:12px;overflow-x:auto}
+.chain summary{cursor:pointer;color:var(--accent);font-weight:500}
+.chain .row{display:flex;align-items:center;gap:6px;white-space:nowrap;margin-top:8px}
+.chain .node{border:1px solid var(--line);background:var(--surface);border-radius:6px;
+padding:3px 9px;font-weight:500}
+.chain .node.ent{border-color:var(--accent);color:var(--accent)}
+.chain .node.edge{background:var(--accent-soft);color:var(--accent);border-color:transparent;
+font-weight:700}
+.chain .arr{color:var(--ink3)}
+.chain .meta{color:var(--ink3);margin-top:6px;white-space:normal}
+.cal{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.cal-item{padding:14px 16px;display:flex;gap:14px;align-items:center}
+.dday{font-weight:700;font-size:19px;color:var(--accent);min-width:56px;text-align:center;
+background:var(--accent-soft);border-radius:8px;padding:8px 4px;line-height:1.15}
+.dday small{display:block;font-size:10px;font-weight:500}
+.cal-item .what{font-weight:500;font-size:13.5px}
+.cal-item .when{font-size:12px;color:var(--ink3)}
+.appx{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.appx-item{padding:13px 16px}
+.appx-item .org{font-size:12px;font-weight:700;color:var(--ink2)}
+.appx-item p{font-size:13px;margin-top:3px;overflow-wrap:anywhere}
+.appx-item .src{font-size:11.5px;margin-top:6px}
+footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;font-size:12px;
+color:var(--ink3);line-height:1.8}
+footer .hitl{color:var(--ink2);font-weight:500}
+</style></head><body>
+<div class="page">
+<header>
+  <div class="masthead"><h1>Nexus 일일 브리프</h1>
+    <div class="sub">대두유 조달 신호 데스크 · 핵심 변인과 <b>과거 유사 시기 실측 참조</b> — <b>Preview</b></div></div>
+  <div class="dateblock"><strong>2026-09-09</strong>
+    KST 05:30 발행 체계 · 데이터 기준 2026-09-09 CME 마감</div>
+</header>
+<div class="trust">
+  <span class="sig">✔ 서명된 검사</span>
+  <span>품질 게이트 <b>PASS</b></span>
+  <span>시점 정합 변수 <b>2,004</b></span>
+  <span>분석 타깃 <b>target_ret20</b></span>
+  <span>런 <b>34316604275</b> · 🚨 기준 초과 1건</span>
+</div>
+
+<section><div class="sec-h"><h2>한눈 요약</h2><span class="note">전 거래일 마감 기준</span></div>
+<div class="brief"><span class="k">현황</span>대두유 선물은 한 주간 -2.6% 하락했으며, 종가 70.48 USc/lb로 마감함. <span class="k">요인</span>현재 중요도 상위 변인은 ALLSKY_SFC_PAR_TOT_Buenos_Aires · ALLSKY_SFC_PAR_TOT_Cordoba임 (Elastic Net·상관 삼각검증). <span class="k">전망</span>향후 약 3개월(60거래일)의 참고 범위는 61.71~84.10 USc/lb임. 과거 유사 시기 실측은 전용 항목 참조. <span class="k warn">유의</span>금일 기준 초과 1건 — 상세는 &#x27;금일 경보&#x27; 참조. 조달 결정은 담당자 승인 절차 필수. </div>
+<div class="kpis">
+    <div class="card kpi"><div class="lbl">CBOT 대두유(ZL) 종가</div>
+      <div class="val num">70.48 <span class="unit">USc/lb</span></div>
+      <span class="chg up num">▲ +0.43%</span>
+      <div class="foot num">주간 -2.6% ·
+        90일 z -0.5 · CME 정산가 기준 · 기준일 2026-09-09</div></div><div class="card kpi"><div class="lbl">참고 도착가 범위 · 60거래일</div><div class="val">산출 불가</div><div class="foot">관세청 실측 또는 CBOT 층 데이터 부족 — 비치명 강등</div></div>
+    <div class="card kpi"><div class="lbl">금일 경보 (유의 사항)</div>
+      <div class="val num">1<span class="unit">건</span></div>
+      <div class="chg flat"><span class="pill warn">🚨 기준 초과</span></div>
+      <div class="foot">기준 초과 1 · 관찰 0 · 정상 2</div></div>
+    <div class="card kpi"><div class="lbl">데이터 적시성</div>
+      <div class="val num">10<span class="unit">/22 항목</span></div>
+      <div class="chg flat"><span class="pill warn">지연 확인 필요</span></div>
+      <div class="foot">신선도 ✅ 비율 기준 (월별 지표의 정기 지연 포함)</div></div></div></section>
+
+<section><div class="sec-h"><h2>가격 추세와 핵심 변인</h2>
+  <span class="note">변인 순위: Elastic Net + 상관 삼각검증 (20거래일 지평)</span></div>
+<div class="duo">
+  <div class="card chartbox">
+    <h3>CBOT ZL 종가 추이 + 참고 범위</h3>
+    <div class="cap">실적: 2026-05-01 ~ 2026-09-09 (90거래일 · CME 실측) · 참고 범위: 기준일 이후 약 90일(60거래일)</div>
+    <svg viewBox="0 0 560 260" style="width:100%;height:auto;display:block" role="img" aria-label="CBOT ZL 종가 추이와 60거래일 참고 범위"><line x1="44" x2="520" y1="200.9" y2="200.9" stroke="var(--line)" stroke-width="1"/><text x="38" y="204.9" font-size="10" fill="var(--ink3)" text-anchor="end">63.7</text><line x1="44" x2="520" y1="158.6" y2="158.6" stroke="var(--line)" stroke-width="1"/><text x="38" y="162.6" font-size="10" fill="var(--ink3)" text-anchor="end">68.6</text><line x1="44" x2="520" y1="116.3" y2="116.3" stroke="var(--line)" stroke-width="1"/><text x="38" y="120.3" font-size="10" fill="var(--ink3)" text-anchor="end">73.5</text><line x1="44" x2="520" y1="74.0" y2="74.0" stroke="var(--line)" stroke-width="1"/><text x="38" y="78.0" font-size="10" fill="var(--ink3)" text-anchor="end">78.4</text><line x1="44" x2="520" y1="31.8" y2="31.8" stroke="var(--line)" stroke-width="1"/><text x="38" y="35.8" font-size="10" fill="var(--ink3)" text-anchor="end">83.3</text><line x1="432.7" x2="432.7" y1="14" y2="226" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="3 3"/><path d="M432.7 142.4 L437.0 159.7 L441.4 166.9 L445.8 172.4 L450.1 177.1 L454.5 181.2 L458.9 184.9 L463.2 188.3 L467.6 191.5 L472.0 194.4 L476.3 197.2 L480.7 199.9 L485.1 202.5 L489.4 204.9 L493.8 207.3 L498.2 209.6 L502.5 211.8 L506.9 213.9 L511.3 216.0 L515.6 218.0 L515.6 24.9 L511.3 28.0 L506.9 31.2 L502.5 34.6 L498.2 38.0 L493.8 41.5 L489.4 45.2 L485.1 49.0 L480.7 53.0 L476.3 57.1 L472.0 61.5 L467.6 66.1 L463.2 71.1 L458.9 76.3 L454.5 82.1 L450.1 88.5 L445.8 95.7 L441.4 104.3 L437.0 115.4 L432.7 142.4 Z" fill="var(--band2)"/><path d="M432.7 142.4 L437.0 142.5 L441.4 142.7 L445.8 142.9 L450.1 143.1 L454.5 143.3 L458.9 143.4 L463.2 143.6 L467.6 143.8 L472.0 144.0 L476.3 144.2 L480.7 144.3 L485.1 144.5 L489.4 144.7 L493.8 144.9 L498.2 145.1 L502.5 145.2 L506.9 145.4 L511.3 145.6 L515.6 145.8" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4"/><text x="522.0" y="27.9" font-size="10" fill="var(--ink3)">84.10</text><text x="522.0" y="148.8" font-size="10" fill="var(--accent)" font-weight="700">70.08</text><text x="522.0" y="221.0" font-size="10" fill="var(--ink3)">61.71</text><text x="476.3" y="24" font-size="10" fill="var(--ink3)" text-anchor="middle">전망 약 90일(60거래일)</text><path d="M44.0 89.1 L48.4 77.3 L52.7 74.0 L57.1 90.3 L61.5 102.6 L65.8 101.1 L70.2 106.1 L74.6 92.2 L78.9 101.1 L83.3 104.9 L87.7 113.0 L92.0 97.9 L96.4 99.6 L100.8 106.3 L105.1 113.1 L109.5 112.2 L113.9 108.9 L118.2 101.1 L122.6 88.7 L127.0 79.9 L131.3 68.1 L135.7 74.0 L140.1 71.4 L144.4 92.2 L148.8 111.0 L153.2 107.2 L157.5 104.1 L161.9 100.5 L166.3 108.1 L170.6 109.6 L175.0 108.8 L179.4 121.3 L183.7 133.2 L188.1 149.2 L192.5 136.6 L196.8 141.4 L201.2 151.2 L205.6 139.5 L209.9 135.3 L214.3 154.5 L218.7 174.6 L223.0 172.2 L227.4 172.8 L231.8 162.5 L236.1 156.9 L240.5 134.5 L244.9 142.6 L249.2 139.1 L253.6 120.3 L258.0 120.3 L262.3 121.3 L266.7 125.5 L271.1 105.0 L275.4 106.1 L279.8 109.4 L284.2 99.2 L288.6 98.3 L292.9 109.2 L297.3 133.9 L301.7 140.0 L306.0 153.7 L310.4 160.7 L314.8 171.4 L319.1 157.8 L323.5 162.2 L327.9 165.9 L332.2 166.4 L336.6 162.4 L341.0 151.2 L345.3 159.9 L349.7 155.5 L354.1 158.0 L358.4 154.7 L362.8 134.1 L367.2 149.2 L371.5 147.7 L375.9 136.3 L380.3 152.1 L384.6 171.3 L389.0 167.9 L393.4 170.5 L397.7 163.8 L402.1 141.4 L406.5 142.2 L410.8 126.1 L415.2 142.2 L419.6 150.8 L423.9 157.0 L428.3 145.0 L432.7 142.4" fill="none" stroke="var(--accent)" stroke-width="2"/><circle cx="240.5" cy="134.5" r="4.5" fill="var(--up)" stroke="var(--surface)" stroke-width="1.5"/><text x="240.5" y="124.5" font-size="11" font-weight="700" fill="var(--up)" text-anchor="middle">①</text><circle cx="297.3" cy="133.9" r="4.5" fill="var(--down)" stroke="var(--surface)" stroke-width="1.5"/><text x="297.3" y="151.9" font-size="11" font-weight="700" fill="var(--down)" text-anchor="middle">②</text><circle cx="362.8" cy="134.1" r="4.5" fill="var(--up)" stroke="var(--surface)" stroke-width="1.5"/><text x="362.8" y="124.1" font-size="11" font-weight="700" fill="var(--up)" text-anchor="middle">③</text><circle cx="402.1" cy="141.4" r="4.5" fill="var(--up)" stroke="var(--surface)" stroke-width="1.5"/><text x="402.1" y="159.4" font-size="11" font-weight="700" fill="var(--up)" text-anchor="middle">④</text><text x="44.0" y="252" font-size="10" fill="var(--ink3)">05-01</text><text x="432.7" y="252" font-size="10" fill="var(--ink3)" text-anchor="middle">09-09 (기준일)</text><text x="520.0" y="252" font-size="10" fill="var(--ink3)" text-anchor="end">12-02</text></svg>
+    <div class="legend"><span><i></i>종가 (USc/lb)</span>
+      <span><i class="band"></i>참고 범위 P10–P90</span></div>
+    
+      <div class="range-figures num">
+        <span>범위 중앙(P50) <b>70.08</b></span>
+        <span>최소(P10) <b>61.71</b></span>
+        <span>최대(P90) <b>84.10</b> USc/lb</span></div><div style="margin-top:8px"><b style="font-size:13px">주요 변동일 4건</b> <span class="cap">— 차트의 번호 표시와 대응 · 클릭 시 당시 신호·변인 상태 표시(과거 사실 기술)</span><details class="mech"><summary>① 2026-07-08 <span class="chg up num">▲ +3.78%</span></summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>일간 변화율 <span class="chg up num">▲ +3.78%</span> · 종가 <span class="num">71.39</span> USc/lb</li><li><span class="src">당시 수집 신호 없음(신호 아카이브는 2026-08-17부터) — 변인 상태만 표시</span></li><li>당시 상위 변인 표준화 지수(z): ALLSKY_SFC_PAR_TOT_Buenos_Aires +1.6 · ALLSKY_SFC_PAR_TOT_Cordoba +1.3 · ALLSKY_SFC_PAR_TOT_Heilongjiang -1.5</li></ul></details><details class="mech"><summary>② 2026-07-27 <span class="chg down num">▼ -3.86%</span></summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>일간 변화율 <span class="chg down num">▼ -3.86%</span> · 종가 <span class="num">71.46</span> USc/lb</li><li><span class="src">당시 수집 신호 없음(신호 아카이브는 2026-08-17부터) — 변인 상태만 표시</span></li><li>당시 상위 변인 표준화 지수(z): ALLSKY_SFC_PAR_TOT_Buenos_Aires +1.6 · ALLSKY_SFC_PAR_TOT_Cordoba +1.3 · ALLSKY_SFC_PAR_TOT_Heilongjiang -1.5</li></ul></details><details class="mech"><summary>③ 2026-08-17 <span class="chg up num">▲ +3.46%</span></summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>일간 변화율 <span class="chg up num">▲ +3.46%</span> · 종가 <span class="num">71.44</span> USc/lb</li><li>당시 신호: RATE: **22.5%**   CHANGE: **unchanged**   DATE: **2026-06-03**   SOURCE: **Boletín Oficia <span class="src">Perplexity/PolicyProxy</span></li><li>연결 경로: 기사 → 신호: 수출세 경로 → CE-003 (검증됨) → 아르헨 수출 물량 → 공급 회복 → 가격 하방</li><li>당시 신호: INDONESIA: **B50** mandate | MALAYSIA: **B15** mandate | CHANGE: **yes – both countries r <span class="src">Perplexity/PolicyProxy</span></li><li>당시 상위 변인 표준화 지수(z): ALLSKY_SFC_PAR_TOT_Buenos_Aires +1.6 · ALLSKY_SFC_PAR_TOT_Cordoba +1.3 · ALLSKY_SFC_PAR_TOT_Heilongjiang -1.5</li></ul></details><details class="mech"><summary>④ 2026-08-28 <span class="chg up num">▲ +3.81%</span></summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>일간 변화율 <span class="chg up num">▲ +3.81%</span> · 종가 <span class="num">70.59</span> USc/lb</li><li>당시 신호: RATE: **22.5%** | CHANGE: **unchanged** | DATE: **2026-06-03** | SOURCE: **Argentina Offi <span class="src">Perplexity/PolicyProxy</span></li><li>연결 경로: 기사 → 신호: 수출세 경로 → CE-003 (검증됨) → 아르헨 수출 물량 → 공급 회복 → 가격 하방</li><li>당시 신호: INDONESIA: **B50** mandate | MALAYSIA: **B15** mandate (B10 nationwide, B20 in Labuan/Lan <span class="src">Perplexity/PolicyProxy</span></li><li>당시 상위 변인 표준화 지수(z): ALLSKY_SFC_PAR_TOT_Buenos_Aires +1.6 · ALLSKY_SFC_PAR_TOT_Cordoba +1.3 · ALLSKY_SFC_PAR_TOT_Heilongjiang -1.5</li></ul></details></div>
+      <details class="mech"><summary>참고 범위 산출 근거 (클릭)</summary>
+        <ol>
+          <li><b>가격 원천</b>: CME(CBOT) ZL 선물 — 정산가 교차검증을 거친 종가 계열.</li>
+          <li><b>기준 가격층</b>: 과거 60거래일 변동 분포(2010~ 전 구간)의 하위 10%·
+            중앙값·상위 10% 지점을 최근 종가에 적용함.</li>
+          <li><b>실측 잔차층</b>: 관세청 수입 실적(선적 100톤 이상)의 CIF 단가에서 같은 달
+            CBOT 가격을 뺀 차이 — 최근 12개월 분포(운임·프리미엄이 섞인 잔차층).</li>
+          <li><b>결합</b>: 두 층을 몬테카를로 방식으로 결합함(2만 회 추출·결과 재현 가능).
+            분위 수치의 단순 합산은 통계적으로 부정확하여 쓰지 않음.</li>
+          <li><b>한계</b>: 과거 변동이 이중으로 반영될 수 있어 <b>"확률 범위"가 아닌
+            "참고 범위"</b>로만 제공함. G2 모델 가동 시 이 층이 교체됨.</li>
+        </ol></details>
+  </div>
+  <div class="card drivers"><h3>핵심 변인 Top 5</h3>
+    <div class="cap">별점 = 최근 기사와 변인의 연관 매핑 (★~★★★) · 제목 클릭 시 원문</div>
+    
+      <div class="drv"><span class="rank num">1</span><div>
+        <span class="name">ALLSKY_SFC_PAR_TOT_Buenos_Aires</span><span class="dir up">상방 ▲</span>
+        <div class="barrow"><div class="bar" style="width:10%"></div>
+          <span class="shap num">계수 +0.0000 · r +0.059</span></div>
+        <div class="news">관련 기사 매핑 없음</div></div></div>
+      <div class="drv"><span class="rank num">2</span><div>
+        <span class="name">ALLSKY_SFC_PAR_TOT_Cordoba</span><span class="dir up">상방 ▲</span>
+        <div class="barrow"><div class="bar" style="width:10%"></div>
+          <span class="shap num">계수 +0.0000 · r +0.061</span></div>
+        <div class="news">관련 기사 매핑 없음</div></div></div>
+      <div class="drv"><span class="rank num">3</span><div>
+        <span class="name">ALLSKY_SFC_PAR_TOT_Heilongjiang</span><span class="dir down">하방 ▼</span>
+        <div class="barrow"><div class="bar" style="width:10%"></div>
+          <span class="shap num">계수 +0.0000 · r -0.054</span></div>
+        <div class="news">관련 기사 매핑 없음</div></div></div>
+      <div class="drv"><span class="rank num">4</span><div>
+        <span class="name">ALLSKY_SFC_PAR_TOT_Illinois</span><span class="dir down">하방 ▼</span>
+        <div class="barrow"><div class="bar" style="width:10%"></div>
+          <span class="shap num">계수 +0.0000 · r -0.033</span></div>
+        <div class="news">관련 기사 매핑 없음</div></div></div>
+      <div class="drv"><span class="rank num">5</span><div>
+        <span class="name">ALLSKY_SFC_PAR_TOT_Indiana</span><span class="dir down">하방 ▼</span>
+        <div class="barrow"><div class="bar" style="width:10%"></div>
+          <span class="shap num">계수 +0.0000 · r -0.041</span></div>
+        <div class="news">관련 기사 매핑 없음</div></div></div></div>
+</div></section>
+
+<section><div class="sec-h"><h2>금일 경보 (유의 사항)</h2>
+  <span class="note">기준 초과 변인만 표시 — 이상이 없는 날은 서명된 무소식으로 대체함</span></div>
+<div class="brief"><span class="k">현황</span>3개 감시 변인 가운데 1건이 주의 기준을 넘어섬. <span class="k">요인</span>판정 기준은 분포 기반(상위 10%·z 2σ)과 검증된 절대 기준의 이중 체계임. <span class="k">전망</span>기준 초과 변인의 지속 여부를 다음 날 브리프에서 다시 점검함. <span class="k warn">유의</span>미수집 항목은 경보 불가 상태이므로 &#x27;정상&#x27;과 구분해 표기함. </div>
+    <div class="alert"><div class="stripe"></div><div class="body">
+      <div class="head">🚨 <span>ENSO ONI(엘니뇨 지수) — 기후 레짐 전환</span>
+        <span class="pill warn">기준 초과</span></div>
+      <div class="detail num">현재값 1.8 · 기준 ±0.5 ·
+        신선도 ✅ 최신</div></div></div></section>
+
+<section><div class="sec-h"><h2>과거 유사 시기 실측 참조</h2>
+  <span class="note">현재와 유사했던 과거 연도들의 이후 실측 — 예측이 아닌 참조(A-191)</span></div>
+<div class="signals">
+    <div class="card sig-item">
+      <span class="tag">ENSO ONI(엘니뇨 지수) <span style="color:var(--ink3)">현재 z ?</span></span>
+      <ul style="font-size:13px;margin:6px 0 0 18px;line-height:1.8"><li>약 1주: 분석용 파생 지표 없음 — 산출 보류</li><li>약 1개월: 분석용 파생 지표 없음 — 산출 보류</li><li>약 3개월: 분석용 파생 지표 없음 — 산출 보류</li></ul>
+      </div>
+    <div class="card sig-item">
+      <span class="tag">ALLSKY_SFC_PAR_TOT_Buenos_Aires <span style="color:var(--ink3)">현재 z +1.6</span></span>
+      <ul style="font-size:13px;margin:6px 0 0 18px;line-height:1.8"><li>약 1주 후 실측: 유사 시기 82회(2010, 2011, 2012, 2013, 2014, 2015…) 중 상승 42회·하락 40회 — 변화율 중앙 +0.2% · 하위~상위 10% [-2.8%, +3.3%]</li><li>약 1개월 후 실측: 유사 시기 28회(2010, 2011, 2012, 2013, 2014, 2015…) 중 상승 16회·하락 11회 — 변화율 중앙 +0.7% · 하위~상위 10% [-6.0%, +11.3%]</li><li>약 3개월 후 실측: 유사 시기 15회(2010, 2011, 2012, 2013, 2014, 2015…) 중 상승 9회·하락 6회 — 변화율 중앙 +0.6% · 하위~상위 10% [-9.2%, +24.3%]</li></ul>
+      <div class="src">겹치는 위기 사례: Case 1 · 2010-11 라니냐·러 수출금지 · Case 2 · 2012 미국 대가뭄 · Case 3 · 2021-22 복합 위기 · Case 4 · 2022-23 아르헨 가뭄</div><details class="mech"><summary>Case 1 · 2010-11 라니냐·러 수출금지 — 왜 유사한가 (클릭)</summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>원인 사건: 라니냐 최고조(ONI −1.4)로 남미 작황 취약성이 누적된 상태에서, 러시아가 폭염·가뭄으로 밀 수출을 금지함(2010-08).</li><li>전달 경로: 곡물 전반 급등 → 유지류로 대체 수요 집중 → 대두유 수급 압박.</li><li>가격 반응(실측): 저점 38.0 → 고점 57.4 USc/lb, 약 9개월 +51% 실측. ONI 전환이 가격에 2~3개월 선행함.</li><li>현재와의 유사점: 기후 취약성이 깔린 상태에서 단일 정책 이벤트가 추가 충격으로 얹히는 중첩 구조.</li><li>현재와의 차이점: 당시 파급은 곡물發 대체 수요 경로였고, 물류(운임·해협) 요인의 비중은 크지 않았음.</li></ul><div class="cap">과거 사실 기술과 구조 비교까지만 — 방향 판단 아님(A-191). 상세·수치는 위기 사례 문서(corrections 병독).</div></details><details class="mech"><summary>Case 2 · 2012 미국 대가뭄 — 왜 유사한가 (클릭)</summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>원인 사건: 미국 중서부 대가뭄(예외적 가뭄 등급 면적 35%) — 7월 WASDE가 미국 대두 생산 전망을 −14.4% 하향함.</li><li>전달 경로: 생산 전망 하향 → 공급 우려 선반영 → 실제 수확 발표(우려 대비 양호)로 급반전.</li><li>가격 반응(실측): 8개월 +13.6% 뒤 9월 한 달 만에 되돌림 실측 — 단일 공급 충격의 가역성 사례.</li><li>현재와의 유사점: 발표 이벤트(WASDE) 전후로 가격이 빠르게 재평가되는 패턴.</li><li>현재와의 차이점: 당시는 운임(BDI) 저수준·수입 수요 부진의 삼중 부정 구조 — 고점이 지속되지 못한 조건이 겹쳐 있었음.</li></ul><div class="cap">과거 사실 기술과 구조 비교까지만 — 방향 판단 아님(A-191). 상세·수치는 위기 사례 문서(corrections 병독).</div></details><details class="mech"><summary>Case 3 · 2021-22 복합 위기 — 왜 유사한가 (클릭)</summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>원인 사건: 2년 연속 라니냐(아르헨 감산) + 러시아-우크라이나 전쟁(해바라기유 공급 45~50% 붕괴) + 인도네시아 팜유 수출 금지 + 인도 수입 관세 인하.</li><li>전달 경로: 기후·지정학·정책 3중 충격이 동시 발생 — 대체 수요 집중에 물류 차질(운임 지수 +387%)이 도착 원가를 증폭함. COVID기 항만·항로 봉쇄로 선박이 우회하며 운임·보험료가 도착가에 얹히는 경로가 형성됨.</li><li>가격 반응(실측): 저점 28.9 → 고점 82.5 USc/lb, 23개월 +185% 실측(당시 사상 최고가). 운임 급등이 가격 고점에 6~18개월 선행함.</li><li>현재와의 유사점: &#x27;요충 경로 불안 → 우회·보험료 → 도착가 상방&#x27;의 물류 증폭 구조가 현재 호르무즈 국면과 동형임(당시는 COVID·흑해發 경로 차질).</li><li>현재와의 차이점: 당시는 수요 측 충격(바이오디젤·인도 수입)이 동반됨 — corrections 재평가에서 유사도 7/10로 하향(우크라이나 요인 제외), 2024-25 미·중 관세 사례(Case D)가 9/10로 더 유사 판정.</li></ul><div class="cap">과거 사실 기술과 구조 비교까지만 — 방향 판단 아님(A-191). 상세·수치는 위기 사례 문서(corrections 병독).</div></details><details class="mech"><summary>Case 4 · 2022-23 아르헨 가뭄 — 왜 유사한가 (클릭)</summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>원인 사건: 3년 연속(트리플딥) 라니냐로 아르헨티나 대두 생산 −42%(43.4→25.0 MMT), 로사리오 압착 허브 가동률 45%로 급락.</li><li>전달 경로: 단일 원산지 공급 급감 — 그러나 브라질 기록 풍작(153 MMT)이 물량을 완전 상쇄함.</li><li>가격 반응(실측): +11.4% 상승에 그친 뒤 되돌림 실측 — 대체 원산지(스윙 프로듀서) 완충 여부가 충격 크기를 결정함.</li><li>현재와의 유사점: 주요 원산지 한 곳의 충격이 발생해도 대체 원산지 물량이 완충하는 구조 — 현재도 브라질 생산이 역대 최고 수준이라는 점이 같은 완충 요인임.</li><li>현재와의 차이점: 당시는 기후 단일 요인 — 물류·정책 충격이 결합하지 않았음.</li></ul><div class="cap">과거 사실 기술과 구조 비교까지만 — 방향 판단 아님(A-191). 상세·수치는 위기 사례 문서(corrections 병독).</div></details></div>
+    <div class="card sig-item">
+      <span class="tag">ALLSKY_SFC_PAR_TOT_Cordoba <span style="color:var(--ink3)">현재 z +1.3</span></span>
+      <ul style="font-size:13px;margin:6px 0 0 18px;line-height:1.8"><li>약 1주 후 실측: 유사 시기 77회(2010, 2011, 2012, 2013, 2014, 2015…) 중 상승 40회·하락 37회 — 변화율 중앙 +0.3% · 하위~상위 10% [-3.4%, +3.6%]</li><li>약 1개월 후 실측: 유사 시기 24회(2010, 2011, 2012, 2013, 2014, 2015…) 중 상승 11회·하락 13회 — 변화율 중앙 -0.4% · 하위~상위 10% [-5.1%, +9.8%]</li><li>약 3개월 후 실측: 유사 시기 14회(2010, 2011, 2013, 2014, 2016, 2017…) 중 상승 5회·하락 9회 — 변화율 중앙 -0.7% · 하위~상위 10% [-11.1%, +19.3%]</li></ul>
+      <div class="src">겹치는 위기 사례: Case 1 · 2010-11 라니냐·러 수출금지 · Case 2 · 2012 미국 대가뭄 · Case 3 · 2021-22 복합 위기</div><details class="mech"><summary>Case 1 · 2010-11 라니냐·러 수출금지 — 왜 유사한가 (클릭)</summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>원인 사건: 라니냐 최고조(ONI −1.4)로 남미 작황 취약성이 누적된 상태에서, 러시아가 폭염·가뭄으로 밀 수출을 금지함(2010-08).</li><li>전달 경로: 곡물 전반 급등 → 유지류로 대체 수요 집중 → 대두유 수급 압박.</li><li>가격 반응(실측): 저점 38.0 → 고점 57.4 USc/lb, 약 9개월 +51% 실측. ONI 전환이 가격에 2~3개월 선행함.</li><li>현재와의 유사점: 기후 취약성이 깔린 상태에서 단일 정책 이벤트가 추가 충격으로 얹히는 중첩 구조.</li><li>현재와의 차이점: 당시 파급은 곡물發 대체 수요 경로였고, 물류(운임·해협) 요인의 비중은 크지 않았음.</li></ul><div class="cap">과거 사실 기술과 구조 비교까지만 — 방향 판단 아님(A-191). 상세·수치는 위기 사례 문서(corrections 병독).</div></details><details class="mech"><summary>Case 2 · 2012 미국 대가뭄 — 왜 유사한가 (클릭)</summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>원인 사건: 미국 중서부 대가뭄(예외적 가뭄 등급 면적 35%) — 7월 WASDE가 미국 대두 생산 전망을 −14.4% 하향함.</li><li>전달 경로: 생산 전망 하향 → 공급 우려 선반영 → 실제 수확 발표(우려 대비 양호)로 급반전.</li><li>가격 반응(실측): 8개월 +13.6% 뒤 9월 한 달 만에 되돌림 실측 — 단일 공급 충격의 가역성 사례.</li><li>현재와의 유사점: 발표 이벤트(WASDE) 전후로 가격이 빠르게 재평가되는 패턴.</li><li>현재와의 차이점: 당시는 운임(BDI) 저수준·수입 수요 부진의 삼중 부정 구조 — 고점이 지속되지 못한 조건이 겹쳐 있었음.</li></ul><div class="cap">과거 사실 기술과 구조 비교까지만 — 방향 판단 아님(A-191). 상세·수치는 위기 사례 문서(corrections 병독).</div></details><details class="mech"><summary>Case 3 · 2021-22 복합 위기 — 왜 유사한가 (클릭)</summary><ul style="margin:6px 0 0 16px;line-height:1.7"><li>원인 사건: 2년 연속 라니냐(아르헨 감산) + 러시아-우크라이나 전쟁(해바라기유 공급 45~50% 붕괴) + 인도네시아 팜유 수출 금지 + 인도 수입 관세 인하.</li><li>전달 경로: 기후·지정학·정책 3중 충격이 동시 발생 — 대체 수요 집중에 물류 차질(운임 지수 +387%)이 도착 원가를 증폭함. COVID기 항만·항로 봉쇄로 선박이 우회하며 운임·보험료가 도착가에 얹히는 경로가 형성됨.</li><li>가격 반응(실측): 저점 28.9 → 고점 82.5 USc/lb, 23개월 +185% 실측(당시 사상 최고가). 운임 급등이 가격 고점에 6~18개월 선행함.</li><li>현재와의 유사점: &#x27;요충 경로 불안 → 우회·보험료 → 도착가 상방&#x27;의 물류 증폭 구조가 현재 호르무즈 국면과 동형임(당시는 COVID·흑해發 경로 차질).</li><li>현재와의 차이점: 당시는 수요 측 충격(바이오디젤·인도 수입)이 동반됨 — corrections 재평가에서 유사도 7/10로 하향(우크라이나 요인 제외), 2024-25 미·중 관세 사례(Case D)가 9/10로 더 유사 판정.</li></ul><div class="cap">과거 사실 기술과 구조 비교까지만 — 방향 판단 아님(A-191). 상세·수치는 위기 사례 문서(corrections 병독).</div></details></div></div>
+    <details class="mech"><summary>산출 방식 (클릭)</summary>
+      변수의 90일 표준화 지수(z)가 현재와 같은 구간(십분위)이었던 과거 거래일을 찾아,
+      그 날들로부터 약 1주(5거래일)/약 1개월(20거래일)/약 3개월(60거래일) 뒤의
+      <b>실측</b> 가격 변화를 집계함(2010~ 전 구간). 유사일 사이에 최소 간격을 두어
+      중복 시기를 제거하고, 최근 60거래일은 집계에서 제외함(전방 구간 겹침 방지).
+      유사 시기가 8회 미만이면 산출을 보류함. <b>통계 검정 없음 — 기술 서술</b>이며,
+      감시 창(90일)은 기준 기간 확정 전 잠정값임.</details><div class="cap" style="margin-top:8px">⚠️ 위 수치는 <b>과거 관측의 요약이며 향후 전망·확률 주장이 아님</b>(A-191). 유사 상황에서 어떤 변수를 주시할지 참고하는 자료로만 사용할 것.</div></section>
+
+<section><div class="sec-h"><h2>글로벌 공급 경로 현황 · 해상 위협 점수</h2>
+  <span class="note">모식도(1단계) — 점등은 해협별 점수 밴드(정상 &lt;20 · 주의 20~49 · 심각 ≥50) · 실지도·AIS 위치 연동은 2단계</span></div>
+<div class="card mapbox"><h3>주요 원산지 → 한국 항로와 요충 해협</h3>
+<svg viewBox="0 0 1000 250" style="width:100%;height:auto;display:block" role="img" aria-label="주요 원산지에서 한국까지의 공급 경로 모식도"><line x1="60" y1="18" x2="60" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="154" y1="18" x2="154" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="248" y1="18" x2="248" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="342" y1="18" x2="342" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="436" y1="18" x2="436" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="530" y1="18" x2="530" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="624" y1="18" x2="624" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="718" y1="18" x2="718" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="812" y1="18" x2="812" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="906" y1="18" x2="906" y2="232" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="30" y1="40" x2="970" y2="40" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="30" y1="84" x2="970" y2="84" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="30" y1="128" x2="970" y2="128" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="30" y1="172" x2="970" y2="172" stroke="var(--line)" stroke-width="1" opacity=".5"/><line x1="30" y1="216" x2="970" y2="216" stroke="var(--line)" stroke-width="1" opacity=".5"/><path d="M210 95 Q545 18 880 80" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 5" opacity=".55"/><path d="M300 185 Q590 188 880 80" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 5" opacity=".55"/><path d="M270 215 Q575 238 880 80" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 5" opacity=".55"/><path d="M700 165 Q790 148 880 80" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 5" opacity=".55"/><circle cx="210" cy="95" r="7" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="210" y="117" font-size="11" fill="var(--ink2)" text-anchor="middle" font-weight="500">미국 멕시코만</text><text x="210" y="130" font-size="9.5" fill="var(--ink3)" text-anchor="middle">조유·정제유</text><circle cx="300" cy="185" r="7" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="300" y="207" font-size="11" fill="var(--ink2)" text-anchor="middle" font-weight="500">브라질</text><text x="300" y="220" font-size="9.5" fill="var(--ink3)" text-anchor="middle">조유</text><circle cx="270" cy="215" r="7" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="270" y="237" font-size="11" fill="var(--ink2)" text-anchor="middle" font-weight="500">아르헨티나</text><text x="270" y="250" font-size="9.5" fill="var(--ink3)" text-anchor="middle">조유 최대 공급</text><circle cx="700" cy="165" r="7" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="700" y="187" font-size="11" fill="var(--ink2)" text-anchor="middle" font-weight="500">말레이·인니</text><text x="700" y="200" font-size="9.5" fill="var(--ink3)" text-anchor="middle">팜유(대체)</text><circle cx="880" cy="80" r="9" fill="var(--accent)"/><text x="880" y="64" font-size="12" fill="var(--ink2)" text-anchor="middle" font-weight="700">한국 (평택·인천)</text><rect x="230" y="135" width="10" height="10" transform="rotate(45 235 140)" fill="var(--ok)"/><text x="235" y="129" font-size="10" fill="var(--ink2)" text-anchor="middle">파나마</text><rect x="495" y="100" width="10" height="10" transform="rotate(45 500 105)" fill="var(--warn)"/><text x="500" y="94" font-size="10" fill="var(--ink2)" text-anchor="middle">수에즈·홍해</text><rect x="580" y="110" width="10" height="10" transform="rotate(45 585 115)" fill="var(--warn)"/><text x="585" y="104" font-size="10" fill="var(--ink2)" text-anchor="middle">호르무즈</text><rect x="710" y="145" width="10" height="10" transform="rotate(45 715 150)" fill="var(--ok)"/><text x="715" y="139" font-size="10" fill="var(--ink2)" text-anchor="middle">말라카</text><rect x="465" y="50" width="10" height="10" transform="rotate(45 470 55)" fill="var(--warn)"/><text x="470" y="44" font-size="10" fill="var(--ink2)" text-anchor="middle">흑해 회랑</text></svg>
+<div class="map-legend"><span><span class="dot ok"></span>정상</span>
+  <span><span class="dot warn"></span>주의</span>
+  <span><span class="dot crit"></span>심각</span>
+  <span><span class="dot" style="background:var(--ink3)"></span>미수집</span>
+</div></div>
+<div class="cp-index">한국향 직접 경유 노출 <b class="num">0</b>/100 (최대치 기준: 파나마 운하) · 부분 산출 · 운임 전파 축 <b class="num">40</b>/100 (최대치 기준: 호르무즈 해협) · 부분 산출 · <small>maritime_rules v1.0.0 (2026-09-09)</small></div><div class="cap">규칙 기반 편집상 참고 지수(0~100)이며 시장 방향의 판단 근거가 아님 · 미확인 성분은 0으로 대체하지 않고 부분 산출로 표기함 · 관세청 실측(2025-08~2026-07) 조유 1507.10.1000 수집국 커버리지 25.2%·정제 1507.90.1010 75.4%(정제는 중국 99.9% — 해협 무경유) → 원산지 가중 합성은 커버리지 표기 없이 발행 금지</div><div class="cp-grid">
+    <div class="card cp-card">
+      <div class="cp-head"><b>호르무즈 해협</b>
+        <span class="cp-score num">40<small>/100</small></span>
+        <span class="pill warn">주의</span> <span class="pill acc">critical</span> <span class="pill acc">부분 산출 · 미확인 2</span></div>
+      <div class="cap">HORMUZ_THREAT_LEVEL=3 → critical 승급</div>
+      <div class="cp-comp"><span>등급</span><b class="num">40</b><small>critical 등급 가중 40</small></div><div class="cp-comp"><span>경보</span><b class="num">0</b><small>경보 0건(원천 1종 확인)</small></div><div class="cp-comp"><span>AIS</span><b class="num">미확인</b><small>AIS 미수집(미수집)</small></div><div class="cp-comp"><span>급감</span><b class="num">미확인</b><small>AIS 미확인</small></div>
+      <div class="cp-meta"><span>항로</span>탱커 선복·전쟁위험보험료 경유 운임 시장 전파(CE-010·CE-013) — 한국향 3항로 직접 경유 아님</div>
+      <div class="cp-meta"><span>리드타임</span>리드타임 영향 근거 없음 <small>DATA GAP — 저장소 근거 없음</small></div>
+      
+      <div class="cap">미확인 성분: GDELT_EVENT_SCORE(미수집) · AIS(AIS 미수집(미수집))</div>
+    </div>
+    <div class="card cp-card">
+      <div class="cp-head"><b>수에즈·홍해(바브엘만데브)</b>
+        <span class="cp-score num">40<small>/100</small></span>
+        <span class="pill warn">주의</span> <span class="pill acc">critical</span> <span class="pill acc">부분 산출 · 미확인 2</span></div>
+      <div class="cap">SUEZ_RED_SEA_RISK=3 → critical 승급</div>
+      <div class="cp-comp"><span>등급</span><b class="num">40</b><small>critical 등급 가중 40</small></div><div class="cp-comp"><span>경보</span><b class="num">0</b><small>경보 0건(원천 1종 확인)</small></div><div class="cp-comp"><span>AIS</span><b class="num">미확인</b><small>전용 AIS 지표 없음(DATA GAP)</small></div><div class="cp-comp"><span>급감</span><b class="num">미확인</b><small>AIS 미확인</small></div>
+      <div class="cp-meta"><span>항로</span>희망봉 우회 → 유효 선복 감소 → 운임 급등 → 한국 CIF 상승(CE-013 validated)</div>
+      <div class="cp-meta"><span>리드타임</span>추가 일수 +12~15 · 운임 +30~40 <small>CE-013 evidence (Adaptation 2025 p.557) — 곡물 벌커 기준·유지 탱커 아님(참고치)</small></div>
+      
+      <div class="cap">미확인 성분: GDELT_EVENT_SCORE(미수집) · AIS(전용 AIS 지표 없음(DATA GAP))</div>
+    </div>
+    <div class="card cp-card">
+      <div class="cp-head"><b>말라카 해협</b>
+        <span class="cp-score num">0<small>/100</small></span>
+        <span class="pill ok">정상</span> <span class="pill acc">normal</span> <span class="pill acc">부분 산출 · 미확인 3</span></div>
+      <div class="cap">분쟁 근거 없음 — 혼잡은 AIS 성분으로만 반영</div>
+      <div class="cp-comp"><span>등급</span><b class="num">0</b><small>normal 등급 가중 0</small></div><div class="cp-comp"><span>경보</span><b class="num">미확인</b><small>경보 원천 전부 미수집</small></div><div class="cp-comp"><span>AIS</span><b class="num">미확인</b><small>AIS 미수집(미수집)</small></div><div class="cp-comp"><span>급감</span><b class="num">미확인</b><small>AIS 미확인</small></div>
+      <div class="cp-meta"><span>항로</span>한국향 직접 경유 — RT-SANTOS-KR · RT-ROSARIO-KR (우회: 순다 해협 · 롬복 해협)</div>
+      <div class="cp-meta"><span>리드타임</span>추가 일수 +1~3(추정) <small>INFERENCE — 미검증</small></div>
+      
+      <div class="cap">미확인 성분: GDELT_EVENT_SCORE(미수집) · AIS(AIS 미수집(미수집))</div>
+    </div>
+    <div class="card cp-card">
+      <div class="cp-head"><b>파나마 운하</b>
+        <span class="cp-score num">0<small>/100</small></span>
+        <span class="pill ok">정상</span> <span class="pill acc">normal</span> <span class="pill acc">부분 산출 · 미확인 3</span></div>
+      <div class="cap">전쟁위험 등급 비대상 — 수위·대기(운하 용량) 축은 전용 지표 부재(DATA GAP)</div>
+      <div class="cp-comp"><span>등급</span><b class="num">0</b><small>normal 등급 가중 0</small></div><div class="cp-comp"><span>경보</span><b class="num">미확인</b><small>경보 원천 전부 미수집</small></div><div class="cp-comp"><span>AIS</span><b class="num">미확인</b><small>AIS 미수집(미수집)</small></div><div class="cp-comp"><span>급감</span><b class="num">미확인</b><small>AIS 미확인</small></div>
+      <div class="cp-meta"><span>항로</span>한국향 직접 경유 — RT-USG-KR (우회: 수에즈 · 희망봉)</div>
+      <div class="cp-meta"><span>리드타임</span>리드타임 영향 근거 없음 <small>DATA GAP — 저장소 근거 없음</small></div>
+      
+      <div class="cap">미확인 성분: GDELT_EVENT_SCORE(미수집) · AIS(AIS 미수집(미수집))</div>
+    </div>
+    <div class="card cp-card">
+      <div class="cp-head"><b>흑해 회랑</b>
+        <span class="cp-score num">40<small>/100</small></span>
+        <span class="pill warn">주의</span> <span class="pill acc">critical</span> <span class="pill acc">부분 산출 · 미확인 3</span></div>
+      <div class="cap">UKRAINE_GRAIN_CORRIDOR=3 → critical 승급</div>
+      <div class="cp-comp"><span>등급</span><b class="num">40</b><small>critical 등급 가중 40</small></div><div class="cp-comp"><span>경보</span><b class="num">미확인</b><small>경보 원천 전부 미수집</small></div><div class="cp-comp"><span>AIS</span><b class="num">미확인</b><small>전용 AIS 지표 없음(DATA GAP)</small></div><div class="cp-comp"><span>급감</span><b class="num">미확인</b><small>AIS 미확인</small></div>
+      <div class="cp-meta"><span>항로</span>해바라기유 수출 경로 상태 관측 표시까지 — 대체 수요→SBO 가격 서술 금지(CE-014 candidate)</div>
+      <div class="cp-meta"><span>리드타임</span>추가 일수 10~15→30~40일 · 운임 운송비 20~25→70~100 $/t <small>CE-013 evidence(우크라이나 곡물 기준 — 유지 탱커 아님)</small></div>
+      
+      <div class="cap">미확인 성분: GDELT_EVENT_SCORE(미수집) · AIS(전용 AIS 지표 없음(DATA GAP))</div>
+    </div></div></section>
+
+<section><div class="sec-h"><h2>지표 스냅샷</h2>
+  <span class="note">z = 90일 기준(잠정 — 기준 기간 확정 전 · W0) · 상승 적색/하락 청색</span></div>
+<div class="card tablewrap"><table>
+  <thead><tr><th>지표</th><th>값</th><th>일간</th><th>주간</th><th>90일 z</th><th>추세</th></tr></thead>
+  <tbody><tr><td>CBOT ZL 종가<span class="src">CME 정산가</span></td><td class="num">70.48</td><td><span class="chg up num">▲ +0.43%</span></td><td><span class="chg down num">▼ -2.61%</span></td><td class="num">-0.5</td><td><svg viewBox="0 0 90 26" width="90" height="26"><polyline points="4.0,12.9 15.7,13.4 27.4,4.0 39.1,13.4 50.9,18.4 62.6,22.0 74.3,15.0 86.0,13.5" fill="none" stroke="var(--ink3)" stroke-width="1.5"/><circle cx="86.0" cy="13.5" r="2.5" fill="var(--accent)"/></svg></td></tr><tr><td>CPO 팜유<span class="src">TE/Bursa</span></td><td colspan="5" style="color:var(--ink3);text-align:left">미수집</td></tr><tr><td>BDI 해상운임지수<span class="src">Baltic</span></td><td class="num">2,910</td><td><span class="chg up num">▲ +3.26%</span></td><td><span class="chg up num">▲ +72.39%</span></td><td class="num">+1.0</td><td><svg viewBox="0 0 90 26" width="90" height="26"><polyline points="4.0,10.8 15.7,4.0 27.4,22.0 39.1,20.0 50.9,18.4 62.6,17.5 74.3,11.3 86.0,10.4" fill="none" stroke="var(--ink3)" stroke-width="1.5"/><circle cx="86.0" cy="10.4" r="2.5" fill="var(--accent)"/></svg></td></tr><tr><td>BRL/USD 환율<span class="src">FRED</span></td><td class="num">5.12</td><td><span class="chg up num">▲ +0.30%</span></td><td><span class="chg down num">▼ -1.83%</span></td><td class="num">+0.3</td><td><svg viewBox="0 0 90 26" width="90" height="26"><polyline points="4.0,12.8 15.7,11.5 27.4,4.0 39.1,9.8 50.9,15.7 62.6,22.0 74.3,21.8 86.0,19.4" fill="none" stroke="var(--ink3)" stroke-width="1.5"/><circle cx="86.0" cy="19.4" r="2.5" fill="var(--accent)"/></svg></td></tr><tr><td>원/달러 환율<span class="src">FRED/BOK</span></td><td class="num">1,347</td><td><span class="chg down num">▼ -0.76%</span></td><td><span class="chg down num">▼ -2.39%</span></td><td class="num"><span class="z-hot">-2.3</span></td><td><svg viewBox="0 0 90 26" width="90" height="26"><polyline points="4.0,4.0 15.7,6.2 27.4,7.1 39.1,12.1 50.9,10.5 62.6,16.4 74.3,17.3 86.0,22.0" fill="none" stroke="var(--ink3)" stroke-width="1.5"/><circle cx="86.0" cy="22.0" r="2.5" fill="var(--accent)"/></svg></td></tr><tr><td>VIX 변동성<span class="src">CBOE</span></td><td class="num">15.3</td><td><span class="chg up num">▲ +5.30%</span></td><td><span class="chg up num">▲ +2.55%</span></td><td class="num">-0.9</td><td><svg viewBox="0 0 90 26" width="90" height="26"><polyline points="4.0,20.3 15.7,21.0 27.4,16.7 39.1,4.0 50.9,14.2 62.6,22.0 74.3,20.1 86.0,13.3" fill="none" stroke="var(--ink3)" stroke-width="1.5"/><circle cx="86.0" cy="13.3" r="2.5" fill="var(--accent)"/></svg></td></tr><tr><td>ENSO ONI<span class="src">NOAA</span></td><td class="num">+1.80</td><td><span style="color:var(--ink3)">월간</span></td><td>—</td><td class="num"><span class="z-hot">+2.2</span></td><td><svg viewBox="0 0 90 26" width="90" height="26"><polyline points="4.0,22.0 15.7,20.4 27.4,19.1 39.1,16.7 50.9,14.1 62.6,10.4 74.3,7.1 86.0,4.0" fill="none" stroke="var(--ink3)" stroke-width="1.5"/><circle cx="86.0" cy="4.0" r="2.5" fill="var(--accent)"/></svg></td></tr><tr><td>압착 마진 (Board Crush)<span class="src">CBOT ZL·ZM·ZS</span></td><td colspan="5" style="color:var(--ink3);text-align:left">수집 예정 — 대두박(ZM)·대두(ZS) 반입 후 산출(트레이더가 대두 복합체를 읽는 대표 지표)</td></tr></tbody></table></div></section>
+
+<section><div class="sec-h"><h2>금일 언론·매체로 보는 시장 추세</h2>
+  <span class="note">일별 수집 + 전문 매체 — 제목 클릭 시 원문 · 온톨로지 연결로 분석 체계 확인</span></div>
+<div class="signals">
+    <div class="card sig-item">
+      <span class="tag">정책 뉴스</span>
+      <p>For that report, public data and commentary provide detail on soybeans generally but do **not** give a clear,</p>
+      <div class="src">Perplexity/PolicyProxy ·
+        09-08</div>
+      </div>
+    <div class="card sig-item">
+      <span class="tag">지정학 이벤트</span>
+      <p>** | DATE: **2026-09-08**  Below is the detail behind that one-line status, separated by product.  ---  ##</p>
+      <div class="src">Perplexity/GeoEventProxy ·
+        09-08</div>
+      <details class="chain"><summary>온톨로지 연결</summary><div class="row"><span class="node ">기사</span><span class="arr">→</span><span class="node ent">신호: 무역 정책</span><span class="arr">→</span><span class="node edge">CE-009 (검증됨)</span><span class="arr">→</span><span class="node ent">미중 교역 흐름</span><span class="arr">→</span><span class="node ">대두 수급 재편</span><span class="arr">→</span><span class="node ">방향 조건부</span></div><div class="meta">시맨틱 레이어 연동: entities.yaml·ontology.yaml v3 (validated 엣지만 변인 분석 반영 · 근거 발췌 보존 S-5)</div></details></div>
+    <div class="card sig-item">
+      <span class="tag">지정학 이벤트</span>
+      <p>| DATE: 2026-09-08  **Supporting detail (not part of requested line, but for context):**  - **Black Sea Grain</p>
+      <div class="src">Perplexity/GeoEventProxy ·
+        09-08</div>
+      <details class="chain"><summary>온톨로지 연결</summary><div class="row"><span class="node ">관측</span><span class="arr">→</span><span class="node ent">흑해 회랑 상태</span><span class="arr">→</span><span class="node edge">CE-014 (후보)</span><span class="arr">→</span><span class="node ent">해바라기유 수출 경로</span><span class="arr">→</span><span class="node ">대체 유지 공급</span><span class="arr">→</span><span class="node ">검증 대기</span></div><div class="meta">시맨틱 레이어 연동: entities.yaml·ontology.yaml v3 (validated 엣지만 변인 분석 반영 · 근거 발췌 보존 S-5)</div></details></div>
+    <div class="card sig-item">
+      <span class="tag">지정학 이벤트</span>
+      <p>RISK: **HIGH** | DIVERSIONS: **unknown (significant, but no reliable weekly tanker count published)** | FREIG</p>
+      <div class="src">Perplexity/GeoEventProxy ·
+        09-08</div>
+      <details class="chain"><summary>온톨로지 연결</summary><div class="row"><span class="node ">관측</span><span class="arr">→</span><span class="node ent">해협 위협 점수</span><span class="arr">→</span><span class="node edge">CE-013 (검증됨)</span><span class="arr">→</span><span class="node ent">희망봉 우회(+12~15일)</span><span class="arr">→</span><span class="node ">운임 상승</span><span class="arr">→</span><span class="node ">도착가 상방</span></div><div class="meta">시맨틱 레이어 연동: entities.yaml·ontology.yaml v3 (validated 엣지만 변인 분석 반영 · 근거 발췌 보존 S-5)</div></details></div>
+    <div class="card sig-item">
+      <span class="tag">전문 매체</span>
+      <p><a href="https://farmdocdaily.illinois.edu/2026/09/wheat-double-crop-soybean-profitability-in-recent-years.html" target="_blank" rel="noopener">Wheat Double-Crop Soybean Profitability in Recent Years (https://farmdocdaily.illinois.edu/2026/09/wheat-doubl</a></p>
+      <div class="src">rss_farmdoc_daily ·
+        09-08</div>
+      </div>
+    <div class="card sig-item">
+      <span class="tag">정책 뉴스</span>
+      <p>DUTY_RATE: **35.75%** (approx. effective total on refined soybean oil imports)   CHANGE: **unchanged (no chan</p>
+      <div class="src">Perplexity/PolicyProxy ·
+        09-08</div>
+      <details class="chain"><summary>온톨로지 연결</summary><div class="row"><span class="node ">기사</span><span class="arr">→</span><span class="node ent">신호: 수입관세</span><span class="arr">→</span><span class="node edge">CE-004 (후보)</span><span class="arr">→</span><span class="node ent">인도 수입 수요</span><span class="arr">→</span><span class="node ">수요 변동</span><span class="arr">→</span><span class="node ">방향 조건부</span></div><div class="meta">시맨틱 레이어 연동: entities.yaml·ontology.yaml v3 (validated 엣지만 변인 분석 반영 · 근거 발췌 보존 S-5)</div></details></div></div></section>
+
+<section><div class="sec-h"><h2>주목해야 할 일정</h2>
+  <span class="note">발표 캘린더 + 조달 리드타임 D-day</span></div>
+<div class="cal">
+    <div class="card cal-item">
+      <div class="dday num">D-2<small>09/11</small></div>
+      <div><div class="what">USDA WASDE 발표</div><div class="when">발표 익영업일 월별 심층판 자동 발행</div></div></div>
+    <div class="card cal-item">
+      <div class="dday num">D-8<small>09/17</small></div>
+      <div><div class="what">차기 선적분 발주 검토 시한</div><div class="when">CIF 한국 리드타임 50일 역산 기준</div></div></div>
+    <div class="card cal-item">
+      <div class="dday num">D-114<small>01/01</small></div>
+      <div><div class="what">아르헨 수출세 월별 인하 개시</div><div class="when">Decree 423/2026 · 24%→15% 경로</div></div></div></div></section>
+
+<section><div class="sec-h"><h2>부록 — 전문 기관·매체 최신</h2>
+  <span class="note">RSS 수집분 기관별 최신 1건 + 원문 링크</span></div>
+<div class="appx">
+    <div class="card appx-item"><div class="org">Farmdoc Daily</div>
+      <p>Wheat Double-Crop Soybean Profitability in Recent Years (https://farmdocdaily.illinois.edu/2026/09/wheat-double-crop-soybean-profi</p><div class="src"><a href="https://farmdocdaily.illinois.edu/2026/09/wheat-double-crop-soybean-profitability-in-recent-years.html" target="_blank" rel="noopener">원문</a></div></div>
+    <div class="card appx-item"><div class="org">World Grain</div>
+      <p>Slideshow: New equipment meets safety, efficiency needs (https://www.world-grain.com/articles/23185-slideshow-new-equipment-meets-</p><div class="src"><a href="https://www.world-grain.com/articles/23185-slideshow-new-equipment-meets-safety-efficiency-needs" target="_blank" rel="noopener">원문</a></div></div></div></section>
+
+<footer>
+  <div class="hitl">본 브리프는 판단 지원 정보이며, 조달(구매/보류) 결정은 반드시 담당자
+    승인 절차를 거침. 구매/보류 신호와 국면 판정(G3)은 정식판에서 제공 예정. 위기 국면에는
+    시나리오와 행동 옵션을 담은 특별 브리프 체계로 전환됨.</div>
+  데이터 시점 규율: 모든 입력은 발행 시점 이전에 확정된 값만 사용함 — 장 마감(14:20 ET)
+  이후 확정되는 지표는 하루 지연해 반영함. 산출: G1 파이프라인 (Elastic Net + SHAP
+  삼각검증 + Granger) · 생성 2026-09-09 06:38:44 UTC
+</footer>
+</div></body></html>
