@@ -85,6 +85,7 @@ docs:     revise CLAUDE.md session protocol
 | `src/pipeline/` | `.claude/rules/data_pipeline.md` | Snowflake patterns, API retry logic, schema conventions |
 | Any `src/` module | `.claude/rules/libraries.md` | Approved libraries with version pins (Python + R) |
 | Any test file | `.claude/rules/testing.md` | pytest, great_expectations, time-aware split protocol |
+| `docs/research_desk/references/` (공유 PDF) | `.claude/rules/references.md` | PDF→Markdown 변환·요약 절차 (PDF 직접 판독 금지) |
 
 ---
 

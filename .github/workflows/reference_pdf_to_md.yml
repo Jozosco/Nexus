@@ -1,0 +1,51 @@
+name: Reference PDF → Markdown (승인자 업로드 자동 변환)
+# 승인자 지시(2026-09-09): 공유 PDF는 Markdown 변환 후 .md 요약으로 처리. references/ 아래 PDF push 시 자동 변환·커밋.
+on:
+  push:
+    branches: [main]
+    paths: ["docs/research_desk/references/**.pdf", "scripts/pdf_to_markdown.py"]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "기존 markdown·요약 골격 덮어쓰기"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reference-pdf-md
+  cancel-in-progress: false
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            docs/research_desk/references
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pymupdf pdfplumber
+      - name: Convert new PDFs (또는 --force 전량)
+        run: |
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            python scripts/pdf_to_markdown.py --force
+          else
+            python scripts/pdf_to_markdown.py --only-new
+          fi
+      - name: Commit markdown + summary skeletons
+        run: |
+          git config user.name "nexus-daily-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/research_desk/references/markdown docs/research_desk/references/summaries
+          if git diff --cached --quiet; then echo "변환 산출물 무변경 — 커밋 생략"; exit 0; fi
+          git commit -m "docs: 공유 PDF → Markdown 변환·요약 골격 ($(date -u +%F)) [A-251]"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main

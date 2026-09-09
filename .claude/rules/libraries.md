@@ -67,6 +67,11 @@ boto3 >= 1.34                       # S3 스냅샷·산출물 착지 (2026-09-02
 # ⛔ azureml-sdk · azure-identity · azure-storage-blob — 2026-09-02 제거(2026-09-01 클라우드 대통합 상세 수령 — Azure 전면 폐지(Power BI 제외)).
 #    잔존 코드(scripts/publish_blob_snapshot.py · azure_snapshot_publish.yml)는 DEPRECATED 표기, S3 실증 후 삭제.
 
+# PDF 판독·변환 (2026-09-09 등재 — A-251 references 규칙)
+pymupdf >= 1.24         # PDF → Markdown 변환(scripts/pdf_to_markdown.py) · 요약 PDF 판독(FAO/GAIN 요약기와 병행)
+pdfplumber >= 0.11      # 표 추출 · GAIN/FAO 텍스트 판독(1차)
+pypdf >= 4.0            # 판독 폴백
+
 # Data Validation
 great-expectations >= 0.18  # schema and quality checks on pipeline inputs
 
