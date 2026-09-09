@@ -43,7 +43,7 @@ COUNTRY_CODES = {
     "china": "CN", "indonesia": "ID", "malaysia": "MY", "netherlands": "NL", "spain": "ES",
     "paraguay": "PY", "vietnam": "VN", "australia": "AU", "austrailia": "AU",   # 업로드 오타 흡수
     "germany": "DE", "united arab emirates": "AE", "canada": "CA", "ukraine": "UA",
-    "hungary": "HU", "turkey": "TR", "singapore": "SG",
+    "hungary": "HU", "turkey": "TR", "turkiye": "TR", "türkiye": "TR", "singapore": "SG",
 }
 
 

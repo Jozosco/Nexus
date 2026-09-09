@@ -937,6 +937,7 @@ jobs:
             scripts
             data/processed
             docs/research_desk
+            reports/pipeline
           sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
@@ -957,23 +958,36 @@ jobs:
         with:
           name: g1-variable-importance-${{ github.run_id }}
           path: reports/pipeline/run_${{ github.run_id }}
+      - name: Stage latest daily brief (배포 브리지 — 세션·아티팩트 재발행 경로, DQ-23)
+        # 브리프는 아티팩트로만 존재해 세션(아티팩트 호스트 차단)이 받을 수 없었음 → 최신 1파일만 덮어쓰기.
+        # D-026 예외: 이력 누적이 아닌 배포 브리지(단일 파일 덮어쓰기)이며 S3 정적 사이트 이관 시 소멸.
+        run: |
+          mkdir -p reports/pipeline/latest
+          f=$(ls -t reports/pipeline/run_${{ github.run_id }}/g1_daily_brief_*.html 2>/dev/null | head -1)
+          if [ -n "$f" ]; then
+            cp "$f" reports/pipeline/latest/g1_daily_brief_latest.html
+            echo "일별 브리프 착지: $f → reports/pipeline/latest/g1_daily_brief_latest.html"
+          else
+            echo "[정보] 이번 회차 브리프 없음(미발행) — latest 유지"
+          fi
+          a=$(ls -t reports/pipeline/run_${{ github.run_id }}/g1_alert_*.md 2>/dev/null | head -1)
+          if [ -n "$a" ]; then cp "$a" reports/pipeline/latest/g1_alert_latest.md; fi
       - name: Build signed daily stamp
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           # C-08 게이트 판정은 잡 output으로 직접 전달(파일은 잡 간 미공유)
           E1_GATE_STATUS: ${{ needs.c08-dq-validation.outputs.overall_status }}
         run: python scripts/signed_daily_stamp.py
-      - name: Commit stamp archive (A-181 패턴)
+      - name: Commit stamp archive + latest brief (A-181 패턴)
         run: |
-          if git diff --quiet -- data/processed/signed_daily_stamps.csv 2>/dev/null \
-             && git ls-files --error-unmatch data/processed/signed_daily_stamps.csv >/dev/null 2>&1; then
-            echo "스탬프 무변경 — 커밋 생략"
-            exit 0
-          fi
           git config user.name "nexus-daily-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/processed/signed_daily_stamps.csv
-          git commit -m "data: E1 서명된 무소식 스탬프 append ($(date -u +%F)) [A-202]" || exit 0
+          git add data/processed/signed_daily_stamps.csv reports/pipeline/latest 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "스탬프·브리프 무변경 — 커밋 생략"
+            exit 0
+          fi
+          git commit -m "data: E1 서명된 무소식 스탬프 + 일별 브리프 배포 브리지 ($(date -u +%F)) [A-202]" || exit 0
           git pull --rebase --autostash origin main
           git push origin HEAD:main
 
