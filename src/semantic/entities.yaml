@@ -3263,3 +3263,590 @@ data,_semantics_and_quality:
   source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
   status: active
   owner_agent: P1-06
+market_structure_and_trade:
+# v3.2(2026-09-09) 신설 — 시장구조 층: 트레이딩하우스·국내 가공사·수입 항만·해상 병목·거래 관행 개념.
+# status 어휘(본 분류 한정): confirmed = 저장소 문서가 사실을 명시 · inference = 문서 서술로부터의 해석.
+# 판독 규율 5칙(용량≠처리량 · 관세청 CIF≠CFR 호가 · 판매등록≠선적 · 부분연도≠연간 · 월별 합계≠개별 화물)은
+# 각 용어의 interpretation_rules에 해당 항목을 명시하고, 전체 목록은 ontology.yaml concentration.interpretation_rules에 둔다.
+- term_id: TERM-153
+  canonical: ADM (Archer Daniels Midland)
+  canonical_ko: 에이디엠
+  class: TradingHouse
+  category: 시장구조·기업
+  subcategory: 트레이딩하우스
+  abbr: ADM
+  synonyms:
+  - Archer Daniels Midland
+  - A of ABCD
+  definition: 미국 중서부 원곡 집하망과 걸프·태평양북서부 수출 터미널을 축으로 압착·정제·트레이딩을 수직 통합한 기업이다.
+  interpretation_rules: 공시 압착 능력은 용량이며 실제 처리량과 다르다(용량≠처리량). 증설 발표는 가동 시점과 분리해 기록한다.
+  role_upstream: 미국 중서부 원곡 집하·엘리베이터
+  role_midstream: 미국 압착 4개 공장 증설(연 2,500만 부셸 추가 · IN·MO·NE·ND), EU 압착 상위
+  role_downstream: 미국 걸프·PNW 수출 터미널, 글로벌 트레이딩 데스크
+  hq: 미국 시카고
+  korea_relevance: 미국산 조유·정제유 수출 채널
+  korea_channel_note: 관세청 미국발 조유는 간헐 채널(활동 12개월·월 중앙값 15,115 MT·CIF 중앙값 1,383 $/MT)이나
+    월별 통계로는 수출 기업을 확정할 수 없다(해석).
+  impact_target: Supply/Channel
+  price_direction: CONTEXT
+  unit_range: company
+  alert_criteria: 압착 증설·가동 개시 공시
+  priority: B
+  ambiguity_risk: 중
+  relations: OPERATED_BY,PRODUCES,EXPORTS_TO
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-154
+  canonical: Bunge (Bunge Global)
+  canonical_ko: 번지
+  class: TradingHouse
+  category: 시장구조·기업
+  subcategory: 트레이딩하우스
+  abbr: BG
+  synonyms:
+  - Bunge Global
+  - Bunge-Viterra
+  - B of ABCD
+  definition: 남미 최대급 압착 자산과 농가 직구매·저장·운송 통합 모델을 가진 기업으로 2025년 Viterra 합병으로 집하망을 확대했다.
+  interpretation_rules: 합병 후 자산 수치는 합병 전 공시와 합산하지 않는다. 로사리오 권역 일 18,000톤은 용량 표기다(용량≠처리량).
+  role_upstream: 브라질·아르헨티나·미국 원곡 직구매·저장·운송
+  role_midstream: 남미 압착 최대급, EU 압착 상위(스페인 3공장)
+  role_downstream: 산투스·파라나과·Up River 수출
+  hq: 스위스 샤프하우젠
+  merger_note: Bunge–Viterra 합병 2025-07-02 완료(정오표 §2 확인 항목).
+  korea_relevance: 남미산 조유 주력 채널
+  korea_channel_note: 아르헨티나 Up River 크러셔 소재 기업 중 하나로 한국향 연속 물량과 방향이 맞물리나 계약 주체는 미확정(해석).
+  impact_target: Supply/Channel
+  price_direction: CONTEXT
+  unit_range: company
+  alert_criteria: 남미 압착 가동률·합병 후 자산 재편 공시
+  priority: A
+  ambiguity_risk: 중
+  relations: OPERATED_BY,PRODUCES,EXPORTS_TO
+  source_code: abcd_trading_structure_2026_08_15.md,market_structure_errata_2026_08_19.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-155
+  canonical: Cargill
+  canonical_ko: 카길
+  class: TradingHouse
+  category: 시장구조·기업
+  subcategory: 트레이딩하우스
+  abbr: ''
+  synonyms:
+  - C of ABCD
+  - Cargill Ocean Transportation
+  definition: 미주·남미·유럽 집하망과 자가 해상 물류를 함께 운영하는 비상장 곡물·유지 트레이딩 기업이다.
+  interpretation_rules: 남미 가공·항만 시설 수는 자사 공시와 외부 집계가 상충한다(가공 14·항만 13 대 자사 12·20) —
+    출처를 병기하지 않은 시설 수는 사용하지 않는다.
+  role_upstream: 미주·남미·유럽 집하망
+  role_midstream: 미국·남미·EU 압착(스페인 1공장 포함)
+  role_downstream: 자가 물류(Cargill Ocean Transportation)
+  hq: 미국 미네소타
+  korea_relevance: 미국·남미 양쪽 채널
+  korea_channel_note: 브라질 트레이딩 점유 1위(11.4%, 2020)로 브라질발 물량의 상류 주체 후보(해석).
+  impact_target: Supply/Channel
+  price_direction: CONTEXT
+  unit_range: company
+  alert_criteria: 자사 지속가능성·자산 공시 갱신
+  priority: B
+  ambiguity_risk: 상
+  relations: OPERATED_BY,PRODUCES,EXPORTS_TO
+  source_code: abcd_trading_structure_2026_08_15.md,market_structure_errata_2026_08_19.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-156
+  canonical: LDC (Louis Dreyfus Company)
+  canonical_ko: 루이드레퓌스
+  class: TradingHouse
+  category: 시장구조·기업
+  subcategory: 트레이딩하우스
+  abbr: LDC
+  synonyms:
+  - Louis Dreyfus Company
+  - D of ABCD
+  definition: 아르헨티나 Up River 압착 자산을 보유한 전통 강자로 미국 오하이오 신설 압착을 추가한 기업이다.
+  interpretation_rules: 오하이오 신설의 대두유 32만 MT는 설계 능력이다(용량≠처리량).
+  role_upstream: 남미(아르헨티나 Up River)·미국 원곡
+  role_midstream: 미국 오하이오 신설 압착 연 150만 MT(대두유 32만 MT 생산 능력)
+  role_downstream: 로사리오·미국 걸프 수출
+  hq: 네덜란드 로테르담
+  korea_relevance: 아르헨티나 조유 전통 강자
+  korea_channel_note: 아르헨티나 연속 채널(활동 45개월·월 중앙값 10,981 MT·CIF 중앙값 1,183 $/MT)의 상류 주체 후보(해석).
+  impact_target: Supply/Channel
+  price_direction: CONTEXT
+  unit_range: company
+  alert_criteria: 아르헨티나 압착 가동률·신설 라인 가동 공시
+  priority: B
+  ambiguity_risk: 중
+  relations: OPERATED_BY,PRODUCES,EXPORTS_TO
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-157
+  canonical: COFCO International
+  canonical_ko: 코프코 인터내셔널
+  class: TradingHouse
+  category: 시장구조·기업
+  subcategory: 트레이딩하우스
+  abbr: COFCO Intl
+  synonyms:
+  - CIL
+  - COFCO
+  definition: 중국 국유 계열의 국제 곡물·유지 트레이딩 기업으로 남미 원곡 조달과 아시아 유통을 잇는다.
+  interpretation_rules: 중국 구매 신호를 국가 매집으로 단정하지 않는다 — 국가 수요와 상업 채널을 분리해 해석한다.
+    선적 실거래 기준 CNF 물량 1위이나 이는 매출 합산 기준 순위와 비교 대상이 아니다(기준 상이).
+  role_upstream: 남미 원곡(중국 수요 기반 물량)
+  role_midstream: 아르헨티나·브라질 압착 자산, 장자강 통합 압착·정제 단지
+  role_downstream: 중국향 최우선 + 제3국 판매(비중국행 41%)
+  hq: 스위스 제네바
+  korea_relevance: 아르헨티나·중국발 조유
+  korea_channel_note: 중국발 조유는 간헐·소형 채널(활동 8개월·월 중앙값 156 MT)로 가공무역 성격이 유력(해석).
+  impact_target: Supply/Channel
+  price_direction: CONTEXT
+  unit_range: company
+  alert_criteria: 중국 비축·수입 발표와 상업 채널 물량의 괴리
+  priority: A
+  ambiguity_risk: 상
+  relations: OPERATED_BY,PRODUCES,IMPORTS_FROM
+  source_code: abcd_trading_structure_2026_08_15.md,China_2023_financialized_soybeans_food_regime.pdf,Dynamics_2025_AEPP_grain_oilseed_trading_concentration.pdf
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-158
+  canonical: Wilmar International
+  canonical_ko: 윌마 인터내셔널
+  class: TradingHouse
+  category: 시장구조·기업
+  subcategory: 트레이딩하우스
+  abbr: ''
+  synonyms:
+  - Wilmar
+  definition: 팜 농원부터 압착·정제·소비자 브랜드까지 수직 통합한 아시아 최대급 유지 기업이다.
+  interpretation_rules: 팜과 대두 사업을 합산해 대두유 공급력으로 읽지 않는다 — 유종별로 분리한다.
+  role_upstream: 팜 자체 농원 + 대두(중국 압착 상위권)
+  role_midstream: 아시아 최대 통합 정제망(압착→정제→브랜드)
+  role_downstream: 아시아 역내 유통망, 중국발 재수출
+  hq: 싱가포르
+  korea_relevance: 아시아 정제유·팜 채널, 중국발 재수출
+  korea_channel_note: 베트남 합작(TERM-160)을 통해 한국향 신규 공급국 구조 변화와 연결될 가능성(해석).
+  impact_target: Supply/Channel
+  price_direction: CONTEXT
+  unit_range: company
+  alert_criteria: 아시아 정제 가동률·합작 신설 공시
+  priority: B
+  ambiguity_risk: 중
+  relations: OPERATED_BY,PRODUCES,EXPORTS_TO
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-159
+  canonical: CHS Inc.
+  canonical_ko: 씨에이치에스
+  class: TradingHouse
+  category: 시장구조·기업
+  subcategory: 트레이딩하우스
+  abbr: CHS
+  synonyms:
+  - CHS Inc
+  definition: 미국 농협계 곡물·에너지 협동조합으로 선적 실거래 기준 상위 7개사 핵심군에 포함된다.
+  interpretation_rules: 상위 7개사 합산 45%는 선적 물량 기준이며 매출 합산 점유율과 비교하지 않는다(기준 상이).
+  role_upstream: 미국 농협 집하망
+  role_midstream: 미국 압착·가공
+  role_downstream: 미국 수출 터미널
+  hq: 미국 미네소타
+  korea_relevance: 미국발 물량의 보조 채널 — 한국향 직접 관측치 없음
+  korea_channel_note: 관세청 국가별 통계로는 기업 식별이 불가하여 한국향 기여를 확인할 수 없다(데이터 공백).
+  impact_target: Supply/Channel
+  price_direction: CONTEXT
+  unit_range: company
+  alert_criteria: 미국 수출 물량 점유 변화
+  priority: C
+  ambiguity_risk: 중
+  relations: OPERATED_BY,EXPORTS_TO
+  source_code: Dynamics_2025_AEPP_grain_oilseed_trading_concentration.pdf
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-160
+  canonical: VAL Vietnam JV (Bunge x Wilmar)
+  canonical_ko: 베트남 합작 압착·정제 법인
+  class: TradingHouse
+  category: 시장구조·기업
+  subcategory: 트레이딩하우스
+  abbr: VAL
+  synonyms:
+  - Vietnam Agriculture JV
+  - Bunge-Wilmar Vietnam
+  definition: 번지와 윌마의 베트남 합작 압착·정제 사업으로 총 일 7,800톤 규모이며 조유 연 50만 MT 이상 수출을 겨냥한다.
+  interpretation_rules: 일 7,800톤은 설비 규모이며 실제 처리량·한국향 물량과 동일시하지 않는다(용량≠처리량).
+  role_upstream: 수입 원곡(대두)
+  role_midstream: 베트남 압착·정제 총 일 7,800톤
+  role_downstream: 역내 수출(조유 연 50만 MT 이상 겨냥)
+  hq: 베트남
+  korea_relevance: 베트남발 대두유의 한국 진입 확대와 시점이 겹치는 실물 근거
+  korea_channel_note: 베트남 대한국 수입은 2023/24년 71,309 MT에서 2024/25년 132,764 MT로 확대(전 유형 합계 기준).
+  impact_target: Supply/Channel
+  price_direction: DOWN
+  unit_range: company
+  alert_criteria: 베트남발 월별 수입량 추세 전환
+  priority: A
+  ambiguity_risk: 중
+  relations: OPERATED_BY,PRODUCES,EXPORTS_TO
+  source_code: MEMORY_A-211,abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-161
+  canonical: CJ CheilJedang
+  canonical_ko: 씨제이제일제당
+  class: Processor
+  category: 시장구조·기업
+  subcategory: 국내 압착·정제
+  abbr: CJ
+  synonyms:
+  - CJ제일제당
+  definition: 국내 최대 대두 압착·식용유 정제 사업자로 인천에 압착 설비를 운영한다.
+  interpretation_rules: 압착 능력(일 2,100 MT)과 실제 가동은 다르며 국내 압착은 채산성 악화로 축소 추세다(용량≠처리량).
+  crush_capacity: 인천 일 2,100 MT(유채 겸용 700 MT 포함)
+  market_share: 정제·유통 25%
+  market_share_as_of: '2024-03'
+  market_share_source: USDA FAS GAIN KS2024-0010 (abcd_trading_structure_2026_08_15.md §4b)
+  impact_target: Demand/Domestic
+  price_direction: CONTEXT
+  unit_range: '%'
+  alert_criteria: 국내 압착 가동률 하락 시 조유 수입 확대 압력
+  priority: A
+  ambiguity_risk: 중
+  relations: PRODUCES,IMPORTS_FROM
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-162
+  canonical: Sajo Daerim
+  canonical_ko: 사조대림
+  class: Processor
+  category: 시장구조·기업
+  subcategory: 국내 압착·정제
+  abbr: ''
+  synonyms:
+  - 사조
+  - Sajo
+  definition: 인천에서 압착과 정제를 함께 운영하는 국내 유지 사업자다.
+  interpretation_rules: 압착 능력(일 1,100 MT)은 용량 표기이며 실제 가동률과 구분한다(용량≠처리량).
+  crush_capacity: 인천 일 1,100 MT
+  market_share: 압착+정제 11%
+  market_share_as_of: '2024-03'
+  market_share_source: USDA FAS GAIN KS2024-0010 (abcd_trading_structure_2026_08_15.md §4b)
+  impact_target: Demand/Domestic
+  price_direction: CONTEXT
+  unit_range: '%'
+  alert_criteria: 압착 가동 중단 공시
+  priority: B
+  ambiguity_risk: 중
+  relations: PRODUCES,IMPORTS_FROM
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-163
+  canonical: Lotte Foods (refining)
+  canonical_ko: 롯데푸드
+  class: Processor
+  category: 시장구조·기업
+  subcategory: 국내 압착·정제
+  abbr: ''
+  synonyms:
+  - 롯데
+  - Lotte
+  definition: 압착 없이 정제 중심으로 식용유를 공급하는 국내 사업자다.
+  interpretation_rules: 정제 전용 사업자의 점유율은 압착 능력과 무관하다 — 조유 수입 수요 축으로 읽는다.
+  crush_capacity: 해당 없음(정제 전용)
+  market_share: 정제 18%
+  market_share_as_of: '2024-03'
+  market_share_source: USDA FAS GAIN KS2024-0010 (abcd_trading_structure_2026_08_15.md §4b)
+  impact_target: Demand/Domestic
+  price_direction: CONTEXT
+  unit_range: '%'
+  alert_criteria: 정제유 수입 대체 확대
+  priority: B
+  ambiguity_risk: 중
+  relations: PRODUCES,IMPORTS_FROM
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-164
+  canonical: Ottogi (refining)
+  canonical_ko: 오뚜기
+  class: Processor
+  category: 시장구조·기업
+  subcategory: 국내 압착·정제
+  abbr: ''
+  synonyms:
+  - Ottogi
+  definition: 정제 중심으로 식용유를 공급하는 국내 사업자다.
+  interpretation_rules: 수입 정제유의 국내 재탈취·재포장 유통이 일반적이므로 국산 표기와 원산지를 구분한다.
+  crush_capacity: 해당 없음(정제 전용)
+  market_share: 정제 7.3%
+  market_share_as_of: '2024-03'
+  market_share_source: USDA FAS GAIN KS2024-0010 (abcd_trading_structure_2026_08_15.md §4b)
+  impact_target: Demand/Domestic
+  price_direction: CONTEXT
+  unit_range: '%'
+  alert_criteria: 정제유 수입 관세 변동
+  priority: C
+  ambiguity_risk: 중
+  relations: PRODUCES,IMPORTS_FROM
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-165
+  canonical: Port of Pyeongtaek
+  canonical_ko: 평택항
+  class: Port
+  category: 시장구조·기업
+  subcategory: 수입 양하 항만
+  abbr: ''
+  synonyms:
+  - Pyeongtaek
+  - 평택·당진항
+  definition: 한국 서해안의 대두유 수입 양하 항만 중 하나다.
+  interpretation_rules: 항만별 양하 실적은 관세청 국가별 통계로 분해되지 않는다 — 양하 항만 배분은 추정하지 않는다.
+  role: import_discharge
+  impact_target: Route
+  price_direction: CONTEXT
+  unit_range: location
+  alert_criteria: 항만 혼잡·파업 발생
+  priority: B
+  ambiguity_risk: 중
+  relations: LOCATED_AT,ROUTED_VIA
+  source_code: ontology_supply_chain_v3.1
+  status: inference
+  owner_agent: P1-06
+- term_id: TERM-166
+  canonical: Port of Incheon
+  canonical_ko: 인천항
+  class: Port
+  category: 시장구조·기업
+  subcategory: 수입 양하 항만
+  abbr: ''
+  synonyms:
+  - Incheon
+  definition: 국내 압착 설비가 소재한 한국 서해안 항만으로 대두유 수입 양하 지점이다.
+  interpretation_rules: 국내 압착 설비 소재지라는 사실이 해당 항만의 조유 양하 비중을 뜻하지는 않는다.
+  role: import_discharge
+  impact_target: Route
+  price_direction: CONTEXT
+  unit_range: location
+  alert_criteria: 항만 혼잡·파업 발생
+  priority: B
+  ambiguity_risk: 중
+  relations: LOCATED_AT,ROUTED_VIA
+  source_code: abcd_trading_structure_2026_08_15.md,ontology_supply_chain_v3.1
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-167
+  canonical: Strait of Malacca
+  canonical_ko: 말라카 해협
+  class: Chokepoint
+  category: 시장구조·기업
+  subcategory: 해상 병목
+  abbr: ''
+  synonyms:
+  - Malacca Strait
+  definition: 인도양과 동아시아를 잇는 해협으로 남미·중동발 한국향 항로의 경유지다.
+  interpretation_rules: 통과 척수 변화는 위험 신호이지 물량 확정이 아니다 — 선박 식별 없이 화물을 귀속하지 않는다.
+  impact_target: Freight/Route
+  price_direction: UP_RISK
+  unit_range: location
+  alert_criteria: 통과 척수 급감 또는 대기시간 급증
+  priority: A
+  ambiguity_risk: 중
+  relations: ROUTED_VIA,TRANSITS
+  source_code: ontology_supply_chain_v3.1
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-168
+  canonical: Suez Canal
+  canonical_ko: 수에즈 운하
+  class: Chokepoint
+  category: 시장구조·기업
+  subcategory: 해상 병목
+  abbr: ''
+  synonyms:
+  - Suez
+  definition: 지중해와 홍해를 잇는 운하로 우회 발생 시 유효 선복이 줄어 운임 시장 전체로 전이된다.
+  interpretation_rules: 한국향 대두유 직접 경유지가 아니다 — 운임·선복 경로의 간접 전이로만 해석한다.
+    희망봉 우회는 항해일 12~15일·비용 30~40% 증가로 관측된 바 있다.
+  impact_target: Freight/Route
+  price_direction: UP_RISK
+  unit_range: location
+  alert_criteria: 통항 제한·우회 비율 상승
+  priority: A
+  ambiguity_risk: 상
+  relations: ROUTED_VIA,TRANSITS
+  source_code: ontology_supply_chain_v3.1,Adaptation_2025_traders_geopolitics.pdf
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-169
+  canonical: Red Sea / Bab el-Mandeb Strait
+  canonical_ko: 홍해·바브엘만데브 해협
+  class: Chokepoint
+  category: 시장구조·기업
+  subcategory: 해상 병목
+  abbr: ''
+  synonyms:
+  - Bab el-Mandeb
+  - Red Sea corridor
+  definition: 홍해 남단의 해협으로 수에즈 항로의 실질 진입로이며 무력 공격 시 우회를 촉발한다.
+  interpretation_rules: 수에즈 운하와 하나의 홍해 회랑으로 함께 움직이므로 두 지점의 위험 신호를 이중 계상하지 않는다.
+  impact_target: Freight/Route
+  price_direction: UP_RISK
+  unit_range: location
+  alert_criteria: 선박 피격·전쟁위험 보험료 급등
+  priority: A
+  ambiguity_risk: 상
+  relations: ROUTED_VIA,TRANSITS
+  source_code: ontology_supply_chain_v3.1
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-170
+  canonical: Black Sea Grain Corridor (Turkish Straits)
+  canonical_ko: 흑해 곡물회랑(터키 해협)
+  class: Chokepoint
+  category: 시장구조·기업
+  subcategory: 해상 병목
+  abbr: ''
+  synonyms:
+  - Turkish Straits
+  - Bosphorus
+  - Black Sea corridor
+  definition: 흑해 곡물·해바라기유 수출이 통과하는 회랑으로 전쟁 국면에서 수출 물량이 직접 차단된다.
+  interpretation_rules: 해역 자체(TERM-082 흑해)와 통항 회랑을 구분한다 — 본 용어는 통항 병목이며 지역 위험지수와 별개다.
+    회랑 붕괴 국면의 수출 감소 −95%와 이후 회복 75~80%는 곡물 기준 관측으로 대두유에 직접 대입하지 않는다.
+  region_ref: TERM-082
+  impact_target: Substitution/Logistics
+  price_direction: UP_RISK
+  unit_range: location
+  alert_criteria: 회랑 중단 선언·선박 통항 급감
+  priority: A
+  ambiguity_risk: 상
+  relations: ROUTED_VIA,TRANSITS
+  source_code: Adaptation_2025_traders_geopolitics.pdf,Ukraine_grain_seed_trade_global_position.pdf
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-171
+  canonical: CR4 (Four-Firm Concentration Ratio)
+  canonical_ko: 상위 4개사 집중도
+  class: ConcentrationMetric
+  category: 시장구조·기업
+  subcategory: 집중도 지표
+  abbr: CR4
+  synonyms:
+  - four-firm concentration ratio
+  definition: 상위 4개 사업자의 합산 점유율로 시장 집중도를 나타내는 지표다.
+  interpretation_rules: 측정 기준(선적 물량·매출·용량)을 반드시 병기한다 — 기준이 다르면 비교하지 않는다.
+    선적 실거래 기준 세계 곡물·유지 CR4는 32%·27%, 대두는 45%로 매출 합산 기반의 통설과 값이 크게 다르다.
+  measurement_note: 선적 실거래 11만 건 기반 측정(FOB·CNF 구분) — 용량·매출 기준과 혼용 금지.
+  impact_target: Market/Structure
+  price_direction: CONTEXT
+  unit_range: '%'
+  alert_criteria: 합병으로 상위 4개사 구성 변경
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY,DERIVED_FROM
+  source_code: Dynamics_2025_AEPP_grain_oilseed_trading_concentration.pdf
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-172
+  canonical: HHI (Herfindahl-Hirschman Index)
+  canonical_ko: 허핀달-허시만 지수
+  class: ConcentrationMetric
+  category: 시장구조·기업
+  subcategory: 집중도 지표
+  abbr: HHI
+  synonyms:
+  - Herfindahl index
+  definition: 전 사업자 점유율의 제곱 합으로 시장 집중도를 나타내는 지수다.
+  interpretation_rules: 관례 임계는 5000 이상 극도 집중·2500 이상 높음·1500 이상 보통이며 이는 판정 관례이지 인과 기준이 아니다.
+    선적 물량 기준 산출값을 매출 기준 산출값과 비교하지 않는다.
+  threshold_convention: {critical: 5000, high: 2500, moderate: 1500}
+  measurement_note: 선적 실거래 기반 산출 — 표본 범위(품목·항로·기간)를 함께 기록한다.
+  impact_target: Market/Structure
+  price_direction: CONTEXT
+  unit_range: 0-10000
+  alert_criteria: 지수 구간 변화(보통→높음 등)
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY,DERIVED_FROM
+  source_code: Dynamics_2025_AEPP_grain_oilseed_trading_concentration.pdf
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-173
+  canonical: FOSFA Standard Contract
+  canonical_ko: 포스파 표준계약
+  class: ContractStandard
+  category: 시장구조·기업
+  subcategory: 거래 관행
+  abbr: FOSFA
+  synonyms:
+  - FOSFA contract
+  - Federation of Oils, Seeds and Fats Associations
+  definition: 유지·유지종자 국제 거래의 표준 계약 서식 체계로 인도조건·원산지·운송수단별로 세분화된다.
+  interpretation_rules: 세계 유지 거래의 약 85%라는 비중은 원문 분모(유지종자 포함 여부) 확인이 남아 있다 —
+    단정적 인용을 피한다. 분쟁 해결은 포스파 중재를 따른다.
+  impact_target: Contract/Terms
+  price_direction: CONTEXT
+  unit_range: contract
+  alert_criteria: 표준 서식 개정
+  priority: B
+  ambiguity_risk: 중
+  relations: STANDARDIZES,GOVERNS
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-174
+  canonical: CBOT-plus-basis pricing and fixation
+  canonical_ko: 선물 기준가 더하기 베이시스 가격 구조와 고정
+  class: PricingConvention
+  category: 시장구조·기업
+  subcategory: 거래 관행
+  abbr: ''
+  synonyms:
+  - basis pricing
+  - buyer's call
+  - fixation
+  definition: 가격을 시카고 대두유 선물에 베이시스(포인트)를 더해 정하고 매수자가 지정 창 안에서 선물 부분을 고정하는 거래 구조다.
+  interpretation_rules: 관세청 수입 CIF 단가는 통관 신고 단가이지 시장 CFR 호가가 아니다 —
+    베이시스의 대용으로 쓰지 않는다. 100포인트는 파운드당 1센트이며 도착가에서 역산한 잔차에는
+    운임·보험·품질·금융·시차가 함께 섞여 있다.
+  impact_target: Price/Contract
+  price_direction: CONTEXT
+  unit_range: points (100pt = 1 cent/lb)
+  alert_criteria: 남미 FOB 베이시스의 기록적 확대·축소
+  priority: A
+  ambiguity_risk: 상
+  relations: DERIVED_FROM,APPLIES_TO
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-175
+  canonical: Up River FOB
+  canonical_ko: 업리버 본선인도 기준가
+  class: PriceBenchmark
+  category: 시장구조·기업
+  subcategory: 거래 관행
+  abbr: ''
+  synonyms:
+  - Up River basis
+  - Rosario FOB
+  definition: 아르헨티나 로사리오 권역 하천 터미널의 본선인도 기준 가격으로 남미 대두유 베이시스의 대표 기준점이다.
+  interpretation_rules: 판매등록(DJVE)은 선적이 아니다 — 등록 물량을 실제 수출 물량으로 읽지 않는다.
+    부분연도 집계를 연간 구조로 확대 해석하지 않는다.
+  impact_target: Price/Origin
+  price_direction: CONTEXT
+  unit_range: USD/MT or points vs CBOT
+  alert_criteria: 수출세 변경 시 베이시스 급변
+  priority: A
+  ambiguity_risk: 상
+  relations: MEASURED_BY,ORIGIN_OF
+  source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06

@@ -68,6 +68,22 @@ triggers so downstream commodity price forecasting models (C-03) remain **interp
 - **(v3) 검증 게이트**: 시맨틱 자산 변경 시 `scripts/validate_semantic_layer.py` 실행 —
   DAG 순환·매핑 실존·evidence 계약을 기계 검증(비정형 워크플로우 게이트 · warn 모드 기본).
 
+### methods.yaml 계약(v3.2 — 예측 로직 선례 층)
+`src/semantic/methods.yaml`은 시맨틱 레이어의 일곱 번째 자산이며 두 절로 구성된다.
+- `analysis_methods`(AM-01~): 우리가 실제로 쓰는 기법 원장 — 목표(G1/G2/G3/W0/공통)·역할
+  (champion·challenger·baseline·diagnostic·frozen)·산출 계약·기법별 누수 규율·상태.
+  기법 정의의 단일 기준은 `.claude/rules/modeling.md`와 데이터 과학 관점의 승격 규칙이며,
+  이 파일은 그 내용을 기계 검증 가능한 형태로 옮긴 사본이다(정의 변경은 원본 먼저).
+- `method_precedents`(MP-01~): 외부 문헌 선례 원장 — 판정(`채용 · Challenger 검토 대기 ·
+  배경 · 인용 주의 · 반면교사`)·연결 기법(`applies_to`)·제약·근거(locator·quote_ko)·
+  연결 계약(예: G2 분위 계약, G3 정보 가치 정본). **문헌은 기법을 정당화할 뿐 대체하지 않는다** —
+  판정이 '채용'이어도 승격 게이트를 통과해야 Champion이 된다.
+- 게이트 **C13**(`scripts/validate_semantic_layer.py`): 판정·목표·역할 어휘 준수, id 중복,
+  `ref` 원문의 `docs/research_desk/references/` 실존, `applies_to`의 기법 id 실존,
+  근거 필드 존재를 검사한다. 위반은 다른 검사와 동일하게 집계되며 `--strict`에서 차단된다.
+- 신규 문헌 등재 절차: 해시 중복 검사 → 원문 판독 → 판정 확정(추측 채용 금지) → MP 등재 →
+  C13 통과 확인. 원문 없이 등재하지 않는다(S-5).
+
 ---
 
 ## Extraction Methodology (Structured Reasoning)

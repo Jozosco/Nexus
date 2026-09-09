@@ -13,6 +13,8 @@
   C9  provenance 계약: SourceDocument 6필드·EvidenceSpan 4필드 선언 확인
   C10 이벤트 인스턴스: data/semantic/events/*.json — event_schema 필수 키·evidence 검증
   C11 신호 태그 매핑 : signal_tag_mapping ↔ UNSTR 레지스트리 ↔ metrics 정합
+  C12 일별 신호 브리지: signal_tag_mapping.daily_codes ↔ DAILY_UNSTRUCTURED 레지스트리 정합
+  C13 기법·선례 원장 : methods.yaml — 어휘·중복·원문 파일 실존·기법 참조(applies_to) 정합
 
 종료 코드: warn 모드(기본)=항상 0(리포트만) · --strict=위반 존재 시 1.
 관리: P1-06 · 실행 지점: unstructured_analysis.yml (비정형 파이프라인 게이트)
@@ -21,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -30,6 +33,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 SEMANTIC_DIR = ROOT / "src" / "semantic"
 EVENTS_DIR = ROOT / "data" / "semantic" / "events"
+REFERENCES_DIR = ROOT / "docs" / "research_desk" / "references"
 
 EDGE_DIRECTIONS = {"UP", "DOWN", "CONTEXT"}
 EDGE_STATUSES = {"candidate", "validated", "rejected"}
@@ -42,6 +46,18 @@ EDGE_EVIDENCE_REQUIRED = {"source_type", "ref", "locator"}
 PDF_SPAN_REQUIRED = PROV_EVIDENCE_SPAN_REQUIRED
 EVENT_REQUIRED_KEYS = {"event_id", "event_type", "event_date", "region", "evidence", "confidence"}
 EVENT_EVIDENCE_REQUIRED = {"document_id", "page", "exact_quote"}
+
+# C13 — methods.yaml(v3.2 예측 로직 선례 층) 통제 어휘
+METHOD_VERDICTS = {"채용", "Challenger 검토 대기", "배경", "인용 주의", "반면교사"}
+METHOD_GOALS = {"G1", "G2", "G3", "W0", "공통"}
+PRECEDENT_GOALS = {"G1", "G2", "G3", "W0", "배경"}
+METHOD_ROLES = {"champion", "challenger", "baseline", "diagnostic", "frozen"}
+METHOD_FAMILIES = {"statistical", "ml", "econometric", "simulation", "nonparametric"}
+PRECEDENT_STATUSES = {"등재", "반영 완료", "대기"}
+METHOD_REQUIRED = {"name", "name_ko", "family", "goal", "role", "contract", "status"}
+PRECEDENT_REQUIRED = {"title", "authors_year", "ref", "method", "target_goal", "verdict",
+                      "applies_to", "constraints", "evidence", "linked_contract", "status"}
+PRECEDENT_EVIDENCE_REQUIRED = {"locator", "quote_ko"}
 
 
 class Report:
@@ -155,6 +171,48 @@ def check_indicator_bindings(
                 )
     if not bindings.get("unstructured_derived", {}).get("codes"):
         report.warning("C4", "UNSTR_* 파생 지표 레지스트리가 비어 있음 — 존재 계약 부재")
+    _check_structured_patterns(bindings, term_ids, report)
+
+
+def _check_structured_patterns(
+    bindings: dict[str, Any], term_ids: set[str], report: Report
+) -> None:
+    """C4 확장 — indicator_bindings.structured_patterns(선택 키) 계약 검사.
+
+    정형 지표를 개별 코드가 아니라 이름 규칙(regex)으로 엔티티에 잇는 바인딩이다.
+    키가 없으면 조용히 건너뛴다(도입 전 저장소와의 호환 — 부재는 결함이 아님).
+    """
+    patterns = bindings.get("structured_patterns")
+    if not patterns:
+        return
+    if not isinstance(patterns, list):
+        report.violation("C4", "structured_patterns — 리스트가 아님(항목 목록이어야 함)")
+        return
+    for idx, item in enumerate(patterns):
+        if not isinstance(item, dict):
+            report.violation("C4", f"structured_patterns[{idx}] — 매핑이 아님")
+            continue
+        label = item.get("pattern") or f"index {idx}"
+        for field in ("pattern", "regex", "entities"):
+            if not item.get(field):
+                report.violation("C4", f"structured_patterns '{label}' — 필수 필드 '{field}' 누락")
+        regex = item.get("regex")
+        if isinstance(regex, str):
+            try:
+                re.compile(regex)
+            except re.error as exc:
+                report.violation("C4", f"structured_patterns '{label}' — regex 컴파일 실패: {exc}")
+        elif regex is not None:
+            report.violation("C4", f"structured_patterns '{label}' — regex가 문자열이 아님")
+        entities = item.get("entities") or []
+        if not isinstance(entities, list):
+            report.violation("C4", f"structured_patterns '{label}' — entities가 리스트가 아님")
+            continue
+        for term in entities:
+            if term not in term_ids:
+                report.violation(
+                    "C4", f"structured_patterns '{label}' — 존재하지 않는 term_id '{term}'"
+                )
 
 
 def check_dictionary_terms(
@@ -360,7 +418,9 @@ def check_daily_codes(ont: dict, rep: "Report") -> None:
     """
     tags = (ont.get("signal_tag_mapping") or {}).get("tags") or []
     assigned: list[str] = []
-    for t in tags:
+    for t in tags:   # 태그는 일반 순회 — 신규 태그가 늘어도 코드 변경 없이 반영된다
+        if not isinstance(t, dict):
+            continue
         assigned.extend(t.get("daily_codes") or [])
     dups = {c for c in assigned if assigned.count(c) > 1}
     if dups:
@@ -369,7 +429,9 @@ def check_daily_codes(ont: dict, rep: "Report") -> None:
         import sys as _sys
         _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
         from daily_unstructured_digest import DAILY_UNSTRUCTURED  # type: ignore
-        all_daily = set(sum(DAILY_UNSTRUCTURED.values(), []))
+        all_daily: set[str] = set()
+        for codes in DAILY_UNSTRUCTURED.values():
+            all_daily.update(codes or [])
         unmapped = sorted(all_daily - set(assigned))
         if unmapped:
             rep.warning("C12", f"온톨로지 태그 미배정 일별 지표 {len(unmapped)}종: {unmapped[:8]}…"
@@ -378,8 +440,8 @@ def check_daily_codes(ont: dict, rep: "Report") -> None:
         unknown = sorted(set(assigned) - all_daily)
         if unknown:
             rep.violation("C12", f"daily_codes에 실존하지 않는 지표: {unknown}")
-    except ImportError:
-        rep.warning("C12", "daily_unstructured_digest 임포트 불가 — 교차 검사 생략")
+    except Exception as exc:   # 의존성 부재·모듈 오류 어느 쪽이든 교차 검사만 생략(비치명)
+        rep.warning("C12", f"daily_unstructured_digest 임포트 불가({type(exc).__name__}) — 교차 검사 생략")
 
 
 def check_signal_tag_mapping(
@@ -416,6 +478,114 @@ def check_signal_tag_mapping(
         report.violation("C11", f"태그 매핑 없는 UNSTR 코드: {sorted(unmapped)}")
 
 
+def _load_methods(report: Report) -> dict[str, Any] | None:
+    """methods.yaml 로드 — 부재·파싱 실패는 C13 위반으로 기록(다른 검사는 계속 진행)."""
+    path = SEMANTIC_DIR / "methods.yaml"
+    try:
+        with path.open(encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except FileNotFoundError:
+        report.violation("C13", f"methods.yaml — 파일 없음 (경로: {path})")
+        return None
+    except yaml.YAMLError as exc:
+        report.violation("C13", f"methods.yaml — YAML 파싱 실패: {exc}")
+        return None
+    if not isinstance(data, dict):
+        report.violation("C13", "methods.yaml — 최상위 구조가 매핑이 아님")
+        return None
+    return data
+
+
+def check_methods_layer(methods: dict[str, Any] | None, report: Report) -> None:
+    """C13 — methods.yaml(예측 로직 선례 층 v3.2) 무결성 검사.
+
+    문헌은 기법을 정당화할 뿐 대체하지 않는다. 따라서 검사는 세 가지에 집중한다.
+      ① 판정·목표·역할이 통제 어휘 안인가(자유 서술 판정 금지)
+      ② 인용한 원문이 references/ 에 실재하는가(근거 없는 등재 차단 — S-5)
+      ③ 선례가 가리키는 기법(applies_to)이 실존하는가(끊어진 참조 차단)
+    """
+    if methods is None:
+        return   # 파일 부재·파싱 실패는 로더가 C13 위반으로 이미 기록
+    if not methods.get("schema_version"):
+        report.violation("C13", "methods.yaml — schema_version 선언 없음")
+    declared = set(methods.get("verdict_vocab") or [])
+    if not declared:
+        report.violation("C13", "methods.yaml — verdict_vocab 선언 없음(판정 어휘 미고정)")
+    elif declared != METHOD_VERDICTS:
+        report.warning(
+            "C13",
+            f"verdict_vocab 선언이 검증기 기준과 다름 — 파일 {sorted(declared)} / "
+            f"기준 {sorted(METHOD_VERDICTS)}",
+        )
+
+    seen_ids: set[str] = set()
+
+    def _dup(item_id: str) -> None:
+        if item_id in seen_ids:
+            report.violation("C13", f"{item_id} — id 중복")
+        seen_ids.add(item_id)
+
+    am_ids: set[str] = set()
+    for method in methods.get("analysis_methods") or []:
+        mid = method.get("id", "?")
+        _dup(mid)
+        am_ids.add(mid)
+        for field in sorted(METHOD_REQUIRED - set(method)):
+            report.violation("C13", f"{mid} — 필수 필드 '{field}' 누락")
+        if method.get("goal") not in METHOD_GOALS:
+            report.violation("C13", f"{mid} — goal '{method.get('goal')}' 어휘 위반")
+        if method.get("role") not in METHOD_ROLES:
+            report.violation("C13", f"{mid} — role '{method.get('role')}' 어휘 위반")
+        if method.get("family") not in METHOD_FAMILIES:
+            report.violation("C13", f"{mid} — family '{method.get('family')}' 어휘 위반")
+        if not method.get("leakage_rules"):
+            report.warning("C13", f"{mid} — leakage_rules 없음(누수 규율 미명시)")
+
+    precedents = methods.get("method_precedents") or []
+    for precedent in precedents:
+        pid = precedent.get("id", "?")
+        _dup(pid)
+        for field in sorted(PRECEDENT_REQUIRED - set(precedent)):
+            if field in {"applies_to", "constraints"}:
+                continue   # 빈 리스트가 정당한 판정(배경 등재)이라 존재 여부만 아래에서 확인
+            report.violation("C13", f"{pid} — 필수 필드 '{field}' 누락")
+        if "applies_to" not in precedent:
+            report.violation("C13", f"{pid} — applies_to 키 없음(빈 목록이라도 명시)")
+        verdict = precedent.get("verdict")
+        if verdict not in METHOD_VERDICTS:
+            report.violation("C13", f"{pid} — verdict '{verdict}' 어휘 위반")
+        goals = precedent.get("target_goal") or []
+        if isinstance(goals, str):
+            goals = [goals]
+        if not goals:
+            report.violation("C13", f"{pid} — target_goal 비어 있음")
+        for goal in goals:
+            if goal not in PRECEDENT_GOALS:
+                report.violation("C13", f"{pid} — target_goal '{goal}' 어휘 위반")
+        if precedent.get("status") not in PRECEDENT_STATUSES:
+            report.violation("C13", f"{pid} — status '{precedent.get('status')}' 어휘 위반")
+        for am in precedent.get("applies_to") or []:
+            if am not in am_ids:
+                report.violation("C13", f"{pid} — 존재하지 않는 기법 id '{am}' 참조")
+        ref = precedent.get("ref")
+        if not ref:
+            report.violation("C13", f"{pid} — ref(원문 파일명) 없음")
+        elif not (REFERENCES_DIR / str(ref)).is_file():
+            report.violation("C13", f"{pid} — 원문 파일 실재하지 않음: references/{ref}")
+        evidence = precedent.get("evidence") or {}
+        if not isinstance(evidence, dict):
+            report.violation("C13", f"{pid} — evidence가 매핑이 아님")
+        else:
+            for field in sorted(PRECEDENT_EVIDENCE_REQUIRED - set(evidence)):
+                report.violation("C13", f"{pid} — evidence 필수 필드 '{field}' 누락(S-5)")
+    report.info(
+        "C13",
+        f"기법 {len(am_ids)}종 · 선례 {len(precedents)}건 로드 — "
+        f"채용 {sum(1 for p in precedents if p.get('verdict') == '채용')} · "
+        f"검토 대기 {sum(1 for p in precedents if p.get('verdict') == 'Challenger 검토 대기')}",
+    )
+
+
 def run_checks() -> Report:
     report = Report()
     entities = _load_yaml(SEMANTIC_DIR / "entities.yaml", report)
@@ -426,6 +596,8 @@ def run_checks() -> Report:
     event_schema = _load_json(SEMANTIC_DIR / "event_schema.json", report)
     if event_schema is not None and "evidence" not in event_schema.get("required", []):
         report.violation("C1", "event_schema.json — evidence가 required에 없음(S-5 위반)")
+    methods = _load_methods(report)
+    check_methods_layer(methods, report)
     if not all(x is not None for x in (entities, metrics, ontology, templates, provenance)):
         return report  # 파싱 실패 시 후속 교차 검사는 무의미
     assert entities and metrics and ontology and templates and provenance

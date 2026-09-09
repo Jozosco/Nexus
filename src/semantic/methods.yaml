@@ -1,0 +1,614 @@
+# src/semantic/methods.yaml — 예측 로직 선례 층 (시맨틱 레이어 ⑦ · v3.2)
+# 목적: 우리가 쓰는 분석 기법(analysis_methods)과 그 근거가 된 외부 문헌(method_precedents)을
+#       한 원장에 묶어, "어떤 논문이 어떤 기법의 무엇을 정당화하는가"를 기계 검증 가능하게 만든다.
+# 원칙:
+#   ① 문헌은 기법을 정당화할 뿐 대체하지 않는다 — 채용은 승격 게이트(c03 §4) 통과 후에만.
+#   ② 모든 선례는 판정(verdict)을 명시한다. '배경'·'인용 주의'·'반면교사'도 정당한 판정이다.
+#   ③ 근거 없는 등재 금지 — evidence(locator·quote_ko) 필수(S-5).
+#   ④ 원문 파일은 docs/research_desk/references/ 에 실재해야 한다(C13이 디스크 대조).
+# 게이트: scripts/validate_semantic_layer.py C13
+# 관리: P1-06 (기법 정의 확정: C-03 · 문헌 판독: C-04 · 도메인 해석: P1-01~04)
+schema_version: '3.2'
+updated: 2026-09-09
+source_of_truth:
+  methods: .claude/rules/modeling.md · .claude/agents/c03-data-scientist.md §4~§5
+  strategy: docs/research_desk/2026-08/model_strategy_2026_08_12/
+  precedents: docs/research_desk/2026-08/forecasting_precedents_notes_2026_08_28.md
+  references_dir: docs/research_desk/references/
+
+# ── 통제 어휘 ────────────────────────────────────────────────────────────────
+verdict_vocab: ['채용', 'Challenger 검토 대기', '배경', '인용 주의', '반면교사']
+goal_vocab: ['G1', 'G2', 'G3', 'W0', '공통']            # analysis_methods.goal
+precedent_goal_vocab: ['G1', 'G2', 'G3', 'W0', '배경']  # method_precedents.target_goal
+role_vocab: ['champion', 'challenger', 'baseline', 'diagnostic', 'frozen']
+family_vocab: ['statistical', 'ml', 'econometric', 'simulation', 'nonparametric']
+precedent_status_vocab: ['등재', '반영 완료', '대기']
+
+# ── 전 기법 공통 누수 규율 (개별 leakage_rules는 이 위에 얹는 추가 제약) ─────
+common_leakage_rules:
+  - 'as-of 시점 정합(D-023): 모델의 t일 입력은 available_at ≤ t 인 최근값만'
+  - '전처리·스케일링·결측대치·변수선택·보정은 fold 내부에서 재적합(전 구간 일괄 적합 금지)'
+  - '무작위 분할 금지 — walk-forward(expanding·sliding)만 사용(M-001)'
+  - '전체 시계열 일괄 신호분해(VMD·EMD 계열) 기본 제외 — fold 내 one-sided 재적합일 때만 허용(M-010)'
+  - '타깃 계열(target_ 접두사)은 피처 후보에서 일괄 제외'
+
+# ══ ① analysis_methods — 우리 스택의 기법 원장 ════════════════════════════════
+analysis_methods:
+
+  - id: AM-01
+    name: Elastic Net (stability selection)
+    name_ko: 엘라스틱넷 안정성 선택
+    family: statistical
+    goal: G1
+    role: champion
+    library: scikit-learn (ElasticNetCV)
+    contract: 공선성이 제어된 변수 집합 + 계수 부호 — horizon×레짐별로 산출
+    leakage_rules:
+      - '변수 선택 자체를 fold 내부에서 재적합(전체 표본 선택 후 fold 평가 금지)'
+      - 'LASSO 단독 회귀는 폐기 — 동행 변수 중 하나만 남겨 중요도가 불안정(M-005)'
+    status: 운영
+
+  - id: AM-02
+    name: LightGBM / XGBoost + SHAP
+    name_ko: 그래디언트 부스팅 중요도와 SHAP 기여도
+    family: ml
+    goal: G1
+    role: champion
+    library: lightgbm · xgboost · shap
+    contract: 변수 기여도 순위 — horizon(1·5·20·60일)×레짐×원산지별 분해
+    leakage_rules:
+      - 'SHAP 값은 기여도이지 인과가 아니다 — 인과 주장은 인과엣지 원장 경유(c03 §9)'
+      - '무역 흐름 파생 피처는 log1p 변환 후 투입(스케일 혼재 완화)'
+    status: 운영
+
+  - id: AM-03
+    name: Permutation importance
+    name_ko: 순열 중요도
+    family: ml
+    goal: G1
+    role: diagnostic
+    library: scikit-learn
+    contract: SHAP 순위의 교차검증용 독립 중요도 — 두 방법이 어긋나면 승격 보류
+    leakage_rules:
+      - '검증 fold에서만 산출 — 학습 fold 순열은 과적합 기여를 그대로 반영'
+    status: 운영
+
+  - id: AM-04
+    name: Granger causality (Bonferroni-corrected)
+    name_ko: 그레인저 인과 검정(본페로니 보정)
+    family: econometric
+    goal: G1
+    role: diagnostic
+    library: statsmodels
+    contract: 선행·시차 후보와 p값 — 보정 전후를 구분 표기(미보정 유의는 참고 등급)
+    leakage_rules:
+      - '다중검정 보정 α/m 필수 — 후보 수가 클수록 우연 유의가 늘어난다'
+      - '통계적 선행성은 인과가 아니다 — 도메인 메커니즘 없이 인과엣지로 승격 금지'
+    status: 운영
+
+  - id: AM-05
+    name: Local Projections
+    name_ko: 국소투영 충격반응
+    family: econometric
+    goal: G1
+    role: diagnostic
+    library: statsmodels
+    contract: 시차별 반응 크기·지속기간 — 사건 임펄스의 지속 구간 서술 근거
+    leakage_rules:
+      - '충격 정의(사건 시점)는 available_at 기준 — 사후 확정 사건일 사용 금지'
+    status: 운영
+
+  - id: AM-06
+    name: Analogue slice (Stage 1, univariate quantile)
+    name_ko: 과거 유사국면 단변량 분위 슬라이스
+    family: nonparametric
+    goal: G1
+    role: champion
+    library: src/forecasting/analogue_g1.py (pandas·numpy)
+    contract: 현재와 같은 분위였던 과거 거래일의 1주·1개월·3개월 실측 수익률 분포 — 전망 아님
+    leakage_rules:
+      - '유사일 탐색은 후방참조 z만 사용 · 전방 수익률은 mart의 유일한 전방참조 컬럼 재사용'
+      - '직전 60거래일 이웃 제외(전방 창 겹침) · 에피소드 8건 미만이면 산출 보류'
+      - '통계 검정 없음 — 기술 서술까지(다중검정 문제 원천 차단, A-191 서술 계약)'
+    status: 운영
+
+  - id: AM-07
+    name: SARIMAX / Dynamic Regression
+    name_ko: 외생변수 포함 계절 ARIMA
+    family: econometric
+    goal: G2
+    role: champion
+    library: statsmodels
+    contract: horizon별 평균 경로 — 분위 결합의 중심 축
+    leakage_rules:
+      - '외생변수는 예측 시점에 실제로 알 수 있던 값만(available_at ≤ t)'
+      - '차분·정상화 판정도 fold 내부에서 재적합'
+    status: 설계 확정
+
+  - id: AM-08
+    name: Quantile LightGBM
+    name_ko: 분위수 그래디언트 부스팅
+    family: ml
+    goal: G2
+    role: champion
+    library: lightgbm (objective=quantile)
+    contract: P10/P25/P50/P75/P90 직접 예측 — 분위 교차 방지 후처리 포함
+    leakage_rules:
+      - '변동성 σ̂를 피처로 주입하는 경우 fold 내 재적합 산출분만 사용(전 구간 σ̂ 일괄 산출은 누수)'
+    status: 설계 확정
+
+  - id: AM-09
+    name: EGARCH-X
+    name_ko: 비대칭 조건부 변동성 모형
+    family: econometric
+    goal: G2
+    role: champion
+    library: arch (Python) · rugarch (R)
+    contract: 조건부 변동성 σ̂_t와 꼬리 비대칭 — 분위 모형의 폭 근거
+    leakage_rules:
+      - '검증된 시장 충격(2020·2022)을 캡핑하면 꼬리를 학습하지 못한다 — IQR 캡은 데이터 오류에만'
+    status: 설계 확정
+
+  - id: AM-10
+    name: EnCQR (Ensemble Conformalized Quantile Regression)
+    name_ko: 앙상블 컨포멀 분위 보정
+    family: statistical
+    goal: G2
+    role: champion
+    library: mapie
+    contract: 50/80/95% 구간의 분포 무가정 보정 + 레짐별 empirical coverage 보고
+    leakage_rules:
+      - '보정 집합은 학습 구간과 시간적으로 분리 — 보정에 미래 관측 사용 금지'
+      - '뷰 결합 계층이 있는 경우 보정은 결합 이후 최종 단계에 둔다(커버리지 보장 유지)'
+    status: 설계 확정
+
+  - id: AM-11
+    name: Markov Regime Switching / HMM
+    name_ko: 마르코프 국면전환 모형
+    family: econometric
+    goal: G3
+    role: champion
+    library: statsmodels
+    contract: Bear/Neutral/Bull 국면 **확률**(하드 라벨 아님) + 전환·지속기간
+    leakage_rules:
+      - '국면 라벨의 사후 평활(smoothed) 값을 실시간 신호로 쓰지 않는다 — filtered 확률 사용'
+      - '국면 수 선택도 fold 내부 결정 — 전체 표본 BIC로 고정 금지'
+    status: 설계 확정
+
+  - id: AM-12
+    name: Monte Carlo P&L simulation
+    name_ko: 몬테카를로 손익 시뮬레이션
+    family: simulation
+    goal: G3
+    role: champion
+    library: numpy · scipy
+    contract: 구매 시점·물량 대안별 per-MT regret 분포(P10/P50/P90) — 실제 P&L 아닌 market-cost proxy
+    leakage_rules:
+      - '내부 조달 실적을 입력에 넣지 않는다(D-021) — 외부 관측 기반 근사 손익만'
+      - '난수 시드 고정·표본 수 기록 — 재현 불가한 밴드는 발행 금지'
+    status: 구현 착수
+
+  - id: AM-13
+    name: Risk-averse procurement portfolio with Value of Information
+    name_ko: 위험회피 조달 포트폴리오와 정보 가치
+    family: simulation
+    goal: G3
+    role: champion
+    library: pulp · scipy (설계 정본 — 구현 예정)
+    contract: 선도·옵션·현물 3채널 배분 + CVaR 병기 + 신호 갱신의 정보 가치(VoI)
+    leakage_rules:
+      - '교란 신호는 발화 시점 기준으로만 판단 갱신에 투입 — 사후 확정 사건 소급 금지'
+      - '원논문의 단일 공급자·수요 독립 가정은 다원산지 도메인으로 번역 후 사용'
+    status: 설계 확정
+
+  - id: AM-14
+    name: Black-Litterman view-blending layer
+    name_ko: 블랙-리터만 뷰 결합 계층
+    family: statistical
+    goal: 공통
+    role: frozen
+    library: numpy (설계 단계 — 구현 없음)
+    contract: prior(채널 실적 비중·통계 분포)에 검증된 인과엣지 뷰를 신뢰도 가중 결합 + 뷰 기여 분해
+    leakage_rules:
+      - 'prior는 외부 공개 통계만(D-021) · 뷰의 1차 소스는 검증된 인과엣지(생성 문장 아님)'
+      - '뷰 발화 시점은 available_at 기준 — look-ahead 차단이 설계 전제'
+    status: 설계 동결(H0 — 마일스톤 무간섭)
+
+  - id: AM-15
+    name: Persistence (last value)
+    name_ko: 최근값 이월 기준선
+    family: statistical
+    goal: 공통
+    role: baseline
+    library: pandas
+    contract: 모든 목표의 최소 기준선 — 이를 못 이기면 승격 없음
+    leakage_rules:
+      - '무역 흐름 파생 계열에서는 특히 강한 기준선 — 명시 비교 없이 대안 채택 금지(c03 §5 특칙)'
+    status: 운영
+
+  - id: AM-16
+    name: Seasonal naive
+    name_ko: 계절 나이브 기준선
+    family: statistical
+    goal: 공통
+    role: baseline
+    library: statsmodels · pandas
+    contract: 계절 주기 반복 예측 — 계절성 착시를 걸러내는 기준선
+    leakage_rules:
+      - '계절 주기 선택도 학습 구간 안에서 결정'
+    status: 운영
+
+  - id: AM-17
+    name: ETS (exponential smoothing)
+    name_ko: 지수평활 기준선
+    family: statistical
+    goal: 공통
+    role: baseline
+    library: statsmodels
+    contract: 추세·계절 평활 기준선 — 점 예측 지표의 하한선
+    leakage_rules:
+      - '평활 계수는 fold 내부 추정'
+    status: 운영
+
+  - id: AM-18
+    name: GRU / LSTM
+    name_ko: 순환신경망 계열
+    family: ml
+    goal: G2
+    role: challenger
+    library: torch
+    contract: horizon별 점·분위 예측 — 동일 fold에서 Champion과 비교
+    leakage_rules:
+      - '스케일러·윈도우 정규화를 전 구간에 적합하면 누수 — fold 내부에서만'
+    status: 동결(GPU 표면 배정 전 — 미평가, 기각 아님)
+
+  - id: AM-19
+    name: N-BEATSx / N-HiTS
+    name_ko: 계층적 분해 신경망 계열
+    family: ml
+    goal: G2
+    role: challenger
+    library: darts · neuralforecast
+    contract: 다중 horizon 직접 예측 — 승격 게이트 통과 시에만 Champion 진입
+    leakage_rules:
+      - '내부 분해 블록은 학습 창 안에서만 작동해야 함(전 구간 사전분해 금지)'
+    status: 동결(GPU 표면 배정 전 — 미평가)
+
+  - id: AM-20
+    name: Temporal Fusion Transformer
+    name_ko: 시간 융합 트랜스포머
+    family: ml
+    goal: G2
+    role: challenger
+    library: pytorch-forecasting
+    contract: 다중 horizon 분위 예측 + 변수 선택 게이트 — 해석 출력은 참고용
+    leakage_rules:
+      - 'known-future 공변량에 실제로는 사후에만 알 수 있는 값을 넣지 않는다'
+    status: 동결(GPU 표면 배정 전 — 미평가)
+
+  - id: AM-21
+    name: PatchTST
+    name_ko: 패치 기반 시계열 트랜스포머
+    family: ml
+    goal: G2
+    role: challenger
+    library: neuralforecast
+    contract: 장기 horizon 점 예측 — 분위 계약 충족은 별도 래핑 필요
+    leakage_rules:
+      - '채널 독립 정규화도 fold 내부 통계로'
+    status: 동결(GPU 표면 배정 전 — 미평가)
+
+  - id: AM-22
+    name: Chronos (pretrained time-series foundation model)
+    name_ko: 사전학습 시계열 기반모형
+    family: ml
+    goal: G2
+    role: challenger
+    library: neuralforecast · torch
+    contract: 제로샷·소량 미세조정 분위 예측 — 사전학습 코퍼스 오염 검증이 승격 전제
+    leakage_rules:
+      - '사전학습 구간이 우리 평가 구간과 겹칠 수 있음 — 오염 가능성을 실험 카드에 명시'
+    status: 동결(GPU 표면 배정 전 — 미평가)
+
+  - id: AM-23
+    name: Wavelet Coherence + Surrogate Test
+    name_ko: 웨이블릿 동조화와 대체 시계열 검정
+    family: nonparametric
+    goal: W0
+    role: diagnostic
+    library: PyWavelets
+    contract: 유지류 간 동조화가 유의한 시간·주기 구간 표 — 기준 기간 판정의 각주 근거
+    leakage_rules:
+      - '사후 기술 분석 전용 — 예측 피처 파생 금지(전 구간 분해 누수 경로 차단)'
+      - 'Surrogate 검정은 사전 등록 1회만 — 반복 탐색 금지'
+    status: 승인 완료(W0 Stage 2 대기)
+
+# ══ ② method_precedents — 외부 문헌 선례 원장 ═════════════════════════════════
+method_precedents:
+
+  - id: MP-01
+    title: Temporal Edge Regression — UN 농산물 무역액 예측
+    authors_year: Jiang·Zhang·Poursafaei·Huang (Cambridge·McGill·Mila), 2023
+    ref: TGL_2023_temporal_edge_regression_UN_agriculture_trade.pdf
+    method: 동적 그래프 엣지 회귀(TGN 계열) vs Persistence 기준선 비교
+    target_goal: ['G1', 'G2']
+    verdict: 채용
+    applies_to: ['AM-15', 'AM-02']
+    constraints:
+      - '무역 흐름 도메인의 기준선 실증 — 예측 모델 자체를 이식한 것이 아님'
+      - '그래프 계열은 기준선에 패배 — 도입 보류 근거로만 인용'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §1 (원문 결과표 판독)
+      quote_ko: 최근값 이월 기준선이 모든 그래프 신경망을 이겼다 — 회귀 오차 약 38배·분류 정확도 61% 대 32%.
+    linked_contract: Persistence 기준선 특칙 · 무역 파생 피처 log1p 변환
+    status: 반영 완료
+
+  - id: MP-02
+    title: GAS-ATT-LSTM — 스코어 구동 변동성 + 주의 + LSTM 하이브리드
+    authors_year: Astudillo et al., Mathematics 13:2300, 2025
+    ref: Mathematics_2025_GAS_ATT_LSTM_nonstationary_financial.pdf
+    method: GAS 변동성 출력을 후단 학습기의 입력 피처로 직렬 결합
+    target_goal: ['G2']
+    verdict: 채용
+    applies_to: ['AM-09', 'AM-08']
+    constraints:
+      - '채용 범위는 결합 패턴 하나 — 조건부 변동성을 분위 모형의 피처로 주입하는 실험'
+      - 'GAS-t 모형 자체는 별도 사전 평가 카드 선행(Challenger 검토 대기 · 파이썬 표준 구현 부재)'
+      - '상품 시장 미검증 — 대두유 적용은 우리 fold에서만 판단'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §2 (저자 결론부)
+      quote_ko: 7일 창에서는 단순 구성이 최선이었다 — 구조 복잡성이 항상 이득은 아니다.
+    linked_contract: G2 분위 계약 — 변동성 층과 분위 층의 직렬 결합 실험
+    status: 등재
+
+  - id: MP-03
+    title: 트리 기반 원자재 가격 예측 자동화 파이프라인
+    authors_year: 이은지·유헌창(고려대), 한국정보처리학회 2024
+    ref: ACK_2024_tree_based_raw_material_price_pipeline_KR.pdf
+    method: 결측 보간 → 차분 자동화 → 변수 조합 전수 탐색 → 그리드서치 기반 부스팅
+    target_goal: ['배경']
+    verdict: 배경
+    applies_to: ['AM-02']
+    constraints:
+      - '나이브 기준선 비교·분할 누수 방지 서술 부재 — 보고 수치 인용 금지'
+      - '자동화 구성은 우리 파이프라인이 이미 상회(시점 게이트·품질 게이트·walk-forward)'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §3 (정직 판정 절)
+      quote_ko: 1스텝 예측의 낮은 오차는 최근값 이월과의 격차가 불명하다 — 기준선 비교 없이는 성능 주장으로 읽지 않는다.
+    linked_contract: 기준선 필수 규율(baseline 미달 시 승격 없음)
+    status: 등재
+
+  - id: MP-04
+    title: GCN 기반 공급망 수요 예측
+    authors_year: 쓰촨대 연구진, Sustainability, 2024
+    ref: Sustainability_2024_GCN_supply_chain_demand_forecasting.pdf
+    method: 기업 노드·거래 엣지 그래프 합성곱 수요 예측
+    target_goal: ['배경']
+    verdict: 배경
+    applies_to: []
+    constraints:
+      - '요구 데이터(다계층 기업 간 수요망)가 우리 자산에 부존재 — 재현 불가'
+      - '국가 수준 무역 그래프로의 전용은 MP-01이 부정적 근거를 제공'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §4
+      quote_ko: 그래프 계열은 선행조건(데이터·기준선 우위) 충족 전까지 보류로 통일한다.
+    linked_contract: 그래프 계열 Phase B 보류 판정
+    status: 등재
+
+  - id: MP-05
+    title: 물리정보 신경망 기반 공급망 교란 예측
+    authors_year: FAPM 게재, 2025 (교신 정보 검증 불가)
+    ref: FAPM_2025_physics_informed_GNN_supply_chain_disruption.pdf
+    method: 흐름 보존·용량·리드타임 제약을 손실 정규화로 주입
+    target_goal: ['배경']
+    verdict: 인용 주의
+    applies_to: []
+    constraints:
+      - '신생 저널·참고문헌 혼입 — 학술 신뢰도 검증 불가, 본 원장 밖 인용 금지'
+      - '원리(도메인 제약 주입)는 이미 다른 형태로 구현됨 — 신규 채용 요소 없음'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §5
+      quote_ko: 제약 주입 원리는 시점 게이트·분위 교차 방지·물리 범위 가드로 이미 구현되어 있다.
+    linked_contract: as-of 게이트 · 물리 범위 가드
+    status: 등재
+
+  - id: MP-06
+    title: VMD-SSA-LSTM 건설자재 가격 예측
+    authors_year: Xiong et al., Applied Sciences, 2025
+    ref: ApplSci_2025_VMD_SSA_LSTM_construction_material_price.pdf
+    method: 전체 시계열 변분모드분해 후 메타휴리스틱 최적화 LSTM
+    target_goal: ['G2']
+    verdict: 반면교사
+    applies_to: ['AM-18']
+    constraints:
+      - '분해가 학습·시험 분할보다 선행 — 시험 구간 정보가 학습으로 유입되는 구조'
+      - '분해 계열 재제안 시 반박 근거 문헌으로만 사용 — 채용 없음'
+    evidence:
+      locator: 원문 p.9 (절차 Step 2) · p.14~15 (분할 절차)
+      quote_ko: 원 시계열 전체를 분해한 뒤 70대 30으로 나눈다 — 우리가 분해를 기본 구성에서 제외한 바로 그 순서다.
+    linked_contract: 신호분해 기본 제외 규율(fold 내 one-sided 재적합만 허용)
+    status: 반영 완료
+
+  - id: MP-07
+    title: GAT-TCN 적응형 게이트 융합 수요 예측
+    authors_year: Li(충칭건축과기대), EDAI 학회 단문, 2025
+    ref: EDAI_2025_GAT_TCN_supply_chain_demand.pdf
+    method: 공간(그래프)·시간(합성곱) 표현을 국면에 따라 가중 전환
+    target_goal: ['G3']
+    verdict: 배경
+    applies_to: ['AM-11']
+    constraints:
+      - '학회 단문·단독 저자 — 벤치마크 재현성 검증 불가, 수치 인용 금지'
+      - '요구 데이터 부존재 — 이식 가능한 것은 국면별 가중이라는 발상뿐'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §7
+      quote_ko: 교란 국면에서는 관계 정보, 평시에는 시간 패턴을 강조하도록 가중을 학습한다.
+    linked_contract: G3 국면별 변인 가중 설계 개념 참조
+    status: 등재
+
+  - id: MP-08
+    title: 조달 포트폴리오 최적화와 정보 가치
+    authors_year: Merzifonluoglu, Annals of Operations Research 356:1059, 2026
+    ref: AOR_2026_procurement_portfolio_VoI_risk_averse.pdf
+    method: 선도·옵션·현물 3채널 위험회피 배분과 정보 가치 정량화
+    target_goal: ['G3']
+    verdict: 채용
+    applies_to: ['AM-13', 'AM-12']
+    constraints:
+      - '단일 공급자·수요와 공급 독립 가정 — 다원산지·수요 내생 도메인으로 번역 필요'
+      - '옵션형 계약은 계약 유형 확장 후보 자리만 예약(현행은 현물·기간계약 2종)'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §8 (부록 14차)
+      quote_ko: 선적 전 교란 신호로 판단을 갱신할 때 조달 성과가 얼마나 개선되는가를 정량화한다.
+    linked_contract: G3 3-시뮬레이션 설계 정본 · CVaR 병기 보고 지표
+    status: 반영 완료
+
+  - id: MP-09
+    title: 호르무즈 해협 조달 전략
+    authors_year: Bell, Zenodo 프리프린트, 2026-03
+    ref: Zenodo_2026_Hormuz_chokepoint_procurement_strategy.pdf
+    method: 봉쇄 이전 단계의 취약성 발현 경로 서술
+    target_goal: ['배경']
+    verdict: 인용 주의
+    applies_to: []
+    constraints:
+      - '개인 프리프린트·동료심사 없음 — 개념 참조만, 수치 인용 금지'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §9 (부록 14차)
+      quote_ko: 해협이 물리적으로 열려 있어도 지연·회피·재가격화로 조달 취약성이 먼저 나타난다.
+    linked_contract: 해협 인과엣지 해석 · 위기 모드 전환 기준을 행동 변화 신호에 두는 근거
+    status: 등재
+
+  - id: MP-10
+    title: 금융화와 세계 곡물가 구조 변화·변동성
+    authors_year: 김우석, 농촌개발연구 47(1), 2024
+    ref: JRD_2024_financialization_grain_price_volatility_KR.pdf
+    method: 투기 자금 유입과 곡물가 구조 변화·변동성의 한국어 실증
+    target_goal: ['G2']
+    verdict: 배경
+    applies_to: ['AM-09']
+    constraints:
+      - '포지셔닝 자료(COT) 수집이 선행 조건 — 미확보 상태에서 외생변수 주장 금지'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §10 (부록 14차)
+      quote_ko: 금융화 진전이 곡물가의 구조 변화와 변동성에 영향을 준다 — 포지셔닝 변수 도입의 학술 근거.
+    linked_contract: G2 변동성 모형의 포지셔닝 외생변수 정당화
+    status: 등재
+
+  - id: MP-11
+    title: 다중위기 공급망 회복탄력성 전략 우선순위
+    authors_year: 박승화·정종수, 2026-03
+    ref: KR_2026_polycrisis_SCR_AHP_strategy.pdf
+    method: 계층분석법 기반 회복탄력성 전략 요인 우선순위
+    target_goal: ['배경']
+    verdict: 배경
+    applies_to: []
+    constraints:
+      - '설문 기반 계층분석 — 모델 직접 이식 없음, 어휘 참고에 한정'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §11 (부록 14차)
+      quote_ko: 신속 재정지원·복구 목표 시간 달성이 최상위 — 위기 브리프의 행동 옵션 어휘 참고.
+    linked_contract: 위기 모드 브리프 행동 옵션 서술
+    status: 등재
+
+  - id: MP-12
+    title: 곡물 무역 네트워크 커뮤니티 구조
+    authors_year: Robu et al., Agricultural and Food Economics 12:24, 2024
+    ref: AFE_2024_cereal_network_trade_communities.pdf
+    method: 무역 네트워크 커뮤니티 탐지 기준선 분석
+    target_goal: ['배경']
+    verdict: 배경
+    applies_to: []
+    constraints:
+      - '구조 문헌 — 예측 절차 이식 없음'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §12 (부록 14차)
+      quote_ko: 무역 네트워크의 커뮤니티 구성은 채널 관점 배분 논의의 구조 배경이다.
+    linked_contract: 채널 배분 관점의 구조 배경
+    status: 등재
+
+  - id: MP-13
+    title: 가격 동조화 탐지와 동적 네트워크 기반 농산물 가격 예측
+    authors_year: 한국대학생 산업공학 프로젝트경진대회 발표자료, 2025
+    ref: KIIE_2025_wavelet_coherence_STGNN_agri_price_KR.pdf
+    method: 웨이블릿 동조화 + 대체 시계열 검정으로 유의 동조화만 채택 후 동적 네트워크 구성
+    target_goal: ['W0']
+    verdict: 채용
+    applies_to: ['AM-23']
+    constraints:
+      - '채용 범위는 동조화 탐지 절차뿐 — 그래프 예측 모형은 배경(MP-01과 상충 가능)'
+      - '학생 발표자료 — 누수 방지·기준선 비교 서술 없음, 성능 수치 인용 금지'
+      - '기준 기간 판정에 새 지표를 추가하지 않고 각주 근거로만 사용'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §13 (부록 15차)
+      quote_ko: 동일 분포·자기상관의 독립 대체 시계열 분포 대비 상위 분위를 넘는 동조화만 유의로 판정한다.
+    linked_contract: 기준 기간 확정 Stage 2 보조 분석 · 유지류 공행성 해석 규칙
+    status: 반영 완료
+
+  - id: MP-14
+    title: 그래프 주의망 기반 글로벌 지수 스필오버 수익률 예측
+    authors_year: 발표자료(저자 표기 불명), 2025
+    ref: GAT_2025_global_indices_spillover_returns.pdf
+    method: 상관 기반 그래프에 주의 기제를 적용한 수익률 예측
+    target_goal: ['배경']
+    verdict: 인용 주의
+    applies_to: ['AM-11']
+    constraints:
+      - '발표자료·도메인 상이(주가지수) — 수치 인용 금지, 개념 참조만'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §14 (부록 15차)
+      quote_ko: 위기·고변동 구간에서만 관계 정보의 이점이 나타나고 안정 구간에서는 미미하다.
+    linked_contract: 국면에 따라 변인 기여가 달라진다는 설계 전제의 세 번째 정합 관찰
+    status: 등재
+
+  - id: MP-15
+    title: 다중과제 가우시안 과정 회귀 대두유 선물 예측
+    authors_year: Yin & Li, IEEE Access, 2025-06
+    ref: IEEE_2025_MTGPR_soybean_oil_futures_forecasting.pdf
+    method: 베이지안 최적화 다중과제 가우시안 과정 회귀(사후 예측구간 내장)
+    target_goal: ['G2']
+    verdict: Challenger 검토 대기
+    applies_to: ['AM-08', 'AM-10']
+    constraints:
+      - '검증 대상이 중국 도매 대두유 지수 — 우리 목표 계열과 다름'
+      - '계산 복잡도가 표본 세제곱 — 4,000거래일 이상에서는 근사 필수'
+      - '사전 평가 카드 작성 전에는 후보 지위조차 아님(승격 게이트 미적용 수치)'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §15 (부록 13차 보충)
+      quote_ko: 사후 예측구간이 모형에 내장돼 있어 확률 밴드 계약과 구조가 맞는 것이 유일한 채용 유인이다.
+    linked_contract: G2 분위 계약(P10~P90) — 구간 산출 방식 대안
+    status: 대기
+
+  - id: MP-16
+    title: 대두 복합체 분위 벡터자기회귀 연결성
+    authors_year: Barboza Martignone et al., Heliyon 10:e34669, 2024-07
+    ref: Heliyon_2024_soybean_quantile_VAR_connectedness.pdf
+    method: 분위별 벡터자기회귀 연결성 분해
+    target_goal: ['G2', 'G3']
+    verdict: 배경
+    applies_to: ['AM-10', 'AM-11']
+    constraints:
+      - '해석 근거로만 사용 — 모형 이식 아님'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md §16 (부록 13차 보충)
+      quote_ko: 극단 분위에서 연결성이 91%·87%로 치솟고 중위에서는 낮다 — 꼬리에서 시장이 동조화한다.
+    linked_contract: G2 레짐별 커버리지 분리 보고 · 유지류 공행성 해석 규칙
+    status: 반영 완료
+
+  - id: MP-17
+    title: 대규모 언어모형으로 보강한 블랙-리터만 자산배분
+    authors_year: Lee et al., CIKM'25 FinAI 워크숍
+    ref: CIKM_2025_LLM_enhanced_BlackLitterman.pdf
+    method: 언어모형 예측과 그 불확실성을 뷰·신뢰도 행렬로 변환하는 절차
+    target_goal: ['G3']
+    verdict: 배경
+    applies_to: ['AM-14']
+    constraints:
+      - '주식 2주 리밸런싱 대상 — 조달 도메인으로 번역 필요'
+      - '뷰의 1차 소스는 검증된 인과엣지 — 언어모형 생성 뷰는 보조에 한정'
+      - '결합 계층 자체가 설계 동결 상태 — 구현 착수는 마일스톤 이후'
+    evidence:
+      locator: forecasting_precedents_notes_2026_08_28.md 부록 참조 · references/README.md 선례 행
+      quote_ko: 예측값과 반복 샘플링 분산을 각각 뷰와 신뢰도로 변환하고, 미래 참조를 설계 단계에서 차단한다.
+    linked_contract: 뷰 결합 계층 설계(H0 동결) — 뷰 변환 체계 참고 원문
+    status: 등재

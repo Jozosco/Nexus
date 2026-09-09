@@ -39,7 +39,11 @@ DAILY_UNSTRUCTURED = {
     "GeoIntel 복합": ["GEOINTEL_RISK_COMPOSITE", "SEISMIC_RISK", "GDELT_EVENT_SCORE"],
     "운임(실시간)":  ["BCAA", "BCTI_PROXY"],
     "기상 특보":     ["WEATHER_ALERT_COUNT", "WEATHER_ANOMALY_SCORE"],
-    "전문 매체":     ["RSS_FARMDOC_DAILY", "RSS_WORLD_GRAIN"],
+    # RSS_SOURCES 전 계열을 등재한다 — 레지스트리에 없으면 수집돼도 다이제스트에
+    # 나타나지 않고 온톨로지 태그 배정 점검(C12)에서도 빠진다.
+    "전문 매체":     ["RSS_FARMDOC_DAILY", "RSS_WORLD_GRAIN", "RSS_OFI_MAGAZINE",
+                     "RSS_GRAIN_ORG", "RSS_SOYGROWERS", "RSS_CLIMATEPOL",
+                     "RSS_AGMARKET", "RSS_GRAINCENTRAL", "RSS_TFM", "RSS_UKRAGRO"],
 }
 
 # ── 전문 매체 RSS (조정자 지시 8/25 · 확장 8/25 2차 — 일별·거시 시황 소스) ──────

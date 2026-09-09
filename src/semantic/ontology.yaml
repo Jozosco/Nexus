@@ -13,10 +13,23 @@
 #   ② 관계 유형 58종 → 60종 (OPERATED_BY · TRANSITS 신규 — 공급망 계층 전용)
 #   ③ entity_types에 TradingHouse · Route 클래스 등록
 #   ④ CE-010 · CE-013에 route_refs 부가 필드 — 교란 사건 → 루트 → KR_IMPORT_CIF 전파 참조
+# v3.2 변경(2026-09-09 · 시장구조 층 + 일별 데이터 바인딩):
+#   ① entities.yaml market_structure_and_trade 23종 신설 연동 — supply_chain의
+#      pending_entity_registration 전량을 entity_term(TERM-153~175)으로 확정
+#   ② entity_types에 market_structure 계보 추가(Processor·ConcentrationMetric·
+#      ContractStandard·PricingConvention·PriceBenchmark 5종)
+#   ③ waypoints에 WP-BLACKSEA·WP-BAB_EL_MANDEB 추가 — 홍해 회랑은 WP-SUEZ와
+#      corridor: red_sea로 묶되 지점은 분리(이중 계상 방지)
+#   ④ concentration 블록 신설 — 선적 실거래 기준 CR4/HHI·브라질 트레이딩 점유·
+#      팜 2국 집중·해바라기 우크라이나/러시아·한국 수입 채널 프로파일 + 판독 규율 5칙
+#   ⑤ supply_chain.routes 보강 — 대체 항로·교란 의미·중국발 정제유 채널(RT-CN-KR)·
+#      관세청 커버리지 캐비엇(customs_coverage_note)
+#   ⑥ signal_tag_mapping에 지정학위험·전문매체 태그 신설 + 미배정 일별 지표 전량 배정
+#   ⑦ indicator_bindings.structured 확장 + structured_patterns 신설(템플릿 지표 계열)
 # 게이트: scripts/validate_semantic_layer.py (DAG 순환·매핑 존재·evidence 필수 필드 검증)
 # 관리: P1-06 (인과엣지 검증: P1-01~04 · 기계적 추출: C-04 · 신호 생산: P1-05)
-version: '3.1'
-updated: 2026-08-14
+version: '3.2'
+updated: 2026-09-09
 erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md
 managed_by: 'P1-06 (검증: P1-01~04 · 게이트: scripts/validate_semantic_layer.py)'
 refs:
@@ -97,6 +110,13 @@ entity_types:
               KnowledgeGraph, Ontology, PageReference, ProvenanceRecord, QualityAlert,
               QualityMetric, ReviewProcess, Schema, SemanticLayer, SemanticStandard,
               SerializationFormat, SourceDocument]
+  - family: market_structure
+    label_ko: 시장구조·기업·거래관행            # v3.2 — entities.yaml market_structure_and_trade 연동
+    classes: [Processor,             # 압착·정제 등 가공 사업자(트레이딩하우스와 구분)
+              ConcentrationMetric,   # CR4·HHI 등 시장 집중도 지표
+              ContractStandard,      # FOSFA 등 표준계약 체계
+              PricingConvention,     # 선물+베이시스·고정 등 가격 결정 관행
+              PriceBenchmark]        # Up River FOB 등 원산지 기준가
 
 # ── 관계 유형 58종 (v2 23종 + entities.yaml 실사용 35종 정식 등록) ────────────
 relation_types:
@@ -535,6 +555,92 @@ indicator_bindings:
   - indicator: GPR
     defined_in: data/schemas/
     entities: [TERM-073]
+  # ── v3.2 추가: 커넥터 실산출 코드 바인딩 ──────────────────────────────
+  - indicator: ARS_USD_OFICIAL          # BCRA 공식 페소/달러 — 아르헨 수출 채산성 경로
+    defined_in: data/schemas/
+    entities: [TERM-104, TERM-175]
+  - indicator: BCTI                     # Baltic Clean Tanker Index — 청정제품선 운임
+    defined_in: data/schemas/
+    entities: [TERM-085, TERM-087]
+  - indicator: CPO_USD_MT               # 팜유 조유 현물·선물 가격(USD/MT)
+    defined_in: data/schemas/
+    entities: [TERM-055, TERM-053]
+  - indicator: GPR_QUALITATIVE          # 지정학 위험 정성 서술(프록시 수집) — 수치 지수 아님
+    defined_in: data/schemas/
+    entities: [TERM-073]
+  - indicator: ONI                      # 해양니뇨지수 — ENSO_ONI의 별칭 코드
+    defined_in: data/schemas/
+    entities: [TERM-016, TERM-017]
+    alias_of: ENSO_ONI
+  # ── v3.2 추가: 해상 병목 위협도(규칙 기반 파생 — 확률 아님) ───────────
+  - indicator: MARITIME_THREAT_HORMUZ
+    defined_in: data/schemas/
+    entities: [TERM-081]
+    causal_edges: [CE-013]
+    scale: 0-100 참고 지수
+    note: 규칙 기반 파생 — 확률 아님. 사건 발생 가능성으로 읽지 않는다.
+  - indicator: MARITIME_THREAT_SUEZ
+    defined_in: data/schemas/
+    entities: [TERM-168, TERM-169]
+    causal_edges: [CE-013]
+    scale: 0-100 참고 지수
+    note: 규칙 기반 파생 — 확률 아님. 수에즈·바브엘만데브는 한 회랑이므로 이중 계상 금지.
+  - indicator: MARITIME_THREAT_MALACCA
+    defined_in: data/schemas/
+    entities: [TERM-167]
+    causal_edges: [CE-013]
+    scale: 0-100 참고 지수
+    note: 규칙 기반 파생 — 확률 아님. 우회 가능 구간이라 차단이 아닌 지연·비용 신호로 해석한다.
+  - indicator: MARITIME_THREAT_PANAMA
+    defined_in: data/schemas/
+    entities: [TERM-083]
+    causal_edges: [CE-013]
+    scale: 0-100 참고 지수
+    note: 규칙 기반 파생 — 확률 아님.
+  - indicator: MARITIME_THREAT_BLACKSEA
+    defined_in: data/schemas/
+    entities: [TERM-170, TERM-082]
+    causal_edges: [CE-013]
+    scale: 0-100 참고 지수
+    note: 규칙 기반 파생 — 확률 아님. 해바라기유 경로 관측용이며 대두유 가격 서술에 쓰지 않는다(CE-014 candidate).
+  - indicator: MARITIME_THREAT_INDEX
+    defined_in: data/schemas/
+    entities: [TERM-081, TERM-083, TERM-167, TERM-168, TERM-169, TERM-170]
+    causal_edges: [CE-013]
+    scale: 0-100 참고 지수
+    note: 지점별 위협도의 규칙 기반 종합 — 확률 아님. 회랑 단위 1회 계상 후 종합한다.
+  # v3.2 신설 — 접미·접두가 붙는 템플릿 지표 계열(개별 열거 불가).
+  # 커넥터가 지역·품목·속성 축을 코드 접미로 붙여 발행하는 계열이다. 개별 코드를 전부 열거하지
+  # 않고 패턴으로 계약한다. 축 분리가 무너지면 값 충돌이 발생하므로(키 붕괴) 접미는 필수다.
+  structured_patterns:
+  - pattern: AIS_{STRAIT}_TANKER_COUNT
+    regex: '^AIS_[A-Z_]+_TANKER_COUNT$'
+    entities: [TERM-081, TERM-083, TERM-167, TERM-168, TERM-169]
+    note: 해협별 탱커 통과 척수. 척수는 위험 신호이지 화물·물량이 아니다.
+  - pattern: AIS_{STRAIT}_RISK
+    regex: '^AIS_[A-Z_]+_RISK$'
+    entities: [TERM-081, TERM-083, TERM-167, TERM-168, TERM-169]
+    note: 해협별 규칙 기반 위험도(0-100 참고 지수) — 확률 아님.
+  - pattern: DROUGHT_{level}_{state}
+    regex: '^DROUGHT_D[0-4]_[A-Z]{2}$'
+    entities: [TERM-024, TERM-027]
+    note: 미국 가뭄 모니터 단계(D0~D4)×주. 단계는 순서형이며 합산하지 않는다.
+  - pattern: CROP_CONDITION_{region}
+    regex: '^CROP_CONDITION_[A-Z0-9_]+$'
+    entities: [TERM-032, TERM-040]
+    note: 지역별 작황 상태 — 지역 간 단순 평균은 재배면적 가중 없이는 금지.
+  - pattern: '{var}_{region}'
+    regex: '^(T2M|PRECTOTCORR|RH2M|SOILM|SWRAD|TMAX|TMIN|WS2M)_[A-Z]{2}[0-9]?$'
+    entities: [TERM-019, TERM-024]
+    note: Open-Meteo·NASA POWER 기후 변수×생산지역(12종). 지역 접미가 없으면 값 충돌이 발생한다.
+  - pattern: PSD_{attr}
+    regex: '^PSD_[A-Z_]+$'
+    entities: [TERM-033, TERM-035, TERM-036]
+    note: USDA PS&D 속성별 수급. 세계 표와 국가 표를 같은 코드로 합치지 않는다.
+  - pattern: SBO_{attr}_{cc}
+    regex: '^SBO_[A-Z_]+_[A-Z]{2,3}$'
+    entities: [TERM-042, TERM-036]
+    note: 대두유 속성×국가코드. 국가 접미 없이 발행하면 65개국이 한 코드로 충돌한다.
   unstructured_derived:             # UNSTR_* 코퍼스 신호 시계열 (감사 갭 4 — 임시 등록)
     pattern: "UNSTR_{GAIN|FAO}_{한글태그}"
     source_script: scripts/build_unstructured_timeseries.py
@@ -588,6 +694,7 @@ signal_tag_mapping:
     unstr_codes: [UNSTR_GAIN_기상이변, UNSTR_FAO_기상이변]
     absa_indicator: null                 # 기상은 정형 ENSO_ONI·기상 커넥터 담당 — ABSA aspect 후보(Phase B)
     entities: [TERM-019, TERM-024, TERM-027]
+    daily_codes: ['WEATHER_ALERT_COUNT', 'WEATHER_ANOMALY_SCORE']   # v3.2
   - tag_ko: 압착
     unstr_codes: [UNSTR_GAIN_압착, UNSTR_FAO_압착]
     absa_indicator: SBO_NEWS_SENTIMENT   # crusher margins는 SBO General Trade aspect 키워드
@@ -606,7 +713,27 @@ signal_tag_mapping:
     unstr_codes: [UNSTR_GAIN_물류충격, UNSTR_FAO_물류충격]
     absa_indicator: LOGISTICS_DISRUPTION_FLAG
     entities: [TERM-081, TERM-083, TERM-087, TERM-089]
-    daily_codes: ['SUEZ_RED_SEA_RISK', 'HORMUZ_THREAT_LEVEL', 'HORMUZ_AWRP_MULTIPLIER', 'GPR_REALTIME', 'GEOINTEL_RISK_COMPOSITE']   # A-198: 일별 아카이브 지표 연결(브리지 확장)
+    entities_v32: [TERM-167, TERM-168, TERM-169]   # v3.2 — 말라카·수에즈·홍해 병목 추가 참조
+    daily_codes: ['SUEZ_RED_SEA_RISK', 'HORMUZ_THREAT_LEVEL', 'HORMUZ_AWRP_MULTIPLIER',
+                  'GEOINTEL_RISK_COMPOSITE',
+                  'AIS_HORMUZ_TANKERS', 'AIS_MALACCA_TANKERS', 'AIS_PANAMA_TANKERS',
+                  'SBO_STRAIT_RISK_COMPOSITE', 'BCAA', 'BCTI_PROXY']   # v3.2 확장
+  - tag_ko: 지정학위험                    # v3.2 신설 — 사건 위험지수 계열(물류 경로 사건과 분리)
+    unstr_codes: []                      # 코퍼스 태그 미대응 — 일별 정형·프록시 신호 전용
+    absa_indicator: null                 # 지정학 전용 ABSA aspect 미정의 — Phase B 후보
+    entities: [TERM-073, TERM-081, TERM-170]
+    daily_codes: ['GPR', 'GPR_REALTIME', 'GDELT_EVENT_SCORE', 'SEISMIC_RISK']
+    note: GPR_REALTIME은 v3.1에서 물류충격에 있었으나 GPR과 같은 지수 계열이므로 v3.2에서 이관했다
+      (일별 코드는 한 태그에만 배정 — 브리지 중복 금지).
+  - tag_ko: 전문매체                      # v3.2 신설 — RSS 수집 채널(주제 태그가 아닌 소스 채널)
+    unstr_codes: []
+    absa_indicator: SBO_NEWS_SENTIMENT   # 기사 톤은 일반 뉴스 감성 aspect로 귀속
+    entities: [TERM-042, TERM-139]
+    daily_codes: ['RSS_FARMDOC_DAILY', 'RSS_WORLD_GRAIN', 'RSS_OFI_MAGAZINE', 'RSS_GRAIN_ORG',
+                  'RSS_SOYGROWERS', 'RSS_CLIMATEPOL', 'RSS_AGMARKET', 'RSS_GRAINCENTRAL',
+                  'RSS_TFM', 'RSS_UKRAGRO']
+    note: 값은 일자별 기사 수이며 주제 신호가 아니다 — 주제 귀속은 기사 본문 태깅(P1-05) 이후에만.
+      RSS_FARMDOC_DAILY·RSS_WORLD_GRAIN 외 8종은 다이제스트 레지스트리 편입과 동시에 유효해진다.
   - tag_ko: TONE
     unstr_codes: [UNSTR_GAIN_TONE, UNSTR_FAO_TONE]
     absa_indicator: SBO_NEWS_SENTIMENT   # 키워드 톤은 LLM 정밀 ABSA의 Phase A 프록시
@@ -622,37 +749,48 @@ supply_chain:
   note: 교란 사건(호르무즈·수에즈·파나마 등)이 chokepoint → route → KR_IMPORT_CIF로
     전파되는 구조의 참조 데이터. 리드타임·운영 주체는 공개 자료 기반 초기값 —
     관세청 월별 도착 실측 역산으로 갱신 예정(성약~도착 전체 주기 포함).
-  companies:                       # class TradingHouse — entities.yaml TERM 미등재(P1-06 등재 대기)
+  companies:                       # class TradingHouse — v3.2에서 entities.yaml TERM 등재 완료
   - company_id: SC-ADM
     name: ADM (Archer Daniels Midland)
     class: TradingHouse
-    pending_entity_registration: true
+    entity_term: TERM-153
     footprint_note: 미국 중서부 압착 벨트 + 걸프 수출 체계. Spiritwood·Quincy 압착·정제 증설 (§3a)
   - company_id: SC-BUNGE
     name: Bunge
     class: TradingHouse
-    pending_entity_registration: true
+    entity_term: TERM-154
     footprint_note: 로사리오 권역 단독 일 18,000톤 압착 — 미주 최대 허브의 핵심 운영사 (§3a)
   - company_id: SC-CARGILL
     name: Cargill
     class: TradingHouse
-    pending_entity_registration: true
+    entity_term: TERM-155
     footprint_note: 미국·브라질·아르헨티나 압착·수출 체계 전반 (§3a)
   - company_id: SC-LDC
     name: LDC (Louis Dreyfus Company)
     class: TradingHouse
-    pending_entity_registration: true
+    entity_term: TERM-156
     footprint_note: 아르헨티나 Bahía Blanca 심수항 압착 증설 (§3a)
   - company_id: SC-COFCO
     name: COFCO International
     class: TradingHouse
-    pending_entity_registration: true
+    entity_term: TERM-157
     footprint_note: 장자강 East Ocean Oils & Grains — 아시아 최대급 통합 압착·정제 단지 (§3a)
   - company_id: SC-WILMAR
     name: Wilmar International
     class: TradingHouse
-    pending_entity_registration: true
+    entity_term: TERM-158
     footprint_note: 중국·인도·베트남·말레이시아 압착 + 세계 최대급 정제·유통망 — 아시아 RBD 공급 채널 (§3a)
+  - company_id: SC-CHS                # v3.2 — 선적 실거래 기준 상위 7개사 핵심군(Wilson 2025)
+    name: CHS Inc.
+    class: TradingHouse
+    entity_term: TERM-159
+    footprint_note: 미국 농협계 집하·압착·수출. 한국향 직접 관측치 없음 — 기업별 분해는 구조적 불가(DATA GAP)
+  - company_id: SC-VAL                # v3.2 — 베트남 채널 승격의 실물 근거(A-211)
+    name: VAL Vietnam JV (Bunge x Wilmar)
+    class: TradingHouse
+    entity_term: TERM-160
+    footprint_note: 베트남 압착·정제 합작 총 일 7,800톤 · 조유 연 50만 MT 이상 수출 겨냥(용량 표기 — 처리량 아님)
+    operated_by: [SC-BUNGE, SC-WILMAR]
   ports:
   - port_id: PORT-USG
     entity_term: TERM-100          # US Gulf (PortRegion) — entities.yaml 등재분 참조
@@ -667,28 +805,37 @@ supply_chain:
     role: export
     operated_by: [SC-BUNGE, SC-CARGILL, SC-LDC, SC-COFCO]
   - port_id: PORT-PYEONGTAEK
-    name: Pyeongtaek (평택항)
-    class: Port
+    entity_term: TERM-165          # Pyeongtaek (평택항) — v3.2 등재
     role: import_discharge
-    pending_entity_registration: true   # entities.yaml TERM 미등재 — P1-06 등재 대기
   - port_id: PORT-INCHEON
-    name: Incheon (인천항)
-    class: Port
+    entity_term: TERM-166          # Incheon (인천항) — v3.2 등재 · 국내 압착 설비 소재지
     role: import_discharge
+    operated_by: []                # 국내 압착사(TERM-161·TERM-162) 설비 소재지 — 터미널 운영 주체는 미확인
+  - port_id: PORT-CN                 # v3.2 — 중국발 정제유 채널의 적출 항만
+    name: China export port (미특정)
+    class: Port
+    role: export
     pending_entity_registration: true
+    data_gap: 관세청 국가별 통계에는 적출 항만이 없어 항만 특정 불가 — 추정하지 않는다(DATA GAP)
   waypoints:                       # 해협·운하 — TRANSITS 대상
   - way_id: WP-PANAMA
     entity_term: TERM-083          # Panama Canal (Chokepoint)
   - way_id: WP-HORMUZ
     entity_term: TERM-081          # Strait of Hormuz (Chokepoint) — 한국향 SBO 직항로 아님(운임 시장 전파)
   - way_id: WP-MALACCA
-    name: Strait of Malacca (말라카 해협)
-    class: Chokepoint
-    pending_entity_registration: true
+    entity_term: TERM-167          # Strait of Malacca (말라카 해협) — v3.2 등재
   - way_id: WP-SUEZ
-    name: Suez Canal (수에즈 운하)
-    class: Chokepoint
-    pending_entity_registration: true
+    entity_term: TERM-168          # Suez Canal (수에즈 운하) — v3.2 등재
+    corridor: red_sea              # WP-BAB_EL_MANDEB와 한 회랑 — 신호 이중 계상 금지
+  - way_id: WP-BAB_EL_MANDEB       # v3.2 신규 — 지점은 분리, 회랑은 공유(설계 판단: 아래 corridor_note)
+    entity_term: TERM-169          # Red Sea / Bab el-Mandeb Strait (홍해·바브엘만데브 해협)
+    corridor: red_sea
+  - way_id: WP-BLACKSEA            # v3.2 신규 — 해바라기유 수출 경로 관측용(대두유 직접 경로 아님)
+    entity_term: TERM-170          # Black Sea Grain Corridor (흑해 곡물회랑 · 터키 해협)
+    region_ref: TERM-082           # 해역(TradeRegion)과 통항 병목(Chokepoint)을 분리 보관
+  corridor_note: 수에즈(WP-SUEZ)와 바브엘만데브(WP-BAB_EL_MANDEB)는 지점으로는 별개이나
+    통항 차질은 홍해 회랑(corridor=red_sea)으로 함께 움직인다. 지점을 나눈 이유는 사건 원천을
+    구분해 기록하기 위함이며, 위험 신호 집계 시에는 corridor 단위로 1회만 계상한다(이중 계상 방지).
   routes:
   # 리드타임 출처: .claude/skills/phase1/04_supply_chain_analyst.md:115-121 (Avg CFR Lead Days)
   # ⚠️ 리드타임은 관세청 실측(월별 도착) 역산으로 갱신 예정 — 아래 값은 공개 문서 초기값
@@ -699,6 +846,8 @@ supply_chain:
     lead_time_days: {min: 45, max: 50}
     lead_time_source: '.claude/skills/phase1/04_supply_chain_analyst.md:115-121'
     transits: [WP-PANAMA]
+    alternatives: [WP-SUEZ, 희망봉 우회]   # v3.2 — 파나마 통항 제약 시 대안(해석 · 소요일 미검증)
+    disruption_semantics: 파나마 통항 제한은 대안 경로가 존재하므로 차단이 아닌 지연·비용 사건이다(해석).
     disruption_edges: []           # 파나마 단독 인과엣지 미등재 — 후보 등재는 P1-04 검증 대기
   - route_id: RT-SANTOS-KR
     label_ko: 브라질 산투스·파라나과 → 한국
@@ -707,6 +856,8 @@ supply_chain:
     lead_time_days: {min: 40, max: 45}
     lead_time_source: '.claude/skills/phase1/04_supply_chain_analyst.md:115-121'
     transits: [WP-MALACCA]         # 희망봉 → 인도양 → 말라카 경유 접근
+    alternatives: [순다 해협, 롬복 해협]   # v3.2 — 해석 · 추가 소요 1~3일 추정(미검증)
+    disruption_semantics: 말라카 혼잡·봉쇄는 차단이 아닌 지연·비용 사건이다(우회 가능).
     disruption_edges: [CE-010]
   - route_id: RT-ROSARIO-KR
     label_ko: 아르헨티나 로사리오 → 한국
@@ -715,10 +866,123 @@ supply_chain:
     lead_time_days: {min: 40, max: 45}
     lead_time_source: '.claude/skills/phase1/04_supply_chain_analyst.md:115-121'
     transits: [WP-MALACCA]
+    alternatives: [순다 해협, 롬복 해협]   # v3.2 — 해석 · 추가 소요 1~3일 추정(미검증)
+    disruption_semantics: 말라카 혼잡·봉쇄는 차단이 아닌 지연·비용 사건이다(우회 가능).
     disruption_edges: [CE-010]
+  - route_id: RT-CN-KR             # v3.2 신규 — 정제 대두유(1507.90.1010) 최대 채널
+    label_ko: 중국 → 한국 (정제 대두유)
+    origin: PORT-CN
+    destination: [PORT-PYEONGTAEK, PORT-INCHEON]
+    lead_time_days: null           # DATA GAP — 연안 단거리라 관세청 월별 통계로 역산 불가
+    lead_time_source: null
+    transits: []                   # 해협 무경유 연안 항로(해석) — 병목 사건의 직접 경로 아님
+    alternatives: []
+    disruption_semantics: 해협 병목의 직접 영향은 없으나 역내 선복·운임 수준을 통해 간접 전이된다(해석).
+    observation: 2025-08~2026-07 관세청 실측 — 수집국 기준 1507.90.1010 정제 대두유의 99.9%가 중국발(확인).
+    disruption_edges: []
   market_wide_freight_note: 호르무즈(WP-HORMUZ)·수에즈(WP-SUEZ)는 한국향 3개 루트의 직접
     경유지가 아니나 탱커 선복·AWRP(전쟁위험보험료)를 통해 운임 시장 전체로 전파된다
     (CE-010 · CE-013). 관측 지표는 BDI·BCAA z-score.
+    중동만 청정제품선 적출이 늘면 선복 재배치를 통해 아시아 운임으로 전이될 수 있다(해석).
+    흑해 회랑(WP-BLACKSEA)은 해바라기유 수출 경로로만 관측 표시한다 — 대두유 가격 영향 서술은
+    CE-014가 candidate이므로 금지(승격 전 인과 주장 금지 · S-1).
+  customs_coverage_note:           # v3.2 — 원산지 비중 사용 시 필수 캐비엇(확인 · 2025-08~2026-07 실측)
+    period: 2025-08~2026-07
+    label: CONFIRMED
+    crude_1507_10_1000: {world_t: 233046, collected_countries_t: 58749, coverage_pct: 25.2}
+    refined_1507_90_1010: {world_t: 115095, collected_countries_t: 86757, coverage_pct: 75.4}
+    rule: 수집국 합계는 전 세계 수입의 일부다. 원산지 비중을 가중치로 쓰는 합성 지수는
+      커버리지 비율을 함께 표기하지 않으면 발행하지 않는다(특히 조유 25.2%는 대표성 부족).
+
+  # ── 시장구조 집중도 (v3.2 신설) ─────────────────────────────────────────
+  # 목적: 도착가 잔차층(CIF−CBOT)의 귀속 해석과 원산지 채널 서술의 사실 기반.
+  # 4-라벨: CONFIRMED(공식·1차 출처) · INFERENCE(해석) · DATA GAP(검증 불가) · NOT COMPARABLE(기준 상이)
+  concentration:
+    shipment_based:
+      label: CONFIRMED
+      source: Wilson · Bullock · Dubovoy, AEPP 47(4):1561-82, 2025
+      source_ref: docs/research_desk/references/Dynamics_2025_AEPP_grain_oilseed_trading_concentration.pdf
+      entity_terms: [TERM-171, TERM-172]
+      measurement: 선박 선적 실거래 약 11만 건 기반 CR4·HHI 실측(FOB·CNF 구분)
+      world_cr4_pct: [32, 27]        # 곡물·유지 2계열 — 논문 표기 그대로 병기(단일 값으로 축약 금지)
+      soybean_cr4_pct: 45
+      top_firm_cnf: COFCO International   # CNF 물량 1위
+      seven_firm_core_pct: 45        # ABCD + Viterra + COFCO + CHS
+      hhi_convention: {critical: 5000, high: 2500, moderate: 1500}
+      hhi_convention_note: 관례 판정 임계이며 인과 기준이 아니다 — 산출 기준(물량·기간·항로)을 함께 기록한다.
+      not_comparable_note: 흔히 인용되는 'ABCD 70~90%'는 매출 합산·2차 인용 계열의 통설이며,
+        선적 물량 기준 실측치와 분모·단위가 달라 비교 대상이 아니다(NOT COMPARABLE).
+    brazil_trading_share_2020:
+      label: CONFIRMED
+      as_of: '2020'
+      source: Medina & Thomé, Logistics 2021 (Transparency 브라질 대두 사슬)
+      source_ref: docs/research_desk/references/Transparency_2021_Brazil_soy_supply_chain_accountability.pdf
+      cross_check: Corcioli 외, Front. Sustain. Food Syst. 5:796845, 2022 — 점유율 전 항목 일치(제2 출처)
+      shares_pct: {Cargill: 11.4, Bunge: 9.4, ADM: 7.8, LDC: 7.5, COFCO: 3.8}
+      entity_terms: [TERM-155, TERM-154, TERM-153, TERM-156, TERM-157]
+      foreign_control_pct: 65.4      # 외국 다국적 통제 비중(사슬 전체 · 투입재 포함 76.1% 계열과 분모 상이)
+      logistics_note: 브라질 물류 인프라는 수출 경쟁력의 유일한 마이너스 동인(도로 48%·저장 적자 7,600만 t) —
+        Filassi & Oliveira, RESR 60(3), 2022. ⚠️대두유는 조사 대상 제외이므로 전이는 INFERENCE.
+    palm_origin_concentration:
+      label: CONFIRMED
+      source: Zhang 외, Sustainability 17:3062, 2025
+      source_ref: docs/research_desk/references/PalmOil_2025_global_trade_complex_network.pdf
+      my_id_share_pct_min: 80        # 말레이시아+인도네시아 수출 점유 21년간 80% 이상 불변
+      entity_terms: [TERM-055]
+      interpretation: 팜유는 2개국 집중 구조라 원산지 사건이 곧 세계 공급 사건이 된다 — CE-015 배경.
+      note: 네트워크 지표를 예측 피처로 사용하지 않는다(TGL 전례 — 기준선 독트린).
+    sunflower_origin:
+      label: CONFIRMED
+      as_of: MY2026/27 (USDA WMT 2026-08 p.23 Exports)
+      exports_kt: {Russia: 5000, Ukraine: 4950}
+      source: USDA WMT 원표 대조(A-239) + Panfilova 외, Scientific Horizons 28(5), 2025
+      source_ref: docs/research_desk/references/Ukraine_grain_seed_trade_global_position.pdf
+      vulnerability: 압착 설비 피해(약 10억 달러)와 운송비 상승(70~100 $/t)이 취약점 — CE-013·CE-014 근거
+      entity_terms: [TERM-170]
+      note: 우크라이나 자국 저널 전망치와 실측을 혼용하지 않는다.
+    korea_import_channel_profile:
+      label: CONFIRMED
+      scope: 관세청 GW · 식용 조유 1507.10.1000 · 2022~2026
+      source_ref: docs/research_desk/2026-08/abcd_trading_structure_2026_08_15.md §5
+      caveat: 아래 물량은 국가·월별 수입 **합계**이며 개별 선박 화물(parcel) 크기가 아니다.
+        B/L·선박 식별자 없이는 화물 단위 분해가 불가하다(DATA GAP).
+      channels:
+      - origin: AR
+        active_months: 45
+        monthly_median_mt: 10981
+        monthly_max_mt: 88088
+        cif_median_usd_mt: 1183
+        character: 주력·연속 채널(INFERENCE) — 저가 요인으로 수출세 할인이 유력하나 운임·품질·시점 미통제
+      - origin: US
+        active_months: 12
+        monthly_median_mt: 15115
+        monthly_max_mt: 39832
+        cif_median_usd_mt: 1383
+        character: 간헐 채널(INFERENCE) — 고가 요인 귀속 불가(동월 비교 부재)
+      - origin: BR
+        active_months: 14
+        monthly_median_mt: 1326
+        monthly_max_mt: 10530
+        cif_median_usd_mt: 1267
+        character: 보조 채널(소형)
+      - origin: CN
+        active_months: 8
+        monthly_median_mt: 156
+        monthly_max_mt: 10031
+        cif_median_usd_mt: 1654
+        character: 간헐·소형(가공무역 성격 — INFERENCE)
+      korea_processors: [TERM-161, TERM-162, TERM-163, TERM-164]
+      korea_crush_note: 국내 압착 전망 800,000 MT(설비 1.1백만 MT의 73% · 10년 평균 대비 −20%) —
+        조유 수입 의존의 지속을 시사(GAIN 2026-03 · D-045).
+    interpretation_rules:            # D-047 판독 규율 5칙 + 집중도 해석 2칙
+    - 용량(capacity) ≠ 처리량(throughput) — 공시 설비 능력을 실제 물량으로 치환·합산하지 않는다.
+    - 관세청 수입 CIF 단가 ≠ CFR 호가 — 통관 신고 단가를 시장 호가·베이시스의 대용으로 쓰지 않는다.
+    - 판매등록(DJVE) ≠ 선적 — 등록 물량을 실제 수출 물량으로 읽지 않는다.
+    - 부분연도(예: 4개월) ≠ 연간 구조 — 부분 집계를 연간 점유·구조로 확대하지 않는다.
+    - 월별 수입 합계 ≠ 개별 화물 크기 — 화물 단위는 B/L 없이 추정하지 않는다(DATA GAP).
+    - 집중도가 낮다는 실측(CR4 27~45%)은 기업 마진층이 통설보다 작다는 뜻이므로,
+      CIF−CBOT 잔차층은 기업 마진이 아니라 운임·보험·정책(수출세·관세)·품질·시차로 귀속해 해석한다(D-041 정합).
+    - 점유율·집중도는 산출 기준(선적 물량·매출·용량)이 다르면 비교하지 않는다 — 기준 병기 없는 수치는 인용하지 않는다.
 
 # ── 인과엣지 원장 (감사 갭 6 — causal_chains.md 18체인 정형화 + 도메인 노트 3경로) ──
 # 규칙:
@@ -728,9 +992,9 @@ supply_chain:
 #   · lag_trading_days = 원인 발생 → 가격 반영까지 추정 거래일 (도메인 근거 기반 — 통계 검증 전 추정치)
 #   · 열람용 표는 causal_chains.md — 본 원장이 단일 원천(single source of truth)
 causal_edges_meta:
-  count: 21
+  count: 24                        # v3.2 실측 재집계(2026-09-09)
   validated: 10
-  candidate: 11
+  candidate: 14
   outcome_nodes: [SBO_INTL_PRICE, KR_IMPORT_CIF]
   evidence_source_types: [research_doc, pdf_span]   # pdf_span은 provenance.yaml EvidenceSpan 계약 준수
 causal_edges:
