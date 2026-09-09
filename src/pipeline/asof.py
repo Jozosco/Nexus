@@ -397,7 +397,14 @@ def attach_asof(
         # 런 #84 pytest 4건의 원인). ingested_at으로 캡한다. 1일 여유는 장중 확정
         # 시각 설계(lag_days=1 — M-012③·M-013)를 보존하기 위한 것으로, VIXCLS류의
         # 의도된 +1일 지연은 절대 건드리지 않는다.
-        overshoot = ing.notna() & ~forecast & (avail > ing + pd.Timedelta(days=1))
+        # A-254: 허용폭을 고정 +1일이 아니라 **규칙의 설계 지연**으로 — immediate+lag_days≥1
+        #        (VIXCLS·TE 에너지·GeoIntel, M-013 장중 확정 시각)만 +1일을 보존하고, 발표
+        #        지연 '추정'(lag_days 종류: ESR·ERA5·USDM)은 수집 시점으로 캡한다. 고정 +1일은
+        #        오전 발사 런(05:52 UTC)에서 ESR 행을 '내일' 날짜로 남겨 품질 테스트를 깨뜨렸다.
+        allow = pd.Series(
+            [pd.Timedelta(days=1) if (rules[c].kind == "immediate" and rules[c].lag_days >= 1)
+             else pd.Timedelta(0) for c in codes], index=out.index)
+        overshoot = ing.notna() & ~forecast & (avail > ing + allow)
         avail = avail.mask(overshoot, ing)
     out["available_at"] = avail
 
