@@ -121,6 +121,78 @@ _START_MONO = time.monotonic()
 def _budget_exceeded() -> bool:
     return _BUDGET_S > 0 and (time.monotonic() - _START_MONO) > _BUDGET_S
 
+
+# ── 월 단위 증분 (A-253 — 승인자 지시 9/9): 업로드본이 덮는 월은 조회하지 않는다 ──
+GW_UPLOAD_ROOT = _Path("data/raw/관세청/Import Export Performance by Commodity and Country(GW)")
+RELEASE_DAY = 15                      # 관세청 월간 통계 공개일(익월 15일 — asof.py CUSTOMS_ 규칙과 동일)
+_CONSECUTIVE_FAILS = 0                # 연속 실패 카운터(서버 장애 조기 중단용)
+CIRCUIT_BREAK_AFTER = 5
+
+
+def _ym_add(ym: str, months: int) -> str:
+    y, m = int(ym[:4]), int(ym[4:])
+    t = y * 12 + (m - 1) + months
+    return f"{t // 12:04d}{t % 12 + 1:02d}"
+
+
+def _last_released_month(today: date | None = None) -> str:
+    """오늘 기준 공개가 끝난 마지막 통계 월(YYYYMM). 익월 15일 공개 → 16일부터 전월 조회 가능."""
+    today = today or date.today()
+    this_ym = f"{today.year:04d}{today.month:02d}"
+    return _ym_add(this_ym, -1) if today.day > RELEASE_DAY else _ym_add(this_ym, -2)
+
+
+def _upload_coverage_month(root: _Path | None = None) -> str | None:
+    """수동 업로드 GW xlsx가 값을 가진 마지막 월(YYYYMM). 환경변수 CUSTOMS_UPLOAD_COVERAGE_YYYYMM 우선.
+
+    수동 업로드본 판독 목적의 xlsx 읽기(파이프라인 데이터 I/O가 아님 — 관세청 업로드 파서와 동일 예외).
+    대두유 폴더의 최신 연도 시트만 훑어 비용을 낮춘다. 판독 불가 시 None(→ 당년 1월부터 조회).
+    """
+    env = os.environ.get("CUSTOMS_UPLOAD_COVERAGE_YYYYMM", "").strip()
+    if env and env.isdigit() and len(env) == 6:
+        return env
+    root = root or GW_UPLOAD_ROOT
+    if not root.exists():
+        return None
+    best: str | None = None
+    try:
+        files = [f for f in root.rglob("*.xlsx")
+                 if "Soybean Oil" in str(f) and "_API" not in f.name and ".partial" not in f.name]
+        for f in files[:60]:
+            try:
+                sheets = pd.read_excel(f, sheet_name=None, header=None, engine="openpyxl")
+            except Exception:                                       # noqa: BLE001 — DRM·손상 파일
+                continue
+            for name, sh in sheets.items():
+                if not str(name)[:4].isdigit():
+                    continue
+                year = int(str(name)[:4])
+                for _, row in sh.iterrows():
+                    label = str(row.iloc[0]) if len(row) else ""
+                    m = None
+                    if label.strip().endswith("월") and label.strip()[:-1].isdigit():
+                        m = int(label.strip()[:-1])
+                    if m is None or not (1 <= m <= 12):
+                        continue
+                    vals = pd.to_numeric(row.iloc[1:], errors="coerce")
+                    if vals.notna().any() and (vals.fillna(0) != 0).any():
+                        ym = f"{year:04d}{m:02d}"
+                        if best is None or ym > best:
+                            best = ym
+    except Exception as e:                                          # noqa: BLE001
+        print(f"[경고] 업로드본 커버리지 판독 실패(비치명): {e}")
+        return None
+    return best
+
+
+def _incremental_window(today: date | None = None) -> tuple[str, str, str | None]:
+    """(조회 시작 YYYYMM, 조회 끝 YYYYMM, 업로드 커버리지) — 시작 > 끝이면 조회할 월이 없다."""
+    today = today or date.today()
+    cov = _upload_coverage_month()
+    end = _last_released_month(today)
+    start = _ym_add(cov, 1) if cov else f"{today.year:04d}01"
+    return start, end, cov
+
 COMTRADE_REPORTER_KOREA = "410"
 
 
@@ -208,12 +280,24 @@ def _fetch(url: str, params: dict[str, Any], max_retries: int = 4) -> dict:
                 return {}
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
             if attempt == max_retries - 1:
+                global _CONSECUTIVE_FAILS
+                _CONSECUTIVE_FAILS += 1
                 print(f"[경고] API 호출 최종 실패 ({url.split('?')[0]}): {type(e).__name__}: {e} "
                       f"— 해당 구간 결측 처리 후 계속 진행 (A-133)")
                 return {}
             time.sleep(delay)
             delay *= 2
     return {}
+
+
+def _mark_success() -> None:
+    global _CONSECUTIVE_FAILS
+    _CONSECUTIVE_FAILS = 0
+
+
+def _circuit_open() -> bool:
+    """연속 실패가 임계를 넘으면 서버 측 장애로 보고 남은 호출을 중단한다(A-253)."""
+    return _CONSECUTIVE_FAILS >= CIRCUIT_BREAK_AFTER
 
 
 def _parse_items(data: dict) -> list[dict]:
@@ -371,6 +455,7 @@ def _normalize_customs_df(all_rows: list[dict], source_tag: str) -> pd.DataFrame
 def fetch_customs_total_imports(
     start_year: int = 2017,
     end_year: int | None = None,
+    window: tuple[str, str] | None = None,
 ) -> pd.DataFrame:
     """관세청 API 1 — 대두유(HS 1507) 전체 수출입실적 (국가 구분 없음).
 
@@ -388,23 +473,27 @@ def fetch_customs_total_imports(
     all_rows: list[dict] = []
     total_calls = 0
 
-    for yr in range(start_year, end_year + 1):
+    # A-253: window가 주어지면 그 월 구간 1회(증분), 아니면 연 단위(백필)
+    periods = [window] if window else [
+        (f"{yr:04d}01", f"{yr:04d}12" if yr < date.today().year else today_ym)
+        for yr in range(start_year, end_year + 1)]
+    for strt_ym, end_ym in periods:
         if _budget_exceeded():
-            print(f"[경고] 시간 예산({_BUDGET_S:.0f}s) 초과 — Itemtrade {yr}년 이후 중단, "
-                  "수집분 저장 진행")
+            print(f"[경고] 시간 예산({_BUDGET_S:.0f}s) 초과 — Itemtrade {strt_ym}~ 중단, 수집분 저장 진행")
             break
-        strt_ym = f"{yr:04d}01"
-        end_ym  = f"{yr:04d}12" if yr < date.today().year else today_ym
         for hs_sgn in HS_CODES_ALL:
-            if _budget_exceeded():
+            if _budget_exceeded() or _circuit_open():
                 break
             total_calls += 1
             items = _fetch_customs_range(service_key, strt_ym, end_ym, hs_sgn, use_nitemtrade=False)
             if items:
+                _mark_success()
                 for item in items:
                     item.setdefault("hsSgn", hs_sgn)
                 all_rows.extend(items)
             time.sleep(0.3)
+    if _circuit_open():
+        print(f"[경고] 연속 실패 {_CONSECUTIVE_FAILS}회 — data.go.kr 응답 없음으로 판단, 남은 Itemtrade 호출 중단")
 
     print(f"[정보] Itemtrade: 총 {total_calls}건 호출, {len(all_rows)}건 수집")
     if not all_rows:
@@ -419,6 +508,7 @@ def fetch_customs_sbo_imports(
     start_year: int = 2017,
     end_year: int | None = None,
     country_codes: list[str] | None = None,
+    window: tuple[str, str] | None = None,
 ) -> pd.DataFrame:
     """관세청 API 2 — 대두유(HS 1507) 국가별 수입 통계 (연도별·국가별 수집).
 
@@ -452,27 +542,38 @@ def fetch_customs_sbo_imports(
     total_calls = 0
     success_calls = 0
 
-    for yr in range(start_year, end_year + 1):
-        if _budget_exceeded():
-            print(f"[경고] 시간 예산({_BUDGET_S:.0f}s) 초과 — nitemtrade {yr}년 이후 중단, "
-                  "수집분 저장 진행")
-            break
-        strt_ym = f"{yr:04d}01"
-        end_ym  = f"{yr:04d}12" if yr < date.today().year else today_ym
+    periods = [window] if window else [
+        (f"{yr:04d}01", f"{yr:04d}12" if yr < date.today().year else today_ym)
+        for yr in range(start_year, end_year + 1)]
 
-        for hs_sgn in HS_CODES_ALL:
-            if _budget_exceeded():
-                break
-            for cnty_cd in country_codes:
+    def _one(strt_ym: str, end_ym: str, hs_sgn: str, cnty_cd: str) -> list[dict]:
+        if _budget_exceeded() or _circuit_open():
+            return []
+        items = _fetch_customs_range(service_key, strt_ym, end_ym, hs_sgn, cnty_cd)
+        time.sleep(0.3)
+        if items:
+            _mark_success()
+            for item in items:
+                item.setdefault("hsSgn",  hs_sgn)
+                item.setdefault("cntyCd", cnty_cd)
+        return items
+
+    # A-253: (HS×국가) 쌍을 병렬 5로 처리(A-101 GW 스크립트와 동일 동시성) — 순차 96회의 대기 누적 제거
+    from concurrent.futures import ThreadPoolExecutor
+    for strt_ym, end_ym in periods:
+        if _budget_exceeded():
+            print(f"[경고] 시간 예산({_BUDGET_S:.0f}s) 초과 — nitemtrade {strt_ym}~ 중단, 수집분 저장 진행")
+            break
+        pairs = [(hs, cc) for hs in HS_CODES_ALL for cc in country_codes]
+        with ThreadPoolExecutor(max_workers=int(os.environ.get("CUSTOMS_WORKERS", "5"))) as ex:
+            for items in ex.map(lambda p: _one(strt_ym, end_ym, *p), pairs):
                 total_calls += 1
-                items = _fetch_customs_range(service_key, strt_ym, end_ym, hs_sgn, cnty_cd)
                 if items:
-                    for item in items:
-                        item.setdefault("hsSgn",  hs_sgn)
-                        item.setdefault("cntyCd", cnty_cd)
                     all_rows.extend(items)
                     success_calls += 1
-                time.sleep(0.3)
+        if _circuit_open():
+            print(f"[경고] 연속 실패 {_CONSECUTIVE_FAILS}회 — data.go.kr 응답 없음으로 판단, 남은 nitemtrade 호출 중단")
+            break
 
     print(f"[정보] nitemtrade: 총 {total_calls}건 호출, {success_calls}건 성공")
 
@@ -583,11 +684,20 @@ def run() -> None:
     # A-216(조정자 확인 8/28): 히스토리는 수동 업로드 GW xlsx가 2010~2026.07을 커버 —
     # 일별 런이 매일 2017~전체를 재수집할 필요가 없고(잡 4~6h 지연·429의 원인),
     # 최신분 갱신만 하면 된다. 비백필은 **당년만** 수집(A-110 climate 증분화 동일 패턴).
+    window: tuple[str, str] | None = None
     if os.environ.get("BACKFILL_MODE", "").lower() == "true":
         start_year = int(os.environ.get("HISTORICAL_START_YEAR", "2017"))
     else:
+        # A-253(승인자 지시 9/9): 업로드본이 덮는 월은 조회하지 않고, 공개(익월 15일)가 끝난 월만 조회.
+        # 조회할 월이 없으면 API를 한 번도 부르지 않고 정상 종료한다(당년 전체 재조회 폐기).
         start_year = int(os.environ.get("CUSTOMS_INCREMENTAL_START_YEAR", str(end_year)))
-        print("[정보] 증분 모드 — 당년만 수집(히스토리는 수동 업로드 GW가 커버, A-216)")
+        w_start, w_end, cov = _incremental_window()
+        print(f"[정보] 증분 모드 — 업로드본 커버리지 {cov or '미확인'} · 공개 완료 월 {w_end} "
+              f"→ 조회 구간 {w_start}~{w_end}")
+        if w_start > w_end:
+            print("[정보] 조회할 신규 월 없음(미공개·미입력 월은 건너뜀) — API 호출 없이 정상 종료")
+            return
+        window = (w_start, w_end)
 
     print(f"[정보] 관세청 수집 범위: {start_year}년 ~ {end_year}년 · HS {len(HS_CODES_ALL)}종 "
           f"(대두유 {len(HS_CODES_SOYBEAN_OIL)} · 대체재 {len(HS_CODES_SUBSTITUTES)} · "
@@ -603,11 +713,11 @@ def run() -> None:
 
     # API 1: 품목별 전체 (Itemtrade — 국가 구분 없음)
     df_total = _safe("Itemtrade", fetch_customs_total_imports,
-                     start_year=start_year, end_year=end_year)
+                     start_year=start_year, end_year=end_year, window=window)
 
     # API 2: 품목별 국가별 (nitemtrade)
     df_by_country = _safe("nitemtrade", fetch_customs_sbo_imports,
-                          start_year=start_year, end_year=end_year)
+                          start_year=start_year, end_year=end_year, window=window)
 
     # 두 소스 병합
     frames = [f for f in [df_total, df_by_country] if not f.empty]
@@ -624,7 +734,11 @@ def run() -> None:
         print("[경고] 관세청·UN Comtrade 모두 실패 — API 키 확인 필요")
         print("       DATA_GO_KR_SERVICE_KEY: data.go.kr 포털 발급")
         print("       UN_COMTRADE_API_KEY: comtradeplus.un.org 발급")
-        raise SystemExit(1)   # 전 소스 실패는 조용히 넘기지 않는다 — 잡 실패로 표면화
+        if window:
+            print(f"[정보] 증분 구간 {window[0]}~{window[1]} 미수집 — 업로드본이 히스토리를 덮으므로 "
+                  "비치명 종료(다음 런 재시도)")
+            return
+        raise SystemExit(1)   # 백필 전 소스 실패는 조용히 넘기지 않는다 — 잡 실패로 표면화
 
     out = f"{OUTPUT_DIR}/customs_import_{today_str}.parquet"
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리

@@ -322,12 +322,13 @@ jobs:
             scripts
             config
             data/schemas
+            data/raw/관세청
           sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install httpx pandas pyarrow comtradeapicall
+        run: pip install httpx pandas pyarrow comtradeapicall openpyxl   # openpyxl: 업로드본 커버리지 판독(A-253)
       - name: Run customs connector
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
