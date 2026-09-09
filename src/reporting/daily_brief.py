@@ -21,6 +21,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.risk.maritime_threat import (Observation, compute_maritime_threat, explain_ko,
+                                      load_registry)
+
 SIGNALS_CSV = Path("data/processed/unstructured_daily_signals.csv")
 LB_PER_MT = 2204.62262            # USc/lb → $/MT 환산 (×22.0462)
 
@@ -74,10 +77,12 @@ _ONTOLOGY_CHAINS: dict[str, list[str]] = {
                             "아르헨 수출 물량", "공급 회복", "가격 하방"],
     "INDIA_DUTY_NEWS": ["기사", "신호: 수입관세", "CE-004 (후보)",
                         "인도 수입 수요", "수요 변동", "방향 조건부"],
-    "HORMUZ_THREAT_LEVEL": ["AIS·프록시 관측", "해협 위험 지수", "CE-013 (검증됨)",
-                            "운임·전쟁보험료", "도착가 잔차층", "참고 범위 폭"],
-    "SUEZ_RED_SEA_RISK": ["관측", "해협 위험 지수", "CE-014 (검증됨)",
-                          "우회 항로(+12~15일)", "운임 상승", "도착가 상방"],
+    "HORMUZ_THREAT_LEVEL": ["AIS·프록시 관측", "해협 위협 점수", "CE-010 (검증됨)",
+                            "탱커 운임·전쟁보험료", "도착가 잔차층", "참고 범위 폭"],
+    "SUEZ_RED_SEA_RISK": ["관측", "해협 위협 점수", "CE-013 (검증됨)",
+                          "희망봉 우회(+12~15일)", "운임 상승", "도착가 상방"],
+    "UKRAINE_GRAIN_CORRIDOR": ["관측", "흑해 회랑 상태", "CE-014 (후보)",
+                               "해바라기유 수출 경로", "대체 유지 공급", "검증 대기"],
     "US_CHINA_TARIFF_STATUS": ["기사", "신호: 무역 정책", "CE-009 (검증됨)",
                                "미중 교역 흐름", "대두 수급 재편", "방향 조건부"],
 }
@@ -359,18 +364,94 @@ def _svg_spark(vals: list[float]) -> str:
             f'<circle cx="{lx}" cy="{ly}" r="2.5" fill="var(--accent)"/></svg>')
 
 
-def _route_status(frames: dict[str, pd.DataFrame]) -> dict[str, str]:
-    """해협 상태 — 실지표 연동(1=ok·2=warn·3=crit), 미수집은 unknown."""
-    def level(codes: list[str]) -> str:
-        s = _dated_series(frames, codes)
-        if s.empty:
-            return "unknown"
-        v = float(s["value"].iloc[-1])
-        return "crit" if v >= 3 else ("warn" if v >= 2 else "ok")
-    return {"hormuz": level(["HORMUZ_THREAT_LEVEL"]),
-            "suez": level(["SUEZ_RED_SEA_RISK"]),
-            "panama": "ok", "malacca": "ok",       # 전용 지표 부재 — 복합 지수로 보완
-            "composite": _fmt_last(frames, ["SBO_STRAIT_RISK_COMPOSITE"], "{:.0f}")}
+def _maritime_inputs(frames: dict[str, pd.DataFrame], reg: dict) -> tuple[dict, dict]:
+    """레지스트리가 요구하는 지표의 최신 관측·AIS 통항 수 시계열을 parquet 프레임에서 추출."""
+    codes: set[str] = set()
+    counts: set[str] = set()
+    for cp in reg["chokepoints"]:
+        if cp.get("dynamic_upgrade"):
+            codes.add(cp["dynamic_upgrade"]["indicator"])
+        codes.update((cp.get("warning_sources") or {}).keys())
+        for k in ("ais_risk_indicator", "awrp_indicator"):
+            if cp.get(k):
+                codes.add(cp[k])
+        if cp.get("ais_count_indicator"):
+            counts.add(cp["ais_count_indicator"])
+    inputs: dict[str, Observation] = {}
+    for code in codes:
+        ser = _dated_series(frames, [code])
+        if not ser.empty:
+            last = ser.iloc[-1]
+            inputs[code] = Observation(float(last["value"]), pd.Timestamp(last["price_date"]).date())
+    series: dict[str, list[tuple[date, float]]] = {}
+    for code in counts:
+        ser = _dated_series(frames, [code])
+        if not ser.empty:
+            series[code] = [(pd.Timestamp(r["price_date"]).date(), float(r["value"])) for _, r in ser.iterrows()]
+    return inputs, series
+
+
+def _maritime_block(frames: dict[str, pd.DataFrame]) -> tuple[dict[str, str], str, dict]:
+    """해상 위협 점수 산출 → (모식도 점등 상태, 해협 카드 HTML, 결과 dict). 실패 시 정직 강등."""
+    try:
+        reg = load_registry()
+        inputs, series = _maritime_inputs(frames, reg)
+        res = compute_maritime_threat(inputs, series=series, registry=reg)
+    except Exception as e:                                    # noqa: BLE001
+        print(f"[경고] 해상 위협 점수 산출 실패(비치명): {e}")
+        st = {k: "unknown" for k in ("hormuz", "red_sea", "malacca", "panama", "black_sea")}
+        return st, ('<div class="card cp-card"><b>해상 위협 점수 미산출</b>'
+                    f'<div class="cap">{_esc(e)}</div></div>'), {}
+    st = {s.key: s.band for s in res["chokepoints"]}
+    badge = {"ok": ("ok", "정상"), "warn": ("warn", "주의"), "crit": ("warn", "심각")}
+    cards = []
+    for s in res["chokepoints"]:
+        cls, lab = badge.get(s.band, ("acc", "미확인"))
+        if s.band == "crit":
+            cls = "crit"
+        rr = s.route_relevance or {}
+        if rr.get("direct_routes"):
+            rel = "한국향 직접 경유 — " + " · ".join(rr["direct_routes"])
+            if rr.get("alternatives"):
+                rel += f" (우회: {' · '.join(rr['alternatives'])})"
+        else:
+            rel = rr.get("propagation") or "항로 관련성 미기재"
+        lt = s.lead_time_impact or {}
+        lt_txt = " · ".join(x for x in (
+            f"추가 일수 {lt['added_days']}" if lt.get("added_days") else "",
+            f"운임 {lt['freight_pct']}" if lt.get("freight_pct") else "") if x) or "리드타임 영향 근거 없음"
+        lt_src = lt.get("source", "")
+        comp_rows = "".join(
+            f'<div class="cp-comp"><span>{lbl}</span><b class="num">'
+            f'{"미확인" if c.points is None else f"{c.points:.0f}"}</b><small>{_esc(c.note)}</small></div>'
+            for lbl, c in (("등급", s.components["tier"]), ("경보", s.components["warnings"]),
+                           ("AIS", s.components["ais"]), ("급감", s.components["anomaly"])))
+        awrp = (f'<div class="cap">관측 전쟁위험보험료 배수 ×{s.awrp_multiplier:.2f}</div>'
+                if s.awrp_multiplier is not None else "")
+        partial = (f'<span class="pill acc">부분 산출 · 미확인 {len([c for c in s.components.values() if c.points is None])}</span>'
+                   if s.partial else "")
+        cards.append(f"""
+    <div class="card cp-card">
+      <div class="cp-head"><b>{_esc(s.name_ko)}</b>
+        <span class="cp-score num">{s.score}<small>/100</small></span>
+        <span class="pill {cls}">{lab}</span> <span class="pill acc">{_esc(s.tier)}</span> {partial}</div>
+      <div class="cap">{_esc(s.tier_basis or s.tier_source)}</div>
+      {comp_rows}
+      <div class="cp-meta"><span>항로</span>{_esc(rel)}</div>
+      <div class="cp-meta"><span>리드타임</span>{_esc(lt_txt)} <small>{_esc(lt_src)}</small></div>
+      {awrp}
+      {('<div class="cap">미확인 성분: ' + _esc(" · ".join(s.missing)) + '</div>') if s.missing else ''}
+    </div>""")
+    kd, pr = res["korea_direct"], res["propagation"]
+    def _idx_txt(d: dict, label: str) -> str:
+        if d.get("score") is None:
+            return f"{label} <b>미확인</b>"
+        return (f"{label} <b class=\"num\">{d['score']}</b>/100 (최대치 기준: {_esc(d.get('driver') or '—')})"
+                + (" · 부분 산출" if d.get("partial") else ""))
+    head = (f'<div class="cp-index">{_idx_txt(kd, "한국향 직접 경유 노출")} · '
+            f'{_idx_txt(pr, "운임 전파 축")} · <small>{_esc(res["rule_version"])}</small></div>'
+            f'<div class="cap">{_esc(res["caption"])} · {_esc(res["coverage_note"])}</div>')
+    return st, head + '<div class="cp-grid">' + "".join(cards) + "</div>", res
 
 
 def _fmt_last(frames: dict, codes: list[str], fmt: str) -> str:
@@ -382,8 +463,8 @@ def _svg_route_map(st: dict[str, str]) -> str:
     col = {"ok": "var(--ok)", "warn": "var(--warn)", "crit": "var(--crit)",
            "unknown": "var(--ink3)"}
     P = {"usg": (210, 95), "bra": (300, 185), "arg": (270, 215), "mys": (700, 165),
-         "kor": (880, 80), "panama": (235, 140), "suez": (500, 105),
-         "hormuz": (585, 115), "malacca": (715, 150)}
+         "kor": (880, 80), "panama": (235, 140), "red_sea": (500, 105),
+         "hormuz": (585, 115), "malacca": (715, 150), "black_sea": (470, 55)}
     W, H = 1000, 250
 
     def arc(a, b, bend):
@@ -425,8 +506,11 @@ def _svg_route_map(st: dict[str, str]) -> str:
             + f'<circle cx="{kx}" cy="{ky}" r="9" fill="var(--accent)"/>'
             + f'<text x="{kx}" y="{ky - 16}" font-size="12" fill="var(--ink2)" '
               f'text-anchor="middle" font-weight="700">한국 (평택·인천)</text>'
-            + choke("panama", "파나마", st["panama"]) + choke("suez", "수에즈·홍해", st["suez"])
-            + choke("hormuz", "호르무즈", st["hormuz"]) + choke("malacca", "말라카", st["malacca"])
+            + choke("panama", "파나마", st.get("panama", "unknown"))
+            + choke("red_sea", "수에즈·홍해", st.get("red_sea", "unknown"))
+            + choke("hormuz", "호르무즈", st.get("hormuz", "unknown"))
+            + choke("malacca", "말라카", st.get("malacca", "unknown"))
+            + choke("black_sea", "흑해 회랑", st.get("black_sea", "unknown"))
             + "</svg>")
 
 
@@ -900,7 +984,7 @@ def build_daily_brief(
                  '이후 기관별 최신 발간물이 이 자리에 표시됨.</p></div>')
 
     # ── 경로 모식도 ──
-    st = _route_status(frames)
+    st, maritime_html, _maritime = _maritime_block(frames)
     route_svg = _svg_route_map(st)
 
     # ── E1 신뢰 스트립 ──
@@ -961,16 +1045,16 @@ def build_daily_brief(
   <span class="note">현재와 유사했던 과거 연도들의 이후 실측 — 예측이 아닌 참조(A-191)</span></div>
 {analogue_html}</section>
 
-<section><div class="sec-h"><h2>글로벌 공급 경로 현황</h2>
-  <span class="note">모식도(1단계) — 실지도·AIS 위치 연동은 2단계 로드맵</span></div>
+<section><div class="sec-h"><h2>글로벌 공급 경로 현황 · 해상 위협 점수</h2>
+  <span class="note">모식도(1단계) — 점등은 해협별 점수 밴드(정상 &lt;20 · 주의 20~49 · 심각 ≥50) · 실지도·AIS 위치 연동은 2단계</span></div>
 <div class="card mapbox"><h3>주요 원산지 → 한국 항로와 요충 해협</h3>
 {route_svg}
 <div class="map-legend"><span><span class="dot ok"></span>정상</span>
   <span><span class="dot warn"></span>주의</span>
   <span><span class="dot crit"></span>심각</span>
   <span><span class="dot" style="background:var(--ink3)"></span>미수집</span>
-  <span style="margin-left:auto">해협 위험 종합 지수 <b class="num">{st["composite"]}</b>/100</span>
-</div></div></section>
+</div></div>
+{maritime_html}</section>
 
 <section><div class="sec-h"><h2>지표 스냅샷</h2>
   <span class="note">z = 90일 기준(잠정 — 기준 기간 확정 전 · W0) · 상승 적색/하락 청색</span></div>
@@ -1105,6 +1189,14 @@ td .src{color:var(--ink3);font-size:11.5px;font-weight:400;margin-left:6px}
 .z-hot{background:var(--warn-soft);border-radius:4px;padding:1px 6px;color:var(--warn);
 font-weight:700}
 .mapbox{padding:16px 18px 12px}.mapbox h3{font-size:14px;font-weight:700;margin-bottom:8px}
+.cp-index{margin-top:12px;font-size:13.5px}.cp-index small{color:var(--ink3);margin-left:6px}
+.cp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:10px}
+.cp-card{padding:13px 16px;font-size:13px}.cp-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.cp-score{font-size:22px;font-weight:700;margin-left:auto}.cp-score small{font-size:11px;color:var(--ink3);font-weight:400}
+.cp-comp{display:grid;grid-template-columns:44px 52px minmax(0,1fr);gap:6px;font-size:12px;padding:2px 0;border-top:1px dashed var(--line)}
+.cp-comp span{color:var(--ink2)}.cp-comp small{color:var(--ink3)}
+.cp-meta{font-size:12px;margin-top:6px}.cp-meta span{display:inline-block;min-width:52px;color:var(--ink2);font-weight:500}.cp-meta small{color:var(--ink3)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
 .map-legend{display:flex;flex-wrap:wrap;gap:12px 18px;font-size:12px;color:var(--ink2);
 margin-top:6px}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:-1px;

@@ -1,0 +1,111 @@
+# 해상 요충 해협·회랑 레지스트리 — 해상 위협 점수(참고 지수) 규칙의 단일 원천
+# 방법론 출처: World Monitor 공개 방법론(koala73/worldmonitor, docs/methodology/chokepoints.mdx —
+#   AGPL-3.0 코드는 복제하지 않고 공개 수식·등급 가중치만 독자 구현). 가중치는 편집상 값(학술 지수 아님).
+# 규율: 확률·전망 아님(A-191) · 결측은 0이 아닌 '미확인'(A-202) · 규칙 개정 시 rule_version 변경(과거 재계산 금지)
+rule_version: "maritime_rules v1.0.0 (2026-09-09)"
+method_source: "World Monitor chokepoint disruption score — 등급 가중 + 경보 + AIS + 급감 보너스, 상한 100"
+tier_weights: {normal: 0, elevated: 15, high: 30, critical: 40, war_zone: 70}
+bands: {ok_below: 20, warn_below: 50}          # ok <20 · warn 20~49 · crit ≥50 (World Monitor 밴드)
+caps: {warning_unit: 5, warnings: 15, ais_unit: 5, ais: 15, anomaly_bonus: 10}
+staleness_days: {tier: 90, signal: 3, ais: 3}   # 초과 시 해당 성분 미반영(부분 산출 표기)
+ais_baseline_min_days: 30                        # 통항 수 자기 기준(롤링 중앙값) 최소 축적 일수
+ais_severity_ratio: {3: 0.5, 2: 0.7, 1: 0.85}   # 통항/기준 비율 임계 → 심각도(하한 미만이면 해당 심각도)
+anomaly_ratio: 0.5                               # 통항 ≤50% + 등급 critical 이상 → 급감 보너스
+# 참고(표시 전용·미적용): World Monitor 전쟁위험보험료 티어 war_zone 300 / critical 100 / high 50 / elevated 20 / normal 5 bp
+#   → 저장소 근거 없음(DATA GAP)이라 점수·표시 모두 미사용. 관측 배수(HORMUZ_AWRP_MULTIPLIER)만 표시.
+
+chokepoints:
+  - key: hormuz
+    name_ko: 호르무즈 해협
+    kind: strait
+    entity_term: TERM-081
+    structural_tier: elevated
+    tier_source: "잠정 기본값(INFERENCE) — 전쟁위험 등재(JWC) 상태의 저장소 근거 없음, 출처·기준일 등재 전 보수값"
+    tier_as_of: "2026-09-09"
+    dynamic_upgrade: {indicator: HORMUZ_THREAT_LEVEL, map: {2: elevated, 3: critical}}
+    warning_sources: {GDELT_EVENT_SCORE: 10, GEOINTEL_RISK_COMPOSITE: 40}   # 값 ≥ 임계 → 경보 1건 (승급에 쓴 신호 제외)
+    ais_count_indicator: AIS_HORMUZ_TANKER_COUNT
+    ais_risk_indicator: AIS_HORMUZ_RISK
+    awrp_indicator: HORMUZ_AWRP_MULTIPLIER
+    route_relevance:
+      direct_routes: []
+      propagation: "탱커 선복·전쟁위험보험료 경유 운임 시장 전파(CE-010·CE-013) — 한국향 3항로 직접 경유 아님"
+      note: "중동만 청정제품선 적출 → 선복 재배치로 아시아 운임 전이(INFERENCE)"
+    lead_time_impact: {added_days: null, freight_pct: null, source: "DATA GAP — 저장소 근거 없음"}
+  - key: red_sea
+    name_ko: 수에즈·홍해(바브엘만데브)
+    kind: canal_corridor
+    entity_term: TERM-169   # Red Sea / Bab el-Mandeb (수에즈 운하 TERM-168과 corridor 결합)
+    structural_tier: high
+    tier_source: "잠정 기본값(INFERENCE) — 후티 공격·희망봉 우회 국면(CE-013 validated) 근거의 보수값"
+    tier_as_of: "2026-09-09"
+    dynamic_upgrade: {indicator: SUEZ_RED_SEA_RISK, map: {2: high, 3: critical}}
+    warning_sources: {GDELT_EVENT_SCORE: 10, GEOINTEL_RISK_COMPOSITE: 40}
+    ais_count_indicator: null
+    ais_risk_indicator: null
+    awrp_indicator: null
+    route_relevance:
+      direct_routes: []
+      alternatives_for: [RT-USG-KR]
+      propagation: "희망봉 우회 → 유효 선복 감소 → 운임 급등 → 한국 CIF 상승(CE-013 validated)"
+      note: "미국 걸프발 파나마 제약 시 대안 경로(INFERENCE)"
+    lead_time_impact: {added_days: "+12~15", freight_pct: "+30~40", source: "CE-013 evidence (Adaptation 2025 p.557) — 곡물 벌커 기준·유지 탱커 아님(참고치)"}
+  - key: malacca
+    name_ko: 말라카 해협
+    kind: strait
+    entity_term: TERM-167
+    structural_tier: normal
+    tier_source: "분쟁 근거 없음 — 혼잡은 AIS 성분으로만 반영"
+    tier_as_of: "2026-09-09"
+    dynamic_upgrade: null
+    warning_sources: {GDELT_EVENT_SCORE: 10}
+    ais_count_indicator: AIS_MALACCA_TANKER_COUNT
+    ais_risk_indicator: AIS_MALACCA_RISK
+    awrp_indicator: null
+    route_relevance:
+      direct_routes: [RT-SANTOS-KR, RT-ROSARIO-KR]
+      alternatives: ["순다 해협", "롬복 해협"]
+      propagation: null
+      note: "봉쇄·혼잡은 차단이 아닌 지연·비용 사건(우회 +1~3일 추정, INFERENCE·미검증)"
+    lead_time_impact: {added_days: "+1~3(추정)", freight_pct: null, source: "INFERENCE — 미검증"}
+  - key: panama
+    name_ko: 파나마 운하
+    kind: canal
+    entity_term: TERM-083
+    structural_tier: normal
+    tier_source: "전쟁위험 등급 비대상 — 수위·대기(운하 용량) 축은 전용 지표 부재(DATA GAP)"
+    tier_as_of: "2026-09-09"
+    dynamic_upgrade: null
+    warning_sources: {GDELT_EVENT_SCORE: 10}
+    ais_count_indicator: AIS_PANAMA_TANKER_COUNT
+    ais_risk_indicator: AIS_PANAMA_RISK
+    awrp_indicator: null
+    route_relevance:
+      direct_routes: [RT-USG-KR]
+      alternatives: ["수에즈", "희망봉"]
+      propagation: null
+      note: "미국 걸프 → 한국 주경로(INFERENCE); 제약 시 수에즈·희망봉 우회"
+    lead_time_impact: {added_days: null, freight_pct: null, source: "DATA GAP — 저장소 근거 없음"}
+  - key: black_sea
+    name_ko: 흑해 회랑
+    kind: corridor
+    entity_term: TERM-170   # 통항 병목(해역 TERM-082와 구분)
+    structural_tier: high
+    tier_source: "잠정 기본값(INFERENCE) — 전쟁위험 5배 경보 기준(TERM-082) 근거의 보수값"
+    tier_as_of: "2026-09-09"
+    dynamic_upgrade: {indicator: UKRAINE_GRAIN_CORRIDOR, map: {2: high, 3: critical}}
+    warning_sources: {GDELT_EVENT_SCORE: 10}
+    ais_count_indicator: null
+    ais_risk_indicator: null
+    awrp_indicator: null
+    route_relevance:
+      direct_routes: []
+      propagation: "해바라기유 수출 경로 상태 관측 표시까지 — 대체 수요→SBO 가격 서술 금지(CE-014 candidate)"
+      note: "보스포루스·다르다넬스와 구분되는 회랑 개념"
+    lead_time_impact: {added_days: "10~15→30~40일", freight_pct: "운송비 20~25→70~100 $/t", source: "CE-013 evidence(우크라이나 곡물 기준 — 유지 탱커 아님)"}
+
+korea_index:
+  # 한국향 직접 경유 노출 = 직접 경유 해협 점수의 최대치(가중 평균 아님 — 원산지 비중 가중은 관세청 커버리지 한계로 보류)
+  direct_keys: [panama, malacca]
+  propagation_keys: [hormuz, red_sea, black_sea]
+  coverage_note: "관세청 실측(2025-08~2026-07) 조유 1507.10.1000 수집국 커버리지 25.2%·정제 1507.90.1010 75.4%(정제는 중국 99.9% — 해협 무경유) → 원산지 가중 합성은 커버리지 표기 없이 발행 금지"
