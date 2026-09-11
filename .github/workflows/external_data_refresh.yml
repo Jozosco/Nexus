@@ -311,6 +311,8 @@ jobs:
   customs-import-stats:
     name: "1.1.2+ | Korea Customs HS 1507 Import Stats (data.go.kr · UN Comtrade fallback)"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # A-255: _API.xlsx 커밋
     timeout-minutes: 45   # A-223: 예산(1800s)+여유 — 6h 러너 소진 재발 방지
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'customs' || github.event_name == 'schedule' }}
     steps:
@@ -329,12 +331,25 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         run: pip install httpx pandas pyarrow comtradeapicall openpyxl   # openpyxl: 업로드본 커버리지 판독(A-253)
-      - name: Run customs connector
+      - name: Run customs API month increment (A-255 — 업로드본 이후 월만 → {국가}_API.xlsx)
+        env:
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+          CUSTOMS_TIME_BUDGET_S: "1800"
+        run: python scripts/customs_gw_api_increment.py
+      - name: Commit API companion files (A-184 패턴 — 업로드 원본 불변, `_API.xlsx`만)
+        run: |
+          git config user.name "nexus-daily-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add "data/raw/관세청/**/*_API.xlsx" 2>/dev/null || true
+          if git diff --cached --quiet; then echo "API 동반 파일 무변경 — 커밋 생략"; exit 0; fi
+          git commit -m "data: 관세청 API 월 증분 → _API.xlsx ($(date -u +%F)) [A-255]"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
+      - name: Run customs connector (백필 전용 — 일별 증분은 위 스텝, A-255)
+        if: ${{ env.BACKFILL_MODE == 'true' }}
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
           UN_COMTRADE_API_KEY:    ${{ secrets.UN_COMTRADE_API_KEY }}
-          # A-223: 일별 잡에 예산 미설정(기본 0=무제한) → 런 #81에서 저녁 data.go.kr
-          # 장애로 6h 소진·런 전체 취소. 30분 예산 — 초과 시 수집분 저장 후 정상 종료
           CUSTOMS_TIME_BUDGET_S: "1800"
         run: python src/pipeline/connectors/customs_connector.py
       - name: Upload raw output
@@ -343,6 +358,7 @@ jobs:
           name: customs-import-${{ github.run_id }}
           path: data/raw/customs_import_*.parquet
           retention-days: 7
+          if-no-files-found: ignore   # 증분 모드는 parquet 미생성
 
   # ── WBS 1.1.33: 지정학 인텔리전스 (Shadowbroker 패턴, Docker 불필요) ────────────
   # USGS 지진: earthquake.usgs.gov (SBO 공급망 핵심 6개 지역 반경 내 M2.5+)

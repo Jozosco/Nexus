@@ -7,7 +7,8 @@
 1507.10 2폴더만 직독. 이 스크립트가 **업로드본 전체**를 하나의 롱포맷으로 정규화한다.
 
 규약:
-  - 원본 xlsx는 읽기 전용(A-184 원본 불가침). `_API.xlsx`·`.partial.xlsx`는 제외(API 소관).
+  - 원본 xlsx는 읽기 전용(A-184 원본 불가침). `.partial.xlsx`는 제외. `_API.xlsx`(A-255 증분)는
+    업로드본이 없는 (지표,월)만 채운다(업로드본 우선 — 사전 등록 규칙).
   - 통합본(`16years…`)은 country=WORLD로 별도 보존(국가 합산과 혼입 금지 — 검증 참조용).
   - 시트 구조: 연도 시트 × 월행 × [무역수지·수출액·수출량·수입액·수입량](헤더행 '무역수지' 탐지).
   - 미완결 월(당해 연도 현재 월 이후)은 물리 제약으로 제거(A-122 GATS 동일 원리).
@@ -120,8 +121,9 @@ def _parse_file(path: Path, today: date) -> pd.DataFrame:
 
 def run(today: date | None = None) -> pd.DataFrame:
     today = today or date.today()
-    files = sorted(p for p in GW_ROOT.rglob("*.xlsx")
-                   if not p.stem.endswith("_API") and ".partial" not in p.name)
+    all_xlsx = sorted(p for p in GW_ROOT.rglob("*.xlsx") if ".partial" not in p.name)
+    files = [p for p in all_xlsx if not p.stem.endswith("_API")]
+    api_files = [p for p in all_xlsx if p.stem.endswith("_API")]      # A-255: API 이어받기 동반 파일
     if not files:
         raise SystemExit(f"[오류] 관세청 GW 업로드본 없음 — {GW_ROOT}")
     frames: list[pd.DataFrame] = []
@@ -154,6 +156,7 @@ def run(today: date | None = None) -> pd.DataFrame:
         df["commodity"] = commodity
         df["use_label"] = use_label
         df["source_name"] = "KoreaCustoms_GW_upload"
+        df["source_kind"] = "upload"
         df["note"] = f"[관세청 GW 업로드본] {commodity} / {use_label or 'HS6 루트'} / {f.stem}"
         frames.append(df.drop(columns=["year", "month", "metric"]))
     if not frames:
@@ -162,6 +165,41 @@ def run(today: date | None = None) -> pd.DataFrame:
     dup = out.duplicated(subset=["indicator_code", "price_date"]).sum()
     if dup:
         raise SystemExit(f"[오류] 지표코드 충돌 {dup}건 — 동일 (HS,국가,월)이 복수 파일에 존재(D-033 원칙: 자동 선택 금지)")
+    # A-255: API 동반 파일(`{국가}_API.xlsx`)은 업로드본이 없는 (지표,월)만 채운다 — 사전 등록된 결정적 우선순위
+    api_frames: list[pd.DataFrame] = []
+    for f in api_files:
+        try:
+            hs, level, commodity, use_label = _hs_from_path(f)
+        except ValueError:
+            continue
+        stem = f.stem[: -len("_API")]
+        cc = _country_code(stem)
+        if _file_kind(f) != "xlsx":
+            continue
+        df = _parse_file(f, today)
+        if df.empty:
+            continue
+        df["price_date"] = pd.to_datetime(dict(year=df["year"], month=df["month"], day=1))
+        df["indicator_code"] = "KCS_" + hs + "_" + df["metric"] + "_" + cc
+        df["unit"] = df["metric"].map(_UNITS)
+        df["hs_code"] = hs
+        df["hs_level"] = level
+        df["country"] = cc
+        df["country_name"] = stem
+        df["commodity"] = commodity
+        df["use_label"] = use_label
+        df["source_name"] = "KoreaCustoms_GW_api"
+        df["source_kind"] = "api"
+        df["note"] = f"[관세청 API 증분] {commodity} / {use_label or 'HS6 루트'} / {stem}"
+        api_frames.append(df.drop(columns=["year", "month", "metric"]))
+    if api_frames:
+        api = pd.concat(api_frames, ignore_index=True)
+        key = ["indicator_code", "price_date"]
+        have = set(map(tuple, out[key].itertuples(index=False, name=None)))
+        api_new = api[~api[key].apply(tuple, axis=1).isin(have)]
+        print(f"[정보] API 동반 파일 {len(api_files)}개 → 업로드본이 없는 (지표,월) {len(api_new):,}행 편입"
+              f"(중복 {len(api) - len(api_new):,}행은 업로드본 우선)")
+        out = pd.concat([out, api_new], ignore_index=True)
     out["ingested_at"] = pd.Timestamp.now("UTC")
     out = attach_asof(out, source="CUSTOMS_")
     OUT.parent.mkdir(parents=True, exist_ok=True)
