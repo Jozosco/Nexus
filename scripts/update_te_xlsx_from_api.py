@@ -154,7 +154,10 @@ def discover_symbols(te_key: str, commodity: str) -> list[str]:
                 break
         except Exception as e:  # noqa: BLE001
             print(f"[정보] TE 심볼 검색 실패({commodity}): {e}")
-    found.sort(key=lambda x: (0 if x.endswith(":COM") else 1 if x.endswith(":IND") else 2))   # A-159
+    # A-159 우선 정렬 + A-256 첫 라이브 런 교훈: 비상품 접미(:HB 등)는 다른 상품(BIF:HB → DAP -64%)을
+    #   집어 점프 게이트에만 걸리므로 :COM/:IND 외 심볼은 후보에서 제외한다.
+    found = [x for x in found if x.endswith((":COM", ":IND"))]
+    found.sort(key=lambda x: (0 if x.endswith(":COM") else 1))
     return list(dict.fromkeys((*fixed, *found)))
 
 
