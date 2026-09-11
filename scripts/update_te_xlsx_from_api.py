@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """Trading Economics API → 기존 수동 xlsx(연도 시트 × Month/Day/Open/High/Low/Close) 증분 갱신 (A-248).
 
-배경: 수동 업로드본 26파일은 2026-07-01까지이고(≈46거래일 공백), 승인자가 API 구독을 연장했다.
-기존 파일 형식·경로를 그대로 유지하며 **마지막 일자 이후 행만 append**한다(원본 시트 불변).
+배경: 승인자가 수동 업로드본 26파일을 2026-09-10까지 직접 갱신했고, 그 이후 일자는 API로
+매일 1행씩 덧붙인다. 기존 파일 형식·경로를 그대로 유지하며 **마지막 일자 이후 행만 append**한다.
+
+모드:
+  - `snapshot`(기본, 일별): `/markets/symbol/{sym}` 스냅샷 1건을 받아 당일 종가 1행을 append한다.
+    historical 엔드포인트가 월별 표본만 반환한 실측(A-249) 때문에 일별 경로는 스냅샷으로 둔다.
+  - `historical`(공백 복구): `/markets/historical/{sym}` 창 조회. 며칠 이상 빠진 파일을 메울 때만
+    수동 dispatch로 실행한다(밀도·점프 게이트 유지).
 
 규약:
   - 심볼은 자기발견(A-150 — /markets/search → :COM/:IND 우선 A-159) + REGISTRY의 고정 심볼 우선.
   - historical 엔드포인트 409/403은 '플랜 미포함'으로 판정해 파일을 건드리지 않고 보고만 한다(A-140).
+  - 스로틀(409/429/"slow down") 확인 시 남은 파일 호출을 **즉시 중단**한다(A-105·A-112 — 실패 처리가
+    스로틀을 자초하던 구조 반복 금지). 비치명 종료.
   - 새 연도 시트는 원본 헤더(Month|Day|Open|High|Low|Close)를 복제해 생성. 내림차순 시트는 상단 삽입.
-  - 갱신 전 원본을 `.bak` 없이 임시 사본에 쓰고, ingest_te_xlsx 파서로 재판독 검증(행 수 증가·날짜 단조)
-    을 통과할 때만 교체한다(A-109 .partial 가드와 동일 원리).
+  - 갱신 전 원본을 `.bak` 없이 임시 사본에 쓰고, 재판독 검증(시트 수·마지막 일자 진전)을 통과할
+    때만 교체한다(A-109 .partial 가드와 동일 원리).
   - 샌드박스는 api.tradingeconomics.com 차단 — GitHub Actions(te_xlsx_update.yml)에서 실행한다.
 
-사용: python scripts/update_te_xlsx_from_api.py [--dry-run] [--only "Soybeans,BDI"]
+사용: python scripts/update_te_xlsx_from_api.py [--mode snapshot|historical] [--dry-run]
+      [--only "Soybeans,BDI"]
 출력: xlsx 갱신 + reports/market/te_api_update_{date}.md
 """
 from __future__ import annotations
@@ -23,6 +32,7 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import quote
@@ -42,6 +52,15 @@ HEADER = ["Month", "Day", "Open", "High", "Low", "Close"]
 THROTTLE = ("slow down", "throttle", "too many")
 MIN_DENSITY = 0.6      # 응답 행 수 / 요청 창 영업일 수 — 미만이면 일별 관측이 아니라고 판정(A-249)
 MAX_JUMP = 0.30        # 기존 마지막 종가 대비 첫 신규 종가 변동률 상한 — 초과 시 계약·집계 혼입 의심(A-249)
+SYMBOL_PACING_S = 0.5  # 심볼 호출 간 간격 — 26파일 × 1~2심볼 ≈ 26~52회(A-105 스로틀 자초 방지)
+MODES = ("snapshot", "historical")
+
+# 스냅샷 응답 컬럼 후보(A-027/A-034 실측 — 심볼·플랜에 따라 일부만 옴)
+_SNAP_DATE_KEYS = ("DateTime", "Date", "datetime", "date")
+_SNAP_CLOSE_KEYS = ("Last", "last", "Close", "close")   # Close는 '전일 종가'일 수 있어 Last 우선
+_SNAP_OPEN_KEYS = ("Open", "open")
+_SNAP_HIGH_KEYS = ("DayHigh", "High", "dayHigh", "high")
+_SNAP_LOW_KEYS = ("DayLow", "Low", "dayLow", "low")
 
 # 파일명 품목 → (검색어, 이름 키워드, 고정 심볼 후보). 고정 심볼은 자기발견 실패 시 폴백.
 REGISTRY: dict[str, tuple[str, tuple[str, ...], tuple[str, ...]]] = {
@@ -185,6 +204,102 @@ def fetch_history(te_key: str, symbols: list[str], d1: date, d2: date) -> tuple[
     return pd.DataFrame(), last_status
 
 
+def _pick(rec: dict, keys: tuple[str, ...]) -> object | None:
+    """응답 레코드에서 후보 키 중 첫 유효값(빈 문자열·None 제외)."""
+    for k in keys:
+        if k in rec and rec[k] not in (None, ""):
+            return rec[k]
+    return None
+
+
+def _parse_snapshot(rec: dict, last_date: date | None = None,
+                    today: date | None = None) -> tuple[dict | None, list[str], str]:
+    """스냅샷 레코드 1건 → ({date,open,high,low,close}, 응답 컬럼 목록, 상태).
+
+    상태: ok | fields(날짜·종가 컬럼 없음) | stale(파일 마지막 일자 이하) | future | weekend.
+    수용 조건은 세 가지뿐이다 — 파일 마지막 일자 초과 · 오늘 이하 · 평일(월~금).
+    `date == today`도 수용한다: 워크플로우가 **미국 장 마감 이후(21:30 UTC = KST 06:30)** 에만
+    돌기 때문에 당일 값은 이미 확정 종가다(그 전 시각에 수동 실행하면 장중값이 들어갈 수 있음).
+    """
+    cols = sorted(rec.keys()) if isinstance(rec, dict) else []
+    if not isinstance(rec, dict):
+        return None, cols, "fields"
+    raw_date, raw_close = _pick(rec, _SNAP_DATE_KEYS), _pick(rec, _SNAP_CLOSE_KEYS)
+    if raw_date is None or raw_close is None:
+        return None, cols, "fields"
+    ts = pd.to_datetime(raw_date, errors="coerce", utc=False)
+    close = pd.to_numeric(pd.Series([raw_close]), errors="coerce").iloc[0]
+    if pd.isna(ts) or pd.isna(close):
+        return None, cols, "fields"
+    obs = ts.date() if hasattr(ts, "date") else None
+    if obs is None:
+        return None, cols, "fields"
+    ref = today or date.today()
+    if obs > ref:
+        return None, cols, "future"
+    if obs.weekday() >= 5:                      # 토·일 스탬프 = 주말 스냅샷 잔상
+        return None, cols, "weekend"
+    if last_date is not None and obs <= last_date:
+        return None, cols, "stale"
+
+    def _num(keys: tuple[str, ...]) -> float:
+        v = _pick(rec, keys)
+        if v is None:
+            return float("nan")
+        return float(pd.to_numeric(pd.Series([v]), errors="coerce").iloc[0])
+
+    row = {"date": obs, "open": _num(_SNAP_OPEN_KEYS), "high": _num(_SNAP_HIGH_KEYS),
+           "low": _num(_SNAP_LOW_KEYS), "close": float(close)}
+    return row, cols, "ok"
+
+
+def fetch_snapshot(te_key: str, symbols: list[str], last_date: date | None,
+                   today: date) -> tuple[dict | None, str, str, list[str]]:
+    """심볼을 차례로 조회해 첫 유효 스냅샷 1건을 반환.
+
+    → (행, 상태, 사용 심볼, 마지막 응답 컬럼). 상태 ∈ ok | empty | fields | stale | weekend |
+      future | throttle | error. throttle이면 호출부는 남은 파일을 중단해야 한다(A-105).
+    """
+    status, cols = "empty", []
+    for i, sym in enumerate(symbols):
+        if i:
+            time.sleep(SYMBOL_PACING_S)
+        try:
+            r = _te_get(f"https://api.tradingeconomics.com/markets/symbol/{quote(sym, safe=':')}",
+                        {"c": te_key, "f": "json"})
+        except Exception as e:  # noqa: BLE001
+            print(f"[경고] TE 스냅샷 요청 실패({sym}): {e}")
+            status = "error"
+            continue
+        if r.status_code in (409, 429) or any(t in r.text.lower() for t in THROTTLE):
+            print(f"[경고] TE 스냅샷 스로틀 HTTP {r.status_code} ({sym}) — 이번 실행 중단")
+            return None, "throttle", sym, cols
+        if r.status_code != 200:
+            print(f"[정보] TE 스냅샷 HTTP {r.status_code} ({sym}) — 다음 심볼")
+            status = "error"
+            continue
+        try:
+            data = r.json()
+        except Exception as e:  # noqa: BLE001
+            print(f"[경고] TE 스냅샷 JSON 파싱 실패({sym}): {e}")
+            status = "error"
+            continue
+        records = data if isinstance(data, list) else [data] if isinstance(data, dict) else []
+        if not records:
+            status = "empty"
+            continue
+        row, cols, st = _parse_snapshot(records[0], last_date, today)   # 첫 레코드만 사용
+        if st == "ok" and row is not None:
+            print(f"[완료] TE 스냅샷 {sym}: {row['date']} 종가 {row['close']}")
+            return row, "ok", sym, cols
+        if st == "fields":
+            print(f"[경고] TE 스냅샷 {sym}: 날짜/종가 컬럼 없음 — 응답 컬럼 {cols}")
+        else:
+            print(f"[정보] TE 스냅샷 {sym}: 행 제외({st}) — 파일 마지막 {last_date}, 오늘 {today}")
+        status = st
+    return None, status, symbols[0] if symbols else "", cols
+
+
 def append_rows(path: Path, rows: pd.DataFrame, desc: bool) -> int:
     """rows(date/open/high/low/close)를 연도 시트에 append. 반환: 추가 행 수."""
     wb = load_workbook(path)
@@ -222,58 +337,109 @@ def _validate(orig: Path, cand: Path) -> tuple[bool, str]:
     return True, f"{a}→{b}"
 
 
-def run(dry_run: bool = False, only: set[str] | None = None) -> list[dict]:
+def _jump_ratio(path: Path, first_new: float) -> float | None:
+    """기존 마지막 종가 대비 신규 첫 종가 변동률(기존 종가 없으면 None)."""
+    last_close = _read_last_close(path)
+    if not last_close:
+        return None
+    return first_new / last_close - 1
+
+
+def _commit_rows(path: Path, rows: pd.DataFrame, desc: bool) -> tuple[bool, int, str]:
+    """임시 사본에 append → 재판독 검증 통과 시에만 원본 교체. → (성공, 추가 행 수, 메시지)."""
+    with tempfile.TemporaryDirectory() as td:
+        cand = Path(td) / path.name
+        shutil.copy(path, cand)
+        n = append_rows(cand, rows, desc)
+        ok, msg = _validate(path, cand)
+        if not ok:
+            return False, 0, msg
+        shutil.copy(cand, path)
+    return True, n, msg
+
+
+def run(dry_run: bool = False, only: set[str] | None = None, mode: str = "snapshot") -> list[dict]:
+    if mode not in MODES:
+        raise SystemExit(f"[오류] 알 수 없는 모드: {mode} — {MODES} 중 하나여야 함")
     te_key = os.environ.get("TRADING_ECONOMICS_API_KEY", "").strip()
     if not te_key and not dry_run:
         raise SystemExit("[오류] TRADING_ECONOMICS_API_KEY 미설정 — GitHub Secrets 확인")
     today = date.today()
+    print(f"[정보] TE xlsx 갱신 시작 — 모드 {mode}, 기준일 {today}"
+          + (" (dry-run — API 호출 없음)" if dry_run else ""))
     results: list[dict] = []
+    throttled = False
     for path in sorted(TE_ROOT.rglob("*.xlsx")):
         commodity = _commodity_of(path)
         if only and commodity not in only:
             continue
         last, desc = _read_last_date(path)
-        rec = {"file": path.name, "commodity": commodity, "last_before": last, "status": "", "added": 0, "symbol": ""}
+        rec = {"file": path.name, "commodity": commodity, "last_before": last, "mode": mode,
+               "status": "", "added": 0, "symbol": ""}
+        if throttled:                       # 스로틀 확인 후 남은 파일은 호출하지 않는다
+            rec["status"] = "스로틀 — 중단"; results.append(rec); continue
         if last is None:
             rec["status"] = "시트 없음"; results.append(rec); continue
-        if last >= today - timedelta(days=1):
+        # snapshot은 '오늘 1행'을 노리므로 마지막 일자가 오늘이어야 최신. historical은 1일 여유.
+        if last >= (today if mode == "snapshot" else today - timedelta(days=1)):
             rec["status"] = "최신"; results.append(rec); continue
         if dry_run:
             rec["status"] = f"dry-run(갱신 필요 {last}~{today})"; results.append(rec); continue
+
         symbols = discover_symbols(te_key, commodity)
         rec["symbol"] = ",".join(symbols[:3])
-        hist, status = fetch_history(te_key, symbols, last, today)
-        if status != "ok":
-            rec["status"] = {"plan": "플랜 미포함(409/403)", "empty": "응답 0행", "error": "HTTP 오류",
-                             "sparse": f"밀도 부족({len(hist)}행) — 미갱신"}[status]
+        if not symbols:
+            rec["status"] = "심볼 미발견"; results.append(rec); continue
+
+        if mode == "snapshot":
+            row, status, used, cols = fetch_snapshot(te_key, symbols, last, today)
+            time.sleep(SYMBOL_PACING_S)
+            if status == "throttle":
+                throttled = True
+                rec["status"] = "스로틀 — 중단"; results.append(rec); continue
+            if status != "ok" or row is None:
+                rec["status"] = {"empty": "스냅샷 응답 없음", "error": "HTTP 오류",
+                                 "fields": f"필드 없음(컬럼 {cols})", "stale": "최신",
+                                 "weekend": "주말 스탬프 — 제외",
+                                 "future": "미래 일자 — 제외"}.get(status, f"미갱신({status})")
+                results.append(rec); continue
+            rec["symbol"] = used
+            new_rows = pd.DataFrame([{**row, "date": pd.Timestamp(row["date"])}])
+        else:
+            hist, status = fetch_history(te_key, symbols, last, today)
+            if status != "ok":
+                rec["status"] = {"plan": "플랜 미포함(409/403)", "empty": "응답 0행", "error": "HTTP 오류",
+                                 "sparse": f"밀도 부족({len(hist)}행) — 미갱신"}[status]
+                results.append(rec); continue
+            new_rows = hist
+
+        first_new = float(new_rows["close"].iloc[0])
+        jump = _jump_ratio(path, first_new)
+        if jump is not None and abs(jump) > MAX_JUMP:
+            rec["status"] = f"점프 {jump:+.0%}(계약·집계 혼입 의심) — 미갱신"
+            print(f"[경고] {path.name}: 기존 종가 대비 {jump:+.0%}(신규 {first_new}) — 미갱신")
             results.append(rec); continue
-        last_close = _read_last_close(path)
-        first_new = float(hist["close"].iloc[0])
-        if last_close and abs(first_new / last_close - 1) > MAX_JUMP:
-            rec["status"] = f"점프 {first_new / last_close - 1:+.0%}(계약·집계 혼입 의심) — 미갱신"
-            print(f"[경고] {path.name}: 기존 종가 {last_close} → 신규 {first_new} — 미갱신")
-            results.append(rec); continue
-        with tempfile.TemporaryDirectory() as td:
-            cand = Path(td) / path.name
-            shutil.copy(path, cand)
-            n = append_rows(cand, hist, desc)
-            ok, msg = _validate(path, cand)
-            if not ok:
-                rec["status"] = f"검증 실패({msg}) — 원본 유지"; results.append(rec); continue
-            shutil.copy(cand, path)
-        rec["status"] = f"갱신({msg})"; rec["added"] = n
+
+        ok, n, msg = _commit_rows(path, new_rows, desc)
+        if not ok:
+            rec["status"] = f"검증 실패({msg}) — 원본 유지"; results.append(rec); continue
+        rec["status"] = f"갱신(+{n}행, {msg})"; rec["added"] = n
         results.append(rec)
         print(f"[완료] {path.name}: +{n}행 ({msg})")
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     rp = REPORT_DIR / f"te_api_update_{today.isoformat()}.md"
     lines = [f"# Trading Economics API 갱신 결과 — {today}", "",
-             "| 파일 | 품목 | 갱신 전 마지막 일자 | 심볼 | 상태 | 추가 행 |", "|---|---|---|---|---|---|"]
-    lines += [f"| {r['file']} | {r['commodity']} | {r['last_before']} | {r['symbol']} | {r['status']} | {r['added']} |" for r in results]
+             "| 파일 | 품목 | 모드 | 갱신 전 마지막 일자 | 심볼 | 상태 | 추가 행 |",
+             "|---|---|---|---|---|---|---|"]
+    lines += [f"| {r['file']} | {r['commodity']} | {r['mode']} | {r['last_before']} "
+              f"| {r['symbol']} | {r['status']} | {r['added']} |" for r in results]
     plan = [r for r in results if r["status"].startswith("플랜")]
     if plan:
-        lines += ["", f"> ⚠️ {len(plan)}건이 '플랜 미포함(409/403)' — 연장 플랜에 Markets Historical이 포함되지 않았다면 "
-                      "①플랜 상향 또는 ②일별 스냅샷 append(te_connector)로 대체해야 함(결정 요청)."]
+        lines += ["", f"> ⚠️ {len(plan)}건이 '플랜 미포함(409/403)' — 연장 플랜에 Markets Historical이 "
+                      "포함되지 않았다면 ①플랜 상향 또는 ②일별 스냅샷 append로 대체해야 함(결정 요청)."]
+    if throttled:
+        lines += ["", "> ⚠️ 스로틀(409/429)로 남은 파일 호출을 중단함 — 다음 회차에서 이어서 갱신됨(비치명)."]
     rp.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"[완료] 보고서 → {rp}")
     return results
@@ -281,7 +447,10 @@ def run(dry_run: bool = False, only: set[str] | None = None) -> list[dict]:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
+    ap.add_argument("--mode", choices=MODES, default="snapshot",
+                    help="snapshot=일별 1행 append(기본) · historical=공백 복구 창 조회")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--only", default="")
     a = ap.parse_args()
-    run(dry_run=a.dry_run, only=set(x.strip() for x in a.only.split(",") if x.strip()) or None)
+    run(dry_run=a.dry_run, only=set(x.strip() for x in a.only.split(",") if x.strip()) or None,
+        mode=a.mode)

@@ -1,14 +1,25 @@
 # A-248: Trading Economics API → 수동 xlsx(연도 시트) 증분 갱신 — 승인자 구독 연장(2026-09) 반영.
 # 샌드박스는 api.tradingeconomics.com 차단이라 Actions가 유일한 실행 표면.
-# 자기 파일 push 시 1회 자동 발화(A-046 패턴) + 수동 dispatch. 스케줄 없음(D-026 정합 — 월 1회 수동 권장).
+# 발화: ①평일 21:30 UTC(=KST 06:30) 스케줄 — 미국 장 마감 이후·22:52 UTC 파이프라인 이전,
+#       스냅샷 1행 append. ②자기 파일 push 1회(A-046 패턴). ③수동 dispatch(모드·품목 선택).
 name: Trading Economics xlsx Update (API → 연도 시트 append)
 
 on:
+  schedule:
+    - cron: "30 21 * * 1-5"     # 평일 21:30 UTC = KST 06:30 (미국 장 마감 후 · 일별 파이프라인 전)
   push:
     paths:
       - ".github/workflows/te_xlsx_update.yml"
   workflow_dispatch:
     inputs:
+      mode:
+        description: "snapshot=당일 1행 append(기본) · historical=공백 복구(창 조회)"
+        required: false
+        type: choice
+        default: "snapshot"
+        options:
+          - snapshot
+          - historical
       only:
         description: "갱신할 품목(쉼표 구분, 파일명 2번째 토큰 — 예: Soybeans,BDI). 비우면 전체"
         required: false
@@ -43,7 +54,10 @@ jobs:
       - name: Update xlsx from TE API
         env:
           TRADING_ECONOMICS_API_KEY: ${{ secrets.TRADING_ECONOMICS_API_KEY }}
-        run: python scripts/update_te_xlsx_from_api.py --only "${{ github.event.inputs.only }}"
+          # schedule·push 발화 시 inputs가 비므로 기본값을 명시한다(argparse choices가 빈 값을 거부).
+          TE_MODE: ${{ github.event.inputs.mode || 'snapshot' }}
+          TE_ONLY: ${{ github.event.inputs.only || '' }}
+        run: python scripts/update_te_xlsx_from_api.py --mode "$TE_MODE" --only "$TE_ONLY"
       - name: Rebuild TE parquet (검증 재판독)
         run: python scripts/ingest_te_xlsx.py
       - name: Commit updated xlsx + report
