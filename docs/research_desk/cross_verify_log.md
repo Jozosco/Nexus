@@ -8,14 +8,24 @@
 
 ## 요약
 
-- 총 검증 기록 **205건** — 판정 산출 144 · 실패(미판정) 61
-- 누적 지적: **[치명] 144건 · [높음] 1506건**
+- 총 검증 기록 **215건** — 판정 산출 154 · 실패(미판정) 61
+- 누적 지적: **[치명] 153건 · [높음] 1625건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-09-13 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-09-13 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-09-13 | `git diff HEAD~1` | ⚠️ 지적 | 0 | 13 | [높음] 월평균 기온에 일중 고온 임계값 35°C를 직접 연결함 | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_git_diff_HEAD_1_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 1 | 15 | [높음] 문서 수와 인덱스 행 수가 불일치한다. | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/hybrid_methodology_design` | ⚠️ 지적 | 2 | 19 | [높음] BL의 prior와 시장 비중을 서로 다른 단위인 채로 혼합했다. | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_docs_research_desk_2026-08_hybrid_methodology_design_2026_08_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/hs_code_classification_20` | ⚠️ 지적 | 1 | 14 | [치명] 현행 HSK 코드를 2010~2026 전체에 소급 적용했다. | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 1 | 19 | [높음] 분석 기간과 표본 비율이 맞지 않음 (§1, §2.2). | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 3 | 23 | [높음] 대표 아이디어 개수가 틀림.** 본문 열거는 A 6건+B 5건+C 6건+D 6건+E 5건으로 **총 28건**이다. 표지·§3·부록의 “대표 24건”, “24건 중 21건 | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 1 | 16 | [높음] 검증되지 않은 `$175/MT`를 운영 임계값으로 사용 | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-09-13 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34754765228 | [xverify_2026-09-13_347547652…](../../reports/cross_verify/xverify_2026-09-13_34754765228_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-09-13 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 1 | 15 | [치명] 8/14 — 도착가 분위수로 해석할 수 없는 성분을 ‘주 밴드’로 제시 | 34754765228 | [xverify_2026-09-13_347547652…](../../reports/cross_verify/xverify_2026-09-13_34754765228_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-09-13 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34754765228 | [xverify_2026-09-13_347547652…](../../reports/cross_verify/xverify_2026-09-13_34754765228_git_diff_HEAD_1_1.md) |
