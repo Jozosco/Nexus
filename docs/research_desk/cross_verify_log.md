@@ -8,14 +8,24 @@
 
 ## 요약
 
-- 총 검증 기록 **225건** — 판정 산출 164 · 실패(미판정) 61
-- 누적 지적: **[치명] 170건 · [높음] 1765건**
+- 총 검증 기록 **235건** — 판정 산출 174 · 실패(미판정) 61
+- 누적 지적: **[치명] 187건 · [높음] 1881건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-09-13 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 1 | 17 | [치명] 8/14·8/19·8/25의 운임 관련 판단이 오류로 확인된 BDI 계열에 기반함. | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-09-13 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 2 | 14 | [치명] 8/14·8/19·8/29 관세청 국가 합산층이 불완전하거나 사후 개정됐으며, 이를 반영하지 않은 밴드가 산출됨 | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-09-13 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_git_diff_HEAD_1_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 3 | 14 | [높음] 문서 규모 `~5천`의 산정 단위가 일관되지 않는다. | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/hybrid_methodology_design` | ⚠️ 지적 | 3 | 14 | [치명] BL 입력의 차원과 단위가 성립하지 않습니다. | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_docs_research_desk_2026-08_hybrid_methodology_design_2026_08_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/hs_code_classification_20` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 2 | 21 | [높음] 분석 기간 연수 오기** — `2010-01~2025-12`는 양 끝을 포함해 **192개월, 16개년**이다. 15개년이라면 `2011-01~2025-12` 등 180개 | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 4 | 22 | [높음] 대표 아이디어 수가 맞지 않는다.** 표에 기재된 항목은 A 6건+B 5건+C 6건+D 6건+E 5건으로 **총 28건**이다. 문서 전반의 “대표 아이디어 24건”, “ | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 2 | 14 | [높음] 조유 수입량 범위와 자체 계산이 모순됨 (§4·§4b) | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-09-13 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 1 | 18 | [치명] 2026-08-14·08-19·08-25 — 정정 전 BDI로 산출한 판정이 본문에 그대로 남아 있음.** 각 문서의 정오표가 BDI 값·z·운임 레짐이 재척도 전 수동본 | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-09-13 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 1 | 10 | [치명] 2026-08-14·08-19·08-29 보고서의 관세청 국가 합산이 불완전하다. | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-09-13 | `git diff HEAD~1` | ⚠️ 지적 | 0 | 1 | [높음] 재현 불가능한 검증 대상**: `git diff HEAD~1`은 저장소·브랜치·커밋 SHA가 제공되지 않아 동일 결과를 재현할 수 없습니다. 또한 이 명령은 `HEAD~1 | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_git_diff_HEAD_1_1.md) |
