@@ -1,3 +1,4 @@
+# 주의(2026-09-13): 로컬 스냅샷 — feat_TE_BDI 통계는 정정 전 BDI 계열 기준. CI가 매 런 재생성함(정오표 bdi_series_correction_errata_2026_09_13.md).
 generated: '2026-08-13'
 window:
   start: '2010-01-01'

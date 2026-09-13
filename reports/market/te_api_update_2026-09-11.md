@@ -28,3 +28,5 @@
 | 2010~2026_GSCI_S&P_Points.xlsx | GSCI | snapshot | 2026-09-11 |  | 최신 | 0 |
 | 2013~2026_Containerized Freight Index_Points.xlsx | Containerized Freight Index | snapshot | 2026-09-11 |  | 최신 | 0 |
 | 2025~2026_Drewry World Container Index_USD.xlsx | Drewry World Container Index | snapshot | 2026-06-25 | WCI:IND | 스냅샷 응답 없음 | 0 |
+
+> 각주(2026-09-13, 정오표): BDI 행의 점프 게이트 차단(+378%)은 **정당했음** — 갱신 전 파일의 2023-01-03 이후 계열이 오류였고(승인자 확인), 9/13 재업로드 정정본(9/9 3,620)은 API 스냅샷(≈3,521)과 같은 척도(−2.7% ≤ 30%)이므로 정정본 이후에는 정상 append가 예상됨. 실측·영향 산출물: `docs/research_desk/2026-09/bdi_series_correction_errata_2026_09_13.md`.

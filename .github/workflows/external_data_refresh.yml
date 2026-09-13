@@ -778,6 +778,7 @@ jobs:
             reports/market/feature_mart_*.md
             data/gold/feature_mart.parquet
             data/gold/feature_contract.yaml
+            data/raw/te_commodities_historical.parquet   # A-258: TE 수동본(BDI 9개년)을 G1 잡에 전달 — 없으면 API BDI(2017~) 폴백
           retention-days: 30
           if-no-files-found: error
 
@@ -816,6 +817,17 @@ jobs:
             if [ -n "$src" ]; then mv "$src" "data/gold/$f"; echo "복원: $f ($src)"; fi
           done
           test -f data/gold/feature_mart.parquet || { echo "::error::feature mart 미착지 — readiness 아티팩트 확인"; exit 1; }
+          # A-258: Readiness 잡이 재구성한 TE 수동본(BDI 9개년)도 merge 다운로드 시
+          # data/raw/data/raw/에 착지 — G1 로더 기대 경로(data/raw/)로 복원.
+          # 미착지면 variable_importance_g1._series_from_frames가 API BDI(2017~)로 폴백하므로 경고만.
+          te_src=$(find data/raw -name "te_commodities_historical.parquet" -type f -not -path "data/raw/te_commodities_historical.parquet" | head -n 1)
+          if [ -n "$te_src" ]; then
+            mv "$te_src" "data/raw/te_commodities_historical.parquet"
+            echo "복원: te_commodities_historical.parquet ($te_src)"
+          fi
+          if [ ! -f data/raw/te_commodities_historical.parquet ]; then
+            echo "::warning::TE 수동본 parquet 미착지 — G1 BDI 경보는 API 계열 폴백(A-258)"
+          fi
       - name: as-of 시점 정합성 게이트 (D-023) — 위반 시 모델 진입 차단
         # available_at 없는 피처는 CLAUDE.md §1에 따라 모델 투입 금지.
         # 이행기에는 ASOF_EXEMPT로 미적용 산출물을 면제할 수 있다(적용 완료 시 제거).
