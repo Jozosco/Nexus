@@ -48,7 +48,7 @@ class CaseProfile:
 
 
 CASE_PROFILES: dict[str, CaseProfile] = {
-    "Case 1 · 2010-11 라니냐·러 수출금지": CaseProfile(
+    "사례 ① · 2010-11 라니냐·러 수출금지": CaseProfile(
         "2010-06-01", "2011-09-30",
         "라니냐 최고조(ONI −1.4)로 남미 작황 취약성이 누적된 상태에서, 러시아가 폭염·"
         "가뭄으로 밀 수출을 금지함(2010-08).",
@@ -57,7 +57,7 @@ CASE_PROFILES: dict[str, CaseProfile] = {
         "2~3개월 선행함.",
         "기후 취약성이 깔린 상태에서 단일 정책 이벤트가 추가 충격으로 얹히는 중첩 구조.",
         "당시 파급은 곡물發 대체 수요 경로였고, 물류(운임·해협) 요인의 비중은 크지 않았음."),
-    "Case 2 · 2012 미국 대가뭄": CaseProfile(
+    "사례 ② · 2012 미국 대가뭄": CaseProfile(
         "2012-05-01", "2013-08-31",
         "미국 중서부 대가뭄(예외적 가뭄 등급 면적 35%) — 7월 WASDE가 미국 대두 생산 "
         "전망을 −14.4% 하향함.",
@@ -66,7 +66,7 @@ CASE_PROFILES: dict[str, CaseProfile] = {
         "발표 이벤트(WASDE) 전후로 가격이 빠르게 재평가되는 패턴.",
         "당시는 운임(BDI) 저수준·수입 수요 부진의 삼중 부정 구조 — 고점이 지속되지 "
         "못한 조건이 겹쳐 있었음."),
-    "Case 3 · 2021-22 복합 위기": CaseProfile(
+    "사례 ③ · 2021-22 복합 위기": CaseProfile(
         "2020-08-01", "2022-06-30",
         "2년 연속 라니냐(아르헨 감산) + 러시아-우크라이나 전쟁(해바라기유 공급 45~50% "
         "붕괴) + 인도네시아 팜유 수출 금지 + 인도 수입 관세 인하.",
@@ -77,10 +77,10 @@ CASE_PROFILES: dict[str, CaseProfile] = {
         "가격 고점에 6~18개월 선행함.",
         "'요충 경로 불안 → 우회·보험료 → 도착가 상방'의 물류 증폭 구조가 현재 호르무즈 "
         "국면과 동형임(당시는 COVID·흑해發 경로 차질).",
-        "당시는 수요 측 충격(바이오디젤·인도 수입)이 동반됨 — corrections 재평가에서 "
-        "유사도 7/10로 하향(우크라이나 요인 제외), 2024-25 미·중 관세 사례(Case D)가 "
+        "당시는 수요 측 충격(바이오디젤·인도 수입)이 동반됨 — 재평가 기록에서 "
+        "유사도 7/10로 하향(우크라이나 요인 제외), 2024-25 미·중 관세 사례가 "
         "9/10로 더 유사 판정."),
-    "Case 4 · 2022-23 아르헨 가뭄": CaseProfile(
+    "사례 ④ · 2022-23 아르헨 가뭄": CaseProfile(
         "2022-12-01", "2023-04-30",
         "3년 연속(트리플딥) 라니냐로 아르헨티나 대두 생산 −42%(43.4→25.0 MMT), "
         "로사리오 압착 허브 가동률 45%로 급락.",
@@ -306,7 +306,7 @@ def render_analogue_md(results: list[AnalogueResult]) -> list[str]:
                 "- 분석 데이터 미가용 또는 대상 변수 부재 — 산출 보류.", ""]
     lines = ["## 과거 유사 시기 실측 참조", "",
              f"변수의 표준화 지수(z)가 현재와 같은 구간이었던 과거 거래일들의 이후 실측 분포. "
-             f"**{_REQUIRED_CAPTION}** (A-191 · 통계 검정 없음 — 기술 서술).", ""]
+             f"**{_REQUIRED_CAPTION}** (통계 검정 없음 — 기술 서술).", ""]
     by_var: dict[str, list[AnalogueResult]] = {}
     for r in results:
         by_var.setdefault(r.var_code, []).append(r)
@@ -319,7 +319,7 @@ def render_analogue_md(results: list[AnalogueResult]) -> list[str]:
         if badges:
             lines.append(f"- 겹치는 위기 사례: {' · '.join(badges)} "
                          f"(→ `_reference/soybean_oil_historical_crisis_analysis.md` — "
-                         f"corrections 병독)")
+                         f"재평가 기록 병독)")
             for b in badges:
                 narr = case_narrative_lines(b)
                 if narr:

@@ -731,7 +731,9 @@ signal_tag_mapping:
     entities: [TERM-042, TERM-139]
     daily_codes: ['RSS_FARMDOC_DAILY', 'RSS_WORLD_GRAIN', 'RSS_OFI_MAGAZINE', 'RSS_GRAIN_ORG',
                   'RSS_SOYGROWERS', 'RSS_CLIMATEPOL', 'RSS_AGMARKET', 'RSS_GRAINCENTRAL',
-                  'RSS_TFM', 'RSS_UKRAGRO']
+                  'RSS_TFM', 'RSS_UKRAGRO',
+                  'RSS_REUTERS_COMMODITIES', 'RSS_REUTERS_CLIMATE_ENERGY',   # 2026-09-13 승인자 지시
+                  'RSS_AP_COMMODITIES', 'RSS_AP_WORLD']
     note: 값은 일자별 기사 수이며 주제 신호가 아니다 — 주제 귀속은 기사 본문 태깅(P1-05) 이후에만.
       RSS_FARMDOC_DAILY·RSS_WORLD_GRAIN 외 8종은 다이제스트 레지스트리 편입과 동시에 유효해진다.
   - tag_ko: TONE

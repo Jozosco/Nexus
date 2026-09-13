@@ -104,6 +104,12 @@ chokepoints:
       note: "보스포루스·다르다넬스와 구분되는 회랑 개념"
     lead_time_impact: {added_days: "10~15→30~40일", freight_pct: "운송비 20~25→70~100 $/t", source: "CE-013 evidence(우크라이나 곡물 기준 — 유지 탱커 아님)"}
 
+# 항로 코드 → 화면 표시명(브리프 한글화 — 코드는 온톨로지 supply_chain 참조)
+route_names_ko:
+  RT-SANTOS-KR: "산토스(브라질)→한국"
+  RT-ROSARIO-KR: "로사리오(아르헨티나)→한국"
+  RT-USG-KR: "미국 걸프→한국"
+
 korea_index:
   # 한국향 직접 경유 노출 = 직접 경유 해협 점수의 최대치(가중 평균 아님 — 원산지 비중 가중은 관세청 커버리지 한계로 보류)
   direct_keys: [panama, malacca]

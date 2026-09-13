@@ -29,8 +29,8 @@
 #   §2 예외 2건(apis.data.go.kr HTTP-80 · stream.aisstream.io wss)은 별도 승인 필요 — 1차
 #   파이프라인 등재 심사와 분리해 선신청. §5 planned의 Azure 2종은 **폐기**(Azure 저장 기능 폐지).
 #   판정 문서: docs/research_desk/2026-09/cloud_integration_impact_2026_09_02.md
-version: '2.5'                   # v2.5: 조정자 일별 소스 5계열(S&P Global·AgMarket·GrainCentral·TFM·UkrAgroConsult) — 누적 56건
-updated: 2026-08-28
+version: '2.6'                   # v2.6: Reuters·AP 일별 수집(Google News RSS 프록시 + 원문 섹션 폴백) — 누적 59건 · v2.5: 일별 소스 5계열 56건
+updated: 2026-09-13
 owner: C-04
 submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수집 중단 방지)
 
@@ -38,16 +38,16 @@ submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수
 # §1 제출 요약 — 신청서 상단에 그대로 기재
 # ════════════════════════════════════════════════════════════════════════════
 submission:
-  total_requested: 56          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.5: 일별 소스 5계열 추가
+  total_requested: 59          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.6: Reuters·AP 3호스트 추가
   by_criticality:
     critical: 6                # 차단 시 파이프라인·모델 전면 중단
     high: 9                    # 차단 시 핵심 변수 결손
-    medium: 21                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.4: MPOB·CFTC 추가
-    low: 20                    # 폴백·부가 기능 — v2.4: Eurostat·JRC 추가
+    medium: 22                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.6: news.google.com 추가
+    low: 22                    # 폴백·부가 기능 — v2.6: reuters.com·apnews.com 원문 폴백 추가
   exceptions_requiring_approval: 3   # §2 참조 (평문 HTTP 1 · WebSocket 1 · 조건부 신규 1)
   excluded: 1                  # cds.climate.copernicus.eu — 미사용 확정, 신청 불요
   protocol_note: >
-    56건 중 54건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
+    59건 중 57건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
     프로토콜·포트가 표준과 다른 항목만 별도 승인이 필요하며, 나머지는 일괄 처리 가능하다.
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -441,6 +441,28 @@ hosts:
     connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media)
     impact_if_blocked: 흑해 축 전문 신호(RSS_UKRAGRO) 결손 — 비치명
     note: 2026-08-28 조정자 지시 — v2.5 신규
+  # ── v2.6 (2026-09-13 승인자 지시) — Reuters·AP 6개 섹션 일별 점검 ───────────────
+  - host: news.google.com
+    port: 443
+    criticality: medium
+    purpose: Google News RSS 검색 프록시 — Reuters·AP 기사(대두유 수급·가격 키워드·site 한정) 일별 수집. 두 매체가 공개 RSS를 폐지해 표준 RSS 2.0을 제공하는 유일한 무료 경로
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media · _gnews)
+    impact_if_blocked: Reuters·AP 4계열(RSS_REUTERS_*·RSS_AP_*) 결손 — 원문 섹션 폴백은 비브라우저 차단이 예상돼 사실상 수집 불가. 비치명
+    note: 2026-09-13 승인자 지시 — v2.6 신규(1순위 경로)
+  - host: www.reuters.com
+    port: 443
+    criticality: low
+    purpose: Reuters markets/commodities · markets/carbon · sustainability/climate-energy 섹션(원문 열람·폴백)
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media — 폴백 슬롯)
+    impact_if_blocked: 원문 링크 열람 불가 — 수집은 news.google.com 경로가 대체. 비치명
+    note: 2026-09-13 승인자 지시 — v2.6 신규(폴백·열람용)
+  - host: apnews.com
+    port: 443
+    criticality: low
+    purpose: AP world-news · hub/commodity-markets · hub/commodity-futures-trading-commission 섹션(원문 열람·폴백)
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media — 폴백 슬롯)
+    impact_if_blocked: 원문 링크 열람 불가 — 수집은 news.google.com 경로가 대체. 비치명
+    note: 2026-09-13 승인자 지시 — v2.6 신규(폴백·열람용)
 
 excluded:
   - host: cds.climate.copernicus.eu

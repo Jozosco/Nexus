@@ -43,13 +43,23 @@ DAILY_UNSTRUCTURED = {
     # 나타나지 않고 온톨로지 태그 배정 점검(C12)에서도 빠진다.
     "전문 매체":     ["RSS_FARMDOC_DAILY", "RSS_WORLD_GRAIN", "RSS_OFI_MAGAZINE",
                      "RSS_GRAIN_ORG", "RSS_SOYGROWERS", "RSS_CLIMATEPOL",
-                     "RSS_AGMARKET", "RSS_GRAINCENTRAL", "RSS_TFM", "RSS_UKRAGRO"],
+                     "RSS_AGMARKET", "RSS_GRAINCENTRAL", "RSS_TFM", "RSS_UKRAGRO",
+                     # 2026-09-13 승인자 지시 — Reuters·AP (대두유 수급·가격 영향 기사 매일 점검)
+                     "RSS_REUTERS_COMMODITIES", "RSS_REUTERS_CLIMATE_ENERGY",
+                     "RSS_AP_COMMODITIES", "RSS_AP_WORLD"],
 }
 
 # ── 전문 매체 RSS (조정자 지시 8/25 · 확장 8/25 2차 — 일별·거시 시황 소스) ──────
 # egress_allowlist 등재 호스트만. RSS 실패는 다이제스트를 죽이지 않는다(비치명).
 # URL 후보는 폴백 순서 — 실제 피드 경로는 Actions 런 로그로 판정(샌드박스 열람 차단).
 # ⚠️ IGC(igc.int)는 RSS 부재 추정 — 월별 Grain Market Report는 수동/추후 경로(미편입).
+def _gnews(site: str, topic: str, when: str = "2d") -> str:
+    """Google News RSS 검색 프록시 URL — 매체(site:)와 주제어를 질의에 넣어 서버측에서 좁힌다."""
+    from urllib.parse import quote
+    q = f"when:{when} site:{site} {topic}"
+    return f"https://news.google.com/rss/search?q={quote(q)}&hl=en-US&gl=US&ceid=US:en"
+
+
 RSS_SOURCES = {
     # farmdoc daily(일리노이대) — 작황·바이오연료·무역 실증 분석 (A-201 farmdoc 논문 계열)
     "RSS_FARMDOC_DAILY": ["https://farmdocdaily.illinois.edu/feed"],
@@ -82,6 +92,30 @@ RSS_SOURCES = {
     # UkrAgroConsult — 흑해 유지작물·곡물·물류 (해바라기유 축 — D-049 정합)
     "RSS_UKRAGRO": ["https://ukragroconsult.com/en/feed/",
                     "https://ukragroconsult.com/feed/"],
+    # ── 2026-09-13 승인자 지시 — Reuters·AP 6개 섹션 (egress v2.6) ──────────────────
+    #   두 매체 모두 공개 RSS를 폐지(Reuters 2020·AP hub .rss 미유지 — 웹 조사 확인)했으므로
+    #   1순위는 Google News RSS 검색 프록시(site: 한정 + 대두유 수급·가격 키워드를 질의에
+    #   서버측 삽입 — 표준 RSS 2.0이라 기존 파서 무수정). 2순위는 승인자 원문 섹션 URL —
+    #   비브라우저 요청은 차단이 예상되나 비치명이므로 첫 Actions 런 로그로 실증한다.
+    "RSS_REUTERS_COMMODITIES": [
+        _gnews("reuters.com", "(soybean OR soyoil OR \"soybean oil\" OR \"vegetable oil\" OR "
+                              "\"palm oil\" OR crush OR biodiesel OR tariff OR \"export tax\" "
+                              "OR freight OR carbon)"),
+        "https://www.reuters.com/markets/commodities/",
+        "https://www.reuters.com/markets/carbon/"],
+    "RSS_REUTERS_CLIMATE_ENERGY": [
+        _gnews("reuters.com", "(biofuel OR biodiesel OR \"renewable diesel\" OR RVO OR EPA OR "
+                              "drought OR \"El Nino\" OR \"La Nina\" OR climate)"),
+        "https://www.reuters.com/sustainability/climate-energy/"],
+    "RSS_AP_COMMODITIES": [
+        _gnews("apnews.com", "(soybean OR \"soybean oil\" OR \"vegetable oil\" OR \"palm oil\" OR "
+                             "commodities OR futures OR CFTC OR tariff OR freight)"),
+        "https://apnews.com/hub/commodity-markets",
+        "https://apnews.com/hub/commodity-futures-trading-commission"],
+    "RSS_AP_WORLD": [
+        _gnews("apnews.com", "(\"Red Sea\" OR Hormuz OR \"Black Sea\" OR \"Suez\" OR Argentina OR "
+                             "Brazil OR drought OR tariff OR shipping)"),
+        "https://apnews.com/world-news"],
     # S&P Global Commodity Insights: 공개 RSS 부재 추정 — 자동 수집 미등재(실패 소음 방지).
     # 부록 인사이트는 Perplexity 프록시 경유 요약으로 커버 (egress에는 열람용 등재)
 }
@@ -90,6 +124,9 @@ _RSS_KEYWORDS = (
     "soybean", "soy oil", "soyoil", "soybean oil", "vegetable oil", "oilseed",
     "palm oil", "canola", "rapeseed", "sunflower", "crush", "biodiesel",
     "renewable diesel", "wasde", "export tax", "tariff", "south korea",
+    # 2026-09-13 Reuters·AP 편입 — 수급·가격 영향 키워드(2차 게이트; 1차는 질의 서버측 한정)
+    "biofuel", "rvo", "cftc", "freight", "drought", "el niño", "el nino", "la niña", "la nina",
+    "red sea", "hormuz", "black sea",
     # 국문 (climatepol 등 한국 매체용)
     "대두", "대두유", "팜유", "식용유", "유지", "바이오디젤", "바이오연료",
     "항공유", "saf", "곡물", "수출세", "관세",
