@@ -8,14 +8,24 @@
 
 ## 요약
 
-- 총 검증 기록 **215건** — 판정 산출 154 · 실패(미판정) 61
-- 누적 지적: **[치명] 153건 · [높음] 1625건**
+- 총 검증 기록 **225건** — 판정 산출 164 · 실패(미판정) 61
+- 누적 지적: **[치명] 170건 · [높음] 1765건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-09-13 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 1 | 18 | [치명] 2026-08-14·08-19·08-25 — 정정 전 BDI로 산출한 판정이 본문에 그대로 남아 있음.** 각 문서의 정오표가 BDI 값·z·운임 레짐이 재척도 전 수동본 | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
+| 2026-09-13 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 1 | 10 | [치명] 2026-08-14·08-19·08-29 보고서의 관세청 국가 합산이 불완전하다. | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
+| 2026-09-13 | `git diff HEAD~1` | ⚠️ 지적 | 0 | 1 | [높음] 재현 불가능한 검증 대상**: `git diff HEAD~1`은 저장소·브랜치·커밋 SHA가 제공되지 않아 동일 결과를 재현할 수 없습니다. 또한 이 명령은 `HEAD~1 | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_git_diff_HEAD_1_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/knowledge_repository_opti` | ⚠️ 지적 | 1 | 15 | [높음] 인덱싱 규모가 서로 맞지 않는다.** 권장 구조에 명시된 단위는 `2,175 + 300+ + 66 + 152 = 2,693+`건인데, 벡터 DB 배제 근거에서는 “문서 ~ | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_docs_research_desk_2026-08_knowledge_repository_options_2026_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/hybrid_methodology_design` | ⚠️ 지적 | 5 | 16 | [치명] 뷰 신뢰도와 \(\Omega\)의 단위가 맞지 않는다.** BL의 \(\Omega\)는 뷰 오차의 공분산 행렬로, Q가 예컨대 USD/톤이면 원소 단위는 \((USD/톤) | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_docs_research_desk_2026-08_hybrid_methodology_design_2026_08_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/hs_code_classification_20` | ⚠️ 지적 | 1 | 15 | [치명] 2010~2026 누적치에 연도별 HSK 코드 정의를 소급 적용했다. | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_docs_research_desk_2026-08_hs_code_classification_2026_08_25_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 3 | 20 | [높음] 분석 기간과 표본 비율이 서로 맞지 않음 | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/differentiation_brainstor` | ⚠️ 지적 | 4 | 25 | [높음] 대표 아이디어 수가 24건이 아니라 28건임 | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_docs_research_desk_2026-08_differentiation_brainstorm_2026_0_1.md) |
+| 2026-09-13 | `docs/research_desk/2026-08/abcd_trading_structure_20` | ⚠️ 지적 | 1 | 20 | [높음] §5 잔차의 부호가 자기모순이다.** “잔차층이 음수(−210/−32/+123 $/MT)”라고 했지만 `+123 $/MT`는 양수다. 이어지는 “방향은 일관”도 세 값의  | 34758941481 | [xverify_2026-09-13_347589414…](../../reports/cross_verify/xverify_2026-09-13_34758941481_docs_research_desk_2026-08_abcd_trading_structure_2026_08_15_1.md) |
 | 2026-09-13 | `reports/market/procurement_alternatives_2026-08-14.m` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-09-13 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-09-13 | `git diff HEAD~1` | ⚠️ 지적 | 0 | 13 | [높음] 월평균 기온에 일중 고온 임계값 35°C를 직접 연결함 | 34758872194 | [xverify_2026-09-13_347588721…](../../reports/cross_verify/xverify_2026-09-13_34758872194_git_diff_HEAD_1_1.md) |
