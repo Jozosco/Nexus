@@ -63,7 +63,10 @@ _SNAP_HIGH_KEYS = ("DayHigh", "High", "dayHigh", "high")
 _SNAP_LOW_KEYS = ("DayLow", "Low", "dayLow", "low")
 
 # 파일명 품목 → (검색어, 이름 키워드, 고정 심볼 후보). 고정 심볼은 자기발견 실패 시 폴백.
-REGISTRY: dict[str, tuple[str, tuple[str, ...], tuple[str, ...]]] = {
+# 검색어는 str 또는 tuple[str, ...] — 여러 개면 순서대로 시도한다(2026-09-13: 고정 심볼 TTF:COM·WCI:IND·
+#   DAP:COM이 빈 스냅샷을 반환하고 단일 검색어가 :COM/:IND 필터 뒤 0건이라 다중 검색어 폴백 도입).
+SearchTerms = str | tuple[str, ...]
+REGISTRY: dict[str, tuple[SearchTerms, tuple[str, ...], tuple[str, ...]]] = {
     "Soybeans":      ("soybeans", ("soybean",), ("S 1:COM",)),
     "Corn":          ("corn", ("corn",), ("C 1:COM",)),
     "Wheat":         ("wheat", ("wheat",), ("W 1:COM",)),
@@ -76,21 +79,29 @@ REGISTRY: dict[str, tuple[str, tuple[str, ...], tuple[str, ...]]] = {
     "WTI Crude Oil": ("crude oil", ("crude", "wti"), ("CL1:COM",)),
     "Coal":          ("coal", ("coal",), ("XAL1:COM",)),
     "Natural Gas":   ("natural gas", ("natural", "gas"), ("NG1:COM",)),
-    "EU Natural Gas": ("ttf", ("ttf",), ("TTF:COM",)),
+    "EU Natural Gas": (("ttf", "eu natural gas", "dutch ttf"), ("ttf",), ("TTF:COM",)),
     "UK Natural Gas": ("uk gas", ("uk", "gas"), ("NBP:COM",)),
     "Gasoline":      ("gasoline", ("gasoline",), ("XB1:COM",)),
     "Heating Oil":   ("heating oil", ("heating",), ("HO1:COM",)),
     "Naphtha":       ("naphtha", ("naphtha",), ("NAPHTHA:COM",)),
     "Ethanol":       ("ethanol", ("ethanol",), ("ETHANOL:COM",)),
     "Urea":          ("urea", ("urea",), ("UREA:COM",)),
-    "Di-ammonium":   ("dap", ("dap",), ("DAP:COM",)),
+    "Di-ammonium":   (("dap", "diammonium", "di-ammonium phosphate", "phosphate"), ("dap",),
+                      ("DAP:COM",)),
     "BDI":           ("baltic dry", ("baltic", "dry"), ("BDIY:IND",)),
     "CRB Index":     ("crb", ("crb",), ("CRY:IND",)),
     "GSCI":          ("gsci", ("gsci",), ("SPGSCI:IND",)),
     "EU Carbon Permits": ("carbon", ("carbon",), ("EECXM:IND",)),
     "Containerized Freight Index": ("containerized freight", ("container",), ("CFI:IND",)),
-    "Drewry World Container Index": ("drewry", ("drewry",), ("WCI:IND",)),
+    "Drewry World Container Index": (("drewry", "world container index", "container"), ("drewry",),
+                                     ("WCI:IND",)),
 }
+
+
+def search_terms_of(commodity: str) -> tuple[str, ...]:
+    """REGISTRY 검색어를 항상 tuple로 정규화(str 단일 검색어 하위 호환)."""
+    term = REGISTRY.get(commodity, (commodity.lower(), (), ()))[0]
+    return (term,) if isinstance(term, str) else tuple(term)
 
 
 def _commodity_of(path: Path) -> str:
@@ -135,25 +146,36 @@ def _te_get(url: str, params: dict, timeout: int = 30) -> httpx.Response:
 
 
 def discover_symbols(te_key: str, commodity: str) -> list[str]:
-    term, kws, fixed = REGISTRY.get(commodity, (commodity.lower(), (commodity.lower(),), ()))
+    """심볼 후보 목록 — 고정 심볼 → 검색어별 /markets/search(순서대로) → /markets/commodities.
+
+    검색어는 여러 개일 수 있으며 첫 매칭이 나오는 검색어에서 멈춘다. 이름 매칭은 키워드 전부 포함
+    또는 검색어 자체 포함(예: 'eu natural gas' ⊂ 'EU Natural Gas TTF') 중 하나면 통과한다.
+    """
+    _, kws, fixed = REGISTRY.get(commodity, (commodity.lower(), (commodity.lower(),), ()))
+    terms = search_terms_of(commodity)
     found: list[str] = []
-    for url in (f"https://api.tradingeconomics.com/markets/search/{quote(term)}",
-                "https://api.tradingeconomics.com/markets/commodities"):
+    urls = [(t, f"https://api.tradingeconomics.com/markets/search/{quote(t)}") for t in terms]
+    urls.append(("", "https://api.tradingeconomics.com/markets/commodities"))
+    for term, url in urls:
         try:
             r = _te_get(url, {"c": te_key})
             if r.status_code != 200:
                 continue
             data = r.json()
             for item in data if isinstance(data, list) else []:
-                name = str(item.get("Name") or item.get("name") or "")
-                if all(k.lower() in name.lower() for k in kws):
+                name = str(item.get("Name") or item.get("name") or "").lower()
+                kw_hit = bool(kws) and all(k.lower() in name for k in kws)
+                term_hit = bool(term) and term.lower() in name
+                if kw_hit or term_hit:
                     sym = item.get("Symbol") or item.get("symbol")
                     if sym and str(sym) not in found:
                         found.append(str(sym))
             if found:
+                if term:
+                    print(f"[정보] TE 심볼 검색 매칭({commodity}): 검색어 '{term}' → {found}")
                 break
         except Exception as e:  # noqa: BLE001
-            print(f"[정보] TE 심볼 검색 실패({commodity}): {e}")
+            print(f"[정보] TE 심볼 검색 실패({commodity}, '{term or 'commodities'}'): {e}")
     # A-159 우선 정렬 + A-256 첫 라이브 런 교훈: 비상품 접미(:HB 등)는 다른 상품(BIF:HB → DAP -64%)을
     #   집어 점프 게이트에만 걸리므로 :COM/:IND 외 심볼은 후보에서 제외한다.
     found = [x for x in found if x.endswith((":COM", ":IND"))]
@@ -400,8 +422,14 @@ def run(dry_run: bool = False, only: set[str] | None = None, mode: str = "snapsh
             if status == "throttle":
                 throttled = True
                 rec["status"] = "스로틀 — 중단"; results.append(rec); continue
+            if status == "empty":
+                # 모든 심볼이 빈 스냅샷 — 시도 심볼·검색어를 로그·보고서에 남겨 다음 런 로그로 확정한다
+                terms = search_terms_of(commodity)
+                print(f"[정보] {path.name}: 스냅샷 응답 없음 — 시도 심볼 {symbols}, 검색어 {list(terms)}")
+                rec["symbol"] = ",".join(symbols)
+                rec["tried_terms"] = " / ".join(terms)
             if status != "ok" or row is None:
-                rec["status"] = {"empty": "스냅샷 응답 없음", "error": "HTTP 오류",
+                rec["status"] = {"empty": f"스냅샷 응답 없음(시도 {len(symbols)}심볼)", "error": "HTTP 오류",
                                  "fields": f"필드 없음(컬럼 {cols})", "stale": "최신",
                                  "weekend": "주말 스탬프 — 제외",
                                  "future": "미래 일자 — 제외"}.get(status, f"미갱신({status})")
@@ -437,6 +465,11 @@ def run(dry_run: bool = False, only: set[str] | None = None, mode: str = "snapsh
              "|---|---|---|---|---|---|---|"]
     lines += [f"| {r['file']} | {r['commodity']} | {r['mode']} | {r['last_before']} "
               f"| {r['symbol']} | {r['status']} | {r['added']} |" for r in results]
+    empty = [r for r in results if r.get("tried_terms")]
+    if empty:
+        lines += ["", "> ℹ️ 스냅샷 응답 없음 — 시도 심볼·검색어(다음 실행 로그에서 유효 심볼 확정용):"]
+        lines += [f">   - {r['commodity']}: 심볼 `{r['symbol']}` · 검색어 `{r['tried_terms']}`"
+                  for r in empty]
     plan = [r for r in results if r["status"].startswith("플랜")]
     if plan:
         lines += ["", f"> ⚠️ {len(plan)}건이 '플랜 미포함(409/403)' — 연장 플랜에 Markets Historical이 "

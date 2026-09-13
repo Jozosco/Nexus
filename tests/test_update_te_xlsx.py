@@ -104,3 +104,37 @@ def test_snapshot_missing_fields_returns_column_list():
     assert cols == ["Importance", "Symbol"]
     row2, _, st2 = _parse_snapshot({"DateTime": "2026-09-11", "Last": "n/a"}, _LAST, _TODAY)
     assert row2 is None and st2 == "fields"
+
+
+# ── 다중 검색어 자기발견(2026-09-13) — 두 번째 검색어에서만 매칭 ───────────────────────
+def test_discover_symbols_multi_term_fallback(monkeypatch):
+    """첫 검색어는 0건, 두 번째 검색어에서 :COM 심볼이 나오면 고정 심볼 뒤에 후보로 붙는다."""
+    import scripts.update_te_xlsx_from_api as mod
+
+    class _Resp:
+        def __init__(self, payload):
+            self.status_code, self._payload, self.text = 200, payload, ""
+
+        def json(self):
+            return self._payload
+
+    calls: list[str] = []
+
+    def _fake_get(url: str, params: dict, timeout: int = 30) -> _Resp:
+        calls.append(url)
+        if url.endswith("/markets/search/first%20term"):
+            return _Resp([])
+        if url.endswith("/markets/search/second%20term"):
+            return _Resp([{"Name": "Second Term Gas", "Symbol": "STG:COM"},
+                          {"Name": "Second Term Equity", "Symbol": "STE:NL"}])
+        return _Resp([{"Name": "Should Not Reach", "Symbol": "SNR:COM"}])   # commodities 폴백
+
+    monkeypatch.setattr(mod, "_te_get", _fake_get)
+    monkeypatch.setitem(mod.REGISTRY, "Test Gas",
+                        (("first term", "second term"), ("second", "term"), ("FIX:COM",)))
+    assert mod.search_terms_of("Test Gas") == ("first term", "second term")
+    assert mod.search_terms_of("Corn") == ("corn",)                    # str 단일 검색어 하위 호환
+
+    out = mod.discover_symbols("k", "Test Gas")
+    assert out == ["FIX:COM", "STG:COM"]                               # 고정 우선 · :NL 제외
+    assert len(calls) == 2 and "commodities" not in calls[-1]           # 매칭 후 중단
