@@ -105,6 +105,11 @@ def test_normal_chokepoints_collapsed_and_labels_korean() -> None:
 
 def test_label_and_humanize_helpers() -> None:
     assert _label_ko("feat_GWETROOT_Illinois__z90") == "근권 토양수분 — 일리노이"
+    # Open-Meteo 코드는 국가 접두(_CN·_US)가 지역 앞에 붙는다 — 접두가 라벨에 새지 않아야 함
+    assert _label_ko("temperature_2m_max_CN_Heilongjiang") == "최고 기온 — 헤이룽장"
+    assert _label_ko("soil_moisture_0_to_7cm_BR_RioGrandedoSul") == "표층 토양수분 — 히우그란지두술"
+    assert _label_ko("FCST_precipitation_sum_BR_Goias") == "15일 예보: 강수량 — 고이아스"
+    assert _label_ko("sunshine_duration_MY_Sabah") == "일조 시간 — 사바(말레이시아)"
     assert _label_ko("HORMUZ_THREAT_LEVEL") == "호르무즈 해협 위협 수준"
     assert _label_ko("RSS_REUTERS_COMMODITIES").startswith("로이터")
     assert "unknown code xyz" in _label_ko("UNKNOWN_CODE_XYZ")     # 대문자 코드 원문 미노출

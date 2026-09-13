@@ -45,7 +45,7 @@ VAR_LABELS: dict[str, str] = {
     "CPO_SBO_SPREAD": "대두유−팜유 가격 차이", "WASDE_SBO_STU": "WASDE 재고사용비율",
     "TE_PALM_OIL": "CPO 팜유(TE)", "TE_SOYBEANS": "CBOT 대두(TE)",
     "FEDFUNDS": "미 기준금리", "CPIAUCSL": "미 CPI",
-    "GDELT_EVENT_SCORE": "국제 사건 지수", "GDELT_SBO_EVENT_COUNT": "대두유 관련 국제 사건 수",
+    "GDELT_EVENT_SCORE": "대두유 관련 국제 사건 기사 수", "GDELT_SBO_EVENT_COUNT": "대두유 관련 국제 사건 수",
     "HORMUZ_THREAT_LEVEL": "호르무즈 해협 위협 수준",
     "HORMUZ_AWRP_MULTIPLIER": "호르무즈 전쟁위험보험료 배수",
     "SUEZ_RED_SEA_RISK": "수에즈·홍해 위험 수준", "UKRAINE_GRAIN_CORRIDOR": "흑해 곡물 회랑 상태",
@@ -69,13 +69,19 @@ VAR_LABELS: dict[str, str] = {
 }
 
 # ── 화면 표기 한글화(승인자 지시 2026-09-13) — 영문 지표 코드·내부 코드는 화면에 노출하지 않음 ──
-# 기후 변수 코드 = {파라미터}_{지역} 패턴 (NASA POWER · Open-Meteo 12산지)
+# 기후 변수 코드 = {파라미터}_{지역} 패턴 (NASA POWER 업로드본 `T2M_Iowa` · Open-Meteo/예보 `..._US_Iowa`)
+# 지역 원천은 config/production_regions.yaml(23산지 — tier1 정본 12 · tier2 주 중심 근사 11, 2026-09-13)
 _REGION_KO: dict[str, str] = {
     "Buenos_Aires": "부에노스아이레스", "BuenosAires": "부에노스아이레스", "Cordoba": "코르도바",
     "Santa_Fe": "산타페", "SantaFe": "산타페", "Heilongjiang": "헤이룽장", "Shandong": "산둥",
     "Jiangsu": "장쑤", "Illinois": "일리노이", "Iowa": "아이오와", "Indiana": "인디애나",
     "Mato_Grosso": "마투그로수", "MatoGrosso": "마투그로수", "MatoGrossodoSul": "마투그로수두술",
     "Parana": "파라나",
+    # tier2 (2026-09-13 확장) — 대두 7 · 팜유 4
+    "RioGrandedoSul": "히우그란지두술", "Goias": "고이아스", "Minnesota": "미네소타",
+    "Nebraska": "네브래스카", "Ohio": "오하이오", "AltoParana": "알토파라나(파라과이)",
+    "MadhyaPradesh": "마디아프라데시(인도)", "Sabah": "사바(말레이시아)", "Johor": "조호르(말레이시아)",
+    "Riau": "리아우(인도네시아)", "CentralKalimantan": "중부칼리만탄(인도네시아)",
 }
 _CLIMATE_PARAM_KO: dict[str, str] = {
     "T2M": "평균 기온", "T2M_MAX": "최고 기온", "T2M_MIN": "최저 기온", "PRECTOTCORR": "강수량",
@@ -85,7 +91,9 @@ _CLIMATE_PARAM_KO: dict[str, str] = {
     "temperature_2m_min": "최저 기온", "precipitation_sum": "강수량",
     "shortwave_radiation_sum": "일사량", "et0_fao_evapotranspiration": "증발산량",
     "soil_moisture_0_to_7cm": "표층 토양수분", "soil_temperature_0_to_7cm": "표층 토양온도",
+    "sunshine_duration": "일조 시간",
 }
+_COUNTRY_SUFFIX_RE = re.compile(r"_[A-Z]{2}$")     # Open-Meteo 지역 코드의 국가 접두(_CN·_US·_BR …)
 _PREFIX_KO: list[tuple[str, str]] = [
     ("SOYBEAN_PROD", "미국 대두 생산"), ("CROP_CONDITION", "작황 등급"), ("DROUGHT", "가뭄 지수"),
     ("USDM", "미 가뭄 모니터"), ("WASDE_USDOM", "USDA 미국 수급"), ("WASDE", "USDA 세계 수급"),
@@ -164,11 +172,15 @@ def _label_ko(code: object) -> str:
     cat = _catalog_ko().get(base)
     if cat:
         return cat
+    forecast = base.startswith("FCST_")          # 15일 예보 계열(Open-Meteo) — 관측과 구분 표기
+    if forecast:
+        base = base[5:]
     for reg_key, reg_ko in sorted(_REGION_KO.items(), key=lambda kv: -len(kv[0])):
         if base.endswith("_" + reg_key):
-            param = base[: -len(reg_key) - 1]
+            param = _COUNTRY_SUFFIX_RE.sub("", base[: -len(reg_key) - 1])
             pko = _CLIMATE_PARAM_KO.get(param) or _CLIMATE_PARAM_KO.get(param.lower())
-            return f"{pko or param.replace('_', ' ').lower()} — {reg_ko}"
+            label = f"{pko or param.replace('_', ' ').lower()} — {reg_ko}"
+            return f"15일 예보: {label}" if forecast else label
     for prefix, ko in _PREFIX_KO:
         if base.startswith(prefix):
             return f"{ko}({base.lower().replace('_', ' ')})"
@@ -249,6 +261,17 @@ _ONTOLOGY_CHAINS: dict[str, list[str]] = {
                                "해바라기유 수출 경로", "대체 유지 공급", "검증 대기"],
     "US_CHINA_TARIFF_STATUS": ["기사", "신호: 무역 정책", "검증된 인과 경로",
                                "미중 교역 흐름", "대두 수급 재편", "방향 조건부"],
+    # 2026-09-13 — 전문 매체 채널(로이터·AP)·GDELT 기사 수: 주제 태깅 전이라 '검증 대기'
+    "RSS_REUTERS_COMMODITIES": ["기사", "전문 매체 채널: 로이터(상품·탄소)", "주제 태깅(후속)",
+                                "뉴스 감성 신호", "검증 대기"],
+    "RSS_REUTERS_CLIMATE_ENERGY": ["기사", "전문 매체 채널: 로이터(기후·에너지)", "주제 태깅(후속)",
+                                   "뉴스 감성 신호", "검증 대기"],
+    "RSS_AP_COMMODITIES": ["기사", "전문 매체 채널: AP 통신(상품·선물)", "주제 태깅(후속)",
+                           "뉴스 감성 신호", "검증 대기"],
+    "RSS_AP_WORLD": ["기사", "전문 매체 채널: AP 통신(국제)", "주제 태깅(후속)",
+                     "뉴스 감성 신호", "검증 대기"],
+    "GDELT_EVENT_SCORE": ["국제 사건 기사 수", "지정학 위험 태그", "규칙 기반 경보 원천",
+                          "해상 위협 점수(경보 성분)", "참고 지수"],
 }
 
 

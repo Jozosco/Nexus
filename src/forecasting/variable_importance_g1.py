@@ -54,6 +54,9 @@ GRANGER_START_YEAR = 2010                                # 15개년 기준선 (�
 GRANGER_EVENT_YEARS = [2012, 2018, 2020, 2022, 2025]     # 미가뭄·미중관세·코로나·러우/팜금수·호르무즈전야
 
 # ── G1 변수 설명 사전 (C-01/C-03 공동 관리) ──────────────────────────────────
+# 로이터·AP 기사 수의 수집 경로(폴백 순) — 4개 항목 공통
+_RSS_FALLBACK_SOURCE = ("Google News RSS 검색(site: 한정) → GDELT DOC 2.0(domain:) → "
+                        "Bing News RSS → 원문 섹션(폴백 순)")
 VARIABLE_CATALOG: list[dict] = [
     # ── 상품가격 ──
     {"code": "CBOT_BO_CLOSE", "category": "상품가격", "name_ko": "CBOT 대두유 선물 종가",
@@ -144,11 +147,42 @@ VARIABLE_CATALOG: list[dict] = [
      "desc_ko": "USDM 가뭄 지수 D2(심각) 면적 비율. 미국 대두 Top-5 생산주(IA/IL/IN/MN/NE) 기준. 작황 스트레스 선행지표.",
      "desc_en": "USDM D2 severe drought coverage for top-5 US soybean states. Leading indicator for crop stress.",
      "source": "drought.gov / USDM", "freq": "주간", "unit": "% of area"},
-    {"code": "T2M_BR_Mato_Grosso", "category": "기후", "name_ko": "브라질 마토그로소 기온 (NASA POWER)",
-     "name_en": "Brazil Mato Grosso Temperature (NASA POWER)",
-     "desc_ko": "브라질 최대 대두 생산지 기온. 고온 스트레스(>35°C) → 대두 착협기 생산량 감소.",
-     "desc_en": "Temperature in Brazil's largest soybean region. Heat stress (>35°C) during pod fill reduces yield.",
-     "source": "NASA POWER API", "freq": "월간", "unit": "°C"},
+    # 기후 코드는 mart 실코드(NASA POWER xlsx 형식 `T2M_MatoGrosso` 등)와 일치시킨다 — 구
+    # `T2M_BR_Mato_Grosso`는 mart에 없는 코드였음(2026-09-13 정정).
+    {"code": "T2M_MatoGrosso", "category": "기후", "name_ko": "마투그로수 평균 기온",
+     "name_en": "Mato Grosso Mean Temperature (NASA POWER)",
+     "desc_ko": "브라질 최대 대두 생산지(마투그로수) 월평균 기온. 고온 스트레스(>35°C) → 대두 착협기 생산량 감소.",
+     "desc_en": ("Monthly mean temperature in Brazil's largest soybean region. "
+                 "Heat stress (>35°C) during pod fill reduces yield."),
+     "source": "NASA POWER 월별 농업기상(승인자 업로드 xlsx + API)", "freq": "월간", "unit": "°C"},
+    {"code": "GWETROOT_Iowa", "category": "기후", "name_ko": "아이오와 근권 토양수분",
+     "name_en": "Iowa Root-Zone Soil Wetness (NASA POWER)",
+     "desc_ko": "미국 최대 대두 생산주(아이오와) 근권 토양수분(0~1). 개화·착협기 토양수분 부족 → 단수 하락 선행지표.",
+     "desc_en": ("Root-zone soil wetness (0-1) for Iowa, the top US soybean state. "
+                 "Deficit during flowering/pod fill leads yield loss."),
+     "source": "NASA POWER 월별 농업기상(승인자 업로드 xlsx + API)", "freq": "월간", "unit": "0~1"},
+    {"code": "FCST_precipitation_sum_BR_MatoGrosso", "category": "기후",
+     "name_ko": "마투그로수 15일 강수 예보(누적)",
+     "name_en": "Mato Grosso 15-day Precipitation Forecast (cumulative)",
+     "desc_ko": ("향후 15일 누적 강수 예보. 23개 생산지역(확정 12 + 근사 중심점 11 — 승인자 확인 대기) 중 "
+                 "브라질 대표 지역. 예보는 관측 대체가 아니며 검증 전 모델 투입 금지(참고 표시 전용)."),
+     "desc_en": ("15-day cumulative precipitation forecast for one of 23 production regions "
+                 "(12 confirmed + 11 approximate centroids pending approval). Reference only; "
+                 "not a substitute for observations and excluded from models until validated."),
+     "source": ("Open-Meteo 예보 API(ECMWF IFS/AIFS 계열 best_match) — 23개 생산지역 · "
+                "예보는 관측 대체가 아니며 검증 전 모델 투입 금지"),
+     "freq": "일간(15일 선행)", "unit": "mm"},
+    {"code": "FCST_temperature_2m_max_US_Iowa", "category": "기후",
+     "name_ko": "아이오와 15일 최고기온 예보",
+     "name_en": "Iowa 15-day Max Temperature Forecast",
+     "desc_ko": ("향후 15일 일 최고기온 예보. 23개 생산지역(확정 12 + 근사 중심점 11 — 승인자 확인 대기) 중 "
+                 "미국 대표 지역. 예보는 관측 대체가 아니며 검증 전 모델 투입 금지(참고 표시 전용)."),
+     "desc_en": ("15-day daily maximum temperature forecast for one of 23 production regions "
+                 "(12 confirmed + 11 approximate centroids pending approval). Reference only; "
+                 "not a substitute for observations and excluded from models until validated."),
+     "source": ("Open-Meteo 예보 API(ECMWF IFS/AIFS 계열 best_match) — 23개 생산지역 · "
+                "예보는 관측 대체가 아니며 검증 전 모델 투입 금지"),
+     "freq": "일간(15일 선행)", "unit": "°C"},
     # ── 작황 ──
     {"code": "SBO_PRODUCTION", "category": "작황", "name_ko": "대두유 글로벌 생산량 (USDA PSD)",
      "name_en": "Global Soybean Oil Production (USDA PSD)",
@@ -180,13 +214,55 @@ VARIABLE_CATALOG: list[dict] = [
      "name_en": "Baltic Dry Index (BDI)",
      "desc_ko": "건화물 운임 지수. 대두유 직접 관련성은 낮으나 글로벌 무역 경기·원자재 수요 대리 지표. C-03 z>2σ(90일) → 구조적 단절 경보.",
      "desc_en": "Dry bulk freight. Indirect indicator of global trade activity. C-03 alert: z-score >2σ (90-day rolling).",
-     "source": "Trading Economics / Baltic Exchange", "freq": "일간", "unit": "points"},
+     "source": "Trading Economics / Baltic Exchange (수동본 2026-09-13 정정 계열 · API 스냅샷 일별 갱신)",
+     "freq": "일간", "unit": "points"},
     # ── 수입통계 ──
     {"code": "import_cif_usd", "category": "수입통계", "name_ko": "한국 대두유 수입 CIF 금액 (HS 1507)",
      "name_en": "Korea Soybean Oil Import CIF Value (HS 1507)",
      "desc_ko": "관세청 공식 통관 데이터. 국가별 수입 CIF 단가 산출 가능. 실제 조달 비용 역산의 기준점.",
      "desc_en": "Korea Customs official trade data. Allows per-country CIF unit price calculation. Ground truth for procurement cost.",
      "source": "관세청/data.go.kr (폴백: UN Comtrade)", "freq": "월간", "unit": "USD"},
+    # ── 비정형·매체 (2026-09-13 신설 — 값은 키워드 게이트를 통과한 관련 기사 수, 주제 신호 아님) ──
+    {"code": "RSS_REUTERS_COMMODITIES", "category": "비정형·매체", "name_ko": "로이터 상품·탄소 기사 수",
+     "name_en": "Reuters Commodities & Carbon Article Count",
+     "desc_ko": "로이터 상품·탄소 섹션 중 대두유 키워드 게이트를 통과한 관련 기사 수. 기사 수이며 주제 신호(방향·강도)가 아님.",
+     "desc_en": ("Count of Reuters commodities/carbon articles passing the soybean-oil "
+                 "keyword gate. A count, not a topic signal."),
+     "source": _RSS_FALLBACK_SOURCE, "freq": "일간", "unit": "건/일"},
+    {"code": "RSS_REUTERS_CLIMATE_ENERGY", "category": "비정형·매체", "name_ko": "로이터 기후·에너지 기사 수",
+     "name_en": "Reuters Climate & Energy Article Count",
+     "desc_ko": "로이터 기후·에너지 섹션 중 키워드 게이트를 통과한 관련 기사 수(바이오연료·기상 이슈 포착). 주제 신호 아님.",
+     "desc_en": ("Count of Reuters climate/energy articles passing the keyword gate "
+                 "(biofuel, weather). Not a topic signal."),
+     "source": _RSS_FALLBACK_SOURCE, "freq": "일간", "unit": "건/일"},
+    {"code": "RSS_AP_COMMODITIES", "category": "비정형·매체", "name_ko": "AP 통신 상품·선물 기사 수",
+     "name_en": "AP Commodities & Futures Article Count",
+     "desc_ko": "AP 통신 상품·선물 기사 중 키워드 게이트를 통과한 관련 기사 수. 주제 신호 아님.",
+     "desc_en": ("Count of AP commodities/futures articles passing the keyword gate. "
+                 "Not a topic signal."),
+     "source": _RSS_FALLBACK_SOURCE, "freq": "일간", "unit": "건/일"},
+    {"code": "RSS_AP_WORLD", "category": "비정형·매체", "name_ko": "AP 통신 국제 기사 수",
+     "name_en": "AP World News Article Count",
+     "desc_ko": "AP 통신 국제 기사 중 키워드 게이트를 통과한 관련 기사 수(지정학·해협 이슈 포착). 주제 신호 아님.",
+     "desc_en": ("Count of AP world-news articles passing the keyword gate "
+                 "(geopolitics, straits). Not a topic signal."),
+     "source": _RSS_FALLBACK_SOURCE, "freq": "일간", "unit": "건/일"},
+    {"code": "GDELT_EVENT_SCORE", "category": "비정형·매체", "name_ko": "대두유 관련 국제 사건 기사 수",
+     "name_en": "GDELT Soybean-Oil Event Article Count",
+     "desc_ko": ("GDELT DOC 2.0에서 대두유 관련 5개 검색어로 최근 24시간 기사 수를 합산(0~25 캡). "
+                 "커넥터의 구 코드 GDELT_SBO_EVENT_COUNT를 대체하는 코드. 기사 수이며 주제 신호 아님."),
+     "desc_en": ("Sum of GDELT DOC 2.0 article counts over the past 24h for 5 soybean-oil "
+                 "queries (capped 0-25). Replaces the connector's former code "
+                 "GDELT_SBO_EVENT_COUNT. A count, not a topic signal."),
+     "source": "GDELT DOC 2.0 · 대두유 관련 5개 검색어 · 최근 24시간", "freq": "일간", "unit": "건/일(0~25)"},
+    {"code": "RSS_전문매체_10종", "category": "비정형·매체", "name_ko": "전문 매체 기사 수(10개 매체)",
+     "name_en": "Specialist Media Article Count (10 outlets)",
+     "desc_ko": "곡물·유지 전문 매체 10곳의 공식 RSS에서 키워드 게이트를 통과한 관련 기사 수(매체별 1행). 주제 신호 아님.",
+     "desc_en": ("Per-outlet count of articles from 10 specialist grain/oilseed outlets' "
+                 "official RSS passing the keyword gate."),
+     "source": ("farmdoc daily(일리노이대)·World Grain·OFI·GRAIN·미국 대두협회·크라이미트폴·AgMarket.Net·"
+                "Grain Central·Total Farm Marketing·UkrAgroConsult (공식 RSS 직접 수집)"),
+     "freq": "일간", "unit": "건/일"},
 ]
 
 # ── C-03 구조적 단절 임계값 (c03-data-scientist.md) ──────────────────────────
@@ -225,13 +301,15 @@ THRESHOLD_RATIONALE: list[dict] = [
         "rationale_ko": (
             "Baltic Dry Index의 90일 이동 z-점수. |z|>2는 통계적 유의성(95% 신뢰구간). "
             "BDI z>2σ는 글로벌 원자재 수송 수요 급증 신호 → 액체 벌크 탱커 운임도 동반 상승. "
-            "대두유 CFR 운임 프리미엄 +5~12% 동반 패턴 확인(2020~2023 역사 검증). "
+            "대두유 CFR 운임 프리미엄 +5~12% 동반 패턴 확인(2020~2022 역사 검증 · "
+            "2023년 이후 구간은 2026-09-13 정정본으로 재검증 대상). "
             "90일 window는 계절성 제거와 단기 노이즈 필터링의 균형점."
         ),
         "rationale_en": (
             "90-day rolling z-score of Baltic Dry Index. |z|>2 = statistically significant (95% CI). "
             "BDI z>2σ signals global dry bulk demand surge → liquid bulk tanker rates follow. "
-            "Historical correlation: CFR soybean oil freight premium +5-12% (verified 2020–2023). "
+            "Historical correlation: CFR soybean oil freight premium +5-12% (verified 2020–2022; "
+            "the post-2023 segment awaits re-verification on the 2026-09-13 corrected series). "
             "90-day window balances seasonality removal with short-term noise filtering."
         ),
         "action": "CFR 운임 상승분 조달 단가 반영 / 장기 물량 선도 계약 검토",
@@ -536,6 +614,47 @@ API_OPTIONAL_PATTERNS = {
 }
 
 
+# 일별 비정형 신호 아카이브(전문 매체·실시간 프록시) — parquet이 아닌 CSV라 FILE_PATTERNS 밖에서
+# 현황 표에만 1행 추가(frames에는 주입하지 않음 — 상관·Granger 입력 아님).
+DAILY_SIGNALS_CSV = Path("data/processed/unstructured_daily_signals.csv")
+DAILY_SIGNALS_LABEL = "비정형 일별 신호 아카이브(전문 매체·실시간 프록시 — CSV)"
+
+
+def _daily_signals_status_row(path: Path = DAILY_SIGNALS_CSV) -> dict:
+    """일별 비정형 신호 CSV의 현황 행 — _build_data_status와 동일한 6개 컬럼.
+
+    CSV 스키마: date·indicator·category·value·note·source_name·appended_at.
+    무결성·신선도 판정은 기존 헬퍼를 재사용하기 위해 value(숫자)·ingested_at(appended_at UTC)
+    프록시 프레임을 구성한다. 파일 부재·빈 파일은 '미수집'으로 정직 표기.
+    """
+    missing = {"변수 항목": DAILY_SIGNALS_LABEL, "변수별 항목 수": 0, "행수": 0,
+               "날짜범위": "미수집", "무결성": "N/A", "신선도": "❌ 데이터 없음"}
+    if not Path(path).exists():
+        return missing
+    try:
+        raw = pd.read_csv(path)
+    except Exception as exc:  # noqa: BLE001 — 현황 표는 비치명
+        print(f"[경고] 비정형 일별 신호 CSV 판독 실패({path}): {exc}")
+        return missing
+    if raw.empty:
+        return missing
+    proxy = pd.DataFrame({
+        "indicator_code": raw["indicator"] if "indicator" in raw.columns else pd.Series(dtype=str),
+        "value": pd.to_numeric(raw.get("value"), errors="coerce"),
+        "ingested_at": pd.to_datetime(raw.get("appended_at"), utc=True, errors="coerce"),
+    })
+    dates = pd.to_datetime(raw.get("date"), errors="coerce").dropna()
+    date_range = f"{dates.min().date()} ~ {dates.max().date()}" if len(dates) else "N/A"
+    return {
+        "변수 항목":     DAILY_SIGNALS_LABEL,
+        "변수별 항목 수": _indicator_count(proxy),
+        "행수":         len(raw),
+        "날짜범위":     date_range,
+        "무결성":       _data_integrity_flag(proxy),
+        "신선도":       _freshness_flag(proxy),
+    }
+
+
 def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """커넥터별 데이터 현황 테이블 (변수항목·행수·날짜범위·무결성·신선도)."""
     rows = []
@@ -564,6 +683,7 @@ def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
             "무결성":       _data_integrity_flag(df),
             "신선도":       _freshness_flag(df),
         })
+    rows.append(_daily_signals_status_row())   # 일별 비정형 신호 CSV(현황 표 전용 1행)
     if skipped_api:
         rows.append({"변수 항목": f"(API 선택 {len(skipped_api)}종 — include_api=true 시 수집)",
                      "변수별 항목 수": "—", "행수": "—", "날짜범위": "—",
