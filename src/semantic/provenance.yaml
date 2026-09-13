@@ -2,8 +2,8 @@
 # ERD 매핑(§8): SourceDocument · EvidenceSpan — 보완 항목: 페이지, bbox, 해시, 추출 버전
 # 원칙(ERD §13 · S5): 모든 핵심 판단은 문서·페이지·정확 인용으로 역추적 가능해야 한다.
 # 관리: C-04 (기계적 추출) · P1-06 (스키마 소유)
-version: '1.0'
-updated: 2026-08-11
+version: '1.1'   # v1.1(2026-09-13): 온라인 기사 원천 필드(url·publisher·retrieved_at·channel) + 일별 다이제스트 추출기 등재
+updated: 2026-09-13
 erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md §8
 
 # ── SourceDocument — 원본 문서 메타데이터 ────────────────────────────────────
@@ -22,6 +22,11 @@ source_document:
     - page_count
     - drm_status         # clean / drm_blocked (reports/market/drm_blocked_documents.md 참조)
     - marketing_year     # USDA 마케팅연도 (해당 시)
+    # v1.1 — 온라인 기사(일별 다이제스트 '전문 매체' 계열) 원천 필드. file_path·file_sha256는 저장본이 있을 때만 채운다.
+    - url                # 온라인 문서 원문 URL (정규화한 링크 — 채널 리다이렉트 URL 아님)
+    - publisher          # 발행 주체 — entities.yaml MediaSource term_id (예 - TERM-176)
+    - retrieved_at       # 수집 시각 (UTC) — 발행 시각(pubDate)·색인 시각(GDELT seendate)과 구분
+    - channel            # 수집 채널 — ontology.yaml media_sources.channels id (예 - CH-GNEWS)
 
 # ── EvidenceSpan — 근거 발췌 (모든 추출 신호에 필수 첨부) ─────────────────────
 evidence_span:
@@ -49,3 +54,7 @@ extractor_registry:
     date: 2026-08-11
     engine: pdfplumber (pypdf fallback) + DRM magic-byte 사전 판정
     note: rglob 재귀 탐색 · <DOCUMENT SAFER> DRM 건너뜀
+  - id: daily_unstructured_digest.py@v2
+    date: 2026-09-13
+    engine: "RSS 2.0(stdlib ElementTree) + GDELT DOC 2.0 artlist JSON(httpx) — 키워드 게이트·2일 컷오프·링크 중복 제거"
+    note: "채널 체인 Google News → GDELT → Bing → 원문 · note 접두 '[채널: …]' · 값=관련 기사 수"

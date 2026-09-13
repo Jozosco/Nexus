@@ -1,5 +1,6 @@
-version: '2.0'
-source: 비정형 분석용_핵심 용어 사전집_v1.0.xlsx (조정자 제공, 152 용어)
+version: '3.3'   # 온톨로지 v3.3와 동기(2026-09-13)
+source: 비정형 분석용_핵심 용어 사전집_v1.0.xlsx (승인자 제공 152) → v3.2 시장구조 23 + v3.3 매체·수집 채널 16 = 191 ·
+  xlsx v1.1 동기화 - scripts/sync_glossary_xlsx.py
 erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md §8
 managed_by: 'P1-06 (보완: C-04·P1-01~05)'
 economy_and_trade:
@@ -1819,10 +1820,14 @@ logistics_and_supply_chain:
   - Baltic Dry
   definition: 건화물 벌크선 운임 수준을 나타내는 지수다.
   interpretation_rules: 대두유 액체화물의 직접 운임이 아니라 글로벌 해운비용 대용치임을 명시한다.
+    2026-09-13 데이터 정정 - TE 수동본 2023-01-03 이후 구간 재척도(구 계열 오류, 승인자 확인) —
+    정정 전 산출물의 z·레짐은 재산출 없이 인용하지 않는다.
+  measurement_note: 'vintage 2026-09-13 · 정정 범위 2023-01-03~2026-09-09 · 영국 공휴일(4/3·4/6·5/4) 무발표 정상 ·
+    정오표 docs/research_desk/2026-09/bdi_series_correction_errata_2026_09_13.md'
   impact_target: Freight
   price_direction: UP
   unit_range: index
-  alert_criteria: '>2σ above 90-day mean'
+  alert_criteria: '>2σ above 90-day mean (정정본 계열 vintage 2026-09-13 기준 재산출)'
   priority: A
   ambiguity_risk: 상
   relations: MEASURED_BY
@@ -3848,5 +3853,373 @@ market_structure_and_trade:
   ambiguity_risk: 상
   relations: MEASURED_BY,ORIGIN_OF
   source_code: abcd_trading_structure_2026_08_15.md
+  status: confirmed
+  owner_agent: P1-06
+media_and_collection_channels:
+# v3.3(2026-09-13) 신설 — 매체·수집 채널 층: 일별 다이제스트 '전문 매체' 계열의 발행 주체(MediaSource)와
+# 수집 경로(CollectionChannel)를 분리해 등재한다. 값은 일자별 관련 기사 수이며 주제 신호가 아니다 —
+# 주제 귀속은 본문 태깅(P1-05) 이후에만. 코드별 수집 체인·승자 규칙의 원천은 ontology.yaml media_sources.
+# status 어휘(본 분류 한정): confirmed = 실행 로그·문서로 채널 동작 확인 · inference = 첫 실행 전 설계 상태.
+- term_id: TERM-176
+  canonical: Reuters
+  canonical_ko: 로이터
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: ''
+  synonyms:
+  - Reuters News
+  - 로이터통신
+  definition: 상품·에너지·기후 시황을 국제적으로 보도하는 통신사로 대두유 수급·가격 영향 기사의 1차 점검 대상 매체다.
+  interpretation_rules: 공개 RSS가 없어 채널 경유(구글 뉴스 RSS 검색 프록시 → GDELT 문서 API → 빙 뉴스 RSS → 원문 섹션)로만
+    확보한다. 기사 수는 주제 신호가 아니며 방향 판단은 본문 태깅 이후에만 한다. 같은 기사가 여러 채널에 잡히면 링크 기준으로
+    1건만 센다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-177
+  canonical: Associated Press
+  canonical_ko: AP 통신
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: AP
+  synonyms:
+  - AP News
+  - 에이피통신
+  definition: 상품 시황과 해운·지정학 사건을 보도하는 국제 통신사로 남미 수출국·해협 사건 기사의 점검 대상 매체다.
+  interpretation_rules: 공개 RSS 허브를 유지하지 않아 채널 경유로만 확보한다. 세계 뉴스 섹션 기사는 지정학·해운 사건의
+    발생 여부 확인용이며 가격 방향은 온톨로지 인과엣지를 거쳐서만 해석한다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-178
+  canonical: Google News RSS Search Proxy
+  canonical_ko: 구글 뉴스 RSS 검색 프록시
+  class: CollectionChannel
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: CH-GNEWS
+  synonyms:
+  - Google News RSS
+  - news.google.com/rss/search
+  definition: 매체 도메인과 주제어를 질의에 넣어 서버 측에서 좁힌 결과를 RSS로 돌려주는 검색 프록시 채널이다.
+  interpretation_rules: 공개 RSS가 없는 매체의 1순위 채널이다. 결과 링크는 리다이렉트 URL일 수 있어 중복 제거는 정규화한
+    링크 기준으로 한다. 비공식 서비스라 형식 변경·차단 시 다음 채널로 넘어간다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-179
+  canonical: GDELT DOC 2.0 API
+  canonical_ko: GDELT 문서 API
+  class: CollectionChannel
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: CH-GDELT
+  synonyms:
+  - GDELT DOC
+  - api.gdeltproject.org/api/v2/doc
+  definition: 전 세계 뉴스 색인에서 도메인·주제어·기간으로 기사 목록을 JSON으로 돌려주는 공개 API 채널이다.
+  interpretation_rules: 2순위 채널이다. 도메인 필터는 부분 문자열 매칭이며 색인 시각(seendate)은 발행일이 아니라
+    하루 정도 늦을 수 있다. 무료 레이트리밋이 엄격해 호출 간격을 두고 429는 재시도한다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-180
+  canonical: Bing News RSS
+  canonical_ko: 빙 뉴스 RSS
+  class: CollectionChannel
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: CH-BING
+  synonyms:
+  - Bing News search RSS
+  - bing.com/news/search?format=rss
+  definition: 검색 결과를 표준 RSS 2.0으로 돌려주는 빙 뉴스 검색 채널로 앞선 두 채널이 비었을 때의 3순위 폴백이다.
+  interpretation_rules: 결과 건수 상한이 약 14건으로 낮아 기사 수를 다른 채널과 비교하지 않는다. 첫 실행 로그로
+    실제 동작을 확정하기 전까지 설계 상태(inference)로 둔다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: inference
+  owner_agent: P1-06
+- term_id: TERM-181
+  canonical: farmdoc daily
+  canonical_ko: 팜닥 데일리(일리노이대)
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_FARMDOC_DAILY
+  synonyms:
+  - farmdocdaily.illinois.edu
+  - farmdoc
+  definition: 일리노이대 농업경제 연구진이 미국 대두·바이오연료 정책과 압착 마진을 분석해 발행하는 일간 매체다.
+  interpretation_rules: 공식 RSS로 직접 수집한다. 재생디젤·RFS 시리즈는 인과엣지 근거로 이미 등재돼 있으므로
+    새 기사는 기존 근거의 갱신인지 새 주장인지 구분해 태깅한다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-182
+  canonical: World Grain
+  canonical_ko: 월드 그레인
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_WORLD_GRAIN
+  synonyms:
+  - world-grain.com
+  definition: 곡물·유지종자 산업의 설비 투자·무역·물류 소식을 다루는 산업 전문지다.
+  interpretation_rules: 공식 RSS로 직접 수집한다. 압착 설비 증설 기사는 공시 용량이며 실제 처리량이 아니다(용량≠처리량).
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-183
+  canonical: Oils & Fats International
+  canonical_ko: OFI 유지 산업지
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_OFI_MAGAZINE
+  synonyms:
+  - OFI
+  - ofimagazine.com
+  definition: 식물성 유지·유지종자 가공 산업의 수급·정책·기업 동향을 다루는 유지 전문 산업지다.
+  interpretation_rules: 공식 RSS로 직접 수집한다. 팜유·해바라기유 기사는 대두유−팜유 가격 차이 해석 규칙(공행성 붕괴 이후
+    평균회귀 가정 금지)을 적용해 태깅한다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-184
+  canonical: GRAIN
+  canonical_ko: 그레인(농업 NGO)
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_GRAIN_ORG
+  synonyms:
+  - grain.org
+  definition: 농업·식량 체계를 감시하는 국제 비정부기구로 토지·무역·기업 집중 관련 보고서와 기사를 발행한다.
+  interpretation_rules: 공식 RSS로 직접 수집한다. 옹호 성격의 매체라 수치는 원자료 출처를 확인한 뒤에만 인용하고
+    기업 집중도 주장은 선적 실거래 기준 집중도 지표와 혼용하지 않는다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-185
+  canonical: American Soybean Association
+  canonical_ko: 미국 대두협회
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_SOYGROWERS
+  synonyms:
+  - ASA
+  - soygrowers.com
+  definition: 미국 대두 생산자 단체로 바이오연료 정책·무역 협상·작황에 관한 입장과 소식을 발행한다.
+  interpretation_rules: 공식 RSS로 직접 수집한다. 생산자 이익단체의 발표이므로 정책 요구와 확정 정책을 구분하고
+    발표일과 시행일을 분리해 기록한다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-186
+  canonical: Climatepol
+  canonical_ko: 크라이미트폴
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_CLIMATEPOL
+  synonyms:
+  - climatepol.com
+  - 클라이미트폴
+  definition: 기후·에너지 정책과 바이오연료·지속가능항공유 동향을 한국어로 보도하는 전문 매체다.
+  interpretation_rules: 공식 RSS로 직접 수집하며 키워드 게이트는 한국어 사전을 적용한다. 정책 단계(제안·확정·시행)를
+    구분해 태깅하고 해외 정책 수치는 원문 단계와 혼용하지 않는다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-187
+  canonical: AgMarket.Net
+  canonical_ko: 애그마켓
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_AGMARKET
+  synonyms:
+  - agmarket.net
+  definition: 미국 농산물 선물 시황과 헤지 관점의 일일 코멘터리를 발행하는 시장 분석 매체다.
+  interpretation_rules: 공식 RSS로 직접 수집한다. 시황 코멘터리의 방향 전망은 근거 발췌와 함께 기록하되 예측 문장은
+    모델 학습 입력으로 쓰지 않는다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-188
+  canonical: Grain Central
+  canonical_ko: 그레인 센트럴
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_GRAINCENTRAL
+  synonyms:
+  - graincentral.com
+  definition: 호주 곡물·유지종자 산업의 작황·수출·물류 소식을 다루는 산업 매체다.
+  interpretation_rules: 공식 RSS로 직접 수집한다. 호주 유채 작황 기사는 유채유 경로(EU 바이오디젤 수요)의 배경 신호로만
+    태깅하고 대두유 가격 방향으로 직접 변환하지 않는다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-189
+  canonical: Total Farm Marketing
+  canonical_ko: 토탈 팜 마케팅
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_TFM
+  synonyms:
+  - TFM
+  - totalfarmmarketing.com
+  definition: 미국 농가 대상 곡물·유지종자 마케팅 자문사로 일일 시황 브리프와 위험관리 코멘트를 발행한다.
+  interpretation_rules: 공식 RSS로 직접 수집한다. 자문사의 매도·헤지 권고는 생산자 관점이므로 조달 관점의 구매·보류
+    판단으로 뒤집어 읽지 않는다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-190
+  canonical: UkrAgroConsult
+  canonical_ko: 우크라그로컨설트
+  class: MediaSource
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: RSS_UKRAGRO
+  synonyms:
+  - ukragroconsult.com
+  definition: 흑해 권역 곡물·해바라기유 수급과 수출 물류를 다루는 우크라이나 농업 시장 분석 기관이다.
+  interpretation_rules: 공식 RSS로 직접 수집한다. 흑해 회랑·해바라기유 기사는 흑해 병목 경로의 관측용이며 대두유 가격
+    서술에는 검증된 인과엣지를 거쳐서만 쓴다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 없음(주제 태깅 후 감성 지표로만)
+  priority: C
+  ambiguity_risk: 하
+  relations: COLLECTED_VIA,PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+- term_id: TERM-191
+  canonical: Perplexity Search Proxy (on-demand)
+  canonical_ko: 퍼플렉시티 검색 프록시(온디맨드)
+  class: CollectionChannel
+  category: 데이터·시맨틱·품질
+  subcategory: 매체·수집 채널
+  abbr: CH-PPLX
+  synonyms:
+  - Perplexity sonar-pro proxy
+  - 온디맨드 요약 채널
+  definition: 검색 기반 언어모델로 특정 주제의 최근 기사를 요약해 돌려주는 채널로 수동·온디맨드 요약에만 쓴다.
+  interpretation_rules: 일별 스케줄에 편입하지 않는다(비용·크레딧 소모). 요약은 원문 발췌와 링크가 있을 때만 근거로
+    인정하며 모델이 생성한 수치는 원문 대조 전에는 인용하지 않는다.
+  impact_target: Signal/Media
+  price_direction: CONTEXT
+  unit_range: articles/day
+  alert_criteria: 일별 스케줄 편입 금지 — 수동·온디맨드
+  priority: C
+  ambiguity_risk: 하
+  relations: PROVIDES
+  source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
   status: confirmed
   owner_agent: P1-06

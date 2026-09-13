@@ -26,10 +26,19 @@
 #      관세청 커버리지 캐비엇(customs_coverage_note)
 #   ⑥ signal_tag_mapping에 지정학위험·전문매체 태그 신설 + 미배정 일별 지표 전량 배정
 #   ⑦ indicator_bindings.structured 확장 + structured_patterns 신설(템플릿 지표 계열)
+# v3.3 변경(2026-09-13 · 매체·수집 채널 층 + BDI 정정 주석 + 기후 산지 확장):
+#   ① entity_types에 MediaSource(발행 주체)·CollectionChannel(수집 경로) 클래스 등록 +
+#      관계 유형 60종 → 61종 (COLLECTED_VIA 신규 — 매체 → 수집 채널)
+#   ② signal_tag_mapping '전문매체' 태그 엔티티 재바인딩 — TERM-042/139 임시 바인딩을
+#      entities.yaml media_and_collection_channels(TERM-176~190)로 교체, 채널 체인 note 갱신
+#   ③ media_sources 원장 신설 — 코드별 수집 체인(채널·승자 규칙·유료 대안)의 단일 원천
+#   ④ indicator_bindings.structured BDI 바인딩 정정 주석 — TE 수동본 재척도(vintage 2026-09-13)
+#   ⑤ 기후 '{var}_{region}' 패턴을 실코드(NASA POWER·Open-Meteo·예보 FCST_)에 정합 +
+#      production_regions 블록 신설(tier 1 정본 12 · tier 2 근사 11)
 # 게이트: scripts/validate_semantic_layer.py (DAG 순환·매핑 존재·evidence 필수 필드 검증)
 # 관리: P1-06 (인과엣지 검증: P1-01~04 · 기계적 추출: C-04 · 신호 생산: P1-05)
-version: '3.2'
-updated: 2026-09-09
+version: '3.3'
+updated: 2026-09-13
 erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md
 managed_by: 'P1-06 (검증: P1-01~04 · 게이트: scripts/validate_semantic_layer.py)'
 refs:
@@ -109,7 +118,9 @@ entity_types:
               EvidenceSpan, ExtractionCapability, GovernanceRule, GroundTruth,
               KnowledgeGraph, Ontology, PageReference, ProvenanceRecord, QualityAlert,
               QualityMetric, ReviewProcess, Schema, SemanticLayer, SemanticStandard,
-              SerializationFormat, SourceDocument]
+              SerializationFormat, SourceDocument,
+              MediaSource,           # v3.3 — 발행 주체(매체·기관)와 수집 경로 분리
+              CollectionChannel]     # v3.3 — 수집 경로(프록시·API·RSS·온디맨드 요약)
   - family: market_structure
     label_ko: 시장구조·기업·거래관행            # v3.2 — entities.yaml market_structure_and_trade 연동
     classes: [Processor,             # 압착·정제 등 가공 사업자(트레이딩하우스와 구분)
@@ -118,7 +129,7 @@ entity_types:
               PricingConvention,     # 선물+베이시스·고정 등 가격 결정 관행
               PriceBenchmark]        # Up River FOB 등 원산지 기준가
 
-# ── 관계 유형 58종 (v2 23종 + entities.yaml 실사용 35종 정식 등록) ────────────
+# ── 관계 유형 61종 (v2 23종 + entities.yaml 실사용 35종 + v3.1 2종 + v3.3 1종) ──
 relation_types:
 # — 식별·정규화 —
 - code: MENTION_OF
@@ -401,6 +412,12 @@ relation_types:
   range: Chokepoint
   symmetric: false
   constraints_example: US Gulf-Korea route TRANSITS Panama Canal
+- code: COLLECTED_VIA
+  definition: 매체(발행 주체)의 기사가 특정 수집 채널(프록시·API·RSS)을 통해 확보됨 (v3.3 — media_sources)
+  domain: MediaSource
+  range: CollectionChannel
+  symmetric: false
+  constraints_example: Reuters COLLECTED_VIA Google News RSS 검색 프록시
 - code: LOCATED_AT
   definition: 엔터티가 위치에 존재
   domain: Entity
@@ -531,6 +548,10 @@ indicator_bindings:
   - indicator: BDI
     defined_in: data/schemas/
     entities: [TERM-085]
+    note: TE 수동본 BDI 정정(vintage 2026-09-13, 승인자 확인) — 2023-01-03 이후 구간 재척도(구 계열 오류);
+      코드 우선순위 TE_BDI(수동 9개년) > BDI(API 2017~); 결측 2026-04-03·04-06·05-04는 영국 공휴일
+      무발표(정상); 정정 전 산출물은 docs/research_desk/2026-09/bdi_series_correction_errata_2026_09_13.md
+      정오표 참조.
   - indicator: FX_BRL_USD
     defined_in: data/schemas/
     entities: [TERM-007]
@@ -629,10 +650,20 @@ indicator_bindings:
     regex: '^CROP_CONDITION_[A-Z0-9_]+$'
     entities: [TERM-032, TERM-040]
     note: 지역별 작황 상태 — 지역 간 단순 평균은 재배면적 가중 없이는 금지.
-  - pattern: '{var}_{region}'
-    regex: '^(T2M|PRECTOTCORR|RH2M|SOILM|SWRAD|TMAX|TMIN|WS2M)_[A-Z]{2}[0-9]?$'
+  # v3.3 — 구 정규식(T2M|PRECTOTCORR|…)_[A-Z]{2}은 실제 발행 코드와 하나도 맞지 않았다(빈 계약).
+  #   실코드 두 계열로 분리하고 예보 계열(FCST_)을 추가한다. 지역 접미의 단일 원천은 production_regions.
+  - pattern: '{var}_{region}'                # NASA POWER 업로드본 — 접미 {Region}
+    regex: '^(T2M|T2M_MAX|T2M_MIN|PRECTOTCORR|RH2M|ALLSKY_SFC_SW_DWN|ALLSKY_SFC_PAR_TOT|GWETROOT|GWETTOP)_[A-Za-z_]+$'
     entities: [TERM-019, TERM-024]
-    note: Open-Meteo·NASA POWER 기후 변수×생산지역(12종). 지역 접미가 없으면 값 충돌이 발생한다.
+    note: NASA POWER 기후 변수×생산지역(업로드본 형식). 지역 접미가 없으면 값 충돌이 발생한다.
+  - pattern: '{openmeteo_var}_{CC}_{Region}'  # Open-Meteo ERA5-Land 실측 — 접미 {CC}_{Region}
+    regex: '^(temperature_2m_max|temperature_2m_min|precipitation_sum|shortwave_radiation_sum|soil_temperature_0_to_7cm|soil_moisture_0_to_7cm|et0_fao_evapotranspiration|sunshine_duration)_[A-Z]{2}_[A-Za-z]+$'
+    entities: [TERM-019, TERM-024]
+    note: Open-Meteo 기후 변수×국가코드×생산지역(production_regions tier 1·2). 토양 변수는 hourly 일평균 집계본이다.
+  - pattern: 'FCST_{var}_{CC}_{Region}'      # v3.3 신설 — Open-Meteo 예보 계열
+    regex: '^FCST_(temperature_2m_max|temperature_2m_min|precipitation_sum|shortwave_radiation_sum|et0_fao_evapotranspiration)_[A-Z]{2}_[A-Za-z]+$'
+    entities: [TERM-019, TERM-024]
+    note: 기상 예보는 참고 지표다 — 실측 대비 검증(예보 오차 분포) 전에는 모델 투입 금지. 예보와 실측을 같은 코드로 합치지 않는다.
   - pattern: PSD_{attr}
     regex: '^PSD_[A-Z_]+$'
     entities: [TERM-033, TERM-035, TERM-036]
@@ -728,18 +759,74 @@ signal_tag_mapping:
   - tag_ko: 전문매체                      # v3.2 신설 — RSS 수집 채널(주제 태그가 아닌 소스 채널)
     unstr_codes: []
     absa_indicator: SBO_NEWS_SENTIMENT   # 기사 톤은 일반 뉴스 감성 aspect로 귀속
-    entities: [TERM-042, TERM-139]
+    # v3.3 — 구 바인딩 [TERM-042, TERM-139](대두유·감성 점수)는 매체 용어가 없던 시점의 임시 바인딩이었다.
+    #   entities.yaml media_and_collection_channels 신설로 매체(TERM-176·177·181~190)와
+    #   수집 채널(TERM-178~180)에 직접 잇는다. 온디맨드 채널(TERM-191)은 일별 태그에 두지 않는다.
+    entities: [TERM-176, TERM-177, TERM-178, TERM-179, TERM-180,
+               TERM-181, TERM-182, TERM-183, TERM-184, TERM-185,
+               TERM-186, TERM-187, TERM-188, TERM-189, TERM-190]
     daily_codes: ['RSS_FARMDOC_DAILY', 'RSS_WORLD_GRAIN', 'RSS_OFI_MAGAZINE', 'RSS_GRAIN_ORG',
                   'RSS_SOYGROWERS', 'RSS_CLIMATEPOL', 'RSS_AGMARKET', 'RSS_GRAINCENTRAL',
                   'RSS_TFM', 'RSS_UKRAGRO',
                   'RSS_REUTERS_COMMODITIES', 'RSS_REUTERS_CLIMATE_ENERGY',   # 2026-09-13 승인자 지시
                   'RSS_AP_COMMODITIES', 'RSS_AP_WORLD']
-    note: 값은 일자별 기사 수이며 주제 신호가 아니다 — 주제 귀속은 기사 본문 태깅(P1-05) 이후에만.
-      RSS_FARMDOC_DAILY·RSS_WORLD_GRAIN 외 8종은 다이제스트 레지스트리 편입과 동시에 유효해진다.
+    note: >-
+      값은 일자별 관련 기사 수이며 주제 신호가 아니다 — 주제 귀속은 기사 본문 태깅(P1-05) 이후에만.
+      공식 RSS가 없는 매체(Reuters·AP)는 채널 체인 Google News RSS 검색 프록시 → GDELT DOC 2.0(domain 필터 한정)
+      → Bing News RSS → 원문 섹션(열람용) 순으로 확보하며, 승자는 관련 기사 1건 이상을 처음 낸 채널이다.
+      어느 채널이 이겼는지는 note 앞머리 '[채널: …]'로 남긴다. 코드별 체인·채널 속성의 원천은 media_sources 블록이다.
   - tag_ko: TONE
     unstr_codes: [UNSTR_GAIN_TONE, UNSTR_FAO_TONE]
     absa_indicator: SBO_NEWS_SENTIMENT   # 키워드 톤은 LLM 정밀 ABSA의 Phase A 프록시
     entities: [TERM-139]
+
+# ── 매체·수집 채널 원장 (v3.3 신설 — 일별 다이제스트 '전문 매체' 계열의 단일 원천) ──
+# 소비자: scripts/daily_unstructured_digest.py(RSS_SOURCES 체인) · P1-05(기사 태깅) · P1-06(온톨로지 갱신)
+# 검증기는 본 블록을 직접 검사하지 않는다(검증기 중립) — 엔티티 실존은 signal_tag_mapping 바인딩(C11)이 보증.
+media_sources:
+  note: >-
+    코드별 수집 체인의 단일 원천. 체인은 앞에서부터 시도하며 승자는 관련 기사 1건 이상을 처음 낸 채널이다
+    (항목이 있기만 한 채널이 무관 기사로 뒤 채널을 가리는 구 규칙은 폐기). 승자 채널은 note 앞머리
+    '[채널: …]'로 기록한다. 값은 일자별 관련 기사 수이며 주제 신호가 아니다 — 주제 귀속은 본문 태깅 이후에만.
+    매체(발행 주체)는 MediaSource, 경로는 CollectionChannel로 분리하고 둘은 COLLECTED_VIA로 잇는다.
+  channels:
+  - {id: CH-GNEWS, entity: TERM-178, kind: rss_proxy, host: news.google.com, cost: 무료, rate_limit: 비공식, egress: v2.6}
+  - {id: CH-GDELT, entity: TERM-179, kind: api_json, host: api.gdeltproject.org, cost: 무료, rate_limit: 엄격(6초 간격·429 재시도), egress: 기등재}
+  - {id: CH-BING,  entity: TERM-180, kind: rss, host: www.bing.com, cost: 무료, rate_limit: 비공식(약 14건 상한), egress: v2.7}
+  - {id: CH-RSS,   kind: rss_official, note: 매체 공식 RSS 2.0 직접 수집(10종) — 매체별 entity는 codes.publisher 참조}
+  - {id: CH-RAW,   kind: html_section, note: 승인자 원문 섹션 URL — 비브라우저 차단 예상 · 열람용(비치명)}
+  - {id: CH-PPLX,  entity: TERM-191, kind: llm_proxy_on_demand, note: 일별 스케줄 편입 금지 — 수동·온디맨드 요약 전용}
+  codes:
+  # 공개 RSS가 없는 매체 — 채널 체인(승자 규칙 적용)
+  - {code: RSS_REUTERS_COMMODITIES,    publisher: TERM-176, chain: [CH-GNEWS, CH-GDELT, CH-BING, CH-RAW], topic: 대두유·식물성유지·압착·바이오디젤·관세·운임}
+  - {code: RSS_REUTERS_CLIMATE_ENERGY, publisher: TERM-176, chain: [CH-GNEWS, CH-GDELT, CH-BING, CH-RAW], topic: 바이오연료·RVO·가뭄·ENSO·기후}
+  - {code: RSS_AP_COMMODITIES,         publisher: TERM-177, chain: [CH-GNEWS, CH-GDELT, CH-BING, CH-RAW], topic: 대두·식물성유지·상품 선물·관세·운임}
+  - {code: RSS_AP_WORLD,               publisher: TERM-177, chain: [CH-GNEWS, CH-GDELT, CH-BING, CH-RAW], topic: 홍해·호르무즈·흑해·수에즈·남미 수출국·해운}
+  # 공식 RSS 2.0 직접 수집 — 매체 1:1
+  - {code: RSS_FARMDOC_DAILY, publisher: TERM-181, chain: [CH-RSS]}
+  - {code: RSS_WORLD_GRAIN,   publisher: TERM-182, chain: [CH-RSS]}
+  - {code: RSS_OFI_MAGAZINE,  publisher: TERM-183, chain: [CH-RSS]}
+  - {code: RSS_GRAIN_ORG,     publisher: TERM-184, chain: [CH-RSS]}
+  - {code: RSS_SOYGROWERS,    publisher: TERM-185, chain: [CH-RSS]}
+  - {code: RSS_CLIMATEPOL,    publisher: TERM-186, chain: [CH-RSS], language: ko}
+  - {code: RSS_AGMARKET,      publisher: TERM-187, chain: [CH-RSS]}
+  - {code: RSS_GRAINCENTRAL,  publisher: TERM-188, chain: [CH-RSS]}
+  - {code: RSS_TFM,           publisher: TERM-189, chain: [CH-RSS]}
+  - {code: RSS_UKRAGRO,       publisher: TERM-190, chain: [CH-RSS]}
+  paid_options:                    # 무료 체인이 지속 실패할 때의 대안 — 최종 결정자 결정 대기
+  - {name: LSEG/Reuters News feed API, tier: 기업 계약, status: 결정 대기(DQ-24)}
+  - {name: AP Media API, tier: 평가 무료·운영 유료, status: 결정 대기(DQ-24)}
+
+# ── 기후 수집 생산지역 (v3.3 신설 — structured_patterns 기후 계열의 지역 접미 단일 원천) ──
+production_regions:
+  note: 기후 수집 지역의 단일 원천은 config/production_regions.yaml — 지표 코드 접미는 {CC}_{Region}(Open-Meteo·예보)
+    또는 {Region}(NASA POWER 업로드본). tier 1 = 승인자 공유 정본 좌표 12(CONFIRMED) ·
+    tier 2 = 주 중심 근사 좌표 11(INFERENCE, 승인자 확인 대기). tier 2 지표는 좌표 확정 전까지 참고 지표로만 쓴다.
+  tier1: [CN_Heilongjiang, CN_Shandong, CN_Jiangsu, US_Illinois, US_Iowa, US_Indiana,
+          BR_MatoGrosso, BR_Parana, BR_MatoGrossodoSul, AR_Cordoba, AR_SantaFe, AR_BuenosAires]
+  tier2: [BR_RioGrandedoSul, BR_Goias, US_Minnesota, US_Nebraska, US_Ohio, PY_AltoParana,
+          IN_MadhyaPradesh, MY_Sabah, MY_Johor, ID_Riau, ID_CentralKalimantan]
+  crops: {soy: 19, palm: 4}        # 팜 4지역(MY·ID)은 대두유−팜유 가격 차이(CE-015) 배경 관측용
 
 # ── 공급망 참조 계층 (v3.1 신설 — G2 운영 현실화: 도착가 밴드·4축 대안 · D-041) ──
 # 소비자: src/forecasting/landed_cost.py · src/forecasting/procurement_alternatives.py ·
