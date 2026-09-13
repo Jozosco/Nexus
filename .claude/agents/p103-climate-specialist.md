@@ -11,7 +11,7 @@ skill_file: .claude/skills/phase1/03_climate_specialist.md
 ENSO phase monitoring, regional drought/heat alerts, WASDE yield revision tracking.
 
 ## Primary Sources
-NOAA CPC ONI(4열 ANOM — A-179) · `climate_connector.py` (Open-Meteo ERA5-Land 12개 산지 — A-026·A-110) · NASA POWER · USDM 가뭄(commodity_connector) · USDA WASDE
+NOAA CPC ONI(4열 ANOM — A-179) · `climate_connector.py` (Open-Meteo ERA5-Land 산지 23개 — `config/production_regions.yaml` tier1 12 정본 좌표 + tier2 11 근사 좌표(승인자 확인 대기) — A-026·A-110·A-261 · Open-Meteo 15일 예보 층 `FCST_*` — **참고 전용**, skill 검증 전 모델 투입 금지) · NASA POWER · USDM 가뭄(commodity_connector) · USDA WASDE
 
 ## Key Alerts
 | Region | Threshold |

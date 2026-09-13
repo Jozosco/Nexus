@@ -1,0 +1,257 @@
+# 대두유·대체유 산지 좌표 — 단일 진실 원천 (2026-09-13 신설)
+# 소비자: src/pipeline/connectors/climate_connector.py (Open-Meteo 아카이브·예보)
+#         data/schemas/climate_data.yaml (region_code 열거)
+#         docs/research_desk/2026-09/climate_regions_forecast_weathernext_2026_09_13.md
+# 형식 제약: 파서 폴백(pyyaml 부재 시)을 위해 각 지역은 `- code:`로 시작하는 평면 매핑만 사용.
+version: '1.0'
+updated: 2026-09-13
+source_note: >
+  tier1 = 승인자 공유 정본 좌표 표(docs/research_desk/_reference/soybean_oil_production_climate.md §3.2)
+  — NASA POWER 업로드본 좌표와 일치 확인(CONFIRMED).
+  tier2 = 주(州) 중심 근사 좌표(INFERENCE) — 승인자 확인 대기. 확인 전에는 참고 수집 전용이며
+  tier1과 동일 코드 규약으로 적재하되 모델 투입 전 좌표 확정이 선행 조건.
+code_conventions:
+  openmeteo_archive: "{var}_{CC}_{Region}   (예: precipitation_sum_BR_MatoGrosso)"
+  openmeteo_forecast: "FCST_{var}_{CC}_{Region}   (예: FCST_precipitation_sum_BR_MatoGrosso)"
+  nasa_power_upload: "{PARAM}_{Region}   (예: PRECTOTCORR_MatoGrosso — 업로드본 규약, 변경 없음)"
+  region_code: "^[A-Z]{2}_[A-Za-z]+$  (ISO2 국가 접두 + 지역명, 공백·하이픈 없음)"
+tiers:
+  '1': "CONFIRMED — 정본 좌표 표와 일치. 아카이브 daily 8변수(토양 hourly 포함) + 예보"
+  '2': "INFERENCE — 주 중심 근사. 아카이브 daily 6변수만(토양 hourly 생략) + 예보. 부하 상한용"
+
+regions:
+  # ── tier 1 · 대두 (정본 좌표 표 §3.2) ─────────────────────────────────────
+  - code: CN_Heilongjiang
+    name_ko: 헤이룽장
+    country: China
+    crop: soy
+    role: grow
+    lat: 48.0
+    lon: 128.0
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 중국 최대 국내 대두 재배 지역
+  - code: CN_Shandong
+    name_ko: 산둥
+    country: China
+    crop: soy
+    role: crush
+    lat: 36.5
+    lon: 118.0
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 연안 최대 압착 클러스터
+  - code: CN_Jiangsu
+    name_ko: 장쑤
+    country: China
+    crop: soy
+    role: crush
+    lat: 32.5
+    lon: 120.0
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 양쯔강 압착 허브
+  - code: US_Illinois
+    name_ko: 일리노이
+    country: USA
+    crop: soy
+    role: grow_crush
+    lat: 40.0
+    lon: -89.0
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 미국 생산 1위 주
+  - code: US_Iowa
+    name_ko: 아이오와
+    country: USA
+    crop: soy
+    role: grow_crush
+    lat: 42.0
+    lon: -93.5
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 미국 압착 설비 1위 주
+  - code: US_Indiana
+    name_ko: 인디애나
+    country: USA
+    crop: soy
+    role: grow
+    lat: 40.2
+    lon: -86.1
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 미국 생산 3위 주
+  - code: BR_MatoGrosso
+    name_ko: 마투그로수
+    country: Brazil
+    crop: soy
+    role: grow_crush
+    lat: -13.0
+    lon: -56.0
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 브라질 생산 1위 주
+  - code: BR_Parana
+    name_ko: 파라나
+    country: Brazil
+    crop: soy
+    role: grow_crush
+    lat: -24.5
+    lon: -51.5
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 브라질 주요 유지 가공 주
+  - code: BR_MatoGrossodoSul
+    name_ko: 마투그로수두술
+    country: Brazil
+    crop: soy
+    role: grow
+    lat: -20.0
+    lon: -54.5
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 생산 비중 확대 중
+  - code: AR_Cordoba
+    name_ko: 코르도바
+    country: Argentina
+    crop: soy
+    role: grow
+    lat: -31.4
+    lon: -64.2
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 아르헨티나 재배 1위 주
+  - code: AR_SantaFe
+    name_ko: 산타페
+    country: Argentina
+    crop: soy
+    role: crush
+    lat: -33.0
+    lon: -60.6
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 로사리오 압착 허브(전국 설비 약 80%)
+  - code: AR_BuenosAires
+    name_ko: 부에노스아이레스
+    country: Argentina
+    crop: soy
+    role: grow
+    lat: -36.0
+    lon: -60.0
+    tier: 1
+    coord_status: CONFIRMED
+    share_note: 팜파스 핵심 재배 지역
+
+  # ── tier 2 · 대두 확장 (주 중심 근사 — 승인자 확인 대기) ─────────────────
+  - code: BR_RioGrandedoSul
+    name_ko: 히우그란지두술
+    country: Brazil
+    crop: soy
+    role: grow
+    lat: -30.0
+    lon: -53.0
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 브라질 남부 최대 가뭄 손실 지역(Embrapa 50년 정량 — CE-006 지역 분리 해석)
+  - code: BR_Goias
+    name_ko: 고이아스
+    country: Brazil
+    crop: soy
+    role: grow
+    lat: -16.5
+    lon: -49.5
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 중서부 세하두 주요 생산 주
+  - code: US_Minnesota
+    name_ko: 미네소타
+    country: USA
+    crop: soy
+    role: grow
+    lat: 44.5
+    lon: -94.5
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 미국 북부 주요 생산 주
+  - code: US_Nebraska
+    name_ko: 네브래스카
+    country: USA
+    crop: soy
+    role: grow
+    lat: 41.0
+    lon: -98.0
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 관개 비중 높은 서부 코른벨트
+  - code: US_Ohio
+    name_ko: 오하이오
+    country: USA
+    crop: soy
+    role: grow
+    lat: 40.3
+    lon: -83.0
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 동부 코른벨트 생산 주
+  - code: PY_AltoParana
+    name_ko: 알토파라나(파라과이)
+    country: Paraguay
+    crop: soy
+    role: grow
+    lat: -25.5
+    lon: -55.0
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 파라과이 최대 대두 생산 지역(남미 4위 수출국)
+  - code: IN_MadhyaPradesh
+    name_ko: 마디아프라데시(인도)
+    country: India
+    crop: soy
+    role: grow
+    lat: 23.0
+    lon: 77.0
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 인도 대두 생산 1위 주(수입 관세 정책 연계 — 인도는 GAIN 국가 상위)
+
+  # ── tier 2 · 팜 (대체유 팜유 가격 전이 CE-015 배경 — 산지 기후는 팜유 수급 경로) ──
+  - code: MY_Sabah
+    name_ko: 사바(말레이시아)
+    country: Malaysia
+    crop: palm
+    role: grow
+    lat: 5.5
+    lon: 117.5
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 말레이시아 팜유 생산 1위 주
+  - code: MY_Johor
+    name_ko: 조호르
+    country: Malaysia
+    crop: palm
+    role: grow
+    lat: 2.0
+    lon: 103.5
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 반도 말레이시아 주요 팜 재배 주
+  - code: ID_Riau
+    name_ko: 리아우(인도네시아)
+    country: Indonesia
+    crop: palm
+    role: grow
+    lat: 0.5
+    lon: 101.5
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 인도네시아 팜유 생산 1위 주(수마트라)
+  - code: ID_CentralKalimantan
+    name_ko: 중부칼리만탄
+    country: Indonesia
+    crop: palm
+    role: grow
+    lat: -2.0
+    lon: 113.5
+    tier: 2
+    coord_status: INFERENCE
+    share_note: 칼리만탄 팜 확장 지역(MY·ID 합산 세계 팜유 80%+ — Zhang 2025)

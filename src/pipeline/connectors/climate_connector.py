@@ -2,7 +2,8 @@
 기후·기상이상 커넥터 — WBS 1.1.5 / 1.1.20
 수집 대상:
   ENSO 페이즈 (NOAA CPC ONI) · 원산지 기상이상 (OpenWeatherMap)
-  Open-Meteo 아카이브 — 12개 주요 생산지역 일별 기후 (2020-01-01~현재)
+  Open-Meteo 아카이브 — 산지 일별 기후 (config/production_regions.yaml — tier1 12 + tier2 11)
+  Open-Meteo 예보 — 산지 15일 일별 예보(FCST_ 접두, 참고 전용 — 2026-09-13 신설)
   ECMWF ERA5 기온·강수 이상 (ECMWF_API_KEY)
 범위 제외: NASA POWER 농업기상 → production_connector.py 담당
 실행 환경: VS Code Web (Azure ML Studio) 또는 GitHub Actions
@@ -27,6 +28,11 @@ from src.pipeline.asof import attach_asof  # noqa: E402
 OUTPUT_DIR = "data/raw"
 NOAA_ENSO_URL = "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt"
 OPEN_METEO_BASE = "https://archive-api.open-meteo.com/v1/archive"
+# 2026-09-13: 예보 API(무료·키 불필요·최대 16일). models=best_match = ECMWF IFS/AIFS 0.25°
+OPEN_METEO_FORECAST_BASE = "https://api.open-meteo.com/v1/forecast"
+FORECAST_SOURCE_NAME = "OpenMeteo_forecast(best_match)"
+FORECAST_CODE_PREFIX = "FCST_"
+REGIONS_CONFIG_PATH = "config/production_regions.yaml"
 
 # Open-Meteo 일별 수집 변수 (ERA5-Land 기반, API 키 불필요)
 # 주의: direct_radiation_spread/soil_temperature_0_to_7cm_spread 는 비표준 — 표준명으로 교정
@@ -64,8 +70,19 @@ OPEN_METEO_UNITS: dict[str, str] = {
     "sunshine_duration":          "s",
 }
 
-# 12개 주요 생산지역 — soybean_oil_production_climate.md Part 3.2
-PRODUCTION_REGIONS: dict[str, dict[str, Any]] = {
+# 예보 daily 변수 — 아카이브 daily 변수의 부분집합(토양·일조는 예보 daily 미제공)
+FORECAST_VARS: list[str] = [
+    "temperature_2m_max",
+    "temperature_2m_min",
+    "precipitation_sum",
+    "shortwave_radiation_sum",
+    "et0_fao_evapotranspiration",
+]
+
+# 내장 12개 주요 생산지역 — soybean_oil_production_climate.md §3.2 (tier1 정본 좌표).
+# 2026-09-13: 단일 진실 원천은 config/production_regions.yaml — 이 dict는 설정 파일 부재·
+#   파싱 실패 시 **폴백**으로만 쓴다(tier2 11개 지역은 설정 파일에만 존재).
+_BUILTIN_REGIONS: dict[str, dict[str, Any]] = {
     "CN_Heilongjiang": {"lat":  48.0, "lon":  128.0, "country": "China",     "role": "grow"},
     "CN_Shandong":     {"lat":  36.5, "lon":  118.0, "country": "China",     "role": "crush"},
     "CN_Jiangsu":      {"lat":  32.5, "lon":  120.0, "country": "China",     "role": "crush"},
@@ -79,11 +96,132 @@ PRODUCTION_REGIONS: dict[str, dict[str, Any]] = {
     "AR_SantaFe":      {"lat": -33.0, "lon":  -60.6, "country": "Argentina", "role": "crush"},
     "AR_BuenosAires":  {"lat": -36.0, "lon":  -60.0, "country": "Argentina", "role": "grow"},
 }
+_REGION_KEYS: tuple[str, ...] = (
+    "lat", "lon", "country", "role", "crop", "tier", "name_ko", "coord_status")
+
+
+def _coerce_scalar(raw: str) -> Any:
+    """최소 YAML 스칼라 변환 — 따옴표 제거, 정수·실수 판정, 그 외 문자열."""
+    s = raw.strip()
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in "'\"":
+        return s[1:-1]
+    try:
+        return int(s)
+    except ValueError:
+        pass
+    try:
+        return float(s)
+    except ValueError:
+        return s
+
+
+def _parse_regions_minimal(text: str) -> list[dict[str, Any]]:
+    """pyyaml 부재 시 폴백 — `regions:` 블록의 `- code:` 평면 매핑 목록만 읽는다.
+
+    설정 파일이 이 형식만 쓰도록 헤더 주석에 제약을 명시했다(CI 기후 잡은 pyyaml을
+    설치하지 않으므로, 의존성 하나 때문에 tier2 지역을 조용히 잃지 않기 위한 장치).
+    """
+    entries: list[dict[str, Any]] = []
+    in_block = False
+    cur: dict[str, Any] | None = None
+    for line in text.splitlines():
+        stripped = line.split("#", 1)[0].rstrip() if not line.lstrip().startswith("#") else ""
+        if not stripped.strip():
+            continue
+        if stripped.startswith("regions:"):
+            in_block = True
+            continue
+        if not in_block:
+            continue
+        if not stripped.startswith(" "):        # 최상위 키 등장 → 블록 종료
+            break
+        body = stripped.strip()
+        if body.startswith("- "):
+            cur = {}
+            entries.append(cur)
+            body = body[2:].strip()
+        if cur is None or ":" not in body:
+            continue
+        key, _, val = body.partition(":")
+        cur[key.strip()] = _coerce_scalar(val)
+    return entries
+
+
+def load_production_regions(path: str | os.PathLike[str] = REGIONS_CONFIG_PATH,
+                            ) -> dict[str, dict[str, Any]]:
+    """config/production_regions.yaml → `{code: {lat, lon, country, role, tier, ...}}`.
+
+    파일 부재·파싱 실패 시 `[경고]` 후 내장 12개(tier1)로 폴백한다. 상대 경로는 저장소
+    루트 기준으로 해석한다(스크립트 직접 실행·pytest 양쪽에서 동일).
+    """
+    p = _Path(path)
+    if not p.is_absolute():
+        p = _Path(__file__).resolve().parents[3] / p
+    fallback = {code: {**info, "tier": 1, "crop": "soy", "coord_status": "CONFIRMED"}
+                for code, info in _BUILTIN_REGIONS.items()}
+    if not p.exists():
+        print(f"[경고] 산지 설정 파일 없음: {p} — 내장 12개 지역(tier1)으로 폴백")
+        return fallback
+    try:
+        text = p.read_text(encoding="utf-8")
+        try:
+            import yaml  # noqa: WPS433 — 선택 의존성(CI 기후 잡 미설치 가능)
+            entries = (yaml.safe_load(text) or {}).get("regions") or []
+        except ImportError:
+            entries = _parse_regions_minimal(text)
+        regions: dict[str, dict[str, Any]] = {}
+        for e in entries:
+            code = str(e.get("code", "")).strip()
+            if not code or "lat" not in e or "lon" not in e:
+                raise ValueError(f"지역 항목 필수 필드(code/lat/lon) 누락: {e}")
+            if code in regions:
+                raise ValueError(f"지역 코드 중복: {code}")
+            info = {k: e[k] for k in _REGION_KEYS if k in e}
+            info["lat"] = float(info["lat"])
+            info["lon"] = float(info["lon"])
+            info["tier"] = int(info.get("tier", 1))
+            regions[code] = info
+        if not regions:
+            raise ValueError("regions 목록이 비어 있음")
+        return regions
+    except Exception as e:  # 파싱 실패는 수집 중단 사유가 아님 — 폴백 후 계속
+        print(f"[경고] 산지 설정 파싱 실패({type(e).__name__}: {str(e)[:80]}) — "
+              "내장 12개 지역(tier1)으로 폴백")
+        return fallback
+
+
+# 수집 대상 산지 — 단일 진실 원천은 설정 파일(23개), 폴백은 내장 12개
+PRODUCTION_REGIONS: dict[str, dict[str, Any]] = load_production_regions()
+
+
+def _select_regions(regions: dict[str, dict[str, Any]] | None = None,
+                    ) -> dict[str, dict[str, Any]]:
+    """환경변수 CLIMATE_TIER(기본 all · '1' = tier1만)로 수집 대상 산지를 고른다.
+
+    429(무료 티어 한도) 발생 시 CLIMATE_TIER=1로 즉시 축소 운용하는 것이 절차다.
+    """
+    base = regions if regions is not None else PRODUCTION_REGIONS
+    tier_env = os.environ.get("CLIMATE_TIER", "all").strip().lower()
+    if tier_env in ("", "all"):
+        return dict(base)
+    try:
+        max_tier = int(tier_env)
+    except ValueError:
+        print(f"[경고] CLIMATE_TIER 값 해석 불가('{tier_env}') — 전체 지역 수집")
+        return dict(base)
+    return {c: i for c, i in base.items() if int(i.get("tier", 1)) <= max_tier}
+
+
+def _tier_counts(regions: dict[str, dict[str, Any]]) -> tuple[int, int]:
+    t1 = sum(1 for i in regions.values() if int(i.get("tier", 1)) == 1)
+    return t1, len(regions) - t1
+
 
 # OpenWeatherMap 현재 기상 수집 (3개 원산지, 레거시)
+# 2026-09-13: 마투그로수 좌표를 정본 좌표 표(-13.0/-56.0)와 정합(구 -12.6/-55.7)
 ORIGIN_COORDS: dict[str, dict[str, float]] = {
     "US_Iowa":        {"lat": 42.0,  "lon": -93.5},
-    "BR_Mato_Grosso": {"lat": -12.6, "lon": -55.7},
+    "BR_Mato_Grosso": {"lat": -13.0, "lon": -56.0},
     "AR_Cordoba":     {"lat": -31.4, "lon": -64.2},
 }
 
@@ -159,15 +297,27 @@ def fetch_enso_index(start_year: int = 2017) -> pd.DataFrame:
 def fetch_openmeteo_regional_climate(
     start_date: str = "2017-01-01",
     end_date: str | None = None,
+    regions: dict[str, dict[str, Any]] | None = None,
 ) -> pd.DataFrame:
-    """Open-Meteo 아카이브 API — 12개 주요 대두유 생산지역 일별 기후 수집.
+    """Open-Meteo 아카이브 API — 산지 일별 기후 수집.
 
     API 키 불필요. ERA5-Land 기반. 비상업적 무료 사용.
-    수집 대상 지역: 중국(3) · 미국(3) · 브라질(3) · 아르헨티나(3)
-    참고: docs/research_desk/soybean_oil_production_climate.md Part 3.2
+    수집 대상: config/production_regions.yaml — tier1 12(정본 좌표) + tier2 11(근사 좌표).
+    tier2는 토양 hourly 호출을 생략(daily 6변수만)해 무료 티어 부하를 묶는다.
+    CLIMATE_TIER=1 이면 tier1만 수집한다(429 발생 시 축소 절차).
+    참고: docs/research_desk/_reference/soybean_oil_production_climate.md §3.2
     """
     if end_date is None:
         end_date = date.today().isoformat()
+    targets = _select_regions(regions)
+    if not targets:
+        print("[경고] 수집 대상 산지 없음(CLIMATE_TIER 필터 결과) — 아카이브 수집 건너뜀")
+        return pd.DataFrame()
+    n_t1, n_t2 = _tier_counts(targets)
+    # 호출 예상: 프로브 1 + tier1(daily+hourly 토양) 2회 + tier2(daily) 1회
+    est_calls = 1 + n_t1 * 2 + n_t2
+    print(f"[정보] 기후 지역 {len(targets)}개(tier1 {n_t1}·tier2 {n_t2}) · "
+          f"호출 예상 {est_calls}")
 
     all_rows: list[dict] = []
     ingested_at = pd.Timestamp.utcnow()
@@ -234,7 +384,7 @@ def fetch_openmeteo_regional_climate(
             time.sleep(0.2)
         return good
 
-    _first = next(iter(PRODUCTION_REGIONS.values()))
+    _first = next(iter(targets.values()))
     active_vars = _probe_vars(_first["lat"], _first["lon"])
     if not active_vars:
         print("[오류] 유효한 daily 변수가 없음 — Open-Meteo 사양 변경 확인 필요")
@@ -244,7 +394,7 @@ def fetch_openmeteo_regional_climate(
         print(f"[경고] daily 유효 변수 {len(active_vars)}/{len(daily_candidates)} — 제외: {dropped} "
               f"(수집 실패로 집계됨 — 조용한 상실 방지)")
 
-    for region_code, info in PRODUCTION_REGIONS.items():
+    for region_code, info in targets.items():
         params = {
             "latitude":  info["lat"],
             "longitude": info["lon"],
@@ -280,8 +430,12 @@ def fetch_openmeteo_regional_climate(
                         "unit":           OPEN_METEO_UNITS.get(var, ""),
                         "ingested_at":    ingested_at,
                     })
-            # A-110(F3): 토양 2종을 hourly→일평균으로 복구해 동일 스키마로 합류
-            soil = _fetch_hourly_soil(info["lat"], info["lon"])
+            # A-110(F3): 토양 2종을 hourly→일평균으로 복구해 동일 스키마로 합류.
+            # 2026-09-13: tier2(근사 좌표)는 hourly 호출 생략 — 값 규모의 약 89%가
+            #   토양 hourly라 부하 상한을 tier1에만 허용한다(좌표 확정 후 승격 검토).
+            is_t1 = int(info.get("tier", 1)) == 1
+            soil = (_fetch_hourly_soil(info["lat"], info["lon"]) if is_t1
+                    else {v: {} for v in HOURLY_ONLY_VARS})
             n_soil = 0
             for var, by_date in soil.items():
                 for t, v in by_date.items():
@@ -298,15 +452,17 @@ def fetch_openmeteo_regional_climate(
                     n_soil += 1
 
             ok_regions.append(region_code)
-            print(f"[완료] {region_code} ({info['country']}): {len(times)}일 × {len(active_vars)}변수"
-                  f" + 토양 {n_soil:,}건(hourly→일평균)")
+            soil_note = (f" + 토양 {n_soil:,}건(hourly→일평균)" if is_t1
+                         else " (tier2 — 토양 hourly 생략)")
+            print(f"[완료] {region_code} ({info['country']}): {len(times)}일 × "
+                  f"{len(active_vars)}변수{soil_note}")
             time.sleep(0.3)  # 요청 간격 (API 레이트 리밋 준수)
         except Exception as e:
             fail_regions.append(region_code)
             print(f"[경고] {region_code} 기후 수집 실패: {e}")
 
-    # A-107: 12개 지역 수집 여부를 **명시 리포트**한다 — 조용한 부분 실패 방지
-    total = len(PRODUCTION_REGIONS)
+    # A-107: 지역 수집 여부를 **명시 리포트**한다 — 조용한 부분 실패 방지
+    total = len(targets)
     print(f"[집계] 지역 수집 {len(ok_regions)}/{total}"
           + (f" · 실패: {', '.join(fail_regions)}" if fail_regions else " (전 지역 성공)"))
 
@@ -321,6 +477,81 @@ def fetch_openmeteo_regional_climate(
     print(f"[완료] Open-Meteo 지역 기후 총 {len(df):,}건 ({total_regions}/{total}개 지역, "
           f"{start_date}~{end_date})")
     print(f"[커버리지] 지역별 일수: {per_region}")
+    return df
+
+
+def fetch_openmeteo_forecast(
+    regions: dict[str, dict[str, Any]] | None = None,
+    forecast_days: int = 15,
+    model: str = "best_match",
+) -> pd.DataFrame:
+    """Open-Meteo 예보 API — 산지 일별 예보(최대 16일) 수집. 참고 전용 층.
+
+    행 규약: price_date = 유효일(미래) · indicator_code = FCST_{var}_{region_code} ·
+    note = issue_date={발행일} lead_days={리드} · source_vintage = 발행일.
+    as-of는 attach_asof가 event_time > ingested_at 분기(A-195)로 available_at = 수집 시각을
+    부여한다 — 예보는 발행 시점에 바로 알 수 있는 정보이므로 이것이 정확한 가용 시점이다.
+    예보는 관측 대체가 아니며 skill 검증(30일+ 이력) 전 모델 투입 금지.
+    """
+    targets = _select_regions(regions)
+    if not targets:
+        print("[경고] 예보 대상 산지 없음 — 건너뜀")
+        return pd.DataFrame()
+    forecast_days = max(1, min(int(forecast_days), 16))
+    issue_date = date.today()
+    ingested_at = pd.Timestamp.utcnow()
+    rows: list[dict[str, Any]] = []
+    ok: list[str] = []
+    failed: list[str] = []
+    print(f"[정보] 산지 예보 수집 — {len(targets)}개 지역 × {forecast_days}일 × "
+          f"{len(FORECAST_VARS)}변수 (model={model}) · 호출 예상 {len(targets)}")
+    for region_code, info in targets.items():
+        params = {
+            "latitude": info["lat"], "longitude": info["lon"],
+            "daily": ",".join(FORECAST_VARS), "timezone": "UTC",
+            "forecast_days": forecast_days, "models": model,
+        }
+        try:
+            payload = _fetch(OPEN_METEO_FORECAST_BASE, params=params).json() or {}
+            daily = payload.get("daily", {})
+            times = daily.get("time", [])
+            if not times:
+                print(f"[경고] {region_code}: 예보 응답에 'daily.time' 없음")
+                failed.append(region_code)
+                continue
+            n_before = len(rows)
+            for var in FORECAST_VARS:
+                for t, v in zip(times, daily.get(var) or []):
+                    if v is None:
+                        continue
+                    valid = date.fromisoformat(str(t)[:10])
+                    rows.append({
+                        "price_date":     valid.isoformat(),
+                        "source_name":    FORECAST_SOURCE_NAME,
+                        "region_code":    region_code,
+                        "country":        info.get("country", region_code[:2]),
+                        "indicator_code": f"{FORECAST_CODE_PREFIX}{var}_{region_code}",
+                        "value":          float(v),
+                        "unit":           OPEN_METEO_UNITS.get(var, ""),
+                        "note":           (f"issue_date={issue_date.isoformat()} "
+                                           f"lead_days={(valid - issue_date).days}"),
+                        # vintage = 발행일 — attach_asof가 행 단위로 vintage_known=True 부여
+                        "source_vintage": issue_date.isoformat(),
+                        "ingested_at":    ingested_at,
+                    })
+            ok.append(region_code)
+            print(f"[완료] {region_code} 예보 {len(times)}일 · {len(rows) - n_before}건")
+        except Exception as e:   # 지역 단위 비치명 — 한 지역 실패가 전체를 죽이지 않게
+            failed.append(region_code)
+            print(f"[경고] {region_code} 예보 수집 실패: {type(e).__name__}: {str(e)[:80]}")
+        time.sleep(0.3)
+    print(f"[집계] 예보 지역 {len(ok)}/{len(targets)}"
+          + (f" · 실패: {', '.join(failed)}" if failed else " (전 지역 성공)"))
+    if not rows:
+        print("[경고] Open-Meteo 예보: 수집된 데이터 없음")
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    df["price_date"] = pd.to_datetime(df["price_date"])
     return df
 
 
@@ -425,13 +656,25 @@ def run(start_year: int | None = None) -> None:
     if not enso.empty:
         frames.append(enso)
 
-    # 2. Open-Meteo 12개 생산지역 일별 기후 (2020-01-01~오늘)
+    # 2. Open-Meteo 산지 일별 기후 (config/production_regions.yaml — tier1 12 + tier2 11)
     regional = fetch_openmeteo_regional_climate(
         start_date=om_start,
         end_date=date.today().isoformat(),
     )
     if not regional.empty:
         frames.append(regional)
+
+    # 2b. Open-Meteo 산지 15일 예보 (참고 전용 층 — 2026-09-13). 백필은 예보 개념이 없어
+    #     건너뛰고, CLIMATE_FORECAST=0 으로 끌 수 있다(429 축소 절차의 첫 단계).
+    forecast_on = os.environ.get("CLIMATE_FORECAST", "1").strip().lower() not in ("0", "false")
+    if backfill:
+        print("[정보] 백필 모드 — 산지 예보 수집 건너뜀(예보는 실시간 전용)")
+    elif not forecast_on:
+        print("[정보] CLIMATE_FORECAST=0 — 산지 예보 수집 비활성")
+    else:
+        forecast = fetch_openmeteo_forecast()
+        if not forecast.empty:
+            frames.append(forecast)
 
     # 3. OpenWeatherMap 현재 기상 이상 (API 키 있을 때)
     owm = fetch_weather_anomalies()

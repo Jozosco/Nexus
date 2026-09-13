@@ -1,34 +1,56 @@
 dataset: climate_data
 source_connector: src/pipeline/connectors/climate_connector.py
 output_path: data/raw/climate_data_YYYYMMDD.parquet
-description: "ENSO 페이즈 (NOAA ONI) · Open-Meteo 12개 생산지역 일별 기후 (ERA5-Land) · OpenWeatherMap 현재 기상 (WBS 1.1.5/1.1.20)"
-note: "Open-Meteo: 중국(3) · 미국(3) · 브라질(3) · 아르헨티나(3) 12개 지역, API 키 불필요. ECMWF ERA5 별도 키 필요. docs/research_desk/soybean_oil_production_climate.md Part 3.2 참조"
+description: "ENSO 페이즈 (NOAA ONI) · Open-Meteo 산지 일별 기후 (ERA5-Land, 23개 지역) · Open-Meteo 산지 15일 예보 (참고 전용) · OpenWeatherMap 현재 기상 (WBS 1.1.5/1.1.20)"
+note: >
+  Open-Meteo 산지 목록의 단일 진실 원천은 config/production_regions.yaml (2026-09-13).
+  tier1 12개(정본 좌표 표 §3.2와 일치 — CONFIRMED): 중국(3)·미국(3)·브라질(3)·아르헨티나(3).
+  tier2 11개(주 중심 근사 — INFERENCE, 승인자 확인 대기): 브라질(2)·미국(3)·파라과이(1)·인도(1)·
+  말레이시아 팜(2)·인도네시아 팜(2). tier2는 토양 hourly 변수를 수집하지 않는다(daily 6변수만).
+  예보 행(FCST_ 접두)은 event_time이 **미래**(유효일)이며 available_at = 수집 시각(attach_asof의
+  event_time > ingested_at 분기, A-195). 예보는 관측 대체가 아니라 참고 층 — skill 검증 전 모델 투입 금지.
+  API 키 불필요. ECMWF ERA5 별도 키 필요. docs/research_desk/_reference/soybean_oil_production_climate.md §3.2 참조
 
 columns:
   - name: price_date
     dtype: datetime64[ns]
     nullable: false
-    description: "관측 기준일 (NOAA: 연도별 1월 1일, Open-Meteo: 일별, OWM: 수집일)"
+    description: "관측 기준일 (NOAA: 계절 중간월 1일, Open-Meteo 아카이브: 일별, OWM: 수집일, Open-Meteo 예보: 유효일 — 미래 날짜)"
 
   - name: source_name
     dtype: object
     nullable: false
-    description: "데이터 출처 (NOAA_CPC | OpenMeteo/ERA5Land | OpenWeatherMap | ECMWF_ERA5)"
+    description: "데이터 출처 (NOAA_CPC | OpenMeteo/ERA5Land | OpenMeteo_forecast(best_match) | OpenWeatherMap | ECMWF_ERA5)"
 
   - name: region_code
     dtype: object
     nullable: true
-    description: "지역 코드 (CN_Heilongjiang | CN_Shandong | CN_Jiangsu | US_Illinois | US_Iowa | US_Indiana | BR_MatoGrosso | BR_Parana | BR_MatoGrossodoSul | AR_Cordoba | AR_SantaFe | AR_BuenosAires | GLOBAL)"
+    description: >
+      지역 코드 — config/production_regions.yaml 규약 ^[A-Z]{2}_[A-Za-z]+$.
+      tier1: CN_Heilongjiang | CN_Shandong | CN_Jiangsu | US_Illinois | US_Iowa | US_Indiana |
+      BR_MatoGrosso | BR_Parana | BR_MatoGrossodoSul | AR_Cordoba | AR_SantaFe | AR_BuenosAires.
+      tier2: BR_RioGrandedoSul | BR_Goias | US_Minnesota | US_Nebraska | US_Ohio | PY_AltoParana |
+      IN_MadhyaPradesh | MY_Sabah | MY_Johor | ID_Riau | ID_CentralKalimantan.
+      ENSO: GLOBAL. (레거시 OWM: US_Iowa | BR_Mato_Grosso | AR_Cordoba)
 
   - name: country
     dtype: object
     nullable: true
-    description: "국가명 (China | USA | Brazil | Argentina | Global)"
+    description: "국가명 (China | USA | Brazil | Argentina | Paraguay | India | Malaysia | Indonesia | Global)"
 
   - name: indicator_code
     dtype: object
     nullable: false
-    description: "지표 코드 (ONI | temperature_2m_max | temperature_2m_min | precipitation_sum | shortwave_radiation_sum | soil_temperature_0_to_7cm | soil_moisture_0_to_7cm | et0_fao_evapotranspiration | sunshine_duration | TEMP_{location})"
+    description: >
+      지표 코드. ENSO: ONI.
+      Open-Meteo 아카이브: {var}_{region_code} — var ∈ temperature_2m_max | temperature_2m_min |
+      precipitation_sum | shortwave_radiation_sum | soil_temperature_0_to_7cm | soil_moisture_0_to_7cm |
+      et0_fao_evapotranspiration | sunshine_duration (예: precipitation_sum_BR_MatoGrosso,
+      soil_moisture_0_to_7cm_US_Iowa — 토양 2종은 tier1 지역만).
+      Open-Meteo 예보: FCST_{var}_{region_code} — var ∈ temperature_2m_max | temperature_2m_min |
+      precipitation_sum | shortwave_radiation_sum | et0_fao_evapotranspiration
+      (예: FCST_precipitation_sum_BR_MatoGrosso, FCST_temperature_2m_max_MY_Sabah).
+      레거시 OWM: TEMP_{location}. (구 열거의 접미 없는 변수명은 A-172 이전 규약 — 현행 아님)
 
   - name: season
     dtype: object
@@ -50,6 +72,11 @@ columns:
     nullable: true
     description: "La_Nina (≤-0.5) | Neutral | El_Nino (≥+0.5) — NOAA ONI 전용"
 
+  - name: note
+    dtype: object
+    nullable: true
+    description: "예보 행 전용: issue_date={발행일} lead_days={리드일수} (관측 행은 null)"
+
   - name: ingested_at
     dtype: datetime64[ns]
     nullable: false
@@ -58,10 +85,13 @@ columns:
   # ── as-of 시점 정합성 5필드 (D-023 · src/pipeline/asof.py) ──────────────────
   # 규칙: 모델의 t일 입력 = available_at <= t 를 만족하는 가장 최근 값
   # 부여: attach_asof(df, source=...) — 커넥터가 직접 계산하지 않는다
+  # 예보 행(FCST_): event_time = 유효일(미래) > ingested_at → available_at = ingested_at(수집 시각).
+  #   RELEASE_RULES "FCST_" = immediate·lag 0·revises True, REVISION_HISTORY "FCST_" = full
+  #   (발행 회차별 행 보존 — 같은 유효일이 매일 재예보되므로 available_at이 vintage 역할).
   - name: event_time
     dtype: datetime64[ns]
     nullable: false
-    description: "측정 대상 현상이 발생한 시점(관측일). price_date와 동일한 경우가 많음"
+    description: "측정 대상 현상이 발생한 시점(관측일). price_date와 동일한 경우가 많음. 예보 행은 유효일(미래)"
 
   - name: period_end
     dtype: datetime64[ns]
@@ -76,7 +106,7 @@ columns:
   - name: available_at
     dtype: datetime64[ns]
     nullable: false
-    description: "우리가 최초로 사용 가능했던 시점 — **모델 필터의 기준**. 없으면 모델 투입 금지"
+    description: "우리가 최초로 사용 가능했던 시점 — **모델 필터의 기준**. 없으면 모델 투입 금지. 예보 행은 수집 시각(미래 불가)"
 
   - name: source_vintage
     dtype: object

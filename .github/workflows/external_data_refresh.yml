@@ -160,7 +160,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install httpx pandas pyarrow
+        run: pip install httpx pandas pyarrow pyyaml   # pyyaml: config/production_regions.yaml 로드(A-261)
       - name: Run climate connector
         env:
           ECMWF_API_KEY: ${{ secrets.ECMWF_API_KEY }}

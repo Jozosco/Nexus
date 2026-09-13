@@ -32,13 +32,16 @@ OUTPUT_DIR = "data/raw"
 PERPLEXITY_MODEL = "sonar-pro"  # MEMORY L-007
 
 # 주요 원산지 좌표 (NASA POWER / 기상 공통)
+# 정본 좌표 표와 정합 — 2026-09-13 (docs/research_desk/_reference/soybean_oil_production_climate.md
+#   §3.2 · config/production_regions.yaml tier1). 구: Illinois -89.2 · Mato Grosso -12.6/-55.7 ·
+#   Parana -24.7/-51.7 · Santa Fe -31.7/-60.7 — 기후 커넥터 좌표와 어긋나 있었음.
 ORIGIN_COORDS = {
     "US_Iowa":        {"lat": 42.0,  "lon": -93.5,  "country": "US"},
-    "US_Illinois":    {"lat": 40.0,  "lon": -89.2,  "country": "US"},
-    "BR_Mato_Grosso": {"lat": -12.6, "lon": -55.7,  "country": "BR"},
-    "BR_Parana":      {"lat": -24.7, "lon": -51.7,  "country": "BR"},
+    "US_Illinois":    {"lat": 40.0,  "lon": -89.0,  "country": "US"},
+    "BR_Mato_Grosso": {"lat": -13.0, "lon": -56.0,  "country": "BR"},
+    "BR_Parana":      {"lat": -24.5, "lon": -51.5,  "country": "BR"},
     "AR_Cordoba":     {"lat": -31.4, "lon": -64.2,  "country": "AR"},
-    "AR_Santa_Fe":    {"lat": -31.7, "lon": -60.7,  "country": "AR"},
+    "AR_Santa_Fe":    {"lat": -33.0, "lon": -60.6,  "country": "AR"},
 }
 
 NASS_BASE    = "https://quickstats.nass.usda.gov/api/api_GET/"

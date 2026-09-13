@@ -201,6 +201,10 @@ RELEASE_RULES: dict[str, ReleaseRule] = {
                                    note="NASA POWER — 위성 처리 지연 약 1주"),
     "USDM_":           ReleaseRule("lag_days", lag_days=5,
                                    note="US Drought Monitor — 화요일 관측, 목요일 08:30 ET 공개"),
+    # 2026-09-13: 산지 예보 층(Open-Meteo forecast, FCST_{var}_{region}). event_time=유효일(미래)
+    "FCST_":           ReleaseRule("immediate", lag_days=0, revises=True,
+                                   note="예보 — 발행 주기마다 동일 유효일 재예보; "
+                                        "available_at=수집 시각(A-195 분기), vintage=발행일"),
 
     # ── 지정학 ─────────────────────────────────────────────────────────────
     "GPR":       ReleaseRule("monthly_on_day", day=5, revises=True,
@@ -258,6 +262,7 @@ REVISION_HISTORY: dict[str, str] = {
     "NASS_":     "none",
     "FAOSTAT_":  "none",
     "COMTRADE_": "none",
+    "FCST_":     "full",   # 발행 회차별 행 보존(같은 유효일이 매일 재예보) — 2026-09-13
 }
 
 
