@@ -86,6 +86,7 @@ SUBCATEGORY_EN: dict[tuple[str, str], str] = {
     ("시장구조·기업", "집중도 지표"): "Concentration Metrics",
     ("시장구조·기업", "거래 관행"): "Trading Conventions",
     ("데이터·시맨틱·품질", "매체·수집 채널"): "Media & Collection Channels",
+    ("농업·농기상", "생산지역"): "Production Regions",
 }
 # 신규 온톨로지 클래스 → 엔터티유형. 기존 시트의 class→K 쌍은 실행 시 먼저 읽어 우선한다.
 CLASS_TO_ENTITY_TYPE: dict[str, str] = {
@@ -98,6 +99,7 @@ CLASS_TO_ENTITY_TYPE: dict[str, str] = {
     "PricingConvention": "Concept",
     "PriceBenchmark": "Indicator",
     "MediaSource": "DataSource",
+    "ProductionRegion": "Region",
     "CollectionChannel": "DataSource",
 }
 
