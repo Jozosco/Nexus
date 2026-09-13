@@ -68,8 +68,10 @@ GDELT_QUERIES = [
 ]
 
 # 복합 지수 가중치 + 정규화 최댓값
-WEIGHTS   = {"SEISMIC": 0.30, "NOAA_WEATHER": 0.20, "GDELT_SBO": 0.30, "FIRMS_FIRE": 0.20}
-MAX_NORMS = {"SEISMIC": 7.0,  "NOAA_WEATHER": 4.0,  "GDELT_SBO": 20.0, "FIRMS_FIRE": 200.0}
+# A-259 — GDELT 키를 "GDELT_SBO"→"GDELT_EVENT"로: 발행 코드 GDELT_EVENT_SCORE의 부분 문자열이라
+#   _compute_composite 의 substring 매칭(가중 0.30·정규화 20)이 그대로 적용된다.
+WEIGHTS   = {"SEISMIC": 0.30, "NOAA_WEATHER": 0.20, "GDELT_EVENT": 0.30, "FIRMS_FIRE": 0.20}
+MAX_NORMS = {"SEISMIC": 7.0,  "NOAA_WEATHER": 4.0,  "GDELT_EVENT": 20.0, "FIRMS_FIRE": 200.0}
 
 
 def _retry_get(url: str, params: dict | None = None, timeout: int = 30) -> httpx.Response:
@@ -202,6 +204,9 @@ def fetch_gdelt_sbo_events() -> pd.DataFrame:
     """GDELT 지정학 이벤트 — 대두유 무역/관세/정책 관련 24시간 이벤트 수.
 
     Shadowbroker news.py 패턴 참조 (API 키 불필요).
+    발행 코드는 GDELT_EVENT_SCORE — A-259: 코드명을 소비자(chokepoints.yaml·digest·ontology·
+    brief)와 일치시킴, 값 의미는 기사 수 합산(5쿼리×최대 5건 = 0~25). 구 코드
+    GDELT_SBO_EVENT_COUNT 는 어느 소비자도 읽지 않아 해상 위협 경보 원천이 발화하지 않았다.
     """
     import time
 
@@ -251,8 +256,10 @@ def fetch_gdelt_sbo_events() -> pd.DataFrame:
     if query_counts:
         total = sum(c for _, c in query_counts)
         detail = " · ".join(f"'{q}' {c}건" for q, c in query_counts)
+        # A-259 — 코드명을 소비자(chokepoints.yaml·digest·ontology·brief)와 일치시킴,
+        #   값 의미는 기사 수 합산(단위 문자열에 범위 명시).
         rows.append(_make_row(
-            "GDELT_SBO_EVENT_COUNT", float(total), "articles/day",
+            "GDELT_EVENT_SCORE", float(total), "articles/day (5쿼리×최대5건 합산, 0~25)",
             f"[GEOINTEL:GDELT] {len(query_counts)}/{len(GDELT_QUERIES)}쿼리 합산 — {detail}",
         ))
     print(f"[완료] GDELT 이벤트 {len(query_counts)}개 쿼리 성공 → 일 합산 1행 "

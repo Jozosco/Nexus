@@ -29,7 +29,7 @@
 #   §2 예외 2건(apis.data.go.kr HTTP-80 · stream.aisstream.io wss)은 별도 승인 필요 — 1차
 #   파이프라인 등재 심사와 분리해 선신청. §5 planned의 Azure 2종은 **폐기**(Azure 저장 기능 폐지).
 #   판정 문서: docs/research_desk/2026-09/cloud_integration_impact_2026_09_02.md
-version: '2.6'                   # v2.6: Reuters·AP 일별 수집(Google News RSS 프록시 + 원문 섹션 폴백) — 누적 59건 · v2.5: 일별 소스 5계열 56건
+version: '2.7'                   # v2.7: Bing News RSS 폴백 + Open-Meteo 예보 API — 누적 61건 · v2.6: Reuters·AP 3호스트 59건 · v2.5: 일별 소스 5계열 56건
 updated: 2026-09-13
 owner: C-04
 submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수집 중단 방지)
@@ -38,16 +38,16 @@ submission_deadline: 2026-08-29   # 조정자 제출 목표(11월 통합 시 수
 # §1 제출 요약 — 신청서 상단에 그대로 기재
 # ════════════════════════════════════════════════════════════════════════════
 submission:
-  total_requested: 59          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.6: Reuters·AP 3호스트 추가
+  total_requested: 61          # 신청 대상 호스트 수 (제외 1건 미포함) — v2.7: www.bing.com·api.open-meteo.com 추가
   by_criticality:
     critical: 6                # 차단 시 파이프라인·모델 전면 중단
     high: 9                    # 차단 시 핵심 변수 결손
-    medium: 22                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.6: news.google.com 추가
-    low: 22                    # 폴백·부가 기능 — v2.6: reuters.com·apnews.com 원문 폴백 추가
+    medium: 23                 # 차단 시 보조 신호 결손(대체 경로 존재) — v2.7: api.open-meteo.com 추가
+    low: 23                    # 폴백·부가 기능 — v2.7: www.bing.com(3순위 폴백) 추가
   exceptions_requiring_approval: 3   # §2 참조 (평문 HTTP 1 · WebSocket 1 · 조건부 신규 1)
   excluded: 1                  # cds.climate.copernicus.eu — 미사용 확정, 신청 불요
   protocol_note: >
-    59건 중 57건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
+    61건 중 59건은 표준 443/TLS. 예외 2건은 §2에 분리 기재했다.
     프로토콜·포트가 표준과 다른 항목만 별도 승인이 필요하며, 나머지는 일괄 처리 가능하다.
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -223,9 +223,9 @@ hosts:
   - host: api.gdeltproject.org
     port: 443
     criticality: medium
-    purpose: GDELT 이벤트(5개 SBO 쿼리)
-    connector: geointel_connector.py
-    impact_if_blocked: GeoIntel 복합지수 구성요소 1종 결손
+    purpose: "GDELT 이벤트(5개 SBO 쿼리 — GDELT_EVENT_SCORE) + Reuters·AP 기사 2순위 폴백(DOC 2.0 `domain: reuters.com·apnews.com` 한정, 일 최대 4회)"
+    connector: geointel_connector.py · scripts/daily_unstructured_digest.py (_fetch_specialist_media · _gdelt)
+    impact_if_blocked: GeoIntel 복합지수 구성요소 1종·해상 위협 경보 원천 결손 + Reuters·AP 2순위 폴백 결손(1·3순위가 대체)
   - host: stream.aisstream.io
     port: 443
     protocol: wss              # ⚠️ §2 예외 승인 대상
@@ -463,6 +463,21 @@ hosts:
     connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media — 폴백 슬롯)
     impact_if_blocked: 원문 링크 열람 불가 — 수집은 news.google.com 경로가 대체. 비치명
     note: 2026-09-13 승인자 지시 — v2.6 신규(폴백·열람용)
+  # ── v2.7 (2026-09-13 승인자 지시) — Reuters·AP 3단 폴백 + 기후 예보 층 ───────────────
+  - host: www.bing.com
+    port: 443
+    criticality: low
+    purpose: "Bing News RSS 검색(site: 한정 + 주제어, format=rss) — Reuters·AP 기사 3순위 폴백"
+    connector: scripts/daily_unstructured_digest.py (_fetch_specialist_media · _bing)
+    impact_if_blocked: 3순위 폴백만 결손 — 1·2순위(news.google.com·api.gdeltproject.org)가 대체. 비치명
+    note: 2026-09-13 승인자 지시 — v2.7 신규(폴백)
+  - host: api.open-meteo.com
+    port: 443
+    criticality: medium
+    purpose: Open-Meteo 예보 API(ECMWF IFS/AIFS 계열 best_match) — 23개 생산지역 15일 일별 예보(FCST_ 계열)
+    connector: src/pipeline/connectors/climate_connector.py (fetch_openmeteo_forecast)
+    impact_if_blocked: 예보 층 결손(관측 계열 archive-api는 별도 호스트 — 무영향). 비치명
+    note: 2026-09-13 승인자 지시(기후 산지 확장·예보) — v2.7 신규
 
 excluded:
   - host: cds.climate.copernicus.eu

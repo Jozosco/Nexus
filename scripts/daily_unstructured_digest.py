@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import glob
 import os
+import time
 from datetime import date
 from pathlib import Path
 
@@ -60,6 +61,58 @@ def _gnews(site: str, topic: str, when: str = "2d") -> str:
     return f"https://news.google.com/rss/search?q={quote(q)}&hl=en-US&gl=US&ceid=US:en"
 
 
+# ── 2026-09-13 승인자 지시 후속 — Reuters·AP 3단 폴백 체인 (A-259) ────────────────
+# 채널 순서: ① Google News RSS 프록시 → ② GDELT DOC 2.0(domain: 한정) → ③ Bing News RSS
+#           → ④ 원문 섹션 URL(비브라우저 차단 예상 — 열람용). 승자 규칙 = **관련 기사 ≥1건을
+#           낸 첫 채널**(구 규칙 '항목이 있는 첫 URL'은 무관 기사만 있는 채널이 승리해 뒤 채널을
+#           가리는 결함이 있었음). 어느 채널이 이겼는지는 note 앞머리 "[채널: …]"로 남긴다.
+# ⚠️ GDELT DOC 질의 주의(웹 조사 확인):
+#   - `domain:` 는 부분 문자열 매칭(reuters.com → www.reuters.com·jp.reuters.com 모두 포함).
+#   - `site:`·`when:` 연산자는 없음 — 기간은 timespan 파라미터로만 제어(2d = 48시간).
+#   - OR 는 반드시 괄호 안에서만 허용, 다단어는 큰따옴표 필수(기존 _gnews 주제어와 동일 형식이라
+#     그대로 재사용). 3자 미만 단어·특수문자는 거부될 수 있음(주제어에 없음).
+#   - 무료 API 레이트리밋이 엄격 — 호출 간 6초 간격(geointel_connector A-142 동일), 일 최대 4회.
+#   - seendate 는 `YYYYMMDDTHHMMSSZ`(UTC) — 기사 발행일이 아니라 GDELT 색인 시각이므로 하루
+#     정도 늦게 잡힐 수 있음(2일 컷오프 안에서 흡수).
+GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
+_TOPIC_REUTERS_COMMODITIES = ("(soybean OR soyoil OR \"soybean oil\" OR \"vegetable oil\" OR "
+                              "\"palm oil\" OR crush OR biodiesel OR tariff OR \"export tax\" "
+                              "OR freight OR carbon)")
+_TOPIC_REUTERS_CLIMATE_ENERGY = ("(biofuel OR biodiesel OR \"renewable diesel\" OR RVO OR EPA OR "
+                                 "drought OR \"El Nino\" OR \"La Nina\" OR climate)")
+_TOPIC_AP_COMMODITIES = ("(soybean OR \"soybean oil\" OR \"vegetable oil\" OR \"palm oil\" OR "
+                         "commodities OR futures OR CFTC OR tariff OR freight)")
+_TOPIC_AP_WORLD = ("(\"Red Sea\" OR Hormuz OR \"Black Sea\" OR \"Suez\" OR Argentina OR "
+                   "Brazil OR drought OR tariff OR shipping)")
+_CHANNEL_LABELS = {"gnews": "Google News", "gdelt": "GDELT", "bing": "Bing News",
+                   "rss": "공식 RSS", "raw": "원문"}
+_GDELT_CALLS = 0   # 프로세스 내 GDELT 호출 수 — 첫 호출 전에는 대기하지 않는다(테스트가 patch 가능)
+
+
+def _gdelt(domain: str, topic: str, timespan: str = "2d") -> dict:
+    """GDELT DOC 2.0 폴백 슬롯 — URL 대신 dict 스펙(질의는 호출 시점에 조립)."""
+    return {"gdelt": {"domain": domain, "topic": topic, "timespan": timespan}}
+
+
+def _bing(site: str, topic: str) -> str:
+    """Bing News RSS 검색 URL(site: 한정 + 주제어, format=rss) — 표준 RSS 2.0(약 14건 상한)."""
+    from urllib.parse import quote_plus
+    return f"https://www.bing.com/news/search?q={quote_plus(f'site:{site} {topic}')}&format=rss"
+
+
+def _channel_of(entry: str | dict) -> str:
+    """슬롯 항목 → 채널명 {gnews, gdelt, bing, rss, raw}."""
+    if isinstance(entry, dict):
+        return "gdelt"
+    if "news.google.com" in entry:
+        return "gnews"
+    if "bing.com" in entry:
+        return "bing"
+    if "reuters.com" in entry or "apnews.com" in entry:
+        return "raw"
+    return "rss"
+
+
 RSS_SOURCES = {
     # farmdoc daily(일리노이대) — 작황·바이오연료·무역 실증 분석 (A-201 farmdoc 논문 계열)
     "RSS_FARMDOC_DAILY": ["https://farmdocdaily.illinois.edu/feed"],
@@ -92,29 +145,33 @@ RSS_SOURCES = {
     # UkrAgroConsult — 흑해 유지작물·곡물·물류 (해바라기유 축 — D-049 정합)
     "RSS_UKRAGRO": ["https://ukragroconsult.com/en/feed/",
                     "https://ukragroconsult.com/feed/"],
-    # ── 2026-09-13 승인자 지시 — Reuters·AP 6개 섹션 (egress v2.6) ──────────────────
+    # ── 2026-09-13 승인자 지시 — Reuters·AP 6개 섹션 (egress v2.6 → v2.7 폴백 확장) ────
     #   두 매체 모두 공개 RSS를 폐지(Reuters 2020·AP hub .rss 미유지 — 웹 조사 확인)했으므로
-    #   1순위는 Google News RSS 검색 프록시(site: 한정 + 대두유 수급·가격 키워드를 질의에
-    #   서버측 삽입 — 표준 RSS 2.0이라 기존 파서 무수정). 2순위는 승인자 원문 섹션 URL —
-    #   비브라우저 요청은 차단이 예상되나 비치명이므로 첫 Actions 런 로그로 실증한다.
+    #   ① Google News RSS 검색 프록시(site: 한정 + 대두유 수급·가격 키워드 서버측 삽입 —
+    #   표준 RSS 2.0) → ② GDELT DOC 2.0 domain: 한정(egress 기등재) → ③ Bing News RSS
+    #   (egress v2.7) → ④ 승인자 원문 섹션 URL(비브라우저 차단 예상·열람용). 전 채널 비치명 —
+    #   실제 통과 채널은 첫 Actions 런 로그·아카이브 note "[채널: …]"로 실증한다.
     "RSS_REUTERS_COMMODITIES": [
-        _gnews("reuters.com", "(soybean OR soyoil OR \"soybean oil\" OR \"vegetable oil\" OR "
-                              "\"palm oil\" OR crush OR biodiesel OR tariff OR \"export tax\" "
-                              "OR freight OR carbon)"),
+        _gnews("reuters.com", _TOPIC_REUTERS_COMMODITIES),
+        _gdelt("reuters.com", _TOPIC_REUTERS_COMMODITIES),
+        _bing("reuters.com", _TOPIC_REUTERS_COMMODITIES),
         "https://www.reuters.com/markets/commodities/",
         "https://www.reuters.com/markets/carbon/"],
     "RSS_REUTERS_CLIMATE_ENERGY": [
-        _gnews("reuters.com", "(biofuel OR biodiesel OR \"renewable diesel\" OR RVO OR EPA OR "
-                              "drought OR \"El Nino\" OR \"La Nina\" OR climate)"),
+        _gnews("reuters.com", _TOPIC_REUTERS_CLIMATE_ENERGY),
+        _gdelt("reuters.com", _TOPIC_REUTERS_CLIMATE_ENERGY),
+        _bing("reuters.com", _TOPIC_REUTERS_CLIMATE_ENERGY),
         "https://www.reuters.com/sustainability/climate-energy/"],
     "RSS_AP_COMMODITIES": [
-        _gnews("apnews.com", "(soybean OR \"soybean oil\" OR \"vegetable oil\" OR \"palm oil\" OR "
-                             "commodities OR futures OR CFTC OR tariff OR freight)"),
+        _gnews("apnews.com", _TOPIC_AP_COMMODITIES),
+        _gdelt("apnews.com", _TOPIC_AP_COMMODITIES),
+        _bing("apnews.com", _TOPIC_AP_COMMODITIES),
         "https://apnews.com/hub/commodity-markets",
         "https://apnews.com/hub/commodity-futures-trading-commission"],
     "RSS_AP_WORLD": [
-        _gnews("apnews.com", "(\"Red Sea\" OR Hormuz OR \"Black Sea\" OR \"Suez\" OR Argentina OR "
-                             "Brazil OR drought OR tariff OR shipping)"),
+        _gnews("apnews.com", _TOPIC_AP_WORLD),
+        _gdelt("apnews.com", _TOPIC_AP_WORLD),
+        _bing("apnews.com", _TOPIC_AP_WORLD),
         "https://apnews.com/world-news"],
     # S&P Global Commodity Insights: 공개 RSS 부재 추정 — 자동 수집 미등재(실패 소음 방지).
     # 부록 인사이트는 Perplexity 프록시 경유 요약으로 커버 (egress에는 열람용 등재)
@@ -133,11 +190,108 @@ _RSS_KEYWORDS = (
 )
 
 
-def _fetch_specialist_media() -> list[dict]:
-    """전문 매체 RSS → 일자·소스별 1행(값=관련 기사 수, note=제목+링크 — S-5 출처 보존).
+def _items_from_rss(content: bytes) -> list[dict]:
+    """RSS 2.0 바이트 → 항목 dict 목록 {title, link, desc, date}. pubDate 부재·파싱 실패는 당일."""
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
 
-    파싱은 stdlib XML만 사용(신규 의존성 없음 — httpx는 커넥터 공통 의존).
-    항목이 임계 대상이 아니므로 온톨로지 후보 큐에는 넣지 않는다 — 태그 매칭·시계열화는
+    items: list[dict] = []
+    for it in ET.fromstring(content).findall(".//item"):
+        pub = it.findtext("pubDate")
+        try:
+            pub_d = pd.Timestamp(parsedate_to_datetime(pub).date()) if pub \
+                else pd.Timestamp(date.today())
+        except Exception:
+            pub_d = pd.Timestamp(date.today())
+        items.append({"title": (it.findtext("title") or "").strip(),
+                      "link": (it.findtext("link") or "").strip(),
+                      "desc": it.findtext("description") or "",
+                      "date": pub_d})
+    return items
+
+
+def _gdelt_get_json(params: dict) -> dict:
+    """GDELT DOC 2.0 GET → JSON dict. 실패 시 {}(비치명) — 테스트가 이 지점을 대체한다.
+
+    geointel_connector(A-142·A-220)와 동일 규약: 매 시도 새 클라이언트(SSL 핸드셰이크
+    타임아웃 시 커넥션 재사용 방지)·timeout 60/connect 20·429는 30초 대기·3회(10→20s 백오프).
+    """
+    import httpx
+
+    for attempt in range(3):
+        try:
+            with httpx.Client(timeout=httpx.Timeout(60, connect=20)) as c:
+                r = c.get(GDELT_DOC_URL, params=params)
+            if r.status_code == 429:
+                if attempt < 2:
+                    print("[정보] GDELT 429 — 30초 대기 후 재시도")
+                    time.sleep(30)
+                    continue
+                print("[경고] GDELT 재시도 후에도 429 — 건너뜀")
+                return {}
+            r.raise_for_status()
+            data = r.json()
+            return data if isinstance(data, dict) else {}
+        except (httpx.HTTPStatusError, httpx.RequestError, ValueError) as e:
+            if attempt < 2:
+                wait = 10 * (attempt + 1)
+                print(f"[정보] GDELT 오류({type(e).__name__}) — {wait}s 후 재시도")
+                time.sleep(wait)
+                continue
+            print(f"[경고] GDELT 3회 실패: {type(e).__name__}")
+    return {}
+
+
+def _items_from_gdelt(spec: dict) -> list[dict]:
+    """GDELT DOC 2.0 artlist → 항목 dict 목록. 호출 간 6초 페이싱(첫 호출은 즉시)."""
+    global _GDELT_CALLS
+    if _GDELT_CALLS > 0:
+        time.sleep(6)   # 무료 API 레이트리밋 — 프로세스 내 두 번째 호출부터 간격 유지
+    _GDELT_CALLS += 1
+    params = {
+        "query": f"domain:{spec['domain']} {spec['topic']}",
+        "mode": "artlist", "format": "json",
+        "timespan": spec.get("timespan", "2d"),
+        "maxrecords": "25", "sort": "DateDesc",
+    }
+    items: list[dict] = []
+    for a in _gdelt_get_json(params).get("articles", []) or []:
+        seen = str(a.get("seendate", "") or "")
+        try:
+            d = pd.Timestamp(pd.to_datetime(seen, format="%Y%m%dT%H%M%SZ").date()) if seen \
+                else pd.Timestamp(date.today())
+        except (ValueError, TypeError):
+            d = pd.Timestamp(date.today())
+        items.append({"title": str(a.get("title", "") or "").strip(),
+                      "link": str(a.get("url", "") or "").strip(),
+                      "desc": "", "date": d})
+    return items
+
+
+def _filter_items(items: list[dict], cutoff: pd.Timestamp) -> list[dict]:
+    """2일 컷오프 + SBO 키워드 게이트 + 링크 중복 제거(첫 항목 유지)."""
+    kept: list[dict] = []
+    seen_links: set[str] = set()
+    for it in items:
+        if it["date"] < cutoff:
+            continue
+        if not any(k in f"{it['title']} {it['desc']}".lower() for k in _RSS_KEYWORDS):
+            continue
+        link = it["link"]
+        if link and link in seen_links:
+            continue
+        seen_links.add(link)
+        kept.append(it)
+    return kept
+
+
+def _fetch_specialist_media() -> list[dict]:
+    """전문 매체 채널 체인 → 일자·소스별 1행(값=관련 기사 수, note=[채널] 제목+링크 — S-5).
+
+    채널: 공식 RSS / Google News 프록시 / GDELT DOC 2.0 / Bing News RSS / 원문. 승자 규칙은
+    **관련 기사 ≥1건을 낸 첫 채널**(무관 기사만 있는 채널은 뒤 채널을 가리지 않는다).
+    파싱은 stdlib XML만 사용(신규 의존성 없음 — httpx는 커넥터 공통 의존). 항목이 임계
+    대상이 아니므로 온톨로지 후보 큐에는 넣지 않는다 — 태그 매칭·시계열화는
     build_unstructured_timeseries 편입 시(30일+ 축적 후) 판단.
     """
     try:
@@ -145,46 +299,45 @@ def _fetch_specialist_media() -> list[dict]:
     except ImportError:
         print("[경고] httpx 미설치 — 전문 매체 RSS 수집 건너뜀")
         return []
-    import xml.etree.ElementTree as ET
-    from email.utils import parsedate_to_datetime
 
     cutoff = pd.Timestamp(date.today()) - pd.Timedelta(days=2)
     rows: list[dict] = []
-    for indicator, urls in RSS_SOURCES.items():
-        items: list = []
-        for url in urls:
+    winners: dict[str, str] = {}
+    for indicator, entries in RSS_SOURCES.items():
+        kept: list[dict] = []
+        channel = ""
+        for entry in entries:
+            ch = _channel_of(entry)
             try:
-                r = httpx.get(url, timeout=30, follow_redirects=True,
-                              headers={"User-Agent": "Mozilla/5.0 (Nexus data pipeline)"})
-                r.raise_for_status()
-                items = ET.fromstring(r.content).findall(".//item")
-                if items:
-                    break
+                if ch == "gdelt":
+                    items = _items_from_gdelt(entry["gdelt"])
+                else:
+                    r = httpx.get(entry, timeout=30, follow_redirects=True,
+                                  headers={"User-Agent": "Mozilla/5.0 (Nexus data pipeline)"})
+                    r.raise_for_status()
+                    items = _items_from_rss(r.content)
             except Exception as e:   # 네트워크·파싱 어느 쪽이든 비치명
-                print(f"[경고] RSS 수집 실패({url}): {type(e).__name__} — 다음 후보로")
+                print(f"[경고] 매체 수집 실패({indicator}·{ch}): {type(e).__name__} — 다음 채널로")
+                continue
+            kept = _filter_items(items, cutoff)
+            if kept:
+                channel = ch
+                break
+        if not kept:
+            continue
+        winners[indicator] = channel
+        label = _CHANNEL_LABELS.get(channel, channel)
         by_date: dict[str, list[str]] = {}
-        for it in items:
-            title = (it.findtext("title") or "").strip()
-            desc = it.findtext("description") or ""
-            link = (it.findtext("link") or "").strip()
-            pub = it.findtext("pubDate")
-            try:
-                pub_d = pd.Timestamp(parsedate_to_datetime(pub).date()) if pub \
-                    else pd.Timestamp(date.today())
-            except Exception:
-                pub_d = pd.Timestamp(date.today())
-            if pub_d < cutoff:
-                continue
-            if not any(k in f"{title} {desc}".lower() for k in _RSS_KEYWORDS):
-                continue
-            by_date.setdefault(str(pub_d.date()), []).append(f"{title} ({link})")
+        for it in kept:
+            by_date.setdefault(str(it["date"].date()), []).append(f"{it['title']} ({it['link']})")
         for d, notes in sorted(by_date.items()):
             rows.append({"indicator": indicator, "date": d, "value": len(notes),
-                         "note": " ⋅ ".join(notes)[:500],
+                         "note": f"[채널: {label}] " + " ⋅ ".join(notes)[:500],
                          "source": indicator.lower()})
     if rows:
+        chan = ", ".join(f"{k}={v}" for k, v in sorted(winners.items()))
         print(f"[전문 매체] RSS 신호 {len(rows)}행 수집 "
-              f"({', '.join(sorted({r['indicator'] for r in rows}))})")
+              f"({', '.join(sorted({r['indicator'] for r in rows}))}) (채널: {chan})")
     return rows
 
 

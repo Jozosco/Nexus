@@ -1,11 +1,11 @@
 # 아웃바운드 방화벽 허용 신청서 (제출용) — Project Nexus
 
-**신청 부서**: 구매/조달 · **작성**: 2026-09-13 (v2.6 — Reuters·AP 일별 수집 3호스트 추가) · **제출 목표**: 2026-08-29
-**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.6)
+**신청 부서**: 구매/조달 · **작성**: 2026-09-13 (v2.7 — Bing News RSS 폴백 · Open-Meteo 예보 API 추가) · **제출 목표**: 2026-08-29
+**근거 문서**: `docs/infra/egress_allowlist.yaml` (v2.7)
 
 ## 신청 개요
 
-- 총 **59개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
+- 총 **61개 호스트** — 전량 아웃바운드 전용(인바운드 없음), 대부분 443/TLS
 - 사유: 대두유 조달 의사결정 AI(Project Nexus)의 외부 데이터 수집
 - 미승인 시: 11월 통합 시점에 해당 데이터 수집이 즉시 중단됨
 
@@ -80,6 +80,8 @@
 | 57 | `news.google.com` | 443 | 중간 | Google News RSS 검색 프록시 — Reuters·AP 대두유 관련 기사 일별 수집(두 매체 공개 RSS 폐지) |
 | 58 | `www.reuters.com` | 443 | 낮음 | Reuters 상품·탄소·기후에너지 섹션 원문 열람(폴백) |
 | 59 | `apnews.com` | 443 | 낮음 | AP 국제·상품·선물거래위원회 섹션 원문 열람(폴백) |
+| 60 | `www.bing.com` | 443 | 낮음 | Bing News RSS 검색(site: 한정) — Reuters·AP 기사 3순위 폴백 |
+| 61 | `api.open-meteo.com` | 443 | 보통 | Open-Meteo 예보 API — 23개 생산지역 15일 일별 예보(FCST_ 계열) |
 
 ## 텍스트 목록 (시스템 입력용)
 
@@ -143,6 +145,8 @@ ukragroconsult.com:443
 news.google.com:443
 www.reuters.com:443
 apnews.com:443
+www.bing.com:443
+api.open-meteo.com:443
 ```
 
 ## 추후 추가 예정 (9월 Azure 이관 확정 시)
