@@ -1,6 +1,7 @@
 """산지 설정(config/production_regions.yaml)·Open-Meteo 예보 층·as-of 정합 검증 (2026-09-13).
 
 샌드박스 프록시가 open-meteo 호스트를 차단하므로 httpx는 전부 합성 응답으로 대체한다.
+tier2 좌표 기대값은 설정 파일에서 읽는다(2026-09-13 벨트 중심 검증 반영 — 하드코딩 금지).
 """
 from __future__ import annotations
 
@@ -17,8 +18,10 @@ from src.pipeline.connectors import climate_connector as cc
 REPO = Path(__file__).resolve().parents[1]
 CONFIG = REPO / "config" / "production_regions.yaml"
 CODE_RE = re.compile(r"^[A-Z]{2}_[A-Za-z]+$")
+COORD_STATUSES = {"CONFIRMED", "INFERENCE"}
 
-# 정본 좌표 표 §3.2 (docs/research_desk/_reference/soybean_oil_production_climate.md)
+# 정본 좌표 표 §3.2 (docs/research_desk/_reference/soybean_oil_production_climate.md) — 승인자 확정값.
+# tier1은 변경 금지 대상이므로 회귀 가드로 상수를 유지한다(설정 파일이 조용히 바뀌면 여기서 잡힌다).
 CANONICAL_TIER1: dict[str, tuple[float, float]] = {
     "CN_Heilongjiang": (48.0, 128.0), "CN_Shandong": (36.5, 118.0), "CN_Jiangsu": (32.5, 120.0),
     "US_Illinois": (40.0, -89.0), "US_Iowa": (42.0, -93.5), "US_Indiana": (40.2, -86.1),
@@ -36,6 +39,13 @@ TIER2_CODES = {
 @pytest.fixture(scope="module")
 def regions() -> dict[str, dict]:
     return cc.load_production_regions(CONFIG)
+
+
+@pytest.fixture(scope="module")
+def raw_entries() -> dict[str, dict]:
+    """설정 파일 원문(share_note·anchor 등 로더가 버리는 필드 포함) — 최소 파서 경로."""
+    entries = cc._parse_regions_minimal(CONFIG.read_text(encoding="utf-8"))
+    return {e["code"]: e for e in entries}
 
 
 @pytest.fixture(autouse=True)
@@ -59,12 +69,43 @@ def test_tier1_confirmed_with_canonical_coords(regions: dict[str, dict]) -> None
         assert t1[code]["crop"] == "soy"
 
 
-def test_tier2_inference(regions: dict[str, dict]) -> None:
+def test_tier2_codes_and_crops(regions: dict[str, dict]) -> None:
     t2 = {c: i for c, i in regions.items() if int(i["tier"]) == 2}
     assert set(t2) == TIER2_CODES
-    assert all(i["coord_status"] == "INFERENCE" for i in t2.values())
     assert {i["crop"] for i in t2.values()} == {"soy", "palm"}
     assert all(i["crop"] == "palm" for c, i in t2.items() if c[:2] in ("MY", "ID"))
+    assert all(i["crop"] == "soy" for c, i in t2.items() if c[:2] not in ("MY", "ID"))
+
+
+def test_every_region_has_coord_status_and_share_note(regions: dict[str, dict],
+                                                      raw_entries: dict[str, dict]) -> None:
+    # 좌표 라벨은 두 값만 허용, 근거 문구는 전 지역 필수(2026-09-13 검증 규약)
+    for code, info in regions.items():
+        assert info["coord_status"] in COORD_STATUSES, code
+        assert str(raw_entries[code].get("share_note", "")).strip(), f"{code}: share_note 누락"
+
+
+def test_tier2_verification_fields(raw_entries: dict[str, dict]) -> None:
+    # tier2는 벨트 기준점·출처 URL·검증일을 설정 파일에 보존해야 재대조가 가능하다
+    for code in TIER2_CODES:
+        e = raw_entries[code]
+        assert str(e.get("anchor", "")).strip(), f"{code}: anchor 누락"
+        assert "http" in str(e.get("source_url", "")), f"{code}: source_url 누락"
+        assert str(e.get("verified_on", "")).strip(), f"{code}: verified_on 누락"
+
+
+def test_coordinates_within_physical_range(regions: dict[str, dict]) -> None:
+    # 기대 좌표는 설정 파일이 원천 — 여기서는 물리 범위·반구 정합만 검사한다
+    hemisphere = {"BR": (-1, -1), "AR": (-1, -1), "PY": (-1, -1), "US": (1, -1), "CN": (1, 1),
+                  "IN": (1, 1), "MY": (1, 1), "ID": (None, 1)}   # ID는 적도 양측
+    for code, info in regions.items():
+        lat, lon = info["lat"], info["lon"]
+        assert -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0, code
+        assert round(lat, 1) == lat and round(lon, 1) == lon, f"{code}: 0.1° 반올림 규약 위반"
+        lat_sign, lon_sign = hemisphere[code[:2]]
+        if lat_sign is not None:
+            assert lat * lat_sign > 0, f"{code}: 위도 반구 불일치"
+        assert lon * lon_sign > 0, f"{code}: 경도 반구 불일치"
 
 
 def test_codes_unique_and_pattern(regions: dict[str, dict]) -> None:
@@ -79,16 +120,14 @@ def test_builtin_tier1_matches_config(regions: dict[str, dict]) -> None:
         assert (info["lat"], info["lon"]) == (regions[code]["lat"], regions[code]["lon"]), code
 
 
-def test_minimal_parser_matches_yaml(regions: dict[str, dict]) -> None:
+def test_minimal_parser_matches_yaml(regions: dict[str, dict], raw_entries: dict[str, dict]) -> None:
     # pyyaml 부재 CI 경로: 최소 파서가 동일 결과를 내야 tier2가 조용히 사라지지 않는다
-    entries = cc._parse_regions_minimal(CONFIG.read_text(encoding="utf-8"))
-    parsed = {e["code"]: e for e in entries}
-    assert set(parsed) == set(regions)
+    assert set(raw_entries) == set(regions)
     for code, info in regions.items():
-        got = (float(parsed[code]["lat"]), float(parsed[code]["lon"]))
+        got = (float(raw_entries[code]["lat"]), float(raw_entries[code]["lon"]))
         assert got == (info["lat"], info["lon"]), code
-        assert int(parsed[code]["tier"]) == info["tier"]
-        assert parsed[code]["coord_status"] == info["coord_status"]
+        assert int(raw_entries[code]["tier"]) == info["tier"]
+        assert raw_entries[code]["coord_status"] == info["coord_status"]
 
 
 def test_fallback_on_missing_path(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

@@ -4223,3 +4223,630 @@ media_and_collection_channels:
   source_code: GH-DIGEST,media_source_fallback_design_2026_09_13.md
   status: confirmed
   owner_agent: P1-06
+
+# ── 산지(기후 수집 지역) — 2026-09-13 신설 · 단일 원천 config/production_regions.yaml(좌표·근거 원장) ──
+# 23건: tier1 12(승인자 정본 좌표 표 §3.2) + tier2 11(2026-09-13 벨트 중심 검증 — 정본 편입은 승인자 확인 대기)
+production_regions:
+- term_id: TERM-192
+  canonical: 'Heilongjiang (China)'
+  canonical_ko: '헤이룽장'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: CN_Heilongjiang
+  synonyms:
+  - 'Heilongjiang Province'
+  - '黑龙江省'
+  - '헤이룽장성'
+  definition: '중국 대두 재배 지역(tier 1) — 중국 최대 국내 대두 재배 지역'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 48.0
+  lon: 128.0
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-193
+  canonical: 'Shandong (China)'
+  canonical_ko: '산둥'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: CN_Shandong
+  synonyms:
+  - 'Shandong Province'
+  - '山东省'
+  - '산둥성'
+  definition: '중국 대두 압착 지역(tier 1) — 연안 최대 압착 클러스터'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 36.5
+  lon: 118.0
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-194
+  canonical: 'Jiangsu (China)'
+  canonical_ko: '장쑤'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: CN_Jiangsu
+  synonyms:
+  - 'Jiangsu Province'
+  - '江苏省'
+  - '장쑤성'
+  definition: '중국 대두 압착 지역(tier 1) — 양쯔강 압착 허브'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 32.5
+  lon: 120.0
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-195
+  canonical: 'Illinois (USA)'
+  canonical_ko: '일리노이'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: US_Illinois
+  synonyms:
+  - 'Illinois'
+  - 'IL'
+  - '일리노이주'
+  definition: '미국 대두 재배·압착 지역(tier 1) — 미국 생산 1위 주'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 40.0
+  lon: -89.0
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-196
+  canonical: 'Iowa (USA)'
+  canonical_ko: '아이오와'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: US_Iowa
+  synonyms:
+  - 'Iowa'
+  - 'IA'
+  - '아이오와주'
+  definition: '미국 대두 재배·압착 지역(tier 1) — 미국 압착 설비 1위 주'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 42.0
+  lon: -93.5
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-197
+  canonical: 'Indiana (USA)'
+  canonical_ko: '인디애나'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: US_Indiana
+  synonyms:
+  - 'Indiana'
+  - 'IN'
+  - '인디애나주'
+  definition: '미국 대두 재배 지역(tier 1) — 미국 생산 3위 주'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 40.2
+  lon: -86.1
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-198
+  canonical: 'Mato Grosso (Brazil)'
+  canonical_ko: '마투그로수'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: BR_MatoGrosso
+  synonyms:
+  - 'Mato Grosso'
+  - 'MT (Brazil)'
+  - '마투그로수주'
+  definition: '브라질 대두 재배·압착 지역(tier 1) — 브라질 생산 1위 주'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -13.0
+  lon: -56.0
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-199
+  canonical: 'Paraná (Brazil)'
+  canonical_ko: '파라나'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: BR_Parana
+  synonyms:
+  - 'Parana'
+  - 'PR (Brazil)'
+  - '파라나주'
+  definition: '브라질 대두 재배·압착 지역(tier 1) — 브라질 주요 유지 가공 주'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -24.5
+  lon: -51.5
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-200
+  canonical: 'Mato Grosso do Sul (Brazil)'
+  canonical_ko: '마투그로수두술'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: BR_MatoGrossodoSul
+  synonyms:
+  - 'Mato Grosso do Sul'
+  - 'MS (Brazil)'
+  - '마투그로수두술주'
+  definition: '브라질 대두 재배 지역(tier 1) — 생산 비중 확대 중'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -20.0
+  lon: -54.5
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-201
+  canonical: 'Córdoba (Argentina)'
+  canonical_ko: '코르도바'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: AR_Cordoba
+  synonyms:
+  - 'Cordoba Province'
+  - '코르도바주'
+  definition: '아르헨티나 대두 재배 지역(tier 1) — 아르헨티나 재배 1위 주'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -31.4
+  lon: -64.2
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-202
+  canonical: 'Santa Fe (Argentina)'
+  canonical_ko: '산타페'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: AR_SantaFe
+  synonyms:
+  - 'Santa Fe Province'
+  - 'Rosario crushing hub'
+  - '산타페주'
+  definition: '아르헨티나 대두 압착 지역(tier 1) — 로사리오 압착 허브(전국 설비 약 80%)'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -33.0
+  lon: -60.6
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-203
+  canonical: 'Buenos Aires Province (Argentina)'
+  canonical_ko: '부에노스아이레스'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: AR_BuenosAires
+  synonyms:
+  - 'Buenos Aires'
+  - '부에노스아이레스주'
+  definition: '아르헨티나 대두 재배 지역(tier 1) — 팜파스 핵심 재배 지역'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
+  priority: B
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -36.0
+  lon: -60.0
+  tier: 1
+  coord_status: CONFIRMED
+- term_id: TERM-204
+  canonical: 'Rio Grande do Sul (Brazil)'
+  canonical_ko: '히우그란지두술'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: BR_RioGrandedoSul
+  synonyms:
+  - 'Rio Grande do Sul'
+  - 'RS (Brazil)'
+  - '히우그란지두술주'
+  - 'Cruz Alta belt'
+  definition: '브라질 대두 재배 지역(tier 2) — 브라질 대두 생산 4위 주 · 약 18.6백만 t(전국 171.5백만 t의 약 11%, CONAB 2024/25) · 남부 최대 가뭄 손실 지역(Embrapa 50년 정량)'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -28.7
+  lon: -53.3
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-205
+  canonical: 'Goiás (Brazil)'
+  canonical_ko: '고이아스'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: BR_Goias
+  synonyms:
+  - 'Goias'
+  - 'GO (Brazil)'
+  - '고이아스주'
+  - 'Rio Verde belt'
+  definition: '브라질 대두 재배 지역(tier 2) — 브라질 대두 생산 3위 주 · 약 20.4백만 t(전국의 약 12%, CONAB 2024/25 · 단수 4,183 kg/ha 전국 최고) · 세하두 남서부 Rio Verde·Jataí·Cristalina가 생산액 상위'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -17.8
+  lon: -51.0
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-206
+  canonical: 'Minnesota (USA)'
+  canonical_ko: '미네소타'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: US_Minnesota
+  synonyms:
+  - 'Minnesota'
+  - 'MN'
+  - '미네소타주'
+  definition: '미국 대두 재배 지역(tier 2) — 미국 대두 생산 3위 주 · 349.4백만 bu(전국 4,366백만 bu의 8.0%, USDA NASS 2024 Crop Production Summary) · 상위 카운티 Redwood·Renville·Blue Earth·Jackson(남서·남중부)'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 44.1
+  lon: -94.6
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-207
+  canonical: 'Nebraska (USA)'
+  canonical_ko: '네브래스카'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: US_Nebraska
+  synonyms:
+  - 'Nebraska'
+  - 'NE'
+  - '네브래스카주'
+  definition: '미국 대두 재배 지역(tier 2) — 미국 대두 생산 5위 주 · 301.0백만 bu(전국의 6.9%, USDA NASS 네브래스카 2024 연간 요약 · 단수 57.5 bu/ac 기록) · 동부·플랫강 유역 집중(Saunders·York·Fillmore) · 관개 비중 높음'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 41.1
+  lon: -97.3
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-208
+  canonical: 'Ohio (USA)'
+  canonical_ko: '오하이오'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: US_Ohio
+  synonyms:
+  - 'Ohio'
+  - 'OH'
+  - '오하이오주'
+  definition: '미국 대두 재배 지역(tier 2) — 미국 대두 생산 6위 주 · 274.3백만 bu(전국의 6.3%, USDA NASS 2024) · 상위 카운티 Wood·Darke·Seneca(서부·북서부)'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 40.8
+  lon: -84.0
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-209
+  canonical: 'Alto Paraná (Paraguay)'
+  canonical_ko: '알토파라나(파라과이)'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: PY_AltoParana
+  synonyms:
+  - 'Alto Parana Department'
+  - '알토파라나도'
+  - 'Santa Rita belt'
+  definition: '파라과이 대두 재배 지역(tier 2) — 파라과이 대두 생산 1위 도 · 3.06백만 t(전국 9.34백만 t의 32.7%, MAG·INBIO 2024/25) · 파종 면적 896천 ha(26.3%, CAPECO 2025/26)'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -25.9
+  lon: -55.0
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-210
+  canonical: 'Madhya Pradesh (India)'
+  canonical_ko: '마디아프라데시(인도)'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: IN_MadhyaPradesh
+  synonyms:
+  - 'Madhya Pradesh'
+  - 'MP (India)'
+  - '마디아프라데시주'
+  - 'Malwa plateau'
+  definition: '인도 대두 재배 지역(tier 2) — 인도 대두 생산 1위 주 · 55.4 lakh t(전국 125.8 lakh t의 약 44%, SOPA kharif 2024) · 수입 관세 정책 연계(인도는 GAIN 국가 상위)'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 23.0
+  lon: 75.8
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-211
+  canonical: 'Sabah (Malaysia)'
+  canonical_ko: '사바(말레이시아)'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: MY_Sabah
+  synonyms:
+  - 'Sabah'
+  - '사바주'
+  - 'Lahad Datu-Tawau belt'
+  definition: '말레이시아 팜 재배 지역(tier 2) — 말레이시아 CPO 생산 1위 주 · 4.27백만 t(전국 19.34백만 t의 22.1%, MPIC·MPOB 2024) · 식재 면적 약 1.48백만 ha(26.4%) · 동해안 Tawau·Lahad Datu·Kinabatangan 등이 주 생산의 약 75%'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리) · 팜 산지 기후는 대두유 가격의 직접 동인이 아니라 대두유−팜유 가격 차이(CE-015) 레짐 판별 보조 입력'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 5.0
+  lon: 118.0
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-212
+  canonical: 'Johor (Malaysia)'
+  canonical_ko: '조호르'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: MY_Johor
+  synonyms:
+  - 'Johor'
+  - '조호르주'
+  - 'Kluang-Kota Tinggi belt'
+  definition: '말레이시아 팜 재배 지역(tier 2) — 반도 말레이시아 팜 식재 면적 1위 주 · 659,820 ha(전국의 11.8%, MPOB 2024 Oil Palm Planted Area) · Kluang·Kota Tinggi 중심'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리) · 팜 산지 기후는 대두유 가격의 직접 동인이 아니라 대두유−팜유 가격 차이(CE-015) 레짐 판별 보조 입력'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 1.9
+  lon: 103.6
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-213
+  canonical: 'Riau (Indonesia)'
+  canonical_ko: '리아우(인도네시아)'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: ID_Riau
+  synonyms:
+  - 'Riau Province'
+  - '리아우주'
+  - 'Pekanbaru belt'
+  definition: '인도네시아 팜 재배 지역(tier 2) — 인도네시아 팜유 생산 1위 주 · 8.79백만 t(전국 46.99백만 t의 18.7%, BPS 2023) · 생산 상위 군은 Rokan Hulu·Pelalawan·Kampar·Rokan Hilir로 Pekanbaru 동서 양측에 분포'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리) · 팜 산지 기후는 대두유 가격의 직접 동인이 아니라 대두유−팜유 가격 차이(CE-015) 레짐 판별 보조 입력'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: 0.5
+  lon: 101.5
+  tier: 2
+  coord_status: CONFIRMED
+- term_id: TERM-214
+  canonical: 'Central Kalimantan (Indonesia)'
+  canonical_ko: '중부칼리만탄'
+  class: ProductionRegion
+  category: 농업·농기상
+  subcategory: 생산지역
+  abbr: ID_CentralKalimantan
+  synonyms:
+  - 'Kalimantan Tengah'
+  - 'Kalteng'
+  - '중부칼리만탄주'
+  - 'Sampit belt'
+  definition: '인도네시아 팜 재배 지역(tier 2) — 인도네시아 팜유 생산 2위 주 · 8.55백만 t(전국의 18.2%, BPS 2023) · Kotawaringin Timur가 주 생산의 26.7%(1위)·Seruyan 2위 · MY·ID 합산 세계 팜유 80%+(Zhang 2025)'
+  interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리) · 팜 산지 기후는 대두유 가격의 직접 동인이 아니라 대두유−팜유 가격 차이(CE-015) 레짐 판별 보조 입력'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: lat/lon(deg)
+  alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
+  priority: C
+  ambiguity_risk: 하
+  relations: LOCATED_AT
+  source_code: config/production_regions.yaml,climate_regions_forecast_weathernext_2026_09_13.md
+  status: confirmed
+  owner_agent: P1-06
+  lat: -2.5
+  lon: 112.8
+  tier: 2
+  coord_status: CONFIRMED

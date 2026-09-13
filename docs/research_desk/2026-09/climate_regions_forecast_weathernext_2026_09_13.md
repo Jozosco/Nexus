@@ -24,45 +24,77 @@
 
 ---
 
-## §2 산지 표 (23행)
+## §2 산지 표 (23행) — 2026-09-13 tier2 좌표·생산 근거 검증 반영
 
 tier1 근거: 승인자 공유 정본 좌표 표 `docs/research_desk/_reference/soybean_oil_production_climate.md` §3.2
-(NASA POWER 업로드본 좌표와 일치). tier2 근거: 주(州) 중심 근사 — 대두 생산 순위·가뭄 손실 지역(Embrapa 50년 정량)·
-팜유 집중 산지(MY·ID 합산 세계 80%+, Zhang 2025)를 기준으로 선정.
+(NASA POWER 업로드본 좌표와 일치). tier2 근거: 승인자 요청에 따라 주(州) 중심 근사 좌표를 **주산 벨트 중심**으로
+교정하고, 생산 비중·순위를 공식 통계로 확인했다(§2.1). 좌표 라벨 CONFIRMED = 공식·통계 출처의 생산 근거 **와**
+gazetteer 기준점 좌표가 모두 확보된 항목. 단일 원천은 `config/production_regions.yaml`(anchor · share_note ·
+source_url · verified_on 필드 추가).
 
-| 코드 | 한글명 | 국가 | 작물 | 역할 | 위도 | 경도 | tier | 좌표 라벨 | 근거 |
+| 코드 | 한글명 | 국가 | 작물 | 위도 | 경도 | 기준점(주산 벨트) | 생산 비중·순위(연도·출처) | 좌표 라벨 | 비고 |
 |---|---|---|---|---|---|---|---|---|---|
-| CN_Heilongjiang | 헤이룽장 | 중국 | 대두 | grow | 48.0 | 128.0 | 1 | CONFIRMED | 정본 §3.2 — 중국 최대 국내 재배 |
-| CN_Shandong | 산둥 | 중국 | 대두 | crush | 36.5 | 118.0 | 1 | CONFIRMED | 정본 §3.2 — 연안 최대 압착 |
-| CN_Jiangsu | 장쑤 | 중국 | 대두 | crush | 32.5 | 120.0 | 1 | CONFIRMED | 정본 §3.2 — 양쯔강 압착 허브 |
-| US_Illinois | 일리노이 | 미국 | 대두 | grow_crush | 40.0 | -89.0 | 1 | CONFIRMED | 정본 §3.2 — 생산 1위 |
-| US_Iowa | 아이오와 | 미국 | 대두 | grow_crush | 42.0 | -93.5 | 1 | CONFIRMED | 정본 §3.2 — 압착 설비 1위 |
-| US_Indiana | 인디애나 | 미국 | 대두 | grow | 40.2 | -86.1 | 1 | CONFIRMED | 정본 §3.2 — 생산 3위 |
-| BR_MatoGrosso | 마투그로수 | 브라질 | 대두 | grow_crush | -13.0 | -56.0 | 1 | CONFIRMED | 정본 §3.2 — 생산 1위 주 |
-| BR_Parana | 파라나 | 브라질 | 대두 | grow_crush | -24.5 | -51.5 | 1 | CONFIRMED | 정본 §3.2 — 주요 유지 가공 |
-| BR_MatoGrossodoSul | 마투그로수두술 | 브라질 | 대두 | grow | -20.0 | -54.5 | 1 | CONFIRMED | 정본 §3.2 — 확대 중 |
-| AR_Cordoba | 코르도바 | 아르헨티나 | 대두 | grow | -31.4 | -64.2 | 1 | CONFIRMED | 정본 §3.2 — 재배 1위 |
-| AR_SantaFe | 산타페 | 아르헨티나 | 대두 | crush | -33.0 | -60.6 | 1 | CONFIRMED | 정본 §3.2 — 로사리오 압착 80% |
-| AR_BuenosAires | 부에노스아이레스 | 아르헨티나 | 대두 | grow | -36.0 | -60.0 | 1 | CONFIRMED | 정본 §3.2 — 팜파스 핵심 |
-| BR_RioGrandedoSul | 히우그란지두술 | 브라질 | 대두 | grow | -30.0 | -53.0 | 2 | INFERENCE | 브라질 남부 최대 가뭄 손실 지역(Embrapa) — CE-006 지역 분리 해석 |
-| BR_Goias | 고이아스 | 브라질 | 대두 | grow | -16.5 | -49.5 | 2 | INFERENCE | 세하두 주요 생산 주 |
-| US_Minnesota | 미네소타 | 미국 | 대두 | grow | 44.5 | -94.5 | 2 | INFERENCE | 북부 주요 생산 주 |
-| US_Nebraska | 네브래스카 | 미국 | 대두 | grow | 41.0 | -98.0 | 2 | INFERENCE | 관개 비중 높은 서부 코른벨트 |
-| US_Ohio | 오하이오 | 미국 | 대두 | grow | 40.3 | -83.0 | 2 | INFERENCE | 동부 코른벨트 |
-| PY_AltoParana | 알토파라나(파라과이) | 파라과이 | 대두 | grow | -25.5 | -55.0 | 2 | INFERENCE | 파라과이 최대 생산 지역 |
-| IN_MadhyaPradesh | 마디아프라데시(인도) | 인도 | 대두 | grow | 23.0 | 77.0 | 2 | INFERENCE | 인도 대두 1위 주 — 수입 관세 정책 연계 |
-| MY_Sabah | 사바(말레이시아) | 말레이시아 | 팜 | grow | 5.5 | 117.5 | 2 | INFERENCE | 말레이시아 팜유 1위 주 |
-| MY_Johor | 조호르 | 말레이시아 | 팜 | grow | 2.0 | 103.5 | 2 | INFERENCE | 반도 주요 팜 재배 주 |
-| ID_Riau | 리아우(인도네시아) | 인도네시아 | 팜 | grow | 0.5 | 101.5 | 2 | INFERENCE | 인도네시아 팜유 1위 주 |
-| ID_CentralKalimantan | 중부칼리만탄 | 인도네시아 | 팜 | grow | -2.0 | 113.5 | 2 | INFERENCE | 칼리만탄 팜 확장 지역 |
+| CN_Heilongjiang | 헤이룽장 | 중국 | 대두 | 48.0 | 128.0 | 정본 §3.2 | 중국 최대 국내 대두 재배 지역(정본) | CONFIRMED | tier1 · grow |
+| CN_Shandong | 산둥 | 중국 | 대두 | 36.5 | 118.0 | 정본 §3.2 | 연안 최대 압착 클러스터(정본) | CONFIRMED | tier1 · crush |
+| CN_Jiangsu | 장쑤 | 중국 | 대두 | 32.5 | 120.0 | 정본 §3.2 | 양쯔강 압착 허브(정본) | CONFIRMED | tier1 · crush |
+| US_Illinois | 일리노이 | 미국 | 대두 | 40.0 | -89.0 | 정본 §3.2 | 미국 생산 1위 주(정본) | CONFIRMED | tier1 · grow_crush |
+| US_Iowa | 아이오와 | 미국 | 대두 | 42.0 | -93.5 | 정본 §3.2 | 미국 압착 설비 1위 주(정본) | CONFIRMED | tier1 · grow_crush |
+| US_Indiana | 인디애나 | 미국 | 대두 | 40.2 | -86.1 | 정본 §3.2 | 미국 생산 3위 주(정본) | CONFIRMED | tier1 · grow |
+| BR_MatoGrosso | 마투그로수 | 브라질 | 대두 | -13.0 | -56.0 | 정본 §3.2 | 브라질 생산 1위 주(정본) | CONFIRMED | tier1 · grow_crush |
+| BR_Parana | 파라나 | 브라질 | 대두 | -24.5 | -51.5 | 정본 §3.2 | 브라질 주요 유지 가공 주(정본) | CONFIRMED | tier1 · grow_crush |
+| BR_MatoGrossodoSul | 마투그로수두술 | 브라질 | 대두 | -20.0 | -54.5 | 정본 §3.2 | 생산 비중 확대 중(정본) | CONFIRMED | tier1 · grow |
+| AR_Cordoba | 코르도바 | 아르헨티나 | 대두 | -31.4 | -64.2 | 정본 §3.2 | 아르헨티나 재배 1위 주(정본) | CONFIRMED | tier1 · grow |
+| AR_SantaFe | 산타페 | 아르헨티나 | 대두 | -33.0 | -60.6 | 정본 §3.2 | 로사리오 압착 허브(전국 설비 약 80%, 정본) | CONFIRMED | tier1 · crush |
+| AR_BuenosAires | 부에노스아이레스 | 아르헨티나 | 대두 | -36.0 | -60.0 | 정본 §3.2 | 팜파스 핵심 재배 지역(정본) | CONFIRMED | tier1 · grow |
+| BR_RioGrandedoSul | 히우그란지두술 | 브라질 | 대두 | -28.7 | -53.3 | Cruz Alta(-28.64/-53.61)·Tupanciretã(-29.08/-53.84)·Passo Fundo(-28.25/-52.40) 북서 고원 벨트 | 생산 4위 주 · 약 18.6백만 t(전국 171.5백만 t의 약 11%) — CONAB 2024/25 12차 조사(단수 2,342 kg/ha 전국 최저 — 가뭄) | CONFIRMED | 구 -30.0/-53.0 → 북으로 1.3°(NASA 격자 2칸 이동) · Embrapa 50년 가뭄 손실 최대 지역 |
+| BR_Goias | 고이아스 | 브라질 | 대두 | -17.8 | -51.0 | Rio Verde(-17.75/-50.92)·Jataí 남서 세하두 벨트 | 생산 3위 주 · 약 20.4백만 t(전국의 약 12%) — CONAB 2024/25(단수 4,183 kg/ha 전국 최고) · 생산액 상위 Rio Verde·Jataí·Cristalina(IBGE PAM) | CONFIRMED | 구 -16.5/-49.5 → 남서로 1.3°/1.5°(NASA 격자 이동) |
+| US_Minnesota | 미네소타 | 미국 | 대두 | 44.1 | -94.6 | Mankato(44.16/-94.01) 남중부 — 상위 카운티 Redwood·Renville·Blue Earth·Jackson | 생산 3위 주 · 349.4백만 bu(전국 4,366백만 bu의 8.0%) — USDA NASS 2024 Crop Production Summary | CONFIRMED | 구 44.5/-94.5 → 남으로 0.4°(NASA 격자 경계 근접 — 이동 유효) |
+| US_Nebraska | 네브래스카 | 미국 | 대두 | 41.1 | -97.3 | York(40.87/-97.59) 동부·남동부 — Saunders·York·Fillmore·Platte | 생산 5위 주 · 301.0백만 bu(전국의 6.9%, 단수 57.5 bu/ac 기록) — USDA NASS 네브래스카 2024 연간 요약 | CONFIRMED | 구 41.0/-98.0 → 동으로 0.7° · 관개 비중 높음 |
+| US_Ohio | 오하이오 | 미국 | 대두 | 40.8 | -84.0 | Celina(Mercer, 40.56/-84.56) — Wood·Darke·Seneca 서부·북서부 벨트 | 생산 6위 주 · 274.3백만 bu(전국의 6.3%) — USDA NASS 2024 · 상위 카운티 Wood 9.67·Darke 8.75·Seneca 7.81백만 bu | CONFIRMED | 구 40.3/-83.0 → 북서로 0.5°/1.0°(NASA 격자 이동) |
+| PY_AltoParana | 알토파라나(파라과이) | 파라과이 | 대두 | -25.9 | -55.0 | Santa Rita(-25.98/-54.95)·Naranjal — 시우다드델에스테 서쪽 벨트 | 생산 1위 도 · 3.06백만 t(전국 9.34백만 t의 32.7%) — MAG·INBIO 2024/25 · 파종 면적 896천 ha(26.3%) — CAPECO 2025/26 | CONFIRMED | 구 -25.5/-55.0 → 남으로 0.4° |
+| IN_MadhyaPradesh | 마디아프라데시(인도) | 인도 | 대두 | 23.0 | 75.8 | Ujjain(23.18/75.78)·Indore(22.72/75.86) 말와 고원 벨트 | 생산 1위 주 · 55.4 lakh t(전국 125.8 lakh t의 약 44%) — SOPA kharif 2024 | CONFIRMED | 구 23.0/77.0 → 서로 1.2°(NASA 격자 2칸 이동) · 수입 관세 정책 연계 |
+| MY_Sabah | 사바(말레이시아) | 말레이시아 | 팜 | 5.0 | 118.0 | Lahad Datu(5.03/118.34)·Tawau(4.26/117.89) 동해안 벨트 | CPO 생산 1위 주 · 4.27백만 t(전국 19.34백만 t의 22.1%) — MPIC 국회 서면답변·MPOB 2024 · 식재 약 1.48백만 ha(26.4%) — MPOB Planted Area 2024 | CONFIRMED | 구 5.5/117.5 → 남동으로 0.5°/0.5° · 동해안 6개 지구가 주 생산의 약 75% |
+| MY_Johor | 조호르 | 말레이시아 | 팜 | 1.9 | 103.6 | Kluang(2.03/103.32)·Kota Tinggi(1.73/103.90) 중부·남동부 벨트 | 반도 식재 면적 1위 주 · 659,820 ha(전국의 11.8%) — MPOB Oil Palm Planted Area 2024 | CONFIRMED | 구 2.0/103.5와 0.1° 차 — NASA POWER 0.5° 격자에서 동일(사실상 유지) |
+| ID_Riau | 리아우(인도네시아) | 인도네시아 | 팜 | 0.5 | 101.5 | Pekanbaru 권역 — Pangkalan Kerinci(0.40/101.86) 동측·Kampar·Rokan Hulu 서측의 중간 | 팜유 생산 1위 주 · 8.79백만 t(전국 46.99백만 t의 18.7%) — BPS 2023 · 군별 상위 Rokan Hulu·Pelalawan·Kampar·Rokan Hilir | CONFIRMED | **기존 좌표 유지** — 주산 군이 Pekanbaru 동서 양측에 분포해 주 중심이 벨트 중심과 일치 |
+| ID_CentralKalimantan | 중부칼리만탄 | 인도네시아 | 팜 | -2.5 | 112.8 | Sampit(Kotawaringin Timur, -2.53/112.95)·Seruyan 남부 벨트 | 팜유 생산 2위 주 · 8.55백만 t(전국의 18.2%) — BPS 2023 · Kotawaringin Timur가 주 생산의 26.7%(1위)·Seruyan 2위 | CONFIRMED | 구 -2.0/113.5 → 남서로 0.5°/0.7°(NASA 격자 이동) · MY·ID 합산 세계 팜유 80%+(Zhang 2025) |
+
+### §2.1 검증 방법·조회일
+
+- **조회일**: 2026-09-13. 샌드박스가 원문 도메인 대부분(CONAB·NASS·MPOB·BPS·Wikipedia 등)의 직접 열람을 차단하므로
+  검색 색인 요약 경유로 수치를 확보했다(A-200·A-209 동일 경로). 원문 URL은 설정 파일 `source_url`에 보존 — 승인자
+  사내망 열람으로 재대조 가능.
+- **생산 근거(공식·통계 출처)**: 브라질 CONAB 2024/25 12차 조사(e-book) + CONAB 인용 보도(InfoMoney·Agência Cora
+  GO) · IBGE PAM(시군 생산액) / 미국 USDA NASS 2024 Crop Production Summary(2025-01-10) + 네브래스카 연간 요약
+  (2025-01-23) + 오하이오 Ag Across Ohio 카운티 추정 / 파라과이 MAG·INBIO 2024/25 수확 보고 + CAPECO 2025/26
+  파종 면적 / 인도 SOPA kharif 2024 주별 통계 / 말레이시아 MPOB Oil Palm Planted Area 2024 + MPIC 국회 서면답변
+  (Sabah CPO 4.27백만 t) / 인도네시아 BPS 2023 주별 생산(Produksi Tanaman Perkebunan) + Kalteng BPS 2024 군별.
+- **좌표 검증**: 행정 중심(주 중심)이 아닌 **주산 벨트 중심**을 채택. 벨트 기준 도시의 위·경도를 gazetteer(Wikipedia
+  좌표 — 검색 색인 경유)로 확인한 뒤 기준점 2~3개의 산술 중심을 0.1° 단위로 반올림. 기준점이 하나뿐인 지역(Rio Verde·
+  Mankato·York·Celina·Santa Rita)은 카운티·군 분포 방향으로 0.1~0.3° 보정.
+- **격자 감도**: Open-Meteo ERA5-Land 0.1° · NASA POWER 0.5°. 0.25° 미만 이동은 NASA POWER 격자에서 무의미
+  (조호르 0.1° 차 · 리아우 유지). 0.5° 이상 이동 8건(RS·GO·MN·NE·OH·MP·Sabah·Kalteng)은 NASA POWER 격자 자체가 바뀌므로
+  **다음 아카이브 백필부터 신좌표 적용 — 구좌표 수집분과 시계열을 잇지 않는다**(코드 동일·좌표 상이 = vintage 분리,
+  `source_vintage`에 좌표 버전 2026-09-13 기록 권장).
+- **라벨 규칙**: CONFIRMED = (a) 공식·통계 출처 생산 근거 + (b) gazetteer 기준점 좌표 양쪽 확보. 한쪽이라도 없으면
+  INFERENCE(사유 명기). DATA GAP = 근거 미확보. 11건 전부 (a)(b) 충족 → CONFIRMED.
+
+### §2.2 승인자 확인 요청 잔여(INFERENCE 항목)
+
+INFERENCE 라벨 잔여 **0건**. 다만 다음 3건은 CONFIRMED 안에서 승인자 재대조를 권장한다.
+
+| 항목 | 내용 | 요청 |
+|---|---|---|
+| 브라질 주별 톤수 | RS 18.6·GO 20.4백만 t는 CONAB 조사 회차별 보도 인용(12차 최종 e-book 원표 미열람). 순위(GO 3위·RS 4위)는 3개 출처 일치 | e-book 12차 주별 표 사내망 열람 후 톤수 확정 |
+| 미국 NE·OH 순위 | 일부 재보도가 NE 266.8백만 bu(구 추정치)로 OH를 5위로 표기 — NASS 최종(NE 301.0)으로 NE 5위·OH 6위 채택 | NASS Crop Production 2024 Summary 원표 대조 |
+| 정본 좌표 표 §3.2 증보 | tier2 11행을 정본 표에 같은 형식으로 추가해야 tier1과 동일한 승인 지위 | 승인자 승인 시 tier2 → 정본 편입 · 토양 hourly 승격 여부 결정 |
 
 팜 산지 편입 근거: 대두유−팜유 가격 전이(CE-015 — 2020 이후 공행성 붕괴, 레짐 인지 하에서만 해석)의
 배경으로 팜 산지 기후는 팜유 수급 경로의 선행 신호다. 다만 팜 기후 변수는 대두유 가격의 직접 동인이 아니라
 스프레드 레짐 판별의 보조 입력으로만 두며, 피처화는 5단계 게이트(D-014)를 거친다.
 
-**좌표 확인 요청(최종 결정자)**: tier2 11지점의 위·경도는 주 중심 근사이므로 정본 좌표 표 §3.2를 같은 형식으로
-증보하는 확인이 필요하다. 확인 전까지 tier2는 수집·적재는 하되 **모델 투입 후보에서 제외**하며, 확인 후
-`coord_status`를 CONFIRMED로 바꾸고 토양 hourly 수집을 tier1과 동일하게 승격할지 함께 결정한다.
+**최종 결정자 확인 요청**: tier2 11지점은 본 검증으로 CONFIRMED 라벨을 얻었으나 정본 좌표 표 §3.2 편입은 승인
+사항이다. 편입 전까지 tier2는 수집·적재는 하되 **모델 투입 후보에서 제외**하며, 편입 후 토양 hourly 수집을 tier1과
+동일하게 승격할지 함께 결정한다.
 
 ---
 

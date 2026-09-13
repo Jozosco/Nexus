@@ -8,8 +8,9 @@ updated: 2026-09-13
 source_note: >
   tier1 = 승인자 공유 정본 좌표 표(docs/research_desk/_reference/soybean_oil_production_climate.md §3.2)
   — NASA POWER 업로드본 좌표와 일치 확인(CONFIRMED).
-  tier2 = 주(州) 중심 근사 좌표(INFERENCE) — 승인자 확인 대기. 확인 전에는 참고 수집 전용이며
-  tier1과 동일 코드 규약으로 적재하되 모델 투입 전 좌표 확정이 선행 조건.
+  tier2 = 2026-09-13 검증 — 주(州) 중심 근사를 주산 벨트 중심(gazetteer 기준점)으로 교정하고 생산 비중·순위
+  근거(공식 통계)를 share_note·source_url에 기록. 라벨 CONFIRMED = 공식 생산 통계 + gazetteer 좌표 양쪽 확보.
+  승인자 최종 확인 전까지 tier2는 참고 수집 전용(모델 투입은 확인 후).
 code_conventions:
   openmeteo_archive: "{var}_{CC}_{Region}   (예: precipitation_sum_BR_MatoGrosso)"
   openmeteo_forecast: "FCST_{var}_{CC}_{Region}   (예: FCST_precipitation_sum_BR_MatoGrosso)"
@@ -17,7 +18,7 @@ code_conventions:
   region_code: "^[A-Z]{2}_[A-Za-z]+$  (ISO2 국가 접두 + 지역명, 공백·하이픈 없음)"
 tiers:
   '1': "CONFIRMED — 정본 좌표 표와 일치. 아카이브 daily 8변수(토양 hourly 포함) + 예보"
-  '2': "INFERENCE — 주 중심 근사. 아카이브 daily 6변수만(토양 hourly 생략) + 예보. 부하 상한용"
+  '2': "검증 완료(2026-09-13 — 벨트 중심 좌표·생산 근거 CONFIRMED, 승인자 최종 확인 대기). 아카이브 daily 6변수만(토양 hourly 생략) + 예보. 부하 상한용"
 
 regions:
   # ── tier 1 · 대두 (정본 좌표 표 §3.2) ─────────────────────────────────────
@@ -142,77 +143,101 @@ regions:
     coord_status: CONFIRMED
     share_note: 팜파스 핵심 재배 지역
 
-  # ── tier 2 · 대두 확장 (주 중심 근사 — 승인자 확인 대기) ─────────────────
+  # ── tier 2 · 대두 확장 (2026-09-13 검증 — 주 중심 근사 → 주산 벨트 중심, 승인자 확인 요청 반영) ──
+  # 좌표 검증 규약: anchor = 주산 벨트 기준 도시(gazetteer 위·경도) · lat/lon = 벨트 중심(0.1° 반올림)
+  # 격자 감도: Open-Meteo 0.1° · NASA POWER 0.5° — 0.25° 미만 이동은 NASA POWER 격자에서 무의미
+  # source_url: '; ' 구분 단일 문자열(파서 폴백이 리스트를 읽지 못하므로 목록 문법 금지)
   - code: BR_RioGrandedoSul
     name_ko: 히우그란지두술
     country: Brazil
     crop: soy
     role: grow
-    lat: -30.0
-    lon: -53.0
+    lat: -28.7
+    lon: -53.3
     tier: 2
-    coord_status: INFERENCE
-    share_note: 브라질 남부 최대 가뭄 손실 지역(Embrapa 50년 정량 — CE-006 지역 분리 해석)
+    coord_status: CONFIRMED
+    share_note: "브라질 대두 생산 4위 주 · 약 18.6백만 t(전국 171.5백만 t의 약 11%, CONAB 2024/25) · 남부 최대 가뭄 손실 지역(Embrapa 50년 정량)"
+    anchor: "Cruz Alta(-28.64/-53.61) · Tupanciretã(-29.08/-53.84) · Passo Fundo(-28.25/-52.40) — 북서 고원 대두 벨트 중심(구 -30.0/-53.0 주 중심에서 북으로 1.3°)"
+    source_url: "https://www.gov.br/conab/pt-br/atuacao/informacoes-agropecuarias/safras/safra-de-graos/boletim-da-safra-de-graos/12o-levantamento-safra-2024-25/e-book_boletim-de-safras-12o-levantamento_2025.pdf; https://www.infomoney.com.br/mercados/conab-mantem-safra-de-soja-do-brasil-e-ve-goias-como-3o-produtor-apos-quebra-no-rs/; https://www.canalrural.com.br/agricultura/soja/confira-quais-sao-os-municipios-que-mais-produzem-soja-em-rs-e-pr/; https://pt.wikipedia.org/wiki/Cruz_Alta_(Rio_Grande_do_Sul)"
+    verified_on: '2026-09-13'
   - code: BR_Goias
     name_ko: 고이아스
     country: Brazil
     crop: soy
     role: grow
-    lat: -16.5
-    lon: -49.5
+    lat: -17.8
+    lon: -51.0
     tier: 2
-    coord_status: INFERENCE
-    share_note: 중서부 세하두 주요 생산 주
+    coord_status: CONFIRMED
+    share_note: "브라질 대두 생산 3위 주 · 약 20.4백만 t(전국의 약 12%, CONAB 2024/25 · 단수 4,183 kg/ha 전국 최고) · 세하두 남서부 Rio Verde·Jataí·Cristalina가 생산액 상위"
+    anchor: "Rio Verde(-17.75/-50.92) · Jataí — 남서 고이아스 대두 벨트 중심(구 -16.5/-49.5 주 중심에서 남서로 1.3°/1.5°)"
+    source_url: "https://www.gov.br/conab/pt-br/atuacao/informacoes-agropecuarias/safras/safra-de-graos/boletim-da-safra-de-graos/12o-levantamento-safra-2024-25/e-book_boletim-de-safras-12o-levantamento_2025.pdf; https://agenciacoradenoticias.go.gov.br/160643-producao-de-graos-em-goias-deve-avancar-17-na-safra-2024-2025; https://sistemafaeg.com.br/noticias/atualizacao-da-producao-agricola-municipal-destaca-soja-milho-e-cana-de-acucar; https://en.wikipedia.org/wiki/Rio_Verde,_Goi%C3%A1s"
+    verified_on: '2026-09-13'
   - code: US_Minnesota
     name_ko: 미네소타
     country: USA
     crop: soy
     role: grow
-    lat: 44.5
-    lon: -94.5
+    lat: 44.1
+    lon: -94.6
     tier: 2
-    coord_status: INFERENCE
-    share_note: 미국 북부 주요 생산 주
+    coord_status: CONFIRMED
+    share_note: "미국 대두 생산 3위 주 · 349.4백만 bu(전국 4,366백만 bu의 8.0%, USDA NASS 2024 Crop Production Summary) · 상위 카운티 Redwood·Renville·Blue Earth·Jackson(남서·남중부)"
+    anchor: "Mankato(44.16/-94.01) — 남중부·남서부 대두 벨트 중심(구 44.5/-94.5 주 중심에서 남으로 0.4°)"
+    source_url: "https://www.nass.usda.gov/Newsroom/printable/2025/2025_Jan_10_Crop_Production_News_Release.pdf; https://www.nass.usda.gov/Statistics_by_State/Minnesota/Publications/County_Estimates/2024/MN-CtyEst-Soybeans-02-24.pdf; https://en.wikipedia.org/wiki/Mankato,_Minnesota"
+    verified_on: '2026-09-13'
   - code: US_Nebraska
     name_ko: 네브래스카
     country: USA
     crop: soy
     role: grow
-    lat: 41.0
-    lon: -98.0
+    lat: 41.1
+    lon: -97.3
     tier: 2
-    coord_status: INFERENCE
-    share_note: 관개 비중 높은 서부 코른벨트
+    coord_status: CONFIRMED
+    share_note: "미국 대두 생산 5위 주 · 301.0백만 bu(전국의 6.9%, USDA NASS 네브래스카 2024 연간 요약 · 단수 57.5 bu/ac 기록) · 동부·플랫강 유역 집중(Saunders·York·Fillmore) · 관개 비중 높음"
+    anchor: "York(40.87/-97.59) — 동부·남동부 대두 벨트 중심(구 41.0/-98.0 주 중심에서 동으로 0.7°)"
+    source_url: "https://www.nass.usda.gov/Statistics_by_State/Nebraska/Publications/Crop_Releases/Annual_Summary/2025/NE-cropsum2501.pdf; https://www.nefb.org/03/06/2023/nebraskas-corn-soybean-producing-counties/; https://en.wikipedia.org/wiki/York,_Nebraska"
+    verified_on: '2026-09-13'
   - code: US_Ohio
     name_ko: 오하이오
     country: USA
     crop: soy
     role: grow
-    lat: 40.3
-    lon: -83.0
+    lat: 40.8
+    lon: -84.0
     tier: 2
-    coord_status: INFERENCE
-    share_note: 동부 코른벨트 생산 주
+    coord_status: CONFIRMED
+    share_note: "미국 대두 생산 6위 주 · 274.3백만 bu(전국의 6.3%, USDA NASS 2024) · 상위 카운티 Wood·Darke·Seneca(서부·북서부)"
+    anchor: "Celina(Mercer, 40.56/-84.56) — Wood·Darke·Seneca를 잇는 서부·북서부 벨트 중심(구 40.3/-83.0 주 중심에서 북서로 0.5°/1.0°)"
+    source_url: "https://www.nass.usda.gov/Newsroom/printable/2025/2025_Jan_10_Crop_Production_News_Release.pdf; https://www.nass.usda.gov/Statistics_by_State/Ohio/Publications/Ag_Across_Ohio/2024/aao2403.pdf; https://en.wikipedia.org/wiki/Celina,_Ohio"
+    verified_on: '2026-09-13'
   - code: PY_AltoParana
     name_ko: 알토파라나(파라과이)
     country: Paraguay
     crop: soy
     role: grow
-    lat: -25.5
+    lat: -25.9
     lon: -55.0
     tier: 2
-    coord_status: INFERENCE
-    share_note: 파라과이 최대 대두 생산 지역(남미 4위 수출국)
+    coord_status: CONFIRMED
+    share_note: "파라과이 대두 생산 1위 도 · 3.06백만 t(전국 9.34백만 t의 32.7%, MAG·INBIO 2024/25) · 파종 면적 896천 ha(26.3%, CAPECO 2025/26)"
+    anchor: "Santa Rita(-25.98/-54.95) · Naranjal — 시우다드델에스테 서쪽 대두 벨트 중심(구 -25.5/-55.0에서 남으로 0.4°)"
+    source_url: "https://inbio.org.py/se-presentan-informes-de-superficie-de-cultivos-y-el-rendimiento-de-soja-de-la-zafra-2024-2025/; https://www.abc.com.py/negocios/abc-campo/2025/12/23/capeco-adelanta-que-aumentara-la-produccion-de-soja-y-la-superficie-cultivada/; https://en.wikipedia.org/wiki/Santa_Rita,_Paraguay"
+    verified_on: '2026-09-13'
   - code: IN_MadhyaPradesh
     name_ko: 마디아프라데시(인도)
     country: India
     crop: soy
     role: grow
     lat: 23.0
-    lon: 77.0
+    lon: 75.8
     tier: 2
-    coord_status: INFERENCE
-    share_note: 인도 대두 생산 1위 주(수입 관세 정책 연계 — 인도는 GAIN 국가 상위)
+    coord_status: CONFIRMED
+    share_note: "인도 대두 생산 1위 주 · 55.4 lakh t(전국 125.8 lakh t의 약 44%, SOPA kharif 2024) · 수입 관세 정책 연계(인도는 GAIN 국가 상위)"
+    anchor: "Ujjain(23.18/75.78) · Indore(22.72/75.86) — 말와 고원 대두 벨트 중심(구 23.0/77.0 주 중심에서 서로 1.2°)"
+    source_url: "https://sopa.org/all-india-state-wise-soybean-area-production-and-productivity/; https://www.business-standard.com/industry/agriculture/india-s-soybean-production-reaches-1-26-million-tonnes-trade-body-124101500369_1.html; https://en.wikipedia.org/wiki/Ujjain"
+    verified_on: '2026-09-13'
 
   # ── tier 2 · 팜 (대체유 팜유 가격 전이 CE-015 배경 — 산지 기후는 팜유 수급 경로) ──
   - code: MY_Sabah
@@ -220,21 +245,27 @@ regions:
     country: Malaysia
     crop: palm
     role: grow
-    lat: 5.5
-    lon: 117.5
+    lat: 5.0
+    lon: 118.0
     tier: 2
-    coord_status: INFERENCE
-    share_note: 말레이시아 팜유 생산 1위 주
+    coord_status: CONFIRMED
+    share_note: "말레이시아 CPO 생산 1위 주 · 4.27백만 t(전국 19.34백만 t의 22.1%, MPIC·MPOB 2024) · 식재 면적 약 1.48백만 ha(26.4%) · 동해안 Tawau·Lahad Datu·Kinabatangan 등이 주 생산의 약 75%"
+    anchor: "Lahad Datu(5.03/118.34) · Tawau(4.26/117.89) — 동해안 팜 벨트 중심(구 5.5/117.5 주 중심에서 남동으로 0.5°/0.5°)"
+    source_url: "https://theedgemalaysia.com/node/775944; https://bepi.mpob.gov.my/images/area/2024/Area_summary2024.pdf; https://www.etawau.com/OilPalm/OilPalmPlantation.htm; https://en.wikipedia.org/wiki/Lahad_Datu"
+    verified_on: '2026-09-13'
   - code: MY_Johor
     name_ko: 조호르
     country: Malaysia
     crop: palm
     role: grow
-    lat: 2.0
-    lon: 103.5
+    lat: 1.9
+    lon: 103.6
     tier: 2
-    coord_status: INFERENCE
-    share_note: 반도 말레이시아 주요 팜 재배 주
+    coord_status: CONFIRMED
+    share_note: "반도 말레이시아 팜 식재 면적 1위 주 · 659,820 ha(전국의 11.8%, MPOB 2024 Oil Palm Planted Area) · Kluang·Kota Tinggi 중심"
+    anchor: "Kluang(2.03/103.32) · Kota Tinggi(1.73/103.90) — 중부·남동부 팜 벨트 중심(구 2.0/103.5와 0.1° 차 — NASA POWER 0.5° 격자에서 동일)"
+    source_url: "https://bepi.mpob.gov.my/images/area/2024/Area_summary2024.pdf; https://en.wikipedia.org/wiki/Kluang; https://en.wikipedia.org/wiki/Kota_Tinggi_District"
+    verified_on: '2026-09-13'
   - code: ID_Riau
     name_ko: 리아우(인도네시아)
     country: Indonesia
@@ -243,15 +274,21 @@ regions:
     lat: 0.5
     lon: 101.5
     tier: 2
-    coord_status: INFERENCE
-    share_note: 인도네시아 팜유 생산 1위 주(수마트라)
+    coord_status: CONFIRMED
+    share_note: "인도네시아 팜유 생산 1위 주 · 8.79백만 t(전국 46.99백만 t의 18.7%, BPS 2023) · 생산 상위 군은 Rokan Hulu·Pelalawan·Kampar·Rokan Hilir로 Pekanbaru 동서 양측에 분포"
+    anchor: "Pekanbaru 권역 — Pangkalan Kerinci(Pelalawan, 0.40/101.86) 동측과 Kampar·Rokan Hulu 서측의 중간. 기존 0.5/101.5가 벨트 중심과 일치하여 유지"
+    source_url: "https://www.bps.go.id/id/statistics-table/2/MTMyIzI=/produksi-tanamanperkebunan.html; https://dataloka.id/ekonomi/1162/produksi-kelapa-sawit-di-indonesia-berdasarkan-provinsi-pada-2023/; https://infopku.com/daerah-penghasil-kelapa-sawit-terbesar-di-provinsi-riau/38749/; https://en.wikipedia.org/wiki/Pangkalan_Kerinci"
+    verified_on: '2026-09-13'
   - code: ID_CentralKalimantan
     name_ko: 중부칼리만탄
     country: Indonesia
     crop: palm
     role: grow
-    lat: -2.0
-    lon: 113.5
+    lat: -2.5
+    lon: 112.8
     tier: 2
-    coord_status: INFERENCE
-    share_note: 칼리만탄 팜 확장 지역(MY·ID 합산 세계 팜유 80%+ — Zhang 2025)
+    coord_status: CONFIRMED
+    share_note: "인도네시아 팜유 생산 2위 주 · 8.55백만 t(전국의 18.2%, BPS 2023) · Kotawaringin Timur가 주 생산의 26.7%(1위)·Seruyan 2위 · MY·ID 합산 세계 팜유 80%+(Zhang 2025)"
+    anchor: "Sampit(Kotawaringin Timur, -2.53/112.95) · Seruyan 남서 — 남부 팜 벨트 중심(구 -2.0/113.5 주 중심에서 남서로 0.5°/0.7°)"
+    source_url: "https://www.bps.go.id/id/statistics-table/2/MTMyIzI=/produksi-tanamanperkebunan.html; https://kalteng.antaranews.com/berita/801025/terluas-di-kalteng-kebun-sawit-sudah-hampir-sepertiga-wilayah-kotim; https://en.wikipedia.org/wiki/Sampit"
+    verified_on: '2026-09-13'

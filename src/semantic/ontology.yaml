@@ -96,7 +96,8 @@ entity_types:
     label_ko: 농업·작황·기상
     classes: [AgriculturalEvent, AgriculturalMetric, ClimateIndicator, ClimatePattern,
               CropStage, WeatherEvent, SupplyMetric, SupplyDemandIndicator, StockMetric,
-              ProcessingMetric, ForecastMetric, ForecastSignal]
+              ProcessingMetric, ForecastMetric, ForecastSignal,
+              ProductionRegion]        # v3.3.1(2026-09-13) — 산지(기후 수집 지역) · entities.yaml production_regions TERM-192~214
   - family: trade_policy
     label_ko: 무역·정책·규제
     classes: [TradeMetric, TradeRegion, TradeTerm, Policy, PolicyDocument, PolicyEvent,
@@ -821,11 +822,28 @@ media_sources:
 production_regions:
   note: 기후 수집 지역의 단일 원천은 config/production_regions.yaml — 지표 코드 접미는 {CC}_{Region}(Open-Meteo·예보)
     또는 {Region}(NASA POWER 업로드본). tier 1 = 승인자 공유 정본 좌표 12(CONFIRMED) ·
-    tier 2 = 주 중심 근사 좌표 11(INFERENCE, 승인자 확인 대기). tier 2 지표는 좌표 확정 전까지 참고 지표로만 쓴다.
+    tier 2 = 2026-09-13 검증으로 주 중심 근사 → 주산 벨트 중심 교정 + 공식 생산 통계 근거 확보(11건 CONFIRMED,
+    정본 좌표 표 §3.2 편입은 승인자 확인 대기). 편입 전까지 tier 2 지표는 참고 지표로만 쓴다.
+  entity_class: ProductionRegion    # entities.yaml production_regions(TERM-192~214) · 관계 LOCATED_AT
+  verified_on: '2026-09-13'         # tier2 좌표·근거 검증일 — 상세: climate_regions_forecast_weathernext_2026_09_13.md §2
+  coord_versioning: 0.5° 이상 이동 지역(RS·GO·MN·NE·OH·MP·Sabah·Kalteng)은 NASA POWER 격자가 바뀌므로 구좌표
+    수집분과 시계열을 잇지 않는다 — 좌표 버전을 source_vintage로 분리.
   tier1: [CN_Heilongjiang, CN_Shandong, CN_Jiangsu, US_Illinois, US_Iowa, US_Indiana,
           BR_MatoGrosso, BR_Parana, BR_MatoGrossodoSul, AR_Cordoba, AR_SantaFe, AR_BuenosAires]
   tier2: [BR_RioGrandedoSul, BR_Goias, US_Minnesota, US_Nebraska, US_Ohio, PY_AltoParana,
           IN_MadhyaPradesh, MY_Sabah, MY_Johor, ID_Riau, ID_CentralKalimantan]
+  tier2_coord_status:               # 라벨 CONFIRMED = 공식 생산 통계 + gazetteer 벨트 기준점 좌표 양쪽 확보
+    BR_RioGrandedoSul: CONFIRMED    # -28.7/-53.3 · Cruz Alta·Tupanciretã·Passo Fundo · CONAB 2024/25 4위
+    BR_Goias: CONFIRMED             # -17.8/-51.0 · Rio Verde·Jataí · CONAB 2024/25 3위
+    US_Minnesota: CONFIRMED         # 44.1/-94.6 · Mankato 남중부 · NASS 2024 3위(8.0%)
+    US_Nebraska: CONFIRMED          # 41.1/-97.3 · York 동부 · NASS 2024 5위(6.9%)
+    US_Ohio: CONFIRMED              # 40.8/-84.0 · Celina—Wood·Darke 벨트 · NASS 2024 6위(6.3%)
+    PY_AltoParana: CONFIRMED        # -25.9/-55.0 · Santa Rita·Naranjal · MAG/INBIO 2024/25 1위(32.7%)
+    IN_MadhyaPradesh: CONFIRMED     # 23.0/75.8 · Ujjain·Indore 말와 · SOPA kharif 2024 1위(약 44%)
+    MY_Sabah: CONFIRMED             # 5.0/118.0 · Lahad Datu·Tawau 동해안 · MPOB 2024 CPO 1위(22.1%)
+    MY_Johor: CONFIRMED             # 1.9/103.6 · Kluang·Kota Tinggi · MPOB 2024 식재 11.8%
+    ID_Riau: CONFIRMED              # 0.5/101.5 유지 · Pekanbaru 권역 · BPS 2023 1위(18.7%)
+    ID_CentralKalimantan: CONFIRMED # -2.5/112.8 · Sampit·Seruyan · BPS 2023 2위(18.2%)
   crops: {soy: 19, palm: 4}        # 팜 4지역(MY·ID)은 대두유−팜유 가격 차이(CE-015) 배경 관측용
 
 # ── 공급망 참조 계층 (v3.1 신설 — G2 운영 현실화: 도착가 밴드·4축 대안 · D-041) ──

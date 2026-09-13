@@ -5,7 +5,7 @@ description: "ENSO 페이즈 (NOAA ONI) · Open-Meteo 산지 일별 기후 (ERA5
 note: >
   Open-Meteo 산지 목록의 단일 진실 원천은 config/production_regions.yaml (2026-09-13).
   tier1 12개(정본 좌표 표 §3.2와 일치 — CONFIRMED): 중국(3)·미국(3)·브라질(3)·아르헨티나(3).
-  tier2 11개(주 중심 근사 — INFERENCE, 승인자 확인 대기): 브라질(2)·미국(3)·파라과이(1)·인도(1)·
+  tier2 11개(주산 벨트 중심 좌표 — 2026-09-13 공식 통계·기준점 검증 CONFIRMED): 브라질(2)·미국(3)·파라과이(1)·인도(1)·
   말레이시아 팜(2)·인도네시아 팜(2). tier2는 토양 hourly 변수를 수집하지 않는다(daily 6변수만).
   예보 행(FCST_ 접두)은 event_time이 **미래**(유효일)이며 available_at = 수집 시각(attach_asof의
   event_time > ingested_at 분기, A-195). 예보는 관측 대체가 아니라 참고 층 — skill 검증 전 모델 투입 금지.
