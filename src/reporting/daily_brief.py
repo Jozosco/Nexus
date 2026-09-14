@@ -132,7 +132,43 @@ _NOTE_KEY_KO: dict[str, str] = {
     "REPORT_DATE": "발표일", "CONSENSUS": "컨센서스", "RATE": "세율", "PROGRESS": "진척",
     "STATUS": "상태", "LEVEL": "수준", "SCORE": "점수", "SOURCE": "출처", "MULTIPLIER": "배수",
     "VALUE": "값", "DATE": "일자", "COUNT": "건수",
+    # A-269: 프록시 프롬프트가 실제로 내는 키 전량 — 미매핑 키가 영문 Title Case로 새던 결함
+    "DUTY_RATE": "관세율", "CHANGE": "변동", "ACTUAL": "실제", "SURPRISE": "서프라이즈",
+    "RISK": "위험", "DIVERSIONS": "우회 선박", "FREIGHT_IMPACT": "운임 영향",
+    "SUNFLOWER_OIL_EXPORTS": "해바라기유 수출", "TARIFF_LEVEL": "관세 수준",
+    "SOYBEAN_OIL_TARIFF": "대두유 관세", "VS_LAST_YEAR": "전년 대비", "WEATHER_RISK": "기상 위험",
+    "INDONESIA": "인도네시아", "MALAYSIA": "말레이시아", "QUALITATIVE": "정성 판정",
+    "COMPOSITE": "복합 점수", "AWRP": "전쟁위험보험료", "THREAT": "위협",
 }
+_VALUE_KO: dict[str, str] = {
+    "unchanged": "변동 없음", "increase": "인상", "decrease": "인하", "high": "높음", "medium": "중간",
+    "low": "낮음", "open": "개방", "restricted": "제한", "blocked": "차단", "normal": "정상",
+    "reduced": "감소", "suspended": "중단", "bullish": "강세", "bearish": "약세", "neutral": "중립",
+    "yes": "있음", "no": "없음", "none": "없음", "unknown": "미확인", "ahead": "앞섬", "behind": "뒤처짐",
+    "on-track": "정상", "critical": "심각", "elevated": "상승",
+}
+_PREFIX_TAG_RE = re.compile(r"^\s*\[[^\]]*\]\s*")
+
+
+def _parse_kv(note: str) -> list[tuple[str, str]]:
+    """프록시 단일 행(`KEY: value | KEY: value`)을 (한글 라벨, 값) 목록으로 — 결정적·비용 0 (A-269).
+
+    `**`·`[]`·인용 번호 제거, 구분자는 `|` 또는 2칸 이상 공백. 키가 2개 미만이면 빈 목록(산문으로 취급).
+    """
+    body = _PREFIX_TAG_RE.sub("", str(note))
+    body = re.sub(r"\[\d+\]", "", body).replace("**", "")
+    parts = re.split(r"\s*\|\s*|\s{2,}", body)
+    out: list[tuple[str, str]] = []
+    for part in parts:
+        m = re.match(r"^\s*([A-Z][A-Z_]{1,}):\s*(.+?)\s*$", part.strip())
+        if not m:
+            continue
+        key, val = m.group(1), m.group(2).strip().strip("[]").strip()
+        val = re.sub(r"\s*\([^)]*\)\s*$", "", val) if len(val) > 40 else val   # 긴 괄호 부연 제거
+        low = val.lower().strip(".")
+        val_ko = _VALUE_KO.get(low, val)
+        out.append((_NOTE_KEY_KO.get(key, key.replace("_", " ").title()), val_ko[:60]))
+    return out if len(out) >= 2 else []
 _CODE_TOKEN_RE = re.compile(r"\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b")
 _INTERNAL_REF_RE = re.compile(r"\b(?:A|CE|DQ|M|V|R|C|P1|S|TERM)-\d{1,3}\b")
 _WORD_KO: list[tuple[str, str]] = [
@@ -214,14 +250,96 @@ def _source_ko(name: object) -> str:
 
 
 def _media_title(note: str, indicator: str, n: int = 110) -> str:
-    """언론·매체 카드 제목 — 원문 KEY: 블록을 한국어 라벨로 풀고 URL은 제거(링크는 별도)."""
-    body = str(note).split("]")[-1].strip()
-    body = re.sub(r"\b([A-Z][A-Z_]{2,}):",
-                  lambda m: _NOTE_KEY_KO.get(m.group(1), m.group(1).replace("_", " ").title()) + ":",
-                  body)
+    """언론·매체 카드 제목/요약 1줄 — A-269 재작성.
+
+    ① 접두 `[…]`만 앵커 제거(구 코드 `split("]")[-1]`는 인용 [1][3]·`**[12.5%]**`에서 본문을 잃음)
+    ② 구조화 행이면 `_parse_kv`로 "세율 22.5% · 변동 없음 · …" 한글 요약
+    ③ 매체 노트(`제목 — 요약 (url)` ⋅ …)는 첫 기사만, URL 제거
+    ④ 산문은 문장·구분자 경계에서 n자 안으로 절단 · 빈 본문은 정성 라벨(예: 위협 수준 높음)
+    """
+    raw = str(note)
+    kv = _parse_kv(raw)
+    if kv:
+        txt = " · ".join(f"{k} {v}" for k, v in kv[:5])
+        return txt[:n].rstrip(" ·") if len(txt) > n else txt
+    m = re.match(r"^\s*\[([^\]]*)\]\s*(.*)$", raw, flags=re.S)
+    tag, body = (m.group(1), m.group(2)) if m else ("", raw)
+    body = body.strip()
+    if not body:                                              # 예: [QUALITATIVE:HIGH]
+        tm = re.match(r"^([A-Z_]+):\s*([A-Za-z]+)$", tag.strip())
+        if tm:
+            return f"{_NOTE_KEY_KO.get(tm.group(1), tm.group(1).title())} {_VALUE_KO.get(tm.group(2).lower(), tm.group(2))}"
+        return _label_ko(indicator)
+    if " ⋅ " in body or " — " in body:                        # 매체 노트: 첫 기사만
+        body = body.split(" ⋅ ")[0]
     body = _URL_RE.sub("", body)
+    body = re.sub(r"\[\d+\]", "", body).replace("**", "")
+    body = re.sub(r"\b([A-Z][A-Z_]{2,}):",
+                  lambda mm: _NOTE_KEY_KO.get(mm.group(1), mm.group(1).replace("_", " ").title()) + ":", body)
     body = re.sub(r"\(\s*\)", "", body).strip(" ⋅·-")
-    return body[:n].strip() or _label_ko(indicator)
+    if len(body) > n:                                         # 문장·구분자 경계 절단
+        cut = body[:n]
+        k = max(cut.rfind(". "), cut.rfind(" — "), cut.rfind(" | "), cut.rfind("·"))
+        body = (cut[:k] if k > n * 0.4 else cut).rstrip(" ·|,-") + "…"
+    return body or _label_ko(indicator)
+
+
+def _media_items(note: str) -> list[dict]:
+    """매체 노트 → 기사별 {title, desc, url} (A-269: 아카이브 note '[채널…] 제목 — 요약 (url) ⋅ …')."""
+    body = _PREFIX_TAG_RE.sub("", str(note))
+    items = []
+    for part in body.split(" ⋅ "):
+        part = part.strip()
+        if not part:
+            continue
+        url = _first_url(part) or ""
+        txt = _URL_RE.sub("", part)
+        txt = re.sub(r"\(\s*\)", "", txt).strip(" ⋅·-")
+        title, desc = (txt.split(" — ", 1) + [""])[:2] if " — " in txt else (txt, "")
+        items.append({"title": title.strip(), "desc": desc.strip(), "url": url})
+    return items
+
+
+_RSS_ORG_EN: dict[str, str] = {   # A-269: 승인자 지시 — 부록 소스명은 영문
+    "RSS_FARMDOC_DAILY": "Farmdoc Daily (Univ. of Illinois)", "RSS_WORLD_GRAIN": "World Grain",
+    "RSS_OFI_MAGAZINE": "Oils & Fats International", "RSS_GRAIN_ORG": "GRAIN",
+    "RSS_SOYGROWERS": "American Soybean Association", "RSS_CLIMATEPOL": "Climatepol (KR)",
+    "RSS_AGMARKET": "AgMarket.Net", "RSS_GRAINCENTRAL": "Grain Central (AU)",
+    "RSS_TFM": "Total Farm Marketing", "RSS_UKRAGRO": "UkrAgroConsult",
+    "RSS_REUTERS_COMMODITIES": "Reuters — Commodities", "RSS_REUTERS_CLIMATE_ENERGY": "Reuters — Climate & Energy",
+    "RSS_AP_COMMODITIES": "AP — Commodities", "RSS_AP_WORLD": "AP — World",
+}
+
+
+def _llm_summary(note: str, indicator: str) -> str | None:
+    """선택(기본 off): BRIEF_LLM_SUMMARY=1 이면 산문형 프록시 응답만 1줄 한글 요약(gpt-4o-mini·JSON·캐시·비치명).
+
+    CI-004는 Perplexity 스케줄 편입 금지 규정이라 저촉 없음. 비용 발생 항목 — 결정 대기열(DQ-27) 승인 전 기본 off.
+    """
+    if os.environ.get("BRIEF_LLM_SUMMARY", "0") != "1":
+        return None
+    try:
+        import json as _json
+        cache_p = Path("data/processed/brief_llm_summary_cache.json")
+        cache = _json.loads(cache_p.read_text(encoding="utf-8")) if cache_p.is_file() else {}
+        key = f"{date.today().isoformat()}|{indicator}|{hash(note) & 0xffffffff}"
+        if key in cache:
+            return cache[key]
+        from src.utils.openai_client import query_openai
+        out = query_openai(
+            f"다음 시장 뉴스 텍스트를 한국어 한 문장(60자 이내)으로 요약하라. JSON {{\"summary\": \"...\"}} 형식만. 텍스트: {note[:800]}",
+            system_prompt="너는 대두유 조달 데스크의 편집자다. 사실만, 전망·확률 표현 금지.",
+            response_format={"type": "json_object"})
+        summ = _json.loads(out).get("summary", "").strip() if out else ""
+        if summ:
+            cache[key] = summ
+            cache_p.parent.mkdir(parents=True, exist_ok=True)
+            cache_p.write_text(_json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+        return summ or None
+    except Exception as e:                                    # noqa: BLE001 — 비치명
+        print(f"[정보] LLM 요약 생략(비치명): {type(e).__name__}")
+        return None
+
 
 # 변인 키워드 → 기사 매칭 (별점) — 규칙 기반(Phase B에서 LLM 매핑 검토)
 _DRIVER_KEYWORDS: dict[str, list[str]] = {
@@ -299,6 +417,23 @@ _ONTOLOGY_CHAINS: dict[str, list[str]] = {
                      "뉴스 감성 신호", "검증 대기"],
     "GDELT_EVENT_SCORE": ["국제 사건 기사 수", "지정학 위험 태그", "규칙 기반 경보 원천",
                           "해상 위협 점수(경보 성분)", "참고 지수"],
+    # A-269: 공식 RSS 10종·나머지 실시간 프록시 — 매체 카드에도 분석 연결 표시
+    "RSS_FARMDOC_DAILY": ["기사", "신호: 압착·바이오연료(농업경제 분석)", "후보 인과 경로(검증 대기)", "미국 재생디젤 압착 증설", "수출 여력", "방향 조건부"],
+    "RSS_WORLD_GRAIN": ["기사", "신호: 물류·설비·가공 산업", "검증된 인과 경로", "요충 경로·압착 설비", "공급 차질", "가격 상방"],
+    "RSS_OFI_MAGAZINE": ["기사", "신호: 유지류 산업·대체유", "후보 인과 경로(검증 대기)", "대두유−팜유 가격 차이", "대체 수요", "방향 조건부"],
+    "RSS_GRAIN_ORG": ["기사", "신호: 토지·정책", "후보 인과 경로(검증 대기)", "삼림 규제(EUDR)", "대체 수요", "방향 조건부"],
+    "RSS_SOYGROWERS": ["기사", "신호: 미국 대두 정책", "검증된 인과 경로", "45Z 세액공제·바이오디젤", "수출 여력", "가격 상방"],
+    "RSS_CLIMATEPOL": ["기사", "신호: 국내 바이오연료·SAF 정책", "검증된 인과 경로", "원유·경유→바이오디젤 경제성", "산업 수요", "가격 상방"],
+    "RSS_AGMARKET": ["기사", "신호: 선물 시장 동향", "후보 인과 경로(검증 대기)", "투기 포지션(COT)", "선물 모멘텀", "방향 조건부"],
+    "RSS_GRAINCENTRAL": ["기사", "신호: 작황·기상(호주·아시아)", "검증된 인과 경로", "엘니뇨·강우", "남미·호주 작황", "가격 상방"],
+    "RSS_TFM": ["기사", "신호: 선물 시장 동향", "후보 인과 경로(검증 대기)", "투기 포지션(COT)", "선물 모멘텀", "방향 조건부"],
+    "RSS_UKRAGRO": ["기사", "신호: 흑해 수출 경로", "후보 인과 경로(검증 대기)", "해바라기유 수출", "대체 수요", "방향 조건부"],
+    "BRAZIL_HARVEST_PROGRESS": ["관측", "신호: 브라질 수확 진척", "후보 인과 경로(검증 대기)", "수출 일정", "공급 시점", "방향 조건부"],
+    "GPR_REALTIME": ["관측", "신호: 지정학 위험 지수", "검증된 인과 경로", "해협 위험·운임", "도착가", "가격 상방"],
+    "GEOINTEL_RISK_COMPOSITE": ["관측", "신호: 복합 지정학 사건", "검증된 인과 경로", "해협 위험·운임", "도착가", "가격 상방"],
+    "WASDE_CONSENSUS_SCORE": ["발표", "신호: WASDE 서프라이즈", "후보 인과 경로(검증 대기)", "재고사용비율 신호", "투기 순매수", "방향 조건부"],
+    "HORMUZ_AWRP_MULTIPLIER": ["관측", "신호: 전쟁위험보험료", "검증된 인과 경로", "탱커 운임", "도착가", "가격 상방"],
+    "BCAA": ["관측", "신호: 식물성유지 탱커 운임", "검증된 인과 경로", "운임층", "도착가", "가격 상방"],
 }
 
 
@@ -388,7 +523,7 @@ def _landed_band() -> tuple[float, float, float] | None:
         return None
 
 
-def _load_signals(days: int = 3) -> pd.DataFrame:
+def _load_signals(days: int = 5) -> pd.DataFrame:
     """일별 비정형 신호 아카이브(A-181)에서 최근 N일 로드."""
     if not SIGNALS_CSV.exists():
         return pd.DataFrame()
@@ -1226,16 +1361,41 @@ def build_daily_brief(
     # ── 언론·매체 블록 ──
     sig_cards = []
     seen_ind: set[str] = set()
-    for _, row in signals.iterrows():
+    # A-269: 종전 '상위 6장'은 아카이브 알파벳 정렬 탓에 프록시 코드만 채워 매체(RSS_*)가 한 번도 못 들어왔다 →
+    #   프록시 최대 3장 + 매체 최대 3장 교차(각각 날짜 내림차순), 매체 카드는 기사별 제목·요약·원문.
+    _rows = list(signals.iterrows())
+    _proxy_rows = [r for _, r in _rows if not str(r.get("indicator", "")).startswith("RSS_")]
+    _media_rows = [r for _, r in _rows if str(r.get("indicator", "")).startswith("RSS_")]
+    ordered_rows: list = []
+    for a_row, b_row in zip(_proxy_rows + [None] * 3, _media_rows + [None] * 3):
+        for rr in (a_row, b_row):
+            if rr is not None:
+                ordered_rows.append(rr)
+    n_proxy = n_media = 0
+    for row in ordered_rows:
         ind = str(row.get("indicator", ""))
-        if ind in seen_ind or len(sig_cards) >= 6:
+        is_media = ind.startswith("RSS_")
+        if ind in seen_ind or (is_media and n_media >= 3) or (not is_media and n_proxy >= 3):
             continue
         seen_ind.add(ind)
         note = str(row.get("note", ""))
-        url = _first_url(note)
-        title = _esc(_media_title(note, ind))
-        head = (f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>'
-                if url else title)
+        if is_media:
+            items = _media_items(note)
+            it0 = items[0] if items else {"title": _media_title(note, ind), "desc": "", "url": _first_url(note) or ""}
+            url = it0["url"]
+            title = _esc(it0["title"][:120])
+            desc_html = f'<div class="src">{_esc(it0["desc"][:160])}</div>' if it0.get("desc") else ""
+            more = f' <span class="src">외 {len(items) - 1}건</span>' if len(items) > 1 else ""
+            head = ((f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>' if url else title)
+                    + more + desc_html)
+            n_media += 1
+        else:
+            url = _first_url(note)
+            llm = _llm_summary(note, ind) if not _parse_kv(note) else None
+            title = _esc(llm or _media_title(note, ind))
+            head = (f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>'
+                    if url else title)
+            n_proxy += 1
         chain = _ONTOLOGY_CHAINS.get(ind)
         chain_html = ""
         if chain:
@@ -1256,7 +1416,7 @@ def build_daily_brief(
         {pd.Timestamp(row.get("date")).strftime("%m-%d") if pd.notna(row.get("date")) else ""}</div>
       {chain_html}</div>""")
     signals_html = ("".join(sig_cards) if sig_cards else
-                    '<div class="card sig-item"><p>최근 3일 내 수집된 언론·매체 신호가 없음 — '
+                    '<div class="card sig-item"><p>최근 5일 내 수집된 언론·매체 신호가 없음 — '
                     '일별 다이제스트 실행 여부 확인 필요.</p></div>')
 
     # ── 주목해야 할 일정 ──
@@ -1282,16 +1442,20 @@ def build_daily_brief(
     if not signals.empty:
         rss = signals[signals["indicator"].astype(str).str.startswith("RSS_")]
         for src, grp in rss.groupby("indicator"):
-            row = grp.iloc[0]
+            row = grp.iloc[0]                                   # 소스별 최신 일자
             note = str(row.get("note", ""))
-            url = _first_url(note)
-            title = _esc(_media_title(note, str(src), n=130))
-            org = _RSS_ORG_KO.get(str(src), str(src).replace("RSS_", "").replace("_", " ").title())
-            link = (f'<a href="{_esc(url)}" target="_blank" rel="noopener">원문</a>' if url else "")
+            org = _RSS_ORG_EN.get(str(src), str(src).replace("RSS_", "").replace("_", " ").title())
+            items = _media_items(note)[:3] or [{"title": _media_title(note, str(src), n=130), "desc": "", "url": _first_url(note) or ""}]
+            art_html = ""
+            for it in items:                                    # A-269: 기사별(제목·요약·원문) — 제목 뭉개기 해소
+                link = (f' <a href="{_esc(it["url"])}" target="_blank" rel="noopener">원문</a>' if it.get("url") else "")
+                desc = f'<div class="src">{_esc(it["desc"][:160])}</div>' if it.get("desc") else ""
+                art_html += f'<p>{_esc(it["title"][:140])}{link}</p>{desc}'
+            when = pd.Timestamp(row.get("date")).strftime("%m-%d") if pd.notna(row.get("date")) else ""
             appx_cards.append(f"""
-    <div class="card appx-item"><div class="org">{_esc(org)}</div>
-      <p>{title}</p><div class="src">{link}</div></div>""")
-    appx_html = ("".join(appx_cards[:6]) if appx_cards else
+    <div class="card appx-item"><div class="org">{_esc(org)} <span class="src">{when}</span></div>
+      {art_html}</div>""")
+    appx_html = ("".join(appx_cards) if appx_cards else
                  '<div class="card appx-item"><p>전문 매체 RSS 수집분이 아직 없음 — 첫 수집 '
                  '이후 기관별 최신 발간물이 이 자리에 표시됨.</p></div>')
 

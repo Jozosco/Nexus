@@ -304,6 +304,23 @@ def _fetch_hormuz_realtime() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+# A-269(2026-09-14): 프록시 응답을 단일 행으로 강제하고, 수치는 선언 키 값에서 먼저 뽑는다.
+_ONE_LINE_SYSTEM = ("You are a data extraction service. Respond with ONLY the single formatted line requested. "
+                    "No preamble, no citations, no markdown, no explanation. If a field is unknown write 'unknown'.")
+_ONE_LINE_SUFFIX = " Respond with ONLY that single line."
+
+
+def _extract_value(text: str, preferred_keys: tuple[str, ...]) -> float:
+    """선언 키(예: RATE:) 뒤의 첫 숫자를 우선, 없으면 본문 첫 숫자. 날짜 '11'을 점수로 오독하던 결함 차단."""
+    clean = text.replace("**", "").replace("[", "").replace("]", "")
+    for k in preferred_keys:
+        m = re.search(rf"{k}\s*:\s*[A-Za-z]?\s*(-?\d+(?:\.\d+)?)", clean, re.IGNORECASE)
+        if m:
+            return float(m.group(1))
+    m = re.search(r"(-?\d+(?:\.\d+)?)", clean)
+    return float(m.group(1)) if m else float("nan")
+
+
 def _fetch_policy_news_proxy() -> pd.DataFrame:
     """Perplexity 실시간 검색 — 대두유 가격 주요 정책·수급 뉴스 4종.
 
@@ -372,13 +389,15 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
         try:
             r = client.chat.completions.create(
                 model=PERPLEXITY_MODEL,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "system", "content": _ONE_LINE_SYSTEM},
+                          {"role": "user", "content": prompt + _ONE_LINE_SUFFIX}],
             )
             text = r.choices[0].message.content
 
-            # 숫자 추출 — 응답 첫 번째 숫자를 대표값으로 사용
-            num_match = re.search(r"(\d+\.?\d*)", text)
-            value = float(num_match.group(1)) if num_match else float("nan")
+            # A-269: 선언 키 값 우선 추출(구 코드는 본문 첫 숫자 — 'September 11'의 11을 점수로 오독)
+            pref = {"ARG_EXPORT_TAX_NEWS": ("RATE",), "INDIA_DUTY_NEWS": ("DUTY_RATE", "RATE"),
+                    "BIODIESEL_MANDATE_NEWS": ("INDONESIA",), "WASDE_CONSENSUS_SCORE": ("SURPRISE_SCORE", "SCORE", "ACTUAL", "CONSENSUS")}
+            value = _extract_value(text, pref.get(indicator_code, ()))
 
             rows.append({
                 "price_date":     today,
@@ -386,7 +405,7 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
                 "indicator_code": indicator_code,
                 "value":          value,
                 "unit":           unit_hint,
-                "note":           f"[PERPLEXITY-PROXY: {label_kr}] {text[:300]}",
+                "note":           f"[PERPLEXITY-PROXY: {label_kr}] {text[:600]}",
             })
         except Exception as e:
             print(f"[경고] {indicator_code} 수집 실패: {e}")
@@ -471,7 +490,8 @@ def _fetch_geopolitical_event_proxy() -> pd.DataFrame:
         try:
             r = client.chat.completions.create(
                 model=PERPLEXITY_MODEL,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "system", "content": _ONE_LINE_SYSTEM},
+                          {"role": "user", "content": prompt + _ONE_LINE_SUFFIX}],
             )
             text = r.choices[0].message.content
 
@@ -483,10 +503,9 @@ def _fetch_geopolitical_event_proxy() -> pd.DataFrame:
                 level_map = {"HIGH": 3.0, "MEDIUM": 2.0, "LOW": 1.0}
                 value = level_map[level_match.group(1).upper()]
             elif "PROGRESS" in text and "%" in text:
-                pct_match = re.search(r"PROGRESS:\s*(\d+\.?\d*)", text, re.IGNORECASE)
-                value = float(pct_match.group(1)) if pct_match else (float(num_match.group(1)) if num_match else float("nan"))
+                value = _extract_value(text, ("PROGRESS",))
             else:
-                value = float(num_match.group(1)) if num_match else float("nan")
+                value = _extract_value(text, ("DIVERSIONS", "FREIGHT_IMPACT", "TARIFF_LEVEL"))
 
             rows.append({
                 "price_date":     today,
@@ -494,7 +513,7 @@ def _fetch_geopolitical_event_proxy() -> pd.DataFrame:
                 "indicator_code": indicator_code,
                 "value":          value,
                 "unit":           unit_hint,
-                "note":           f"[PERPLEXITY-PROXY: {label_kr}] {text[:300]}",
+                "note":           f"[PERPLEXITY-PROXY: {label_kr}] {text[:600]}",
             })
         except Exception as e:
             print(f"[경고] {indicator_code} 수집 실패: {e}")

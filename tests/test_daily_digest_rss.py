@@ -158,7 +158,7 @@ def test_gdelt_fallback_fires_only_when_rss_yields_nothing(monkeypatch) -> None:
     assert len(rows) == 1
     r = rows[0]
     assert r["indicator"] == "RSS_REUTERS_COMMODITIES" and r["value"] == 1
-    assert r["note"].startswith("[채널: GDELT] ")
+    assert r["note"].startswith("[채널: GDELT")
     assert "Argentina export tax" in r["note"] and "soyoil-1" in r["note"]
     assert r["date"] == str(date.today()) and r["source"] == "rss_reuters_commodities"
     assert len(seen_params) == 1
@@ -195,7 +195,7 @@ def test_gdelt_not_called_when_gnews_relevant(monkeypatch) -> None:
     monkeypatch.setattr(httpx, "get", fake_get)
     monkeypatch.setattr(dg, "_gdelt_get_json", lambda p: called.append(p) or _canned_gdelt())
     rows = dg._fetch_specialist_media()
-    assert len(rows) == 1 and rows[0]["note"].startswith("[채널: Google News] ")
+    assert len(rows) == 1 and rows[0]["note"].startswith("[채널: Google News")
     assert called == []
 
 
@@ -215,7 +215,7 @@ def test_irrelevant_only_channel_does_not_block_fallback(monkeypatch) -> None:
     monkeypatch.setattr(dg, "_gdelt_get_json", lambda p: _canned_gdelt())
     monkeypatch.setattr(dg.time, "sleep", lambda s: None)
     rows = dg._fetch_specialist_media()
-    assert len(rows) == 1 and rows[0]["note"].startswith("[채널: GDELT] ")
+    assert len(rows) == 1 and rows[0]["note"].startswith("[채널: GDELT")
 
 
 def test_bing_slot_parsed_with_duplicate_links_deduped(monkeypatch) -> None:
@@ -236,7 +236,7 @@ def test_bing_slot_parsed_with_duplicate_links_deduped(monkeypatch) -> None:
     rows = dg._fetch_specialist_media()
     assert len(rows) == 1
     r = rows[0]
-    assert r["value"] == 1 and r["note"].startswith("[채널: Bing News] ")
+    assert r["value"] == 1 and r["note"].startswith("[채널: Bing News")
     assert r["note"].count("palm-1") == 1 and "Sports" not in r["note"]
 
 
@@ -283,4 +283,4 @@ def test_gdelt_failure_is_non_fatal_and_continues_chain(monkeypatch) -> None:
     monkeypatch.setattr(dg, "_gdelt_get_json", boom)
     monkeypatch.setattr(dg.time, "sleep", lambda s: None)
     rows = dg._fetch_specialist_media()
-    assert len(rows) == 1 and rows[0]["note"].startswith("[채널: Bing News] ")
+    assert len(rows) == 1 and rows[0]["note"].startswith("[채널: Bing News")

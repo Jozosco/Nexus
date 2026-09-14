@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import glob
 import os
+import re
 import time
 from datetime import date
 from pathlib import Path
@@ -129,8 +130,9 @@ RSS_SOURCES = {
     "RSS_SOYGROWERS": ["https://soygrowers.com/feed/",
                        "https://soygrowers.com/category/news-releases/feed/"],
     # 크라이미트폴 — 한국 기후·에너지 매체 (SAF·바이오연료 국문 — 부록 8차 원문 소스)
-    "RSS_CLIMATEPOL": ["https://www.climatepol.com/rss/allArticle.xml",
-                       "https://www.climatepol.com/rss/S1N2.xml"],
+    # A-269: 전체 기사 피드가 1순위라 골프·관광 기사가 유입됐음 → 섹션 피드(S1N2)를 1순위, 전체는 폴백
+    "RSS_CLIMATEPOL": ["https://www.climatepol.com/rss/S1N2.xml",
+                       "https://www.climatepol.com/rss/allArticle.xml"],
     # ── 2026-08-28 조정자 추가 지시 4계열 (egress v2.5) — WordPress /feed 관행,
     #    실피드 URL은 샌드박스 차단으로 미검증: 첫 Actions 런 로그로 확정(비치명 설계) ──
     # AgMarket.Net — 조간·마감 시장 분석
@@ -176,37 +178,86 @@ RSS_SOURCES = {
     # S&P Global Commodity Insights: 공개 RSS 부재 추정 — 자동 수집 미등재(실패 소음 방지).
     # 부록 인사이트는 Perplexity 프록시 경유 요약으로 커버 (egress에는 열람용 등재)
 }
-# SBO·유지 관련 기사만 통과 (제목+요약 매칭 — 영문 소문자·국문 원형)
-_RSS_KEYWORDS = (
+# SBO·유지 관련 기사만 통과 — A-269(2026-09-14) 재설계:
+#   ① 영문은 제목+요약 소문자 부분 일치(종전과 동일), 단 'saf'는 safety에 걸리므로 단어 경계 정규식으로만.
+#   ② 국문은 '유지'(인명·"유지하다"에 오탐 — 실측 '오호리 유지로') 대신 '유지류'로, SAF는 '지속가능항공유'.
+#   ③ 국문 매체(RSS_CLIMATEPOL)는 **제목 매칭 필수** — 설명문 단독 매칭이 골프·관광 기사를 통과시켰다.
+#   ④ 매칭 키워드를 항목에 기록(`_kw`) → note 접두 `[채널: X · kw:…]`로 감사 가능.
+_RSS_KEYWORDS_EN = (
     "soybean", "soy oil", "soyoil", "soybean oil", "vegetable oil", "oilseed",
     "palm oil", "canola", "rapeseed", "sunflower", "crush", "biodiesel",
     "renewable diesel", "wasde", "export tax", "tariff", "south korea",
-    # 2026-09-13 Reuters·AP 편입 — 수급·가격 영향 키워드(2차 게이트; 1차는 질의 서버측 한정)
     "biofuel", "rvo", "cftc", "freight", "drought", "el niño", "el nino", "la niña", "la nina",
     "red sea", "hormuz", "black sea",
-    # 국문 (climatepol 등 한국 매체용)
-    "대두", "대두유", "팜유", "식용유", "유지", "바이오디젤", "바이오연료",
-    "항공유", "saf", "곡물", "수출세", "관세",
 )
+_RSS_KEYWORDS_KO = (
+    "대두", "대두유", "팜유", "식용유", "유지류", "바이오디젤", "바이오연료",
+    "항공유", "지속가능항공유", "곡물", "수출세", "관세",
+)
+_RSS_KEYWORD_REGEX = (re.compile(r"\bsaf\b"),)          # 단어 경계 필수 — 'safety' 오탐 차단
+_TITLE_ONLY_SOURCES = {"RSS_CLIMATEPOL"}                  # 국문 종합 매체: 제목에 키워드가 있어야 통과
+_RSS_KEYWORDS = _RSS_KEYWORDS_EN + _RSS_KEYWORDS_KO       # 하위 호환(테스트·외부 참조)
+NOTE_BUDGET = 900                                          # A-269: 제목+요약 보존(구 500 — 제목만)
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _clean_desc(raw: str, n: int = 160) -> str:
+    """RSS description/summary → 태그·개행 제거 후 n자."""
+    import html as _html
+    txt = _html.unescape(_TAG_RE.sub(" ", str(raw or "")))
+    txt = re.sub(r"\s+", " ", txt).strip()
+    return txt[:n].rstrip() + ("…" if len(txt) > n else "")
+
+
+def _match_keyword(title: str, desc: str, indicator: str = "") -> str | None:
+    """통과 키워드 반환(없으면 None). 국문 매체는 제목 기준, 그 외는 제목+요약."""
+    t = str(title).lower(); d = str(desc).lower()
+    blob = t if indicator in _TITLE_ONLY_SOURCES else f"{t} {d}"
+    for k in _RSS_KEYWORDS_EN + _RSS_KEYWORDS_KO:
+        if k in blob:
+            return k
+    for rx in _RSS_KEYWORD_REGEX:
+        if rx.search(blob):
+            return rx.pattern.strip("\\b")
+    return None
 
 
 def _items_from_rss(content: bytes) -> list[dict]:
-    """RSS 2.0 바이트 → 항목 dict 목록 {title, link, desc, date}. pubDate 부재·파싱 실패는 당일."""
+    """RSS 2.0 <item> 및 Atom <entry> → 항목 dict {title, link, desc, date}. pubDate 부재·파싱 실패는 당일.
+
+    A-269: 요약문(description/summary/content:encoded)을 보존해 브리프가 '핵심 내용'을 쓸 수 있게 한다.
+    """
     import xml.etree.ElementTree as ET
     from email.utils import parsedate_to_datetime
 
+    root = ET.fromstring(content)
     items: list[dict] = []
-    for it in ET.fromstring(content).findall(".//item"):
-        pub = it.findtext("pubDate")
+
+    def _date(txt: str | None) -> pd.Timestamp:
+        if not txt:
+            return pd.Timestamp(date.today())
         try:
-            pub_d = pd.Timestamp(parsedate_to_datetime(pub).date()) if pub \
-                else pd.Timestamp(date.today())
+            return pd.Timestamp(parsedate_to_datetime(txt).date())
         except Exception:
-            pub_d = pd.Timestamp(date.today())
+            try:
+                return pd.Timestamp(pd.Timestamp(txt).date())
+            except Exception:
+                return pd.Timestamp(date.today())
+
+    for it in root.findall(".//item"):                       # RSS 2.0
+        desc = (it.findtext("description") or it.findtext("{http://purl.org/rss/1.0/modules/content/}encoded") or "")
         items.append({"title": (it.findtext("title") or "").strip(),
                       "link": (it.findtext("link") or "").strip(),
-                      "desc": it.findtext("description") or "",
-                      "date": pub_d})
+                      "desc": _clean_desc(desc),
+                      "date": _date(it.findtext("pubDate"))})
+    ns = "{http://www.w3.org/2005/Atom}"
+    for en in root.findall(f".//{ns}entry"):                # Atom
+        link_el = en.find(f"{ns}link")
+        link = (link_el.get("href") if link_el is not None else "") or ""
+        desc = en.findtext(f"{ns}summary") or en.findtext(f"{ns}content") or ""
+        items.append({"title": (en.findtext(f"{ns}title") or "").strip(),
+                      "link": link.strip(), "desc": _clean_desc(desc),
+                      "date": _date(en.findtext(f"{ns}updated") or en.findtext(f"{ns}published"))})
     return items
 
 
@@ -268,15 +319,17 @@ def _items_from_gdelt(spec: dict) -> list[dict]:
     return items
 
 
-def _filter_items(items: list[dict], cutoff: pd.Timestamp) -> list[dict]:
-    """2일 컷오프 + SBO 키워드 게이트 + 링크 중복 제거(첫 항목 유지)."""
+def _filter_items(items: list[dict], cutoff: pd.Timestamp, indicator: str = "") -> list[dict]:
+    """2일 컷오프 + SBO 키워드 게이트(매칭어 기록) + 링크 중복 제거(첫 항목 유지)."""
     kept: list[dict] = []
     seen_links: set[str] = set()
     for it in items:
         if it["date"] < cutoff:
             continue
-        if not any(k in f"{it['title']} {it['desc']}".lower() for k in _RSS_KEYWORDS):
+        kw = _match_keyword(it.get("title", ""), it.get("desc", ""), indicator)
+        if kw is None:
             continue
+        it["_kw"] = kw
         link = it["link"]
         if link and link in seen_links:
             continue
@@ -319,7 +372,7 @@ def _fetch_specialist_media() -> list[dict]:
             except Exception as e:   # 네트워크·파싱 어느 쪽이든 비치명
                 print(f"[경고] 매체 수집 실패({indicator}·{ch}): {type(e).__name__} — 다음 채널로")
                 continue
-            kept = _filter_items(items, cutoff)
+            kept = _filter_items(items, cutoff, indicator)
             if kept:
                 channel = ch
                 break
@@ -328,12 +381,19 @@ def _fetch_specialist_media() -> list[dict]:
         winners[indicator] = channel
         label = _CHANNEL_LABELS.get(channel, channel)
         by_date: dict[str, list[str]] = {}
+        kws_by_date: dict[str, set[str]] = {}
         for it in kept:
-            by_date.setdefault(str(it["date"].date()), []).append(f"{it['title']} ({it['link']})")
+            d_key = str(it["date"].date())
+            desc = it.get("desc", "")
+            body = f"{it['title']} — {desc}" if desc else it["title"]
+            by_date.setdefault(d_key, []).append(f"{body} ({it['link']})")
+            kws_by_date.setdefault(d_key, set()).add(str(it.get("_kw", "")))
         for d, notes in sorted(by_date.items()):
+            kw_txt = ",".join(sorted(k for k in kws_by_date.get(d, set()) if k))[:60]
+            # A-269: 접두를 절단 범위 **안에** 두고(구 코드는 접두 밖에서 잘라 아카이브 [:500]이 재절단) 예산 900자
+            note = (f"[채널: {label}" + (f" · kw:{kw_txt}" if kw_txt else "") + "] " + " ⋅ ".join(notes))[:NOTE_BUDGET]
             rows.append({"indicator": indicator, "date": d, "value": len(notes),
-                         "note": f"[채널: {label}] " + " ⋅ ".join(notes)[:500],
-                         "source": indicator.lower()})
+                         "note": note, "source": indicator.lower()})
     if rows:
         chan = ", ".join(f"{k}={v}" for k, v in sorted(winners.items()))
         print(f"[전문 매체] RSS 신호 {len(rows)}행 수집 "
@@ -424,7 +484,7 @@ def _append_archive(rows: list[dict]) -> None:
         "indicator": r["indicator"],
         "category": cat_of.get(r["indicator"], ""),
         "value": r["value"],
-        "note": r["note"][:500].replace("\n", " "),
+        "note": r["note"][:NOTE_BUDGET].replace("\n", " "),
         "source_name": r["source"],
         "appended_at": pd.Timestamp.now("UTC").isoformat(timespec="seconds"),
     } for r in rows if r["indicator"] in targets])
