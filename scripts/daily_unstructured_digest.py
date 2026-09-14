@@ -225,8 +225,8 @@ def _match_keyword(title: str, desc: str, indicator: str = "") -> str | None:
     for k in _RSS_KEYWORDS_EN + _RSS_KEYWORDS_KO:
         if k in blob and (k not in _GENERIC_KEYWORDS or has_ctx):
             return k
-    for rx in _RSS_KEYWORD_REGEX:
-        if rx.search(blob) and has_ctx:
+    for rx in _RSS_KEYWORD_REGEX:                      # 단어 경계 SAF는 그 자체로 특정적 — 맥락어 불요
+        if rx.search(blob):
             return rx.pattern.strip("\\b")
     return None
 
