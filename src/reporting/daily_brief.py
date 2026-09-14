@@ -1146,6 +1146,7 @@ def build_daily_brief(
     fresh_cycle = int(_fl.str.contains("⏳").sum())
     fresh_over = int(_fl.str.contains("🚨").sum())
     fresh_missing = int(_fl.str.contains("❌").sum())
+    fresh_upload = int(_fl.str.contains("📥").sum())        # A-271: 승인자 업로드본 갱신 필요(파이프라인 결함 아님)
     fresh_timely = fresh_ok + fresh_cycle
 
     # ── KPI 블록 ──
@@ -1159,8 +1160,8 @@ def build_daily_brief(
         평소 대비 편차 {f"{kpi.z90:+.1f}" if kpi.z90 is not None else "—"} · 시카고 거래소 정산가 기준 · 기준일 {kpi.last_date}</div></div>""")
     else:
         kpi_cards.append('<div class="card kpi"><div class="lbl">대두유 선물 종가(시카고)</div>'
-                         '<div class="val">미수집</div><div class="foot">종가 계열 미수집 — '
-                         '수집 상태 확인 필요</div></div>')
+                         '<div class="val">미수집 <span class="unit">센트/파운드</span></div>'
+                         '<div class="foot">종가 계열 미수집 — 수집 상태 확인 필요</div></div>')
     if band_mt:
         kpi_cards.append(f"""
     <div class="card kpi"><div class="lbl">참고 도착가 범위 · 약 90일(60거래일)</div>
@@ -1169,8 +1170,8 @@ def build_daily_brief(
       <div class="foot">한국 도착가 기준(운임·보험 포함) · 실측 반영 <span class="pill acc">참고 범위</span></div></div>""")
     else:
         kpi_cards.append('<div class="card kpi"><div class="lbl">참고 도착가 범위 · 60거래일</div>'
-                         '<div class="val">산출 불가</div><div class="foot">관세청 실측 또는 '
-                         '선물 가격 데이터 부족</div></div>')
+                         '<div class="val">산출 불가 <span class="unit">달러/톤</span></div>'
+                         '<div class="foot">관세청 실측 또는 선물 가격 데이터 부족</div></div>')
     kpi_cards.append(f"""
     <div class="card kpi"><div class="lbl">금일 경보 (유의 사항)</div>
       <div class="val num">{len(breach)}<span class="unit">건</span></div>
@@ -1183,7 +1184,7 @@ def build_daily_brief(
       <div class="chg flat">{('<span class="pill ok">주기 내 수집</span>'
                               if fresh_total and fresh_over == 0 and fresh_missing == 0
                               else '<span class="pill warn">확인 필요</span>')}</div>
-      <div class="foot">적시 {fresh_ok} · 주기 내(월간·연간 정상 지연) {fresh_cycle} · 기한 초과 {fresh_over} · 미수집 {fresh_missing}</div></div>""")
+      <div class="foot">적시 {fresh_ok} · 주기 내(월간·연간 정상 지연) {fresh_cycle} · 기한 초과 {fresh_over} · 미수집 {fresh_missing}{f" · 업로드 갱신 필요 {fresh_upload}" if fresh_upload else ""}</div></div>""")
 
     # ── 한눈 요약 4단 문장 (규칙 기반) ──
     if kpi and kpi.wk_pct is not None:
@@ -1220,9 +1221,13 @@ def build_daily_brief(
     basis_gap_txt = ""
     if kpi:
         try:
-            _gap = (pd.Timestamp(run_kst_txt).date() - kpi.last_date).days
+            _run_d = pd.Timestamp(run_kst_txt).date()
+            _gap = (_run_d - kpi.last_date).days
             if _gap >= 2:
-                _wk = "주말 휴장" if pd.Timestamp(kpi.last_date).weekday() == 4 else "휴장·미정산일"
+                # A-271: 요일이 아니라 사이 영업일 수로 판정 — 월요일 정산 결손을 '주말 휴장'으로 위장하지 않음
+                _bd = int(np.busday_count(kpi.last_date + timedelta(days=1), _run_d))
+                _wk = ("주말 휴장" if _bd <= 1
+                       else f"직전 {_bd - 1}영업일 정산가 미수집(휴장 또는 수집 지연)")
                 basis_gap_txt = f" · 발행일과 {_gap}일 차이는 {_wk} 때문 — 다음 정산가는 다음 발행에 반영"
         except Exception:                                     # noqa: BLE001
             basis_gap_txt = ""
@@ -1246,7 +1251,7 @@ def build_daily_brief(
                      else ('<span class="dir down">하방 ▼</span>' if isinstance(r, float) and r < 0
                            else ""))
         _mag = abs(r) if (ranking_basis == "pearson_fallback" and isinstance(r, float)) else (abs(coef) if isinstance(coef, float) else 0.0)
-        width = int(_mag / max_abs * 100) if max_abs else 10
+        width = int(_mag / max_abs * 100) if (max_abs and max_abs == max_abs) else 10   # NaN 가드(A-271)
         arts = _match_articles(code, signals)
         if arts:
             a0 = arts[0]

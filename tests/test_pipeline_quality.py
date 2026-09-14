@@ -79,8 +79,21 @@ def _assert_no_future_price_date(df: pd.DataFrame, connector: str) -> None:
     """
     today = _today_utc()
     if "available_at" in df.columns:
-        avail = pd.to_datetime(df["available_at"], utc=True, errors="coerce").dropna()
-        future_avail = int((avail.dt.date > today).sum())
+        avail = pd.to_datetime(df["available_at"], utc=True, errors="coerce")
+        # A-271: 장중 확정 시각 설계(M-013 — immediate·lag_days≥1: VIXCLS·TE 에너지·GEOINTEL 등)는 당일 관측의
+        #   available_at을 의도적으로 익일로 둔다. 코드별 규칙 lag만큼 허용하고 그 밖의 미래는 누수로 본다.
+        allow_days = pd.Series(0, index=df.index)
+        if "indicator_code" in df.columns:
+            try:
+                from src.pipeline.asof import rule_for
+                allow_days = df["indicator_code"].astype(str).map(
+                    lambda c: int(getattr(rule_for(c), "lag_days", 0) or 0)
+                    if getattr(rule_for(c), "kind", "") == "immediate" else 0)
+            except Exception:                                 # noqa: BLE001
+                allow_days = pd.Series(0, index=df.index)
+        limit = pd.Series([today + pd.Timedelta(days=int(d)) for d in allow_days], index=df.index)
+        ok = avail.isna() | (avail.dt.date <= limit)
+        future_avail = int((~ok).sum())
         assert future_avail == 0, (
             f"[{connector}] 미래 available_at {future_avail}건 — as-of 누출 가능성"
         )
@@ -387,3 +400,24 @@ def test_ge_economic_schema_if_available(economic_df: Optional[pd.DataFrame]) ->
 
     result = validator.validate()
     assert result["success"], f"[GE] 경제 지표 스키마 검증 실패: {result['statistics']}"
+
+
+class TestSchemaFiles:
+    """A-271: 스키마 YAML 전량 파싱 — 미인용 `datetime64[ns]` 같은 flow-mapping 오류가 validate_asof 게이트를 죽인 사례."""
+
+    def test_all_schema_yaml_parse(self) -> None:
+        import glob as _glob
+        yaml = pytest.importorskip("yaml")
+        files = sorted(_glob.glob("data/schemas/*.yaml"))
+        assert files, "data/schemas/*.yaml 없음"
+        bad = []
+        for f in files:
+            try:
+                doc = yaml.safe_load(open(f, encoding="utf-8"))
+                cols = {c.get("name") for c in (doc or {}).get("columns", []) if isinstance(c, dict)}
+                missing = {"event_time", "available_at"} - cols
+                if missing:
+                    bad.append(f"{f}: as-of 필드 누락 {sorted(missing)}")
+            except Exception as e:                            # noqa: BLE001
+                bad.append(f"{f}: {type(e).__name__}: {str(e)[:80]}")
+        assert not bad, "\n".join(bad)

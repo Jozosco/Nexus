@@ -564,13 +564,20 @@ SOURCE_CADENCE_BDAYS: dict[str, int] = {
     "economic_indicators": 5, "shipping_indices": 5, "climate_data": 5, "geopolitical_indices": 5,
     "commodity_data": 5, "cbot_session_close": 5, "geointel": 5, "te_commodities_historical": 5,
     "fx_brl_usd_historical": 5, "customs_import": 45,
-    "crop_data": 45, "wasde_historical": 45, "psd_historical": 400, "enso_oni_historical": 45,
+    "crop_data": 45, "wasde_historical": 70, "psd_historical": 400, "enso_oni_historical": 70,
     "nasa_power_agroclimatology_historical": 60, "ice_monthly_volumes": 60, "fao_amis_historical": 60,
     "gain_historical": 60, "unstructured_signals_historical": 60, "gats_quantity_historical": 60,
     "gats_value_historical": 60, "customs_gw_historical": 60, "customs_gw_uploads": 60,
     "production_data": 400,
 }
 _DEFAULT_CADENCE_BDAYS = 45
+# A-271: 월간 지수는 t월 값이 t+1월에 나오므로 허용 45영업일은 월말마다 경계에 걸린다(ONI 업로드가 첫날부터 🚨).
+#   승인자 업로드 계열은 파이프라인 결함이 아니라 '업로드본 갱신 필요'로 분리 표기(KPI 경고와 분리).
+UPLOAD_SOURCES: frozenset[str] = frozenset({
+    "wasde_historical", "psd_historical", "enso_oni_historical", "fx_brl_usd_historical",
+    "nasa_power_agroclimatology_historical", "ice_monthly_volumes", "gats_quantity_historical",
+    "gats_value_historical", "customs_gw_uploads", "customs_gw_historical", "fao_amis_historical", "gain_historical",
+})
 
 
 def _load_levels_all(mart_path: Path = FEATURE_MART_PATH) -> pd.DataFrame:
@@ -590,7 +597,8 @@ def _load_levels_all(mart_path: Path = FEATURE_MART_PATH) -> pd.DataFrame:
     return out
 
 
-def _freshness_flag(df: pd.DataFrame, stale_days: int = 5, cadence_bdays: int | None = None) -> str:
+def _freshness_flag(df: pd.DataFrame, stale_days: int = 5, cadence_bdays: int | None = None,
+                    upload: bool = False) -> str:
     """데이터 적시성 판정 — 내용 기준(최신 price_date의 나이 vs 소스 주기 허용치).
 
     ✅ 적시: 나이 ≤ 5영업일 · ⏳ 주기 내: 5 < 나이 ≤ 허용치(월간·연간 소스의 정상 지연) ·
@@ -611,6 +619,8 @@ def _freshness_flag(df: pd.DataFrame, stale_days: int = 5, cadence_bdays: int | 
         return f"✅ 적시 ({age}영업일)"
     if age <= allow:
         return f"⏳ 주기 내 ({age}영업일 · 허용 {allow})"
+    if upload:
+        return f"📥 업로드 갱신 필요 ({age}영업일 · 허용 {allow})"
     return f"🚨 기한 초과 ({age}영업일 · 허용 {allow})"
 
 
@@ -720,7 +730,8 @@ def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
             "행수":         len(df),
             "날짜범위":     date_range,
             "무결성":       _data_integrity_flag(df),
-            "신선도":       _freshness_flag(df, cadence_bdays=SOURCE_CADENCE_BDAYS.get(key, _DEFAULT_CADENCE_BDAYS)),
+            "신선도":       _freshness_flag(df, cadence_bdays=SOURCE_CADENCE_BDAYS.get(key, _DEFAULT_CADENCE_BDAYS),
+                                            upload=key in UPLOAD_SOURCES),
         })
     rows.append(_daily_signals_status_row())   # 일별 비정형 신호 CSV(현황 표 전용 1행)
     if skipped_api:

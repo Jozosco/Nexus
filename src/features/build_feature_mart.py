@@ -111,6 +111,11 @@ class Loaded:
     skipped: list[str] = field(default_factory=list)
 
 
+# A-271(2026-09-14): 예보 층(climate_forecast_*.parquet — price_date=발행일·lead별 다중 값)은 마트 미등재(A-263 설계).
+#   재귀 글로브가 이를 적재하면 (지표, event_time) 값충돌 게이트가 정당 차단해 readiness 잡이 죽는다.
+EXCLUDE_PREFIXES: tuple[str, ...] = ("climate_forecast",)
+
+
 def load_long(raw_dir: str = RAW_DIR) -> Loaded:
     """전 parquet → 단일 롱 테이블. as-of 필드 없는 파일은 제외한다."""
     frames: list[pd.DataFrame] = []
@@ -122,6 +127,9 @@ def load_long(raw_dir: str = RAW_DIR) -> Loaded:
 
     for f in files:
         name = os.path.basename(f)
+        if name.startswith(EXCLUDE_PREFIXES):
+            skipped.append(f"{name} — 예보 층: 마트 미등재(A-263 · 발행일 축 vintage는 별도 층)")
+            continue
         if name in SUPERSEDES:
             replacement, reason = SUPERSEDES[name]
             if replacement in available_names:

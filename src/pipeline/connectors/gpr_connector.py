@@ -310,14 +310,27 @@ _ONE_LINE_SYSTEM = ("You are a data extraction service. Respond with ONLY the si
 _ONE_LINE_SUFFIX = " Respond with ONLY that single line."
 
 
+_DATE_SEGMENT_RE = re.compile(r"\b(?:REPORT_)?DATE\s*:[^|]*|\bSOURCE\s*:[^|]*", re.IGNORECASE)
+_DATE_TOKEN_RE = re.compile(r"\b(?:19|20)\d{2}\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b",
+                            re.IGNORECASE)
+
+
 def _extract_value(text: str, preferred_keys: tuple[str, ...]) -> float:
-    """선언 키(예: RATE:) 뒤의 첫 숫자를 우선, 없으면 본문 첫 숫자. 날짜 '11'을 점수로 오독하던 결함 차단."""
-    clean = text.replace("**", "").replace("[", "").replace("]", "")
+    """선언 키(예: RATE:) 세그먼트 안의 첫 숫자를 우선, 없으면 날짜·출처 세그먼트를 제거한 본문의 첫 숫자.
+
+    A-271: 구 정규식은 콜론 뒤 글자 1개만 허용해 'ACTUAL: Global … 3.2 MMT'를 못 잡고, 폴백이 'September 11'의
+    11이나 연도 2026을 값으로 저장했다(아카이브 9/13 WASDE_CONSENSUS_SCORE=11.0 실증). 선언 키가 있는데 값이
+    없으면(응답 'unknown') NaN — 값 위장 금지.
+    """
+    clean = str(text or "").replace("**", "").replace("`", "").replace("[", "").replace("]", "")
     for k in preferred_keys:
-        m = re.search(rf"{k}\s*:\s*[A-Za-z]?\s*(-?\d+(?:\.\d+)?)", clean, re.IGNORECASE)
-        if m:
-            return float(m.group(1))
-    m = re.search(r"(-?\d+(?:\.\d+)?)", clean)
+        m = re.search(rf"\b{k}\s*:([^|]{{0,160}}?)(-?\d+(?:\.\d+)?)", clean, re.IGNORECASE)
+        if m and not _DATE_TOKEN_RE.fullmatch(m.group(2)):
+            return float(m.group(2))
+    if preferred_keys:
+        return float("nan")
+    rest = _DATE_TOKEN_RE.sub(" ", _DATE_SEGMENT_RE.sub(" ", clean))
+    m = re.search(r"(-?\d+(?:\.\d+)?)", rest)
     return float(m.group(1)) if m else float("nan")
 
 
@@ -377,7 +390,7 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
                 "What is the latest USDA WASDE report release date and the market consensus vs actual "
                 "for global soybean oil ending stocks or production? Was the report bullish or bearish vs consensus? "
                 "Format: REPORT_DATE: [date] | CONSENSUS: [value + unit] | ACTUAL: [value + unit] | "
-                "SURPRISE: [bullish/bearish/neutral] | SOURCE: [source]"
+                "SURPRISE: [bullish/bearish/neutral] | SURPRISE_SCORE: [number from -1 bearish to +1 bullish, 0 neutral] | SOURCE: [source]"
             ),
             "surprise score",
             "USDA WASDE 컨센서스",
@@ -497,7 +510,6 @@ def _fetch_geopolitical_event_proxy() -> pd.DataFrame:
 
             # 위험 수준(HIGH/MEDIUM/LOW) → 숫자 인코딩 우선 시도
             level_match = re.search(r"\b(HIGH|MEDIUM|LOW)\b", text, re.IGNORECASE)
-            num_match   = re.search(r"(\d+\.?\d*)", text)
 
             if level_match and indicator_code in ("SUEZ_RED_SEA_RISK", "UKRAINE_GRAIN_CORRIDOR", "US_CHINA_TARIFF_STATUS"):
                 level_map = {"HIGH": 3.0, "MEDIUM": 2.0, "LOW": 1.0}

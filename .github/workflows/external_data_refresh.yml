@@ -78,6 +78,7 @@ jobs:
     if: ${{ github.event.inputs.connector == 'all' || github.event.inputs.connector == 'shipping' || github.event_name == 'schedule' }}
     steps:
       # A-136: API 커넥터 잡 — data/raw 원문 불필요, sparse checkout으로 1.5GB → 수십 MB (잡당 1~2분 절감)
+      # A-263: 마지막 경로 = BDI xlsx 사본 3순위 폴백. 블록 스칼라 안에는 인라인 주석을 쓰지 말 것(경로에 포함됨 — A-271)
       - uses: actions/checkout@v4
         with:
           sparse-checkout: |
@@ -85,7 +86,7 @@ jobs:
             scripts
             config
             data/schemas
-            data/raw/Trading Economics/Markets/Commodities/Shipping Indices   # A-263: BDI xlsx 사본 3순위 폴백
+            data/raw/Trading Economics/Markets/Commodities/Shipping Indices
           sparse-checkout-cone-mode: true
       - uses: actions/setup-python@v5
         with:
@@ -94,7 +95,7 @@ jobs:
         # A-132: httpx 누락으로 shipping 잡이 import 단계에서 즉사했다.
         #   shipping_connector는 TE REST(httpx 직접 호출)·stooq 폴백·Perplexity 프록시
         #   모두 httpx를 쓴다. tradingeconomics SDK는 A-034에서 제거됐으므로 정리.
-        run: pip install httpx openai pandas pyarrow
+        run: pip install httpx openai pandas pyarrow openpyxl   # openpyxl: TE xlsx 3순위 폴백 읽기(A-271)
       - name: Run shipping connector
         env:
           PERPLEXITY_API_KEY:          ${{ secrets.PERPLEXITY_API_KEY }}
@@ -349,8 +350,13 @@ jobs:
           git add "data/raw/관세청/**/*_API.xlsx" 2>/dev/null || true
           if git diff --cached --quiet; then echo "API 동반 파일 무변경 — 커밋 생략"; exit 0; fi
           git commit -m "data: 관세청 API 월 증분 → _API.xlsx ($(date -u +%F)) [A-255]"
-          git pull --rebase --autostash origin main
-          git push origin HEAD:main
+          # A-271: bot push 경합(교차검증·다른 bot 커밋) 3회 재시도 — 실패는 잡 실패로 가시화
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            git rebase --abort 2>/dev/null || true
+            [ "$i" = 3 ] && { echo "[오류] push 3회 실패"; exit 1; }
+            sleep $((i*7))
+          done
       - name: Run customs connector (백필 전용 — 일별 증분은 위 스텝, A-255)
         if: ${{ env.BACKFILL_MODE == 'true' }}
         env:
@@ -444,8 +450,13 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/processed/unstructured_daily_signals.csv "data/semantic/events" 2>/dev/null || git add data/processed/unstructured_daily_signals.csv
           git commit -m "data: 일별 비정형 신호 아카이브 append ($(date -u +%F)) [A-181]" || exit 0
-          git pull --rebase --autostash origin main
-          git push origin HEAD:main
+          # A-271: bot push 경합(교차검증·다른 bot 커밋) 3회 재시도 — 실패는 잡 실패로 가시화
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            git rebase --abort 2>/dev/null || true
+            [ "$i" = 3 ] && { echo "[오류] push 3회 실패"; exit 1; }
+            sleep $((i*7))
+          done
       - name: Upload digest artifact
         uses: actions/upload-artifact@v4
         with:
@@ -891,10 +902,10 @@ jobs:
           # 고정 시간창(36h)은 발표 당일 20:30 UTC 실행과 익일 실행이 모두 창에 들어
           # monthly 이중 발행 가능, 금요일 발표는 월요일 실행에서 누락 가능.
           # → "직전 스케줄 실행 시각 이후에 available_at이 새로 생겼는가"로 판정.
-          #   직전 실행 = 가장 최근의 20:30 UTC(일~목, cron과 동일) — 주말·공휴일을
+          #   직전 실행 = 가장 최근의 19:17 UTC(일~목, cron과 동일 — A-263 이동 반영) — 주말·공휴일을
           #   건너뛰어도 창이 이어지므로 금요일 발표도 일요일 실행에서 1회 잡힘.
           def prev_scheduled_run(ref: datetime) -> datetime:
-              cand = ref.replace(hour=20, minute=30, second=0, microsecond=0)
+              cand = ref.replace(hour=19, minute=17, second=0, microsecond=0)   # cron 17 19(A-263)와 동기(A-271)
               if cand >= ref:
                   cand -= timedelta(days=1)
               while cand.weekday() not in {6, 0, 1, 2, 3}:   # 일~목(UTC)만 cron 발화
@@ -925,16 +936,9 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write(f"mode={mode}\n")
           PYEOF
-      - name: Run C-03 G1 variable importance analysis
-        env:
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          G1_PUBLISH_MODE: ${{ steps.pubmode.outputs.mode }}
-          E1_GATE_STATUS: ${{ needs.c08-dq-validation.outputs.overall_status }}
-          # 실행별 격리 디렉터리 — 과거 산출물 재발행 차단 (GPT 교차검증 정정)
-          G1_REPORT_DIR: reports/pipeline/run_${{ github.run_id }}
-        run: python src/forecasting/variable_importance_g1.py 7
       - name: Run G1 reliability metrics (A-264 — 2단계 검증 지표)
-        # alert 모드는 실시간 R1~R6만(경량), weekly/monthly/full은 과거 H1~H5 포함. 비치명.
+        # alert 모드는 실시간 R1~R6만(경량, 과거 H1~H5는 직전 정규판 값을 이월), weekly/monthly/full은 H1~H5 재산출. 비치명.
+        # A-271: 브리프 생성 **앞**에서 산출하고 data/processed에도 착지 — 브리프 신뢰도 블록이 이번 회차 값을 읽게 함
         continue-on-error: true
         env:
           G1_PUBLISH_MODE: ${{ steps.pubmode.outputs.mode }}
@@ -944,6 +948,15 @@ jobs:
             --mode "${{ steps.pubmode.outputs.mode }}" \
             --report-dir "reports/pipeline/run_${{ github.run_id }}" \
             --json "reports/pipeline/run_${{ github.run_id }}/g1_reliability_latest.json"
+          cp "reports/pipeline/run_${{ github.run_id }}/g1_reliability_latest.json" data/processed/g1_reliability_latest.json
+      - name: Run C-03 G1 variable importance analysis
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          G1_PUBLISH_MODE: ${{ steps.pubmode.outputs.mode }}
+          E1_GATE_STATUS: ${{ needs.c08-dq-validation.outputs.overall_status }}
+          # 실행별 격리 디렉터리 — 과거 산출물 재발행 차단 (GPT 교차검증 정정)
+          G1_REPORT_DIR: reports/pipeline/run_${{ github.run_id }}
+        run: python src/forecasting/variable_importance_g1.py 7
       - name: Append G1 summary to GitHub Step Summary
         run: |
           python - <<'PYEOF'
@@ -1037,9 +1050,10 @@ jobs:
           f=$(ls -t reports/pipeline/run_${{ github.run_id }}/g1_daily_brief_*.html 2>/dev/null | head -1)
           if [ -n "$f" ]; then
             cp "$f" reports/pipeline/latest/g1_daily_brief_latest.html
+            date -u +%FT%TZ > reports/pipeline/latest/g1_daily_brief_asof.txt   # A-271: latest 갱신 시각 마커
             echo "일별 브리프 착지: $f → reports/pipeline/latest/g1_daily_brief_latest.html"
           else
-            echo "[정보] 이번 회차 브리프 없음(미발행) — latest 유지"
+            echo "[경고] 이번 회차 브리프 없음(미발행) — latest는 직전 회차 파일 그대로(g1_daily_brief_asof.txt 참조)"
           fi
           a=$(ls -t reports/pipeline/run_${{ github.run_id }}/g1_alert_*.md 2>/dev/null | head -1)
           if [ -n "$a" ]; then cp "$a" reports/pipeline/latest/g1_alert_latest.md; fi
@@ -1064,8 +1078,13 @@ jobs:
             exit 0
           fi
           git commit -m "data: E1 서명된 무소식 스탬프 + 일별 브리프 배포 브리지 ($(date -u +%F)) [A-202]" || exit 0
-          git pull --rebase --autostash origin main
-          git push origin HEAD:main
+          # A-271: bot push 경합(교차검증·다른 bot 커밋) 3회 재시도 — 실패는 잡 실패로 가시화
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            git rebase --abort 2>/dev/null || true
+            [ "$i" = 3 ] && { echo "[오류] push 3회 실패"; exit 1; }
+            sleep $((i*7))
+          done
 
   # ── WBS 1.1.19: pytest 데이터 품질 테스트 (C-08 검증 후 실행) ────────────────────
   pipeline-tests:
@@ -1084,7 +1103,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pytest pandas pyarrow numpy statsmodels httpx   # httpx: customs_connector import (A-195)
+        run: pip install pytest pandas pyarrow numpy statsmodels httpx pyyaml   # httpx: customs_connector import (A-195) · pyyaml: 스키마 파싱 테스트(A-271)
       - uses: actions/download-artifact@v4
         with:
           path: data/raw/

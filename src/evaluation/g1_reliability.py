@@ -497,7 +497,7 @@ def realtime_metrics(today: date | None = None) -> dict[str, Any]:
         bdays = pd.bdate_range(days.min(), days.max())
         arrived = days.drop_duplicates()
         arrived_b = arrived[arrived.dt.weekday < 5]
-        ch = sg["note"].astype(str).str.extract(r"^\[채널: ([^\]]+)\]")[0]
+        ch = sg["note"].astype(str).str.extract(r"^\[채널: ([^\]·]+?)\s*(?:·|\])")[0]   # A-271: kw 접미 제외
         r5 = {"status": "산출", "rows": int(len(sg)), "indicators": int(sg["indicator"].nunique()),
               "from": str(days.min().date()), "to": str(days.max().date()),
               "bday_arrival_rate": round(float(len(arrived_b) / max(len(bdays), 1)), 3),
@@ -604,7 +604,19 @@ def evaluate(mode: str = "full") -> dict[str, Any]:
         "mode": mode, "window": [WINDOW_START, WINDOW_END], "caption": REQUIRED_CAPTION,
         "realtime": realtime_metrics(), "ledger": ledger_summary()}
     if mode == "alert":
+        # A-271: 경량 모드는 직전 정규판(weekly/monthly/full)의 과거 H1~H5를 이월 — 문자열로 덮으면
+        #   E1 승격 후 브리프 월별 항목이 다음 금요일까지 사라진다.
         result["historical"] = {"status": "경량 모드 — 주별·월별판에서 산출"}
+        try:
+            prev = json.loads(LATEST_JSON.read_text(encoding="utf-8")) if LATEST_JSON.is_file() else {}
+            ph = prev.get("historical")
+            if isinstance(ph, dict) and "H1_rank_stability" in ph:
+                result["historical"] = ph
+                result["historical_asof"] = prev.get("generated_at")
+                result["basis"] = prev.get("basis", "직전 정규판 이월")
+                result["source"] = prev.get("source", {})
+        except Exception as e:                                  # noqa: BLE001
+            result["historical_carry_error"] = f"{type(e).__name__}"
         return result
     inp = load_inputs()
     result["basis"] = inp.basis
@@ -673,7 +685,7 @@ def render_markdown(res: dict[str, Any]) -> str:
                  f"무조건부 |변화율| 중앙값 5/20/60일 = "
                  + " / ".join(f"{h3['unconditional_median_abs'][str(h)]*100:.2f}%" for h in HORIZONS))
         L.append("")
-        L.append("| 규칙 | 발화일 비중 | 지평 | 에피소드 | 오경보 근사율 | 조건부 중앙 |변화율| / 무조건부 |")
+        L.append("| 규칙 | 발화일 비중 | 지평 | 에피소드 | 오경보 근사율 | 조건부 중앙 \\|변화율\\| / 무조건부 |")
         L.append("|---|---|---|---|---|---|")
         for name, r in h3["rules"].items():
             if r.get("status") != "산출":

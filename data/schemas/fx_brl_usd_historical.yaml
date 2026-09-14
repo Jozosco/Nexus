@@ -9,7 +9,7 @@ note: >
   CME 6L 선물 거래량 대리는 scripts/fill_fx_volume_proxy.py가 volume_proxy_cme_6l 열에 채운다(정의 상이 —
   NOT COMPARABLE). as-of: RELEASE_RULES 'FX_BRL_' immediate·lag 1일·revises False.
 columns:
-  - {name: price_date, dtype: datetime64[ns], nullable: false, description: "거래일"}
+  - {name: price_date, dtype: "datetime64[ns]", nullable: false, description: "거래일"}
   - {name: indicator_code, dtype: object, nullable: false, description: "FX_BRL_USD"}
   - {name: value, dtype: float64, nullable: false, description: "종가 BRL per USD (= 1 / 원본 Price)"}
   - {name: open, dtype: float64, nullable: true, description: "시가(역수)"}
@@ -23,9 +23,9 @@ columns:
   - {name: source_name, dtype: object, nullable: false, description: "Investing.com_upload"}
   - {name: note, dtype: object, nullable: true, description: "설명"}
   - {name: ingested_at, dtype: "datetime64[ns, UTC]", nullable: false, description: "파서 실행 시각"}
-  - {name: event_time, dtype: datetime64[ns], nullable: false, description: "거래일"}
-  - {name: period_end, dtype: datetime64[ns], nullable: true, description: "거래일"}
-  - {name: release_time, dtype: datetime64[ns], nullable: true, description: "거래일"}
-  - {name: available_at, dtype: datetime64[ns], nullable: false, description: "거래일 + 1일"}
+  - {name: event_time, dtype: "datetime64[ns]", nullable: false, description: "거래일"}
+  - {name: period_end, dtype: "datetime64[ns]", nullable: true, description: "거래일"}
+  - {name: release_time, dtype: "datetime64[ns]", nullable: true, description: "거래일"}
+  - {name: available_at, dtype: "datetime64[ns]", nullable: false, description: "거래일 + 1일"}
   - {name: source_vintage, dtype: object, nullable: true, description: "null(개정 없음)"}
   - {name: vintage_known, dtype: bool, nullable: false, description: "n/a 규칙 — 오염 표기 아님"}

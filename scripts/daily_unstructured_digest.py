@@ -214,7 +214,7 @@ _GENERIC_KEYWORDS = {"tariff", "export tax", "freight", "drought", "red sea", "h
                      "cftc", "rvo", "biofuel", "관세", "수출세", "곡물"}
 _AGRI_CONTEXT = ("soy", "oil", "grain", "crop", "farm", "agri", "palm", "biodiesel", "canola", "rapeseed",
                  "sunflower", "wheat", "corn", "vessel", "tanker", "ship", "strait", "commodit", "harvest",
-                 "대두", "유지", "곡물", "농", "팜", "선박", "해협", "운임", "바이오")
+                 "대두", "유지류", "곡물", "농산", "농업", "팜", "선박", "해협", "운임", "바이오")
 
 
 def _match_keyword(title: str, desc: str, indicator: str = "") -> str | None:

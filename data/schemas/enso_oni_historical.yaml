@@ -8,7 +8,7 @@ note: >
   값충돌 하드 실패(D-033). 준비도·유사 시기·신뢰도·브리프는 ENSO_ONI를 우선 후보로 본다. 업로드본은 재산출 시
   전량 재적재(vintage 단일)라 as-of 규칙 revises=False(개정 미보존 필터에 걸리지 않음 — A-270).
 columns:
-  - {name: price_date, dtype: datetime64[ns], nullable: false, description: "해당 월 1일"}
+  - {name: price_date, dtype: "datetime64[ns]", nullable: false, description: "해당 월 1일"}
   - {name: indicator_code, dtype: object, nullable: false, description: "ENSO_ONI"}
   - {name: value, dtype: float64, nullable: false, description: "°C anomaly (±5 물리 가드)"}
   - {name: unit, dtype: object, nullable: false, description: "°C anomaly"}
@@ -17,9 +17,9 @@ columns:
   - {name: source_name, dtype: object, nullable: false, description: "NOAA_PSL_upload"}
   - {name: note, dtype: object, nullable: true, description: "설명"}
   - {name: ingested_at, dtype: "datetime64[ns, UTC]", nullable: false, description: "파서 실행 시각"}
-  - {name: event_time, dtype: datetime64[ns], nullable: false, description: "해당 월 1일"}
-  - {name: period_end, dtype: datetime64[ns], nullable: true, description: "해당 월 말"}
-  - {name: release_time, dtype: datetime64[ns], nullable: true, description: "익월 10일"}
-  - {name: available_at, dtype: datetime64[ns], nullable: false, description: "익월 10일(수집 시점 캡)"}
+  - {name: event_time, dtype: "datetime64[ns]", nullable: false, description: "해당 월 1일"}
+  - {name: period_end, dtype: "datetime64[ns]", nullable: true, description: "해당 월 말"}
+  - {name: release_time, dtype: "datetime64[ns]", nullable: true, description: "익월 10일"}
+  - {name: available_at, dtype: "datetime64[ns]", nullable: false, description: "익월 10일(수집 시점 캡)"}
   - {name: source_vintage, dtype: object, nullable: true, description: "null"}
   - {name: vintage_known, dtype: bool, nullable: false, description: "n/a 규칙"}

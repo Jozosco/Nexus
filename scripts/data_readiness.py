@@ -93,6 +93,8 @@ def _load_index() -> tuple[dict[str, list[str]], dict[str, dict]]:
     where: dict[str, list[str]] = defaultdict(list)
     stats: dict[str, dict] = {}
     for f in sorted(glob.glob(os.path.join(RAW_DIR, "**", "*.parquet"), recursive=True)):
+        if os.path.basename(f).startswith("climate_forecast"):   # A-271: 예보 층은 준비도 지표 통계에서 제외
+            continue
         try:
             df = pd.read_parquet(f)
         except Exception as e:
