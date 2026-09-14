@@ -1,6 +1,6 @@
 # GPT-5.6-Sol 교차검증 누적 원장
 
-**갱신**: 2026-09-13 · **자동 생성**: `scripts/build_cross_verify_log.py`
+**갱신**: 2026-09-14 · **자동 생성**: `scripts/build_cross_verify_log.py`
 
 > 조정자 상시 지시(2026-08-13): 인프라·분석·코드 작업은 GPT-5.6-Sol로 교차검증한다.
 > 이 파일은 그 **실행 이력과 판정을 한곳에 모은 원장**이다. 개별 판정 전문은
@@ -8,14 +8,17 @@
 
 ## 요약
 
-- 총 검증 기록 **235건** — 판정 산출 174 · 실패(미판정) 61
-- 누적 지적: **[치명] 187건 · [높음] 1881건**
+- 총 검증 기록 **238건** — 판정 산출 177 · 실패(미판정) 61
+- 누적 지적: **[치명] 188건 · [높음] 1915건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-09-14 | `git diff HEAD~1` | ⚠️ 지적 | 0 | 9 | [높음] `.github/workflows/cross_verify.yml` — “이번 push에서 바뀐 파일” 판정이 실제로는 마지막 커밋만 포함한다. | 34795678963 | [xverify_2026-09-14_347956789…](../../reports/cross_verify/xverify_2026-09-14_34795678963_git_diff_HEAD_1_1.md) |
+| 2026-09-14 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 34795678963 | [xverify_2026-09-14_347956789…](../../reports/cross_verify/xverify_2026-09-14_34795678963_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
+| 2026-09-14 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 1 | 25 | [높음] 분석 기간이 15년과 16년으로 상충한다. | 34795678963 | [xverify_2026-09-14_347956789…](../../reports/cross_verify/xverify_2026-09-14_34795678963_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
 | 2026-09-13 | `reports/market/procurement_alternatives_2026-08-14.m` | ⚠️ 지적 | 1 | 17 | [치명] 8/14·8/19·8/25의 운임 관련 판단이 오류로 확인된 BDI 계열에 기반함. | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_reports_market_procurement_alternatives_2026-08-14.md_report_1.md) |
 | 2026-09-13 | `reports/market/landed_cost_band_2026-08-14.md, repor` | ⚠️ 지적 | 2 | 14 | [치명] 8/14·8/19·8/29 관세청 국가 합산층이 불완전하거나 사후 개정됐으며, 이를 반영하지 않은 밴드가 산출됨 | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_reports_market_landed_cost_band_2026-08-14.md_reports_market_1.md) |
 | 2026-09-13 | `git diff HEAD~1` | ✅ 무지적 | 0 | 0 | (요지 추출 불가) | 34762625214 | [xverify_2026-09-13_347626252…](../../reports/cross_verify/xverify_2026-09-13_34762625214_git_diff_HEAD_1_1.md) |
