@@ -164,24 +164,24 @@ VARIABLE_CATALOG: list[dict] = [
     {"code": "FCST_precipitation_sum_BR_MatoGrosso", "category": "기후",
      "name_ko": "마투그로수 15일 강수 예보(누적)",
      "name_en": "Mato Grosso 15-day Precipitation Forecast (cumulative)",
-     "desc_ko": ("향후 15일 누적 강수 예보. 23개 생산지역(확정 12 + 근사 중심점 11 — 승인자 확인 대기) 중 "
+     "desc_ko": ("향후 15일 누적 강수 예보. 23개 생산지역(전 지역 좌표 확인 완료) 중 "
                  "브라질 대표 지역. 예보는 관측 대체가 아니며 검증 전 모델 투입 금지(참고 표시 전용)."),
      "desc_en": ("15-day cumulative precipitation forecast for one of 23 production regions "
-                 "(12 confirmed + 11 approximate centroids pending approval). Reference only; "
+                 "(all coordinates confirmed). Reference only; "
                  "not a substitute for observations and excluded from models until validated."),
      "source": ("Open-Meteo 예보 API(ECMWF IFS/AIFS 계열 best_match) — 23개 생산지역 · "
-                "예보는 관측 대체가 아니며 검증 전 모델 투입 금지"),
+                "별도 예보 파일(발행일 키·유효일·리드) · 예보는 관측 대체가 아니며 검증 전 모델 투입 금지"),
      "freq": "일간(15일 선행)", "unit": "mm"},
     {"code": "FCST_temperature_2m_max_US_Iowa", "category": "기후",
      "name_ko": "아이오와 15일 최고기온 예보",
      "name_en": "Iowa 15-day Max Temperature Forecast",
-     "desc_ko": ("향후 15일 일 최고기온 예보. 23개 생산지역(확정 12 + 근사 중심점 11 — 승인자 확인 대기) 중 "
+     "desc_ko": ("향후 15일 일 최고기온 예보. 23개 생산지역(전 지역 좌표 확인 완료) 중 "
                  "미국 대표 지역. 예보는 관측 대체가 아니며 검증 전 모델 투입 금지(참고 표시 전용)."),
      "desc_en": ("15-day daily maximum temperature forecast for one of 23 production regions "
-                 "(12 confirmed + 11 approximate centroids pending approval). Reference only; "
+                 "(all coordinates confirmed). Reference only; "
                  "not a substitute for observations and excluded from models until validated."),
      "source": ("Open-Meteo 예보 API(ECMWF IFS/AIFS 계열 best_match) — 23개 생산지역 · "
-                "예보는 관측 대체가 아니며 검증 전 모델 투입 금지"),
+                "별도 예보 파일(발행일 키·유효일·리드) · 예보는 관측 대체가 아니며 검증 전 모델 투입 금지"),
      "freq": "일간(15일 선행)", "unit": "°C"},
     # ── 작황 ──
     {"code": "SBO_PRODUCTION", "category": "작황", "name_ko": "대두유 글로벌 생산량 (USDA PSD)",

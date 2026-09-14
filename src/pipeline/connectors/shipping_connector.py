@@ -321,6 +321,53 @@ def fetch_bdi_stooq(start_date: str = "2017-01-01") -> pd.DataFrame:
     return pd.DataFrame()
 
 
+TE_XLSX_BDI_GLOB = "data/raw/Trading Economics/Markets/Commodities/Shipping Indices/*BDI*.xlsx"
+TE_XLSX_RECENT_DAYS = 120
+
+
+def fetch_bdi_te_xlsx(recent_days: int = TE_XLSX_RECENT_DAYS) -> pd.DataFrame:
+    """3순위 폴백(A-263) — 저장소 커밋 TE xlsx(BDI 시트)에서 최근 N일을 재구성한다.
+
+    왜 필요한가: TE historical 409(플랜 미포함, A-140)·stooq 404(심볼 소멸)가 겹치는 날은
+    파케이에 Perplexity BCAA 1행만 남아 품질 게이트 `MIN_ROWS`에 걸렸다(런 #97). BDI 일별
+    계열은 `te_xlsx_update.yml` 스냅샷이 평일마다 xlsx에 append하므로(DQ-21 확정 경로) 저장소
+    사본이 곧 최신 정본이다 — 이 사본을 읽으면 BDI 일별 계열이 비는 날이 없다.
+    파서는 scripts/ingest_te_xlsx.parse_te_file 재사용(연도 시트·정렬 교정 포함).
+    source_name을 구분해 API 수집분과 섞이지 않게 한다.
+    """
+    import glob as _glob
+
+    files = sorted(_glob.glob(TE_XLSX_BDI_GLOB))
+    if not files:
+        print("[정보] TE xlsx BDI 사본 없음(sparse checkout 범위 밖?) — 3순위 폴백 건너뜀")
+        return pd.DataFrame()
+    try:
+        from scripts.ingest_te_xlsx import parse_te_file
+        raw = parse_te_file(_Path(files[-1]))
+    except Exception as e:
+        print(f"[경고] TE xlsx BDI 파싱 실패: {type(e).__name__}: {str(e)[:80]}")
+        return pd.DataFrame()
+    if raw.empty:
+        return pd.DataFrame()
+    cutoff = pd.Timestamp(date.today() - __import__("datetime").timedelta(days=recent_days))
+    sub = raw[raw["price_date"] >= cutoff]
+    if sub.empty:
+        print("[경고] TE xlsx BDI: 최근 구간 행 없음")
+        return pd.DataFrame()
+    df = pd.DataFrame({
+        "price_date":     pd.to_datetime(sub["price_date"]),
+        "value":          pd.to_numeric(sub["value"], errors="coerce"),
+        "source_name":    "TradingEconomics_xlsx_snapshot",
+        "indicator_code": "BDI",
+        "unit":           "points",
+        "note":           f"[TE-XLSX: 저장소 스냅샷 사본 최근 {recent_days}일 — API 미수신 폴백]",
+        "ingested_at":    pd.Timestamp.utcnow(),
+    }).dropna(subset=["price_date", "value"])
+    print(f"[완료] BDI TE xlsx 사본 {len(df)}건 (최근 {recent_days}일, 마지막 "
+          f"{df['price_date'].max().date()})")
+    return df.sort_values("price_date").reset_index(drop=True)
+
+
 def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
@@ -340,7 +387,7 @@ def run() -> None:
         except EnvironmentError:
             print("[경고] PERPLEXITY_API_KEY 미등록 — BCAA 수집 건너뜀")
 
-    # BDI: C-03 구조적 단절 모니터링 (Trading Economics REST API → stooq 폴백)
+    # BDI: 구조적 단절 모니터링 (Trading Economics REST API → stooq → TE xlsx 사본 3단 폴백, A-263)
     hist_start = f"{os.environ.get('HISTORICAL_START_YEAR', '2017')}-01-01"
     bdi = fetch_bdi_te(start_date=hist_start)
     if not bdi.empty:
@@ -350,6 +397,12 @@ def run() -> None:
         bdi_stooq = fetch_bdi_stooq(start_date=hist_start)
         if not bdi_stooq.empty:
             frames.append(bdi_stooq)
+        else:
+            # A-263: 3순위 — 저장소 TE xlsx 스냅샷 사본(최근 120일). BDI 일별 계열 무결성 보장.
+            print("[정보] stooq BDI 미수집 — TE xlsx 스냅샷 사본 폴백 시도")
+            bdi_xlsx = fetch_bdi_te_xlsx()
+            if not bdi_xlsx.empty:
+                frames.append(bdi_xlsx)
 
     if not frames:
         # A-140(d): 전 소스 실패여도 exit 0 — BDI 히스토리는 수동 TE xlsx로 이미 확보(A-061).

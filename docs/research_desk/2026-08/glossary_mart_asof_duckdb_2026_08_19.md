@@ -163,3 +163,16 @@ Mart 조립의 핵심 연산은 **ASOF JOIN**이다 — "각 거래일마다, �
 관련 문서: `docs/research_desk/2026-08/abcd_trading_structure_2026_08_15.md`(본편) ·
 `competitive_differentiation_2026_08_14.md`(경쟁 구도) ·
 `differentiation_brainstorm_2026_08_17.md`(차별화 24건)
+
+---
+
+## 구현 현황 부기 (2026-09-14) — 반복 지적 2건에 대한 현행 코드 기준 답
+
+외부 교차검증이 이 문서를 재검증할 때마다 같은 지적을 냈다. 지적은 문서 서술이 코드보다 뒤처진 데서 나온 것이므로
+현행 구현을 그대로 적는다(정본은 `src/pipeline/asof.py`).
+
+| 지적 | 현행 구현 (CONFIRMED) |
+|---|---|
+| `available_at ≤ t`의 `t`에 장중 시각이 없어 같은 날 종가 이후 확정된 값(예: VIX 16:15 ET)이 통과한다 | 예측 대상은 CBOT ZL 정규장 종가이고 마감은 **14:20 ET**(`TARGET_MARKET_CLOSE_ET`). 마감 이후 확정되는 지표는 `ReleaseRule(lag_days=1)`로 **하루 뒤부터** 보이게 한다 — VIXCLS·FRED H.10 환율·TE 에너지(Brent·WTI·난방유·휘발유·천연가스·EU 가스/탄소·CRB·GSCI)·GDELT·USGS·GeoIntel·FIRMS. 마감 전 확정 지표(BDI ~08:00 ET·CPO Bursa ~06:00 ET)는 즉시. 일 단위 ASOF JOIN은 이 규칙을 전제로 정확하다(M-012③·M-013·2026-08-13 TE 확장). |
+| 예측 시점(forecast_origin)과 목표 시점(target_time)의 분리가 없다 | 마트는 거래일 격자 `d`가 곧 forecast_origin이고, 목표는 `target_ret{h} = log(close[d+h]/close[d])`(h ∈ 1·5·20·60)로 **마트 안의 유일한 전방참조**다(`build_feature_mart.py`). 입력은 `available_at ≤ d`, 목표는 `d+h`이므로 `available_at ≤ forecast_origin < target_time`이 구조적으로 보장된다. 독립 재계산 대조(`_independent_check`)가 `available_at > d` 위반 0건을 매 실행 확인한다. |
+| 과거 백필에 point-in-time vintage 정책이 없어 `latest ≤ now` 가드만으로는 역사적 누수를 못 막는다 | 개정 이력을 보존하는 소스(WASDE·FRED ALFRED)는 회차별 행을 적재하고 `vintage_known=True`, 보존하지 않는 소스는 `source_vintage=None`·`revision_contaminated`로 표기해 **G1이 해당 지표(94종)를 투입에서 제외하고 보고서에 "point-in-time 성능이 아님" 면책을 자동 삽입**한다(D-034·`_load_g1_feature_mart`). 즉 가드가 아니라 **표기·제외**로 다룬다. 남은 한계는 그대로다 — 개정 이력이 없는 소스는 사후에도 복원 불가(DATA GAP). |

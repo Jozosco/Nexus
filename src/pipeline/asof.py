@@ -391,9 +391,10 @@ def attach_asof(
     # ingested_at으로 캡한다. 조건부이므로 일별 관측 행(VIXCLS 등 lag_days=1 장중누수
     # 방지 — M-012③)은 절대 건드리지 않는다.
     if "ingested_at" in out.columns:
-        ing = pd.to_datetime(out["ingested_at"], errors="coerce")
-        if hasattr(ing.dtype, "tz") and ing.dt.tz is not None:
-            ing = ing.dt.tz_localize(None)
+        # A-263: leak_inversions()와 동일하게 UTC로 정규화한 뒤 tz를 뗀다. 구 코드는 utc=True 없이
+        #   파싱해 오프셋 문자열(예: +09:00)이 저장된 ingested_at을 벽시계 그대로 읽어 캡 기준이
+        #   최대 9시간 어긋날 수 있었다(현재 커넥터는 전부 UTC라 실해는 없었음 — 예방 정합).
+        ing = pd.to_datetime(out["ingested_at"], utc=True, errors="coerce").dt.tz_localize(None)
         forecast = ing.notna() & (out["event_time"] > ing)
         avail = avail.mask(forecast, ing)          # 타임스탬프 그대로(normalize 금지)
         # A-242: 관측 행(전망 아님)에서도 규칙 추정 발표일이 수집 시점을 1일 초과해

@@ -67,7 +67,12 @@ jobs:
         shell: bash
         # A-171: 4패턴 일괄 호출이 대용량 입력으로 APIConnectionError 2연속(런 #5·#6) —
         #   글로브별 개별 호출로 요청 크기 축소. 스크립트는 호출 실패 시 비치명(exit 0).
+        # A-263(2026-09-14): 글로브가 잡는 문서 중 **이번 push에서 바뀐 파일만** 검증한다.
+        #   구 방식은 변경 없는 문서(as-of 용어집·발행 주기 패널 등)를 매 push마다 재검증해
+        #   같은 판정문을 24회 반복 발행했다(reports/cross_verify 78건이 동일 지적) — 비용·중복
+        #   원장 항목만 늘고 정보는 없다. diff 스텝(위)이 코드·yml을, 이 스텝이 바뀐 문서를 맡는다.
         run: |
+          changed=$(git diff --name-only HEAD~1 HEAD || true)
           for g in "reports/market/landed_cost_band_*.md" \
                    "reports/market/procurement_alternatives_*.md" \
                    "docs/research_desk/*/g1_publication_schedule_panel_*.md" \
@@ -77,7 +82,14 @@ jobs:
                    "docs/research_desk/*/knowledge_repository_*.md" \
                    "docs/research_desk/*/hs_code_classification_*.md" \
                    "docs/research_desk/*/hybrid_methodology_design_*.md"; do
-            python scripts/cross_verify_gpt.py "$g"
+            for f in $g; do
+              [ -f "$f" ] || continue
+              if echo "$changed" | grep -qxF "$f"; then
+                python scripts/cross_verify_gpt.py "$f"
+              else
+                echo "[정보] 변경 없음 — 재검증 생략: $f"
+              fi
+            done
           done
       - name: Build ledger & commit verdicts (A-186 · A-208 — 저장소 보존·단일 열람 지점)
         if: always()

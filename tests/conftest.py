@@ -44,6 +44,11 @@ def climate_df() -> pd.DataFrame | None:
 
 
 @pytest.fixture(scope="session")
+def climate_forecast_df() -> pd.DataFrame | None:
+    return _load_latest_parquet("climate_forecast")
+
+
+@pytest.fixture(scope="session")
 def geopolitical_df() -> pd.DataFrame | None:
     return _load_latest_parquet("geopolitical_indices")
 

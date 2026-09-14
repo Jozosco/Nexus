@@ -1,0 +1,87 @@
+dataset: climate_forecast
+source_connector: src/pipeline/connectors/climate_connector.py  (fetch_openmeteo_forecast → run() 별도 저장)
+output_path: data/raw/climate_forecast_YYYYMMDD.parquet
+description: "Open-Meteo 예보 API(best_match — ECMWF IFS/AIFS 계열) 산지 23개 지역 15일 일별 예보. 참고 전용 층 (A-261 신설 · A-263 분리)"
+note: >
+  2026-09-14(A-263) 발행일 키 규약. 구 규약(관측 파케이 동거·price_date=유효일)은 ①품질 게이트 '미래 price_date'
+  1,610건(5변수×23지역×14미래일) 실패 ②마트가 같은 available_at의 15리드 중 최신 event_time 1행만 남겨 14리드가
+  탈락하는 누락 구조를 만들었다. 이 파일은 마트·G1 FILE_PATTERNS에 등재하지 않는다 — 예보 skill 검증(발행 30일+
+  누적 후 valid_date ↔ ERA5 관측 대조, 리드별 MAE·편향) 전에는 모델 투입 금지. 검증 후 투입 시에도 리드별 코드
+  (또는 7일·15일 집계 파생)로 별도 지표를 설계한다.
+  CLIMATE_FORECAST=0 이면 파일이 생성되지 않는다(429 축소 절차 1단계) — C-08 매니페스트 선택 항목.
+
+columns:
+  - name: price_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "예보 **발행일**(수집일, UTC). 미래 날짜 없음"
+  - name: valid_date
+    dtype: datetime64[ns]
+    nullable: false
+    description: "예보 유효일(발행일 + lead_days). 미래 날짜"
+  - name: lead_days
+    dtype: int64
+    nullable: false
+    description: "리드(일) = valid_date − price_date, 0~16"
+  - name: source_name
+    dtype: object
+    nullable: false
+    description: "OpenMeteo_forecast(best_match)"
+  - name: region_code
+    dtype: object
+    nullable: false
+    description: "config/production_regions.yaml 지역 코드 (tier1 12 + tier2 11)"
+  - name: country
+    dtype: object
+    nullable: true
+    description: "국가명"
+  - name: indicator_code
+    dtype: object
+    nullable: false
+    description: >
+      FCST_{var}_{region_code} — var ∈ temperature_2m_max | temperature_2m_min | precipitation_sum |
+      shortwave_radiation_sum | et0_fao_evapotranspiration (예: FCST_precipitation_sum_BR_MatoGrosso).
+      같은 코드에 리드 0~15가 공존하므로 (indicator_code, price_date, valid_date)가 자연 키다.
+  - name: value
+    dtype: float64
+    nullable: false
+    description: "예보값"
+  - name: unit
+    dtype: object
+    nullable: false
+    description: "°C | mm | MJ/m²"
+  - name: note
+    dtype: object
+    nullable: true
+    description: "issue_date={발행일} lead_days={리드}"
+  - name: ingested_at
+    dtype: datetime64[ns, UTC]
+    nullable: false
+    description: "수집 시각 (UTC)"
+  # ── as-of 5필드 (attach_asof, source=CLIMATE) ─────────────────────────────
+  # RELEASE_RULES "FCST_" = immediate·lag 0 → available_at = 발행일(event_time). REVISION_HISTORY "FCST_" = full
+  # (source_vintage = 발행일 — 같은 유효일이 매일 재예보되므로 발행일이 vintage).
+  - name: event_time
+    dtype: datetime64[ns]
+    nullable: false
+    description: "발행일 (= price_date)"
+  - name: period_end
+    dtype: datetime64[ns]
+    nullable: true
+    description: "발행일"
+  - name: release_time
+    dtype: datetime64[ns]
+    nullable: true
+    description: "발행일"
+  - name: available_at
+    dtype: datetime64[ns]
+    nullable: false
+    description: "발행일 — 항상 ingested_at 이하"
+  - name: source_vintage
+    dtype: object
+    nullable: true
+    description: "발행일 ISO 문자열"
+  - name: vintage_known
+    dtype: bool
+    nullable: false
+    description: "True"

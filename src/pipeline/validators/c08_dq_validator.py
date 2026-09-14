@@ -37,6 +37,7 @@ EXPECTED_ARTIFACTS: list[tuple[str, bool]] = [
     ("economic_indicators", False),
     ("commodity_data", False),
     ("climate_data", False),
+    ("climate_forecast", True),           # A-263: 산지 15일 예보 — 별도 파일·참고 전용(CLIMATE_FORECAST=0 시 결번)
     ("shipping_indices", False),
     ("geopolitical_indices", False),
     ("production_data", False),
@@ -69,6 +70,7 @@ REQUIRED_COLUMNS: dict[str, list[str]] = {
     "shipping_indices":     ["price_date", "indicator_code", "value"],
     "crop_data":            ["price_date"],
     "climate_data":         ["price_date", "indicator_code", "value"],
+    "climate_forecast":     ["price_date", "valid_date", "lead_days", "indicator_code", "value"],
     "geopolitical_indices": ["price_date", "indicator_code", "value"],
     "production_data":      ["price_date"],
     "commodity_data":       ["price_date"],

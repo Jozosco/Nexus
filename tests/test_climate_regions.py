@@ -192,8 +192,13 @@ def test_forecast_rows_shape(forecast_df: pd.DataFrame) -> None:
     assert len(forecast_df) == 2 * len(cc.FORECAST_VARS) * 15
     per = forecast_df.groupby(["region_code", "indicator_code"]).size()
     assert (per == 15).all()
-    assert (forecast_df["price_date"] >= pd.Timestamp(date.today())).all()
-    assert (forecast_df["price_date"] > pd.Timestamp(date.today())).sum() == 2 * 5 * 14
+    # A-263: price_date = 발행일(오늘) — 미래 price_date 0건, 유효일·리드는 별도 열
+    assert (forecast_df["price_date"] == pd.Timestamp(date.today())).all()
+    assert (forecast_df["valid_date"] >= forecast_df["price_date"]).all()
+    assert (forecast_df["valid_date"] > pd.Timestamp(date.today())).sum() == 2 * 5 * 14
+    assert forecast_df["lead_days"].between(0, 16).all()
+    assert ((forecast_df["valid_date"] - forecast_df["price_date"]).dt.days
+            == forecast_df["lead_days"]).all()
     assert forecast_df["source_name"].eq(cc.FORECAST_SOURCE_NAME).all()
     assert forecast_df["note"].str.startswith(f"issue_date={date.today().isoformat()}").all()
 
@@ -202,9 +207,9 @@ def test_forecast_asof_no_future_availability(forecast_df: pd.DataFrame) -> None
     out = attach_asof(forecast_df, source="CLIMATE")
     ing = pd.to_datetime(out["ingested_at"]).dt.tz_localize(None)
     assert (out["available_at"] <= ing).all(), "예보 행 available_at이 수집 시각을 넘음"
-    fut = out[out["event_time"] > ing]
-    assert len(fut) == 2 * 5 * 14
-    assert (fut["available_at"] == ing[fut.index]).all()
+    # A-263: event_time = 발행일 — A-195 전망 분기(event_time > ingested_at)는 더 이상 발동하지 않는다
+    assert (out["event_time"] <= ing).all()
+    assert (out["available_at"].dt.normalize() == pd.Timestamp(date.today())).all()
     assert out["vintage_known"].all() and out["source_vintage"].eq(date.today().isoformat()).all()
 
 

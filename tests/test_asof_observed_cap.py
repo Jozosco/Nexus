@@ -28,3 +28,11 @@ def test_forecast_row_capped():
     # 전망 행(event_time > ingested_at)은 수집 시점으로 캡(A-195)
     out = attach_asof(_row("SBO_PRODUCTION_US", "2026-10-01", "2026-09-09 05:52"), source="USDA")
     assert out["available_at"].iloc[0] <= pd.Timestamp("2026-09-09 05:52")
+
+
+def test_kst_offset_ingested_at_normalized_to_utc():
+    # A-263: ingested_at이 +09:00 오프셋으로 저장돼도 캡 기준은 UTC 벽시계여야 한다
+    # (KST 14:52 = UTC 05:52 → 오전 발사 런과 동일하게 05:52로 캡)
+    out = attach_asof(_row("ESR_SBO_EXPORT_KOREA", "2026-09-04", "2026-09-09 14:52+09:00"),
+                      source="USDA")
+    assert out["available_at"].iloc[0] == pd.Timestamp("2026-09-09 05:52")

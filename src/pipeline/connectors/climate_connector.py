@@ -487,11 +487,15 @@ def fetch_openmeteo_forecast(
 ) -> pd.DataFrame:
     """Open-Meteo 예보 API — 산지 일별 예보(최대 16일) 수집. 참고 전용 층.
 
-    행 규약: price_date = 유효일(미래) · indicator_code = FCST_{var}_{region_code} ·
-    note = issue_date={발행일} lead_days={리드} · source_vintage = 발행일.
-    as-of는 attach_asof가 event_time > ingested_at 분기(A-195)로 available_at = 수집 시각을
-    부여한다 — 예보는 발행 시점에 바로 알 수 있는 정보이므로 이것이 정확한 가용 시점이다.
-    예보는 관측 대체가 아니며 skill 검증(30일+ 이력) 전 모델 투입 금지.
+    행 규약(2026-09-14 개정, A-263): price_date = **발행일(수집일)** · valid_date = 유효일 ·
+    lead_days = 유효일 − 발행일(0~16) · indicator_code = FCST_{var}_{region_code} ·
+    source_vintage = 발행일. 산출은 관측 파케이가 아닌 **별도 파케이 climate_forecast_{date}**로
+    저장한다(run() 참조).
+    개정 근거: 구 규약(price_date=유효일·관측 파케이 동거)은 ①품질 게이트의 '미래 price_date'
+    1,610건 실패(런 #99) ②마트가 같은 available_at의 15리드 중 최신 event_time 1행만 남겨
+    14리드가 조용히 탈락하는 누락 구조를 만들었다. 발행일 키는 미래 일자를 없애고 리드별
+    전 행을 보존해 30일 뒤 예보 skill 검증(관측 ERA5 대조)이 가능하다.
+    예보는 관측 대체가 아니며 skill 검증 전 모델 투입 금지 — 마트·G1 FILE_PATTERNS 미등재.
     """
     targets = _select_regions(regions)
     if not targets:
@@ -526,7 +530,9 @@ def fetch_openmeteo_forecast(
                         continue
                     valid = date.fromisoformat(str(t)[:10])
                     rows.append({
-                        "price_date":     valid.isoformat(),
+                        "price_date":     issue_date.isoformat(),   # 발행일 키(A-263)
+                        "valid_date":     valid.isoformat(),
+                        "lead_days":      (valid - issue_date).days,
                         "source_name":    FORECAST_SOURCE_NAME,
                         "region_code":    region_code,
                         "country":        info.get("country", region_code[:2]),
@@ -552,6 +558,7 @@ def fetch_openmeteo_forecast(
         return pd.DataFrame()
     df = pd.DataFrame(rows)
     df["price_date"] = pd.to_datetime(df["price_date"])
+    df["valid_date"] = pd.to_datetime(df["valid_date"])
     return df
 
 
@@ -674,7 +681,11 @@ def run(start_year: int | None = None) -> None:
     else:
         forecast = fetch_openmeteo_forecast()
         if not forecast.empty:
-            frames.append(forecast)
+            # A-263: 예보는 관측 파케이에 섞지 않고 별도 파일로 저장한다(품질 게이트·마트 분리).
+            fout = f"{OUTPUT_DIR}/climate_forecast_{today}.parquet"
+            forecast = attach_asof(forecast, source="CLIMATE")
+            forecast.to_parquet(fout, index=False)
+            print(f"[완료] 산지 예보 {len(forecast):,}건 저장 → {fout} (관측 파케이와 분리)")
 
     # 3. OpenWeatherMap 현재 기상 이상 (API 키 있을 때)
     owm = fetch_weather_anomalies()

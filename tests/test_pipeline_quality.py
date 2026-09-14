@@ -18,6 +18,15 @@ NULL_WARN_PCT = 5.0    # 결측치 경고 임계값
 NULL_FAIL_PCT = 30.0   # 결측치 실패 임계값
 MIN_ROWS      = 10     # 최소 행 수
 
+
+def _today_utc() -> date:
+    """오늘 기준일 — 러너 로컬(`date.today()`)이 아니라 UTC 일자(A-263).
+
+    커넥터의 ingested_at·available_at은 전부 UTC로 기록된다. 기준일만 러너 시간대를 따르면
+    발사 시각·러너 위치에 따라 같은 파케이가 통과/실패를 오간다(A-254의 '오전 발사 런' 유형).
+    """
+    return pd.Timestamp.now(tz="UTC").date()
+
 # ── 공통 헬퍼 ─────────────────────────────────────────────────────────────────
 
 def _skip_if_none(df: Optional[pd.DataFrame]) -> pd.DataFrame:
@@ -36,7 +45,7 @@ def _freshness_bdays(df: pd.DataFrame) -> Optional[int]:
     ts = pd.to_datetime(df["ingested_at"], utc=True, errors="coerce").dropna()
     if ts.empty:
         return None
-    return int(np.busday_count(ts.max().date(), date.today()))
+    return int(np.busday_count(ts.max().date(), _today_utc()))
 
 
 # ── 스키마 공통 검증 ─────────────────────────────────────────────────────────
@@ -60,16 +69,25 @@ MARKETING_YEAR_CONNECTORS = {"crop_data", "production_data"}
 
 
 def _assert_no_future_price_date(df: pd.DataFrame, connector: str) -> None:
-    """데이터 누출 방지 — 일반 소스는 price_date, 마케팅연도 소스는 available_at 기준."""
-    if connector in MARKETING_YEAR_CONNECTORS and "available_at" in df.columns:
-        avail = pd.to_datetime(df["available_at"], errors="coerce").dropna()
-        future = (avail.dt.date > date.today()).sum()
-        assert future == 0, (
-            f"[{connector}] 미래 available_at {future}건 — as-of 누출 가능성"
+    """데이터 누출 방지 — 행 단위 규칙(A-263).
+
+    ① 모든 파케이: available_at(UTC 일자) ≤ 오늘 — 규칙이 만든 미래 가용 시점은 누수.
+    ② 관측 파케이: price_date ≤ 오늘. 마케팅연도 라벨 소스만 price_date 미래 허용(①로 검증).
+    커넥터 허용목록으로 '미래 허용'을 판정하던 구 방식은 예보처럼 정당하게 미래 유효일을 가진
+    행 계열이 관측 파케이에 섞이면 오탐하고, 반대로 허용목록 커넥터에 섞인 진짜 누수는 놓친다.
+    예보 층은 A-263으로 별도 파케이(climate_forecast, price_date=발행일)로 분리됐다.
+    """
+    today = _today_utc()
+    if "available_at" in df.columns:
+        avail = pd.to_datetime(df["available_at"], utc=True, errors="coerce").dropna()
+        future_avail = int((avail.dt.date > today).sum())
+        assert future_avail == 0, (
+            f"[{connector}] 미래 available_at {future_avail}건 — as-of 누출 가능성"
         )
+    if connector in MARKETING_YEAR_CONNECTORS and "available_at" in df.columns:
         return
     dates = pd.to_datetime(df["price_date"], errors="coerce").dropna()
-    future = (dates.dt.date > date.today()).sum()
+    future = int((dates.dt.date > today).sum())
     assert future == 0, (
         f"[{connector}] 미래 price_date {future}건 발견 — 데이터 누출 가능성"
     )
@@ -203,6 +221,31 @@ class TestClimateData:
         _assert_no_future_price_date(_skip_if_none(climate_df), "climate_data")
 
 
+class TestClimateForecast:
+    """산지 15일 예보 파케이(climate_forecast — A-263 별도 파일). 참고 전용 층."""
+
+    def test_issue_date_keys_and_leads(self, climate_forecast_df: Optional[pd.DataFrame]) -> None:
+        df = _skip_if_none(climate_forecast_df)
+        for col in ["price_date", "valid_date", "lead_days", "indicator_code", "value"]:
+            assert col in df.columns, f"필수 컬럼 '{col}' 없음"
+        issue = pd.to_datetime(df["price_date"], errors="coerce")
+        valid = pd.to_datetime(df["valid_date"], errors="coerce")
+        assert issue.notna().all() and valid.notna().all()
+        assert (issue.dt.date <= _today_utc()).all(), "예보 발행일이 미래"
+        assert (valid >= issue).all(), "유효일이 발행일보다 이름"
+        assert ((valid - issue).dt.days == df["lead_days"]).all()
+        assert df["lead_days"].between(0, 16).all()
+        assert df["indicator_code"].str.startswith("FCST_").all()
+
+    def test_no_future_availability(self, climate_forecast_df: Optional[pd.DataFrame]) -> None:
+        df = _skip_if_none(climate_forecast_df)
+        _assert_no_future_price_date(df, "climate_forecast")
+        if {"available_at", "ingested_at"}.issubset(df.columns):
+            av = pd.to_datetime(df["available_at"], utc=True, errors="coerce")
+            ing = pd.to_datetime(df["ingested_at"], utc=True, errors="coerce")
+            assert (av <= ing).all(), "예보 available_at이 수집 시각을 넘음"
+
+
 class TestGeopoliticalIndices:
     """1.1.6 지정학 리스크 지수 (GPR · Hormuz)."""
 
@@ -311,7 +354,7 @@ class TestTimeSeriesIntegrity:
         dates = pd.to_datetime(df["price_date"], errors="coerce").dropna()
         if dates.empty:
             return
-        today = pd.Timestamp(date.today())
+        today = pd.Timestamp(_today_utc())
         future_rows = (dates > today).sum()
         assert future_rows == 0, (
             f"수집 데이터에 미래 날짜 {future_rows}건 포함 — 데이터 누출 가능성"

@@ -664,7 +664,7 @@ indicator_bindings:
   - pattern: 'FCST_{var}_{CC}_{Region}'      # v3.3 신설 — Open-Meteo 예보 계열
     regex: '^FCST_(temperature_2m_max|temperature_2m_min|precipitation_sum|shortwave_radiation_sum|et0_fao_evapotranspiration)_[A-Z]{2}_[A-Za-z]+$'
     entities: [TERM-019, TERM-024]
-    note: 기상 예보는 참고 지표다 — 실측 대비 검증(예보 오차 분포) 전에는 모델 투입 금지. 예보와 실측을 같은 코드로 합치지 않는다.
+    note: 기상 예보는 참고 지표다 — 실측 대비 검증(예보 오차 분포) 전에는 모델 투입 금지. 예보와 실측을 같은 코드로 합치지 않는다. 2026-09-14(A-263)부터 별도 데이터셋 climate_forecast(price_date=발행일·valid_date=유효일·lead_days) — 관측 파케이·마트 미포함.
   - pattern: PSD_{attr}
     regex: '^PSD_[A-Z_]+$'
     entities: [TERM-033, TERM-035, TERM-036]
