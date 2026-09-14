@@ -209,15 +209,24 @@ def _clean_desc(raw: str, n: int = 160) -> str:
     return txt[:n].rstrip() + ("…" if len(txt) > n else "")
 
 
+# 범용 키워드(관세·운임·가뭄·해협 등)는 농산물·유지 맥락어와 **동반될 때만** 통과 — 실측 오탐: AP 'Irish whiskey tariff'.
+_GENERIC_KEYWORDS = {"tariff", "export tax", "freight", "drought", "red sea", "hormuz", "black sea", "south korea",
+                     "cftc", "rvo", "biofuel", "관세", "수출세", "곡물"}
+_AGRI_CONTEXT = ("soy", "oil", "grain", "crop", "farm", "agri", "palm", "biodiesel", "canola", "rapeseed",
+                 "sunflower", "wheat", "corn", "vessel", "tanker", "ship", "strait", "commodit", "harvest",
+                 "대두", "유지", "곡물", "농", "팜", "선박", "해협", "운임", "바이오")
+
+
 def _match_keyword(title: str, desc: str, indicator: str = "") -> str | None:
-    """통과 키워드 반환(없으면 None). 국문 매체는 제목 기준, 그 외는 제목+요약."""
+    """통과 키워드 반환(없으면 None). 국문 매체는 제목 기준, 그 외는 제목+요약. 범용어는 맥락어 동반 필수."""
     t = str(title).lower(); d = str(desc).lower()
     blob = t if indicator in _TITLE_ONLY_SOURCES else f"{t} {d}"
+    has_ctx = any(c in blob for c in _AGRI_CONTEXT)
     for k in _RSS_KEYWORDS_EN + _RSS_KEYWORDS_KO:
-        if k in blob:
+        if k in blob and (k not in _GENERIC_KEYWORDS or has_ctx):
             return k
     for rx in _RSS_KEYWORD_REGEX:
-        if rx.search(blob):
+        if rx.search(blob) and has_ctx:
             return rx.pattern.strip("\\b")
     return None
 

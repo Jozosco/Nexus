@@ -14,6 +14,10 @@ def test_korean_false_positives_blocked():
     assert dg._match_keyword("국내 SAF 의무화 논의", "", "RSS_CLIMATEPOL") == "saf"
     assert dg._match_keyword("바이오디젤 혼합 의무 상향", "", "RSS_CLIMATEPOL") == "바이오디젤"
     assert dg._match_keyword("Attack damages Bunge oilseeds plant", "", "RSS_WORLD_GRAIN") == "oilseed"
+    # 범용어(tariff)는 농산물 맥락 없이는 통과 불가 — 실측 오탐(AP 아이리시 위스키 관세)
+    assert dg._match_keyword("Trump says he's lifting a 10% tariff on Irish whiskey", "", "RSS_AP_COMMODITIES") is None
+    assert dg._match_keyword("Iranian media say 1 killed in ship strike on the Strait of Hormuz", "", "RSS_AP_WORLD") == "hormuz"
+    assert dg._match_keyword("US tariff on soybean oil imports raised", "", "RSS_REUTERS_COMMODITIES") == "soybean"
 
 
 def test_rss_items_keep_description_and_atom():
@@ -52,5 +56,7 @@ def test_media_items_split_and_english_org_names():
     note = "[채널: 공식 RSS · kw:soybean] Bunge plant hit — Attack damages plant. (https://a.b/1) ⋅ ADM biofuels — Margins improve. (https://a.b/2)"
     items = _media_items(note)
     assert len(items) == 2 and items[1]["url"] == "https://a.b/2" and items[0]["desc"] == "Attack damages plant."
+    cut = _media_items("[채널: 공식 RSS] Iranian media say 1 killed - apnews.com (https://apnews.com/arti")
+    assert cut[0]["title"].endswith("apnews.com") and "(" not in cut[0]["title"]
     assert _media_title(note, "RSS_WORLD_GRAIN").startswith("Bunge plant hit")
     assert _RSS_ORG_EN["RSS_TFM"] == "Total Farm Marketing" and _RSS_ORG_EN["RSS_CLIMATEPOL"].startswith("Climatepol")

@@ -294,7 +294,8 @@ def _media_items(note: str) -> list[dict]:
             continue
         url = _first_url(part) or ""
         txt = _URL_RE.sub("", part)
-        txt = re.sub(r"\(\s*\)", "", txt).strip(" ⋅·-")
+        txt = re.sub(r"\(\s*\)?\s*$", "", txt)               # 절단된 '(https…' 잔여 괄호 제거
+        txt = re.sub(r"\(\s*\)", "", txt).strip(" ⋅·-(")
         title, desc = (txt.split(" — ", 1) + [""])[:2] if " — " in txt else (txt, "")
         items.append({"title": title.strip(), "desc": desc.strip(), "url": url})
     return items
