@@ -1,6 +1,6 @@
-version: '3.3'   # 온톨로지 v3.3와 동기(2026-09-13)
-source: 비정형 분석용_핵심 용어 사전집_v1.0.xlsx (승인자 제공 152) → v3.2 시장구조 23 + v3.3 매체·수집 채널 16 = 191 ·
-  xlsx v1.1 동기화 - scripts/sync_glossary_xlsx.py
+version: '3.4'   # 온톨로지 v3.4와 동기(2026-09-14)
+source: 비정형 분석용_핵심 용어 사전집_v1.0.xlsx (승인자 제공 152) → v3.2 시장구조 23 + v3.3 매체·수집 채널 16 + 생산지역 23 = 214 · v3.4 평가 지표 10·무료 대안 소스 6 = 230 ·
+  xlsx v1.2 동기화 - scripts/sync_glossary_xlsx.py
 erd_ref: .claude/agents/Semantic Layer & Ontology_ERD_v1.0.md §8
 managed_by: 'P1-06 (보완: C-04·P1-01~05)'
 economy_and_trade:
@@ -3268,6 +3268,347 @@ data,_semantics_and_quality:
   source_code: GH-C04,GH-C08,OA-SO,OA-EVAL
   status: active
   owner_agent: P1-06
+# v3.4(2026-09-14) 신설 — 평가 지표 층(2단계 검증 체계·순위 안정성·경보 소급 성적·참고 범위 폭 진단·경보 원장·핀볼·포함률·
+#   워크포워드·락박스·예보 시간 규약)과 무료 대안 소스(stooq·CFTC COT·MPOB·ECMWF Open Data·세계은행·USDA AMS — 9/30 최종판까지 검증 갱신).
+- term_id: TERM-215
+  canonical: 'Two-stage validation (historical → real-time)'
+  canonical_ko: '2단계 검증(과거→실시간)'
+  class: Evaluation
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'TWO_STAGE_VALIDATION'
+  synonyms:
+  - '1차 과거 데이터 검증'
+  - '2차 실시간 적용 검증'
+  - 'two-step validation'
+  definition: 'G1·G2 산출물의 신뢰도 평가 체계 — ①약 15개년 과거 데이터로 규칙·순위를 검증(H1~H5) ②실시간 수집 데이터 유형별로 같은 규칙이 성립하는지 재검증(R1~R6). 승인자 요구(2026-09-14)'
+  interpretation_rules: '두 단계 수치는 예측 정확도가 아니라 과정 무결성·과거 관측 요약임(A-191) · 브리프 신뢰도 블록과 월별 부록에 같은 정의로 표시'
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: '-'
+  alert_criteria: 'g1_reliability_latest.json 미산출 시 브리프에 미산출 표기'
+  priority: A
+  ambiguity_risk: 하
+  relations: MEASURES
+  source_code: src/evaluation/g1_reliability.py
+  status: confirmed
+- term_id: TERM-216
+  canonical: 'Variable rank stability'
+  canonical_ko: '변인 순위 안정성'
+  class: QualityMetric
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'RANK_STABILITY'
+  synonyms:
+  - 'Spearman rank stability'
+  - '순위 상관 안정성'
+  definition: '확장 폴드(5구간 누적)마다 |피어슨 r|(및 규제 회귀 계수) 순위를 만들어 인접 폴드 간 Spearman ρ와 상위 20 부호 일치율을 잰 값. 표본 추가에 순위가 흔들리지 않을수록 현재 핵심 변인 주장이 견고함'
+  interpretation_rules: 'ρ는 -1~1 · 부호 일치율은 0~1 · 폴드 수와 상위 N 명시 필수 · 정본 입력(CI 마트)과 진단 입력(로컬) 라벨 구분'
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: 'ρ(-1~1)·비율(0~1)'
+  alert_criteria: '월별판 산출 · 임계 없음(추세 관찰)'
+  priority: B
+  ambiguity_risk: 하
+  relations: MEASURES
+  source_code: src/evaluation/g1_reliability.py::rank_stability
+  status: confirmed
+- term_id: TERM-217
+  canonical: 'Alert-rule retrospective score (false-alarm proxy)'
+  canonical_ko: '경보 규칙 소급 성적(오경보 근사율)'
+  class: QualityMetric
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'ALERT_RETRO_FALSE_ALARM'
+  synonyms:
+  - 'false alarm proxy'
+  - '소급 합성 경보 성적'
+  definition: '현행 임계 규칙을 2010~2025에 소급 적용해 에피소드(간격≥지평)를 만들고, 경보 뒤 5/20/60거래일 |수익률|이 무조건부 중앙값 이하인 비율. 값이 50%면 규칙이 평소와 구분되지 않음'
+  interpretation_rules: '라벨 ''실발행 아님 — 소급 합성'' 고정 · 방향 적중률 산출 금지 · 에피소드 8회 미만 보류 · 규칙 버전 병기'
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: '비율(0~1)·에피소드 수'
+  alert_criteria: '보류 기준 8회'
+  priority: B
+  ambiguity_risk: 중
+  relations: MEASURES
+  source_code: src/evaluation/g1_reliability.py::alert_rule_retro
+  status: confirmed
+- term_id: TERM-218
+  canonical: 'Reference-range width diagnosis'
+  canonical_ko: '참고 범위 폭 진단'
+  class: QualityMetric
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'RANGE_WIDTH_DIAG'
+  synonyms:
+  - 'empirical coverage of reference range'
+  - '참고 범위 포함률'
+  definition: '브리프 참고 범위(직전 h거래일 수익률의 P10~P90 확장 분위)가 실측 변동을 담은 비율과 평균 폭. 명목 80% 대비 부족분이 곧 범위 폭의 한계'
+  interpretation_rules: '확률 밴드 주장이 아니므로 의사결정 근거 금지(신뢰 문서 §2 ④) · 월별 부록 한정 · 스트레스 슬라이스별 병기'
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: '비율(0~1)·폭(%)'
+  alert_criteria: '명목 80% 대비 편차 관찰'
+  priority: B
+  ambiguity_risk: 중
+  relations: MEASURES
+  source_code: src/evaluation/g1_reliability.py::reference_range_diagnosis
+  status: confirmed
+- term_id: TERM-219
+  canonical: 'Alert ledger'
+  canonical_ko: '경보 원장'
+  class: ProvenanceRecord
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'ALERT_LEDGER'
+  synonyms:
+  - '실발행 경보 원장'
+  - 'g1_alert_ledger'
+  definition: 'G1이 실제 발행한 경보(변수·값·임계·규칙 버전·실행 ID)를 날짜별로 영구 기록하고, 5/20/60거래일 경과 후 실측 |수익률|을 채우는 표. 2026-09-14 개설(9/9·9/13 경보 시드)'
+  interpretation_rules: '(date, variable) 중복은 기존 유지 · 성숙 경보 8회 이상부터 사후 성적 표기 · look-ahead 차단(경과분만 채움)'
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: '-'
+  alert_criteria: '성숙 8회 미만 보류'
+  priority: A
+  ambiguity_risk: 하
+  relations: PROVIDES
+  source_code: data/processed/g1_alert_ledger.csv
+  status: confirmed
+- term_id: TERM-220
+  canonical: 'Pinball loss'
+  canonical_ko: '핀볼 손실'
+  class: QualityMetric
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'PINBALL'
+  synonyms:
+  - 'quantile loss'
+  - '분위 손실'
+  definition: '분위 q 예측 qhat에 대한 손실 max(q(y−qhat), (q−1)(y−qhat))의 평균 — 분위 밴드의 정확도 척도. 낮을수록 좋음. 기준선 대비 상대 비교로만 해석'
+  interpretation_rules: '단일 점수 금지 — 지평×기준선×슬라이스 표로 보고(방법론 §Validation) · 로그수익률 단위 명시'
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: '손실(≥0)'
+  alert_criteria: '기준선(최근값·롤링 분위) 미개선 시 승격 없음'
+  priority: B
+  ambiguity_risk: 중
+  relations: MEASURES
+  source_code: src/evaluation/band_backtest.py
+  status: confirmed
+- term_id: TERM-221
+  canonical: 'Empirical interval coverage'
+  canonical_ko: '경험 구간 포함률'
+  class: QualityMetric
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'COVERAGE'
+  synonyms:
+  - 'empirical coverage'
+  - '밴드 포함률'
+  definition: '명목 50%/80% 구간에 실측이 든 비율. 명목과의 차이가 밴드 보정(EnCQR) 필요성의 지표'
+  interpretation_rules: '레짐·스트레스 슬라이스별 분리 보고 필수 · 명목 초과도 결함(폭 과대)'
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: '비율(0~1)'
+  alert_criteria: '명목 ±5%p 밖이면 보정 대상(INFERENCE)'
+  priority: B
+  ambiguity_risk: 하
+  relations: MEASURES
+  source_code: src/evaluation/band_backtest.py
+  status: confirmed
+- term_id: TERM-222
+  canonical: 'Walk-forward validation'
+  canonical_ko: '워크포워드 검증'
+  class: ReviewProcess
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'WALK_FORWARD'
+  synonyms:
+  - 'expanding window CV'
+  - '시간순 교차검증'
+  definition: '시간 순서를 지키는 확장/이동 창 검증 — 각 시점의 예측은 그 시점까지 확정된 정보만 사용. 무작위 분할은 금지(M-001)'
+  interpretation_rules: '전처리·분위 추정을 폴드 안에서 재적합 · gap=지평으로 전방 창 겹침 차단'
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: '-'
+  alert_criteria: '-'
+  priority: A
+  ambiguity_risk: 하
+  relations: APPLIES_TO
+  source_code: src/evaluation/band_backtest.py,.claude/rules/modeling.md
+  status: confirmed
+- term_id: TERM-223
+  canonical: 'Lockbox period'
+  canonical_ko: '락박스 기간'
+  class: ReviewProcess
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'LOCKBOX'
+  synonyms:
+  - 'hold-out latest period'
+  - '최신 보존 기간'
+  definition: '최신 완전 기간(현행 2025-07~12)을 학습·튜닝에서 분리해 마지막에 한 번만 평가하는 규약'
+  interpretation_rules: '락박스 성적은 별도 열로 표기 · 튜닝 반복 후 재사용 금지'
+  impact_target: Governance
+  price_direction: CONTEXT
+  unit_range: '-'
+  alert_criteria: '-'
+  priority: B
+  ambiguity_risk: 하
+  relations: APPLIES_TO
+  source_code: src/evaluation/band_backtest.py
+  status: confirmed
+- term_id: TERM-224
+  canonical: 'Forecast issue date / valid date / lead'
+  canonical_ko: '예보 발행일·유효일·리드'
+  class: TemporalAttribute
+  category: 데이터·시맨틱·품질
+  subcategory: 평가 지표
+  abbr: 'FCST_ISSUE_VALID_LEAD'
+  synonyms:
+  - 'issue_date'
+  - 'valid_date'
+  - 'lead_days'
+  definition: '산지 15일 예보 행의 시간 규약 — 발행일(수집일)이 as-of 키(price_date=event_time), 유효일은 별도 열, 리드=유효일−발행일(0~16). 2026-09-14(A-263)부터 별도 파케이 climate_forecast'
+  interpretation_rules: '예보와 관측을 같은 코드·파일에 섞지 않음 · 마트 미등재(skill 검증 전 모델 투입 금지) · 같은 유효일이 매일 재예보되므로 발행일이 vintage'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: '일(0~16)'
+  alert_criteria: '-'
+  priority: B
+  ambiguity_risk: 하
+  relations: APPLIES_TO
+  source_code: data/schemas/climate_forecast.yaml
+  status: confirmed
+- term_id: TERM-225
+  canonical: 'stooq (free market data CSV)'
+  canonical_ko: 'stooq 무료 시세 CSV'
+  class: DataSource
+  category: 데이터·시맨틱·품질
+  subcategory: 무료 대안 소스
+  abbr: 'STOOQ'
+  synonyms:
+  - 'stooq.com'
+  - '^bdi'
+  definition: '폴란드 기반 무료 시세 포털 — 일별 OHLC CSV 직접 다운로드(키 불요). 프로젝트에서는 BDI 2순위 폴백(A-053). 2026-08 실측에서 ^bdi 404(심볼 소멸) — 상태 재확인 대상'
+  interpretation_rules: '무료·비공식 소스이므로 정본 아님 · 심볼 소멸·형식 변경 시 폴백 체인 다음 단계로 이동 · 상업 이용 약관 확인 필요(DATA GAP)'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: '-'
+  alert_criteria: '404 지속 시 체인에서 제거 검토'
+  priority: C
+  ambiguity_risk: 중
+  relations: PROVIDES
+  source_code: src/pipeline/connectors/shipping_connector.py
+  status: candidate
+- term_id: TERM-226
+  canonical: 'CFTC Commitments of Traders'
+  canonical_ko: 'CFTC 투기 포지션 보고(COT)'
+  class: DataSource
+  category: 데이터·시맨틱·품질
+  subcategory: 무료 대안 소스
+  abbr: 'CFTC_COT'
+  synonyms:
+  - 'Commitments of Traders'
+  - 'publicreporting.cftc.gov'
+  definition: '미국 상품선물거래위원회 주간 포지션 보고 — 화요일 기준·금요일 15:30 ET 공표, 대두유(ZL) 상업/비상업 순포지션. 무료·공개 API/CSV. 미구현 무료 자산(P0, B-9)'
+  interpretation_rules: '발표 규칙 lag 3일(화→금) · 주간 지표는 as-of 발표일 이후 가용 · CE-017 근거 지표 후보'
+  impact_target: Demand
+  price_direction: CONTEXT
+  unit_range: '계약 수'
+  alert_criteria: '-'
+  priority: B
+  ambiguity_risk: 하
+  relations: PROVIDES
+  source_code: docs/research_desk/2026-09/free_alternatives_inventory_2026_09_14.md
+  status: candidate
+- term_id: TERM-227
+  canonical: 'MPOB monthly palm oil statistics'
+  canonical_ko: 'MPOB 월간 팜유 통계'
+  class: DataSource
+  category: 데이터·시맨틱·품질
+  subcategory: 무료 대안 소스
+  abbr: 'MPOB_BEPI'
+  synonyms:
+  - 'bepi.mpob.gov.my'
+  - 'Malaysian Palm Oil Board'
+  definition: '말레이시아 팜유청 월간 생산·재고·수출 통계(무료 공개, 익월 10일경 발표). 유료 FCPO 일별 선물의 부분 대안(수급 축) — 가격 축은 대체 불가'
+  interpretation_rules: '월간·발표 지연 약 10일 · CE-015 대두유−팜유 가격 차이 레짐 판별 보조 · egress 기등재'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: '천 톤'
+  alert_criteria: '-'
+  priority: B
+  ambiguity_risk: 하
+  relations: PROVIDES
+  source_code: docs/infra/egress_allowlist.yaml
+  status: candidate
+- term_id: TERM-228
+  canonical: 'ECMWF Open Data (IFS/AIFS forecasts)'
+  canonical_ko: 'ECMWF 오픈 데이터(IFS·AIFS 예보)'
+  class: DataSource
+  category: 데이터·시맨틱·품질
+  subcategory: 무료 대안 소스
+  abbr: 'ECMWF_OPEN_DATA'
+  synonyms:
+  - 'ecmwf-opendata'
+  - 'AIFS open forecast'
+  definition: '유럽중기예보센터가 공개하는 0.25° 실시간 예보(IFS·AIFS, CC BY 4.0). Open-Meteo 상용 조건(DQ-26)의 무료 대안 후보 — 점 추출·후처리 구현 필요'
+  interpretation_rules: '라이선스 표기 필수 · 원시 GRIB 처리 비용 · Open-Meteo best_match와 동일 계열이므로 skill 비교 가능'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: '-'
+  alert_criteria: '-'
+  priority: C
+  ambiguity_risk: 중
+  relations: PROVIDES
+  source_code: docs/research_desk/2026-09/free_alternatives_inventory_2026_09_14.md
+  status: candidate
+- term_id: TERM-229
+  canonical: 'World Bank Pink Sheet (monthly commodity prices)'
+  canonical_ko: '세계은행 월간 원자재 가격(핑크 시트)'
+  class: DataSource
+  category: 데이터·시맨틱·품질
+  subcategory: 무료 대안 소스
+  abbr: 'WB_PINK_SHEET'
+  synonyms:
+  - 'Commodity Markets Outlook prices'
+  - 'CMO monthly'
+  definition: '세계은행 월간 원자재 가격표(대두유·팜유·해바라기유·유채유 등, USD/MT, 무료 xlsx). 유료 일별 유지류 시세의 월간 대안 — 일별 밀도는 대체 불가'
+  interpretation_rules: '월간·발표 지연 약 1주 · 스프레드 레짐의 장기 검증용 · 일별 마트 편입 시 as-of 발표일 규칙 필요'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: 'USD/MT'
+  alert_criteria: '-'
+  priority: C
+  ambiguity_risk: 하
+  relations: PROVIDES
+  source_code: docs/research_desk/2026-09/free_alternatives_inventory_2026_09_14.md
+  status: candidate
+- term_id: TERM-230
+  canonical: 'USDA AMS weekly soybean oil cash prices'
+  canonical_ko: 'USDA AMS 주간 대두유 현물가'
+  class: DataSource
+  category: 데이터·시맨틱·품질
+  subcategory: 무료 대안 소스
+  abbr: 'USDA_AMS_SBO'
+  synonyms:
+  - 'AMS Market News'
+  - 'National Weekly Soybean Oil'
+  definition: '미국 농무부 마케팅서비스 주간 현물(대두유·대두박) 보고 — 무료 공개. 유료 basis 호가(Platts/Fastmarkets)의 미국 내륙 현물 축 부분 대안(CFR 아시아 basis는 대체 불가)'
+  interpretation_rules: '주간·미국 내륙 기준 · CIF 아시아 호가와 NOT COMPARABLE · 기준 가격층 검증 보조'
+  impact_target: Supply
+  price_direction: CONTEXT
+  unit_range: 'USc/lb·USD/ton'
+  alert_criteria: '-'
+  priority: C
+  ambiguity_risk: 중
+  relations: PROVIDES
+  source_code: docs/research_desk/2026-09/free_alternatives_inventory_2026_09_14.md
+  status: candidate
+
 market_structure_and_trade:
 # v3.2(2026-09-09) 신설 — 시장구조 층: 트레이딩하우스·국내 가공사·수입 항만·해상 병목·거래 관행 개념.
 # status 어휘(본 분류 한정): confirmed = 저장소 문서가 사실을 명시 · inference = 문서 서술로부터의 해석.
@@ -3279,7 +3620,7 @@ market_structure_and_trade:
   class: TradingHouse
   category: 시장구조·기업
   subcategory: 트레이딩하우스
-  abbr: ADM
+  abbr: 'ADM'
   synonyms:
   - Archer Daniels Midland
   - A of ABCD
@@ -3294,7 +3635,7 @@ market_structure_and_trade:
     월별 통계로는 수출 기업을 확정할 수 없다(해석).
   impact_target: Supply/Channel
   price_direction: CONTEXT
-  unit_range: company
+  unit_range: 'company'
   alert_criteria: 압착 증설·가동 개시 공시
   priority: B
   ambiguity_risk: 중
@@ -3308,7 +3649,7 @@ market_structure_and_trade:
   class: TradingHouse
   category: 시장구조·기업
   subcategory: 트레이딩하우스
-  abbr: BG
+  abbr: 'BG'
   synonyms:
   - Bunge Global
   - Bunge-Viterra
@@ -3324,7 +3665,7 @@ market_structure_and_trade:
   korea_channel_note: 아르헨티나 Up River 크러셔 소재 기업 중 하나로 한국향 연속 물량과 방향이 맞물리나 계약 주체는 미확정(해석).
   impact_target: Supply/Channel
   price_direction: CONTEXT
-  unit_range: company
+  unit_range: 'company'
   alert_criteria: 남미 압착 가동률·합병 후 자산 재편 공시
   priority: A
   ambiguity_risk: 중
@@ -3353,7 +3694,7 @@ market_structure_and_trade:
   korea_channel_note: 브라질 트레이딩 점유 1위(11.4%, 2020)로 브라질발 물량의 상류 주체 후보(해석).
   impact_target: Supply/Channel
   price_direction: CONTEXT
-  unit_range: company
+  unit_range: 'company'
   alert_criteria: 자사 지속가능성·자산 공시 갱신
   priority: B
   ambiguity_risk: 상
@@ -3367,7 +3708,7 @@ market_structure_and_trade:
   class: TradingHouse
   category: 시장구조·기업
   subcategory: 트레이딩하우스
-  abbr: LDC
+  abbr: 'LDC'
   synonyms:
   - Louis Dreyfus Company
   - D of ABCD
@@ -3381,7 +3722,7 @@ market_structure_and_trade:
   korea_channel_note: 아르헨티나 연속 채널(활동 45개월·월 중앙값 10,981 MT·CIF 중앙값 1,183 $/MT)의 상류 주체 후보(해석).
   impact_target: Supply/Channel
   price_direction: CONTEXT
-  unit_range: company
+  unit_range: 'company'
   alert_criteria: 아르헨티나 압착 가동률·신설 라인 가동 공시
   priority: B
   ambiguity_risk: 중
@@ -3395,7 +3736,7 @@ market_structure_and_trade:
   class: TradingHouse
   category: 시장구조·기업
   subcategory: 트레이딩하우스
-  abbr: COFCO Intl
+  abbr: 'COFCO Intl'
   synonyms:
   - CIL
   - COFCO
@@ -3410,7 +3751,7 @@ market_structure_and_trade:
   korea_channel_note: 중국발 조유는 간헐·소형 채널(활동 8개월·월 중앙값 156 MT)로 가공무역 성격이 유력(해석).
   impact_target: Supply/Channel
   price_direction: CONTEXT
-  unit_range: company
+  unit_range: 'company'
   alert_criteria: 중국 비축·수입 발표와 상업 채널 물량의 괴리
   priority: A
   ambiguity_risk: 상
@@ -3437,7 +3778,7 @@ market_structure_and_trade:
   korea_channel_note: 베트남 합작(TERM-160)을 통해 한국향 신규 공급국 구조 변화와 연결될 가능성(해석).
   impact_target: Supply/Channel
   price_direction: CONTEXT
-  unit_range: company
+  unit_range: 'company'
   alert_criteria: 아시아 정제 가동률·합작 신설 공시
   priority: B
   ambiguity_risk: 중
@@ -3451,7 +3792,7 @@ market_structure_and_trade:
   class: TradingHouse
   category: 시장구조·기업
   subcategory: 트레이딩하우스
-  abbr: CHS
+  abbr: 'CHS'
   synonyms:
   - CHS Inc
   definition: 미국 농협계 곡물·에너지 협동조합으로 선적 실거래 기준 상위 7개사 핵심군에 포함된다.
@@ -3464,7 +3805,7 @@ market_structure_and_trade:
   korea_channel_note: 관세청 국가별 통계로는 기업 식별이 불가하여 한국향 기여를 확인할 수 없다(데이터 공백).
   impact_target: Supply/Channel
   price_direction: CONTEXT
-  unit_range: company
+  unit_range: 'company'
   alert_criteria: 미국 수출 물량 점유 변화
   priority: C
   ambiguity_risk: 중
@@ -3478,7 +3819,7 @@ market_structure_and_trade:
   class: TradingHouse
   category: 시장구조·기업
   subcategory: 트레이딩하우스
-  abbr: VAL
+  abbr: 'VAL'
   synonyms:
   - Vietnam Agriculture JV
   - Bunge-Wilmar Vietnam
@@ -3492,7 +3833,7 @@ market_structure_and_trade:
   korea_channel_note: 베트남 대한국 수입은 2023/24년 71,309 MT에서 2024/25년 132,764 MT로 확대(전 유형 합계 기준).
   impact_target: Supply/Channel
   price_direction: DOWN
-  unit_range: company
+  unit_range: 'company'
   alert_criteria: 베트남발 월별 수입량 추세 전환
   priority: A
   ambiguity_risk: 중
@@ -3506,7 +3847,7 @@ market_structure_and_trade:
   class: Processor
   category: 시장구조·기업
   subcategory: 국내 압착·정제
-  abbr: CJ
+  abbr: 'CJ'
   synonyms:
   - CJ제일제당
   definition: 국내 최대 대두 압착·식용유 정제 사업자로 인천에 압착 설비를 운영한다.
@@ -3617,7 +3958,7 @@ market_structure_and_trade:
   role: import_discharge
   impact_target: Route
   price_direction: CONTEXT
-  unit_range: location
+  unit_range: 'location'
   alert_criteria: 항만 혼잡·파업 발생
   priority: B
   ambiguity_risk: 중
@@ -3639,7 +3980,7 @@ market_structure_and_trade:
   role: import_discharge
   impact_target: Route
   price_direction: CONTEXT
-  unit_range: location
+  unit_range: 'location'
   alert_criteria: 항만 혼잡·파업 발생
   priority: B
   ambiguity_risk: 중
@@ -3660,7 +4001,7 @@ market_structure_and_trade:
   interpretation_rules: 통과 척수 변화는 위험 신호이지 물량 확정이 아니다 — 선박 식별 없이 화물을 귀속하지 않는다.
   impact_target: Freight/Route
   price_direction: UP_RISK
-  unit_range: location
+  unit_range: 'location'
   alert_criteria: 통과 척수 급감 또는 대기시간 급증
   priority: A
   ambiguity_risk: 중
@@ -3682,7 +4023,7 @@ market_structure_and_trade:
     희망봉 우회는 항해일 12~15일·비용 30~40% 증가로 관측된 바 있다.
   impact_target: Freight/Route
   price_direction: UP_RISK
-  unit_range: location
+  unit_range: 'location'
   alert_criteria: 통항 제한·우회 비율 상승
   priority: A
   ambiguity_risk: 상
@@ -3704,7 +4045,7 @@ market_structure_and_trade:
   interpretation_rules: 수에즈 운하와 하나의 홍해 회랑으로 함께 움직이므로 두 지점의 위험 신호를 이중 계상하지 않는다.
   impact_target: Freight/Route
   price_direction: UP_RISK
-  unit_range: location
+  unit_range: 'location'
   alert_criteria: 선박 피격·전쟁위험 보험료 급등
   priority: A
   ambiguity_risk: 상
@@ -3729,7 +4070,7 @@ market_structure_and_trade:
   region_ref: TERM-082
   impact_target: Substitution/Logistics
   price_direction: UP_RISK
-  unit_range: location
+  unit_range: 'location'
   alert_criteria: 회랑 중단 선언·선박 통항 급감
   priority: A
   ambiguity_risk: 상
@@ -3743,7 +4084,7 @@ market_structure_and_trade:
   class: ConcentrationMetric
   category: 시장구조·기업
   subcategory: 집중도 지표
-  abbr: CR4
+  abbr: 'CR4'
   synonyms:
   - four-firm concentration ratio
   definition: 상위 4개 사업자의 합산 점유율로 시장 집중도를 나타내는 지표다.
@@ -3766,7 +4107,7 @@ market_structure_and_trade:
   class: ConcentrationMetric
   category: 시장구조·기업
   subcategory: 집중도 지표
-  abbr: HHI
+  abbr: 'HHI'
   synonyms:
   - Herfindahl index
   definition: 전 사업자 점유율의 제곱 합으로 시장 집중도를 나타내는 지수다.
@@ -3776,7 +4117,7 @@ market_structure_and_trade:
   measurement_note: 선적 실거래 기반 산출 — 표본 범위(품목·항로·기간)를 함께 기록한다.
   impact_target: Market/Structure
   price_direction: CONTEXT
-  unit_range: 0-10000
+  unit_range: '0-10000'
   alert_criteria: 지수 구간 변화(보통→높음 등)
   priority: A
   ambiguity_risk: 상
@@ -3790,7 +4131,7 @@ market_structure_and_trade:
   class: ContractStandard
   category: 시장구조·기업
   subcategory: 거래 관행
-  abbr: FOSFA
+  abbr: 'FOSFA'
   synonyms:
   - FOSFA contract
   - Federation of Oils, Seeds and Fats Associations
@@ -3799,7 +4140,7 @@ market_structure_and_trade:
     단정적 인용을 피한다. 분쟁 해결은 포스파 중재를 따른다.
   impact_target: Contract/Terms
   price_direction: CONTEXT
-  unit_range: contract
+  unit_range: 'contract'
   alert_criteria: 표준 서식 개정
   priority: B
   ambiguity_risk: 중
@@ -3824,7 +4165,7 @@ market_structure_and_trade:
     운임·보험·품질·금융·시차가 함께 섞여 있다.
   impact_target: Price/Contract
   price_direction: CONTEXT
-  unit_range: points (100pt = 1 cent/lb)
+  unit_range: 'points (100pt = 1 cent/lb)'
   alert_criteria: 남미 FOB 베이시스의 기록적 확대·축소
   priority: A
   ambiguity_risk: 상
@@ -3847,7 +4188,7 @@ market_structure_and_trade:
     부분연도 집계를 연간 구조로 확대 해석하지 않는다.
   impact_target: Price/Origin
   price_direction: CONTEXT
-  unit_range: USD/MT or points vs CBOT
+  unit_range: 'USD/MT or points vs CBOT'
   alert_criteria: 수출세 변경 시 베이시스 급변
   priority: A
   ambiguity_risk: 상
@@ -3876,7 +4217,7 @@ media_and_collection_channels:
     1건만 센다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -3890,7 +4231,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: AP
+  abbr: 'AP'
   synonyms:
   - AP News
   - 에이피통신
@@ -3899,7 +4240,7 @@ media_and_collection_channels:
     발생 여부 확인용이며 가격 방향은 온톨로지 인과엣지를 거쳐서만 해석한다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -3913,7 +4254,7 @@ media_and_collection_channels:
   class: CollectionChannel
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: CH-GNEWS
+  abbr: 'CH-GNEWS'
   synonyms:
   - Google News RSS
   - news.google.com/rss/search
@@ -3922,7 +4263,7 @@ media_and_collection_channels:
     링크 기준으로 한다. 비공식 서비스라 형식 변경·차단 시 다음 채널로 넘어간다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -3936,7 +4277,7 @@ media_and_collection_channels:
   class: CollectionChannel
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: CH-GDELT
+  abbr: 'CH-GDELT'
   synonyms:
   - GDELT DOC
   - api.gdeltproject.org/api/v2/doc
@@ -3945,7 +4286,7 @@ media_and_collection_channels:
     하루 정도 늦을 수 있다. 무료 레이트리밋이 엄격해 호출 간격을 두고 429는 재시도한다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -3959,7 +4300,7 @@ media_and_collection_channels:
   class: CollectionChannel
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: CH-BING
+  abbr: 'CH-BING'
   synonyms:
   - Bing News search RSS
   - bing.com/news/search?format=rss
@@ -3968,7 +4309,7 @@ media_and_collection_channels:
     실제 동작을 확정하기 전까지 설계 상태(inference)로 둔다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -3982,7 +4323,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_FARMDOC_DAILY
+  abbr: 'RSS_FARMDOC_DAILY'
   synonyms:
   - farmdocdaily.illinois.edu
   - farmdoc
@@ -3991,7 +4332,7 @@ media_and_collection_channels:
     새 기사는 기존 근거의 갱신인지 새 주장인지 구분해 태깅한다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4005,14 +4346,14 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_WORLD_GRAIN
+  abbr: 'RSS_WORLD_GRAIN'
   synonyms:
   - world-grain.com
   definition: 곡물·유지종자 산업의 설비 투자·무역·물류 소식을 다루는 산업 전문지다.
   interpretation_rules: 공식 RSS로 직접 수집한다. 압착 설비 증설 기사는 공시 용량이며 실제 처리량이 아니다(용량≠처리량).
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4026,7 +4367,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_OFI_MAGAZINE
+  abbr: 'RSS_OFI_MAGAZINE'
   synonyms:
   - OFI
   - ofimagazine.com
@@ -4035,7 +4376,7 @@ media_and_collection_channels:
     평균회귀 가정 금지)을 적용해 태깅한다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4049,7 +4390,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_GRAIN_ORG
+  abbr: 'RSS_GRAIN_ORG'
   synonyms:
   - grain.org
   definition: 농업·식량 체계를 감시하는 국제 비정부기구로 토지·무역·기업 집중 관련 보고서와 기사를 발행한다.
@@ -4057,7 +4398,7 @@ media_and_collection_channels:
     기업 집중도 주장은 선적 실거래 기준 집중도 지표와 혼용하지 않는다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4071,7 +4412,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_SOYGROWERS
+  abbr: 'RSS_SOYGROWERS'
   synonyms:
   - ASA
   - soygrowers.com
@@ -4080,7 +4421,7 @@ media_and_collection_channels:
     발표일과 시행일을 분리해 기록한다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4094,7 +4435,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_CLIMATEPOL
+  abbr: 'RSS_CLIMATEPOL'
   synonyms:
   - climatepol.com
   - 클라이미트폴
@@ -4103,7 +4444,7 @@ media_and_collection_channels:
     구분해 태깅하고 해외 정책 수치는 원문 단계와 혼용하지 않는다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4117,7 +4458,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_AGMARKET
+  abbr: 'RSS_AGMARKET'
   synonyms:
   - agmarket.net
   definition: 미국 농산물 선물 시황과 헤지 관점의 일일 코멘터리를 발행하는 시장 분석 매체다.
@@ -4125,7 +4466,7 @@ media_and_collection_channels:
     모델 학습 입력으로 쓰지 않는다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4139,7 +4480,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_GRAINCENTRAL
+  abbr: 'RSS_GRAINCENTRAL'
   synonyms:
   - graincentral.com
   definition: 호주 곡물·유지종자 산업의 작황·수출·물류 소식을 다루는 산업 매체다.
@@ -4147,7 +4488,7 @@ media_and_collection_channels:
     태깅하고 대두유 가격 방향으로 직접 변환하지 않는다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4161,7 +4502,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_TFM
+  abbr: 'RSS_TFM'
   synonyms:
   - TFM
   - totalfarmmarketing.com
@@ -4170,7 +4511,7 @@ media_and_collection_channels:
     판단으로 뒤집어 읽지 않는다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4184,7 +4525,7 @@ media_and_collection_channels:
   class: MediaSource
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: RSS_UKRAGRO
+  abbr: 'RSS_UKRAGRO'
   synonyms:
   - ukragroconsult.com
   definition: 흑해 권역 곡물·해바라기유 수급과 수출 물류를 다루는 우크라이나 농업 시장 분석 기관이다.
@@ -4192,7 +4533,7 @@ media_and_collection_channels:
     서술에는 검증된 인과엣지를 거쳐서만 쓴다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 없음(주제 태깅 후 감성 지표로만)
   priority: C
   ambiguity_risk: 하
@@ -4206,7 +4547,7 @@ media_and_collection_channels:
   class: CollectionChannel
   category: 데이터·시맨틱·품질
   subcategory: 매체·수집 채널
-  abbr: CH-PPLX
+  abbr: 'CH-PPLX'
   synonyms:
   - Perplexity sonar-pro proxy
   - 온디맨드 요약 채널
@@ -4215,7 +4556,7 @@ media_and_collection_channels:
     인정하며 모델이 생성한 수치는 원문 대조 전에는 인용하지 않는다.
   impact_target: Signal/Media
   price_direction: CONTEXT
-  unit_range: articles/day
+  unit_range: 'articles/day'
   alert_criteria: 일별 스케줄 편입 금지 — 수동·온디맨드
   priority: C
   ambiguity_risk: 하
@@ -4233,7 +4574,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: CN_Heilongjiang
+  abbr: 'CN_Heilongjiang'
   synonyms:
   - 'Heilongjiang Province'
   - '黑龙江省'
@@ -4242,7 +4583,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4260,7 +4601,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: CN_Shandong
+  abbr: 'CN_Shandong'
   synonyms:
   - 'Shandong Province'
   - '山东省'
@@ -4269,7 +4610,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4287,7 +4628,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: CN_Jiangsu
+  abbr: 'CN_Jiangsu'
   synonyms:
   - 'Jiangsu Province'
   - '江苏省'
@@ -4296,7 +4637,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4314,7 +4655,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: US_Illinois
+  abbr: 'US_Illinois'
   synonyms:
   - 'Illinois'
   - 'IL'
@@ -4323,7 +4664,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4341,7 +4682,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: US_Iowa
+  abbr: 'US_Iowa'
   synonyms:
   - 'Iowa'
   - 'IA'
@@ -4350,7 +4691,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4368,7 +4709,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: US_Indiana
+  abbr: 'US_Indiana'
   synonyms:
   - 'Indiana'
   - 'IN'
@@ -4377,7 +4718,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4395,7 +4736,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: BR_MatoGrosso
+  abbr: 'BR_MatoGrosso'
   synonyms:
   - 'Mato Grosso'
   - 'MT (Brazil)'
@@ -4404,7 +4745,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4422,7 +4763,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: BR_Parana
+  abbr: 'BR_Parana'
   synonyms:
   - 'Parana'
   - 'PR (Brazil)'
@@ -4431,7 +4772,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4449,7 +4790,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: BR_MatoGrossodoSul
+  abbr: 'BR_MatoGrossodoSul'
   synonyms:
   - 'Mato Grosso do Sul'
   - 'MS (Brazil)'
@@ -4458,7 +4799,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4476,7 +4817,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: AR_Cordoba
+  abbr: 'AR_Cordoba'
   synonyms:
   - 'Cordoba Province'
   - '코르도바주'
@@ -4484,7 +4825,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4502,7 +4843,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: AR_SantaFe
+  abbr: 'AR_SantaFe'
   synonyms:
   - 'Santa Fe Province'
   - 'Rosario crushing hub'
@@ -4511,7 +4852,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4529,7 +4870,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: AR_BuenosAires
+  abbr: 'AR_BuenosAires'
   synonyms:
   - 'Buenos Aires'
   - '부에노스아이레스주'
@@ -4537,7 +4878,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: '정본 좌표 표 §3.2 기준 — 아카이브 daily 8변수(토양 hourly 포함)+예보 FCST_'
   priority: B
   ambiguity_risk: 하
@@ -4555,7 +4896,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: BR_RioGrandedoSul
+  abbr: 'BR_RioGrandedoSul'
   synonyms:
   - 'Rio Grande do Sul'
   - 'RS (Brazil)'
@@ -4565,7 +4906,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4583,7 +4924,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: BR_Goias
+  abbr: 'BR_Goias'
   synonyms:
   - 'Goias'
   - 'GO (Brazil)'
@@ -4593,7 +4934,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4611,7 +4952,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: US_Minnesota
+  abbr: 'US_Minnesota'
   synonyms:
   - 'Minnesota'
   - 'MN'
@@ -4620,7 +4961,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4638,7 +4979,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: US_Nebraska
+  abbr: 'US_Nebraska'
   synonyms:
   - 'Nebraska'
   - 'NE'
@@ -4647,7 +4988,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4665,7 +5006,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: US_Ohio
+  abbr: 'US_Ohio'
   synonyms:
   - 'Ohio'
   - 'OH'
@@ -4674,7 +5015,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4692,7 +5033,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: PY_AltoParana
+  abbr: 'PY_AltoParana'
   synonyms:
   - 'Alto Parana Department'
   - '알토파라나도'
@@ -4701,7 +5042,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4719,7 +5060,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: IN_MadhyaPradesh
+  abbr: 'IN_MadhyaPradesh'
   synonyms:
   - 'Madhya Pradesh'
   - 'MP (India)'
@@ -4729,7 +5070,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리)'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4747,7 +5088,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: MY_Sabah
+  abbr: 'MY_Sabah'
   synonyms:
   - 'Sabah'
   - '사바주'
@@ -4756,7 +5097,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리) · 팜 산지 기후는 대두유 가격의 직접 동인이 아니라 대두유−팜유 가격 차이(CE-015) 레짐 판별 보조 입력'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4774,7 +5115,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: MY_Johor
+  abbr: 'MY_Johor'
   synonyms:
   - 'Johor'
   - '조호르주'
@@ -4783,7 +5124,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리) · 팜 산지 기후는 대두유 가격의 직접 동인이 아니라 대두유−팜유 가격 차이(CE-015) 레짐 판별 보조 입력'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4801,7 +5142,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: ID_Riau
+  abbr: 'ID_Riau'
   synonyms:
   - 'Riau Province'
   - '리아우주'
@@ -4810,7 +5151,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리) · 팜 산지 기후는 대두유 가격의 직접 동인이 아니라 대두유−팜유 가격 차이(CE-015) 레짐 판별 보조 입력'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하
@@ -4828,7 +5169,7 @@ production_regions:
   class: ProductionRegion
   category: 농업·농기상
   subcategory: 생산지역
-  abbr: ID_CentralKalimantan
+  abbr: 'ID_CentralKalimantan'
   synonyms:
   - 'Kalimantan Tengah'
   - 'Kalteng'
@@ -4838,7 +5179,7 @@ production_regions:
   interpretation_rules: '지역별 기후 신호는 일반화하지 않는다(지역 간 단순 평균 금지 — 재배면적 가중 없이는 합산 불가) · 좌표는 행정 중심이 아닌 주산 벨트 중심(NASA POWER 0.5° 격자 감도) · 라벨 CONFIRMED/INFERENCE는 config coord_status와 동기 · 좌표 이동 시 구좌표 수집분과 시계열을 잇지 않는다(vintage 분리) · 팜 산지 기후는 대두유 가격의 직접 동인이 아니라 대두유−팜유 가격 차이(CE-015) 레짐 판별 보조 입력'
   impact_target: Supply
   price_direction: CONTEXT
-  unit_range: lat/lon(deg)
+  unit_range: 'lat/lon(deg)'
   alert_criteria: 'climate_regions_forecast_weathernext_2026_09_13.md §2 기준 — daily 6변수+예보, 모델 투입은 정본 편입 후'
   priority: C
   ambiguity_risk: 하

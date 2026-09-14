@@ -129,7 +129,7 @@ def test_summary_sheet_updated(synced: tuple[dict[str, Path], sync.SyncStats]) -
     assert str(ws["B6"].value).endswith("$A$500)")
     assert str(ws["B7"].value).startswith("=COUNTA(분류체계!")
     assert "$500" in str(ws["B8"].value) and "$500" in str(ws["B9"].value)
-    assert "v1.1" in str(ws["A1"].value) and "v1.0" not in str(ws["A1"].value)
+    assert sync.SUMMARY_VERSION_NEW in str(ws["A1"].value) and sync.SUMMARY_VERSION_OLD not in str(ws["A1"].value)
     assert re.search(r"\d{4}-\d{2}-\d{2}", str(ws["A3"].value)).group(0) == sync.SUMMARY_DATE
     assert ws["D14"].value == "시장구조·기업"
     assert str(ws["E14"].value).endswith("D14)")

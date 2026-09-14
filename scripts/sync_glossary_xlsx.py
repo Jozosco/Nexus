@@ -38,9 +38,9 @@ SHEET_RELATIONS = "관계사전"
 SHEET_SOURCES = "출처"
 SHEET_CODES = "코드목록"
 
-SUMMARY_VERSION_OLD = "v1.0"
-SUMMARY_VERSION_NEW = "v1.1"
-SUMMARY_DATE = "2026-09-13"
+SUMMARY_VERSION_OLD = "v1.1"
+SUMMARY_VERSION_NEW = "v1.2"
+SUMMARY_DATE = "2026-09-14"
 TERM_RANGE_END = 500  # 요약 수식의 행 상한 — 용어 증가에 대비한 여유
 
 SYNONYM_SEP = "; "
@@ -87,6 +87,8 @@ SUBCATEGORY_EN: dict[tuple[str, str], str] = {
     ("시장구조·기업", "거래 관행"): "Trading Conventions",
     ("데이터·시맨틱·품질", "매체·수집 채널"): "Media & Collection Channels",
     ("농업·농기상", "생산지역"): "Production Regions",
+    ("데이터·시맨틱·품질", "평가 지표"): "Evaluation Metrics",
+    ("데이터·시맨틱·품질", "무료 대안 소스"): "Free Alternative Sources",
 }
 # 신규 온톨로지 클래스 → 엔터티유형. 기존 시트의 class→K 쌍은 실행 시 먼저 읽어 우선한다.
 CLASS_TO_ENTITY_TYPE: dict[str, str] = {
