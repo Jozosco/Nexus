@@ -242,7 +242,34 @@ _DRIVER_KEYWORDS: dict[str, list[str]] = {
     "HORMUZ": ["hormuz", "strait", "호르무즈", "해협"],
     "VIX": ["volatility", "vix", "변동성"],
     "CBOT": ["soybean oil", "soyoil", "cbot", "대두유"],
+    # A-268: 기후 격자 변인(NASA POWER·Open-Meteo·예보) — 종전에는 키가 없어 항상 '매핑 없음'
+    "T2M": ["heat", "temperature", "frost", "폭염", "기온", "한파", "weather", "기상"],
+    "PRECTOTCORR": ["rain", "precipitation", "drought", "flood", "강우", "강수", "가뭄", "홍수", "weather", "기상"],
+    "PRECIPITATION": ["rain", "precipitation", "drought", "flood", "강우", "강수", "가뭄", "홍수"],
+    "ALLSKY": ["sunshine", "solar", "radiation", "일조", "일사", "weather", "기상", "drought", "가뭄"],
+    "SHORTWAVE": ["sunshine", "solar", "일조", "일사"],
+    "GWET": ["soil moisture", "drought", "토양", "가뭄", "dry"],
+    "SOIL_": ["soil moisture", "drought", "토양", "가뭄", "dry"],
+    "RH2M": ["humidity", "습도", "weather", "기상"],
+    "FCST_": ["forecast", "예보", "weather", "기상"],
+    "FX_BRL_USD": ["brazil", "real", "브라질", "헤알"],
+    "ENSO_ONI": ["el nino", "la nina", "enso", "drought", "엘니뇨", "라니냐", "가뭄"],
 }
+
+
+def _driver_keywords(var_code: str) -> list[str]:
+    """변인 코드 → 키워드. A-268: 접두/정확 매칭 + 지역명 추가(부분 문자열 오탐 — BOARD_CRUSH_MARGIN→ARG — 제거)."""
+    up = var_code.upper().split("__")[0]
+    kws: list[str] = []
+    for key, words in _DRIVER_KEYWORDS.items():
+        k = key.upper()
+        if up == k or up.startswith(k) or up.startswith(k + "_") or f"_{k}_" in f"_{up}_":
+            kws.extend(words)
+    # 기후 변인의 지역명(한글·영문) — 기사에 산지 이름이 등장하면 연관
+    for reg_key, reg_ko in _REGION_KO.items():
+        if up.endswith("_" + reg_key.upper()) or up.endswith(reg_key.upper()):
+            kws.extend([reg_ko.split("(")[0], reg_key.split("_")[-1].lower()])
+    return list(dict.fromkeys(kws))
 
 # 일별 비정형 지표 → 온톨로지 체인 (signal_tag_mapping·CE evidence 기반 정적 렌더 —
 # 실검증 상태는 ontology.yaml이 원천, 여기서는 표시용 최소 사본)
@@ -385,11 +412,7 @@ def _first_url(text: str) -> str | None:
 
 def _match_articles(var_code: str, signals: pd.DataFrame) -> list[dict]:
     """변인 코드 ↔ 최근 기사 키워드 매칭 — 별점 재료."""
-    kws: list[str] = []
-    up = var_code.upper()
-    for key, words in _DRIVER_KEYWORDS.items():
-        if key in up:
-            kws.extend(words)
+    kws = _driver_keywords(var_code)
     if not kws or signals.empty:
         return []
     out = []
@@ -815,9 +838,10 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
     A-191: 과거 관측의 요약까지만 — 전망·확률 주장 금지. mart 미가용 시 정직 강등.
     """
     try:
-        from src.forecasting.analogue_g1 import (build_analogue_context,
+        from src.forecasting.analogue_g1 import (badge_name, build_analogue_context,
                                                  case_narrative_lines,
-                                                 format_result_line)
+                                                 format_result_line,
+                                                 representative_badges)
         alert_codes = [str(a.get("변수", "")) for a in breach]
         top_codes = ([str(r["변수"]) for _, r in importance_df.head(4).iterrows()]
                      if not importance_df.empty else [])
@@ -838,14 +862,14 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
         label = _label_ko(var)
         lines = "".join(f"<li>{_esc(format_result_line(r))}</li>"
                         for r in sorted(rs, key=lambda x: x.horizon))
-        badges = sorted({b for r in rs for b in r.case_badges})
+        badges = representative_badges(rs)          # A-270: 20일 지평 대표·밀도 검사 통과분만
         badge_parts = []
         if badges:
-            badge_parts.append(f'<div class="src">겹치는 위기 사례: '
+            badge_parts.append(f'<div class="src">겹치는 위기 사례(1개월 지평·밀도 검사 통과): '
                                f'{_esc(" · ".join(badges))}</div>')
             # W-B(조정자 R1): 배지 클릭 → 왜 유사한가 — 원인→경로→가격 실측→유사점/차이점
             for b in badges:
-                narr = case_narrative_lines(b)
+                narr = case_narrative_lines(badge_name(b))
                 if narr:
                     items = "".join(f"<li>{_esc(t)}</li>" for t in narr)
                     badge_parts.append(
@@ -877,12 +901,12 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
 def _snapshot_specs() -> list[dict]:
     return [
         {"label": "대두유 선물 종가(시카고)", "codes": ["CBOT_BO_CLOSE"], "src": "시카고 거래소 정산가", "fmt": "{:,.2f}"},
-        {"label": "팜유(말레이시아 선물)", "codes": ["TE_PALM_OIL", "CPO"], "src": "트레이딩이코노믹스", "fmt": "{:,.0f}"},
+        {"label": "팜유(말레이시아 선물)", "codes": ["TE_PALM_OIL", "CPO_USD_MT", "CPO"], "src": "트레이딩이코노믹스", "fmt": "{:,.0f}"},
         {"label": "BDI 해상운임지수", "codes": ["TE_BDI", "BDI"], "src": "발틱 거래소", "fmt": "{:,.0f}"},
-        {"label": "브라질 헤알 환율", "codes": ["DEXBZUS"], "src": "미 연준 FRED", "fmt": "{:.2f}"},
+        {"label": "브라질 헤알 환율", "codes": ["DEXBZUS", "FX_BRL_USD"], "src": "미 연준 FRED·업로드", "fmt": "{:.2f}"},
         {"label": "원/달러 환율", "codes": ["DEXKOUS", "KRW_USD"], "src": "미 연준 FRED·한국은행", "fmt": "{:,.0f}"},
         {"label": "VIX 변동성 지수", "codes": ["VIXCLS"], "src": "시카고옵션거래소", "fmt": "{:.1f}"},
-        {"label": "엘니뇨 지수(ONI)", "codes": ["ONI", "ENSO_ONI"], "src": "미 해양대기청", "fmt": "{:+.2f}",
+        {"label": "엘니뇨 지수(ONI)", "codes": ["ENSO_ONI", "ONI"], "src": "미 해양대기청", "fmt": "{:+.2f}",
          "monthly": True},
         # D-051·A-229: 대두박(ZM)·대두(ZS) 반입(9/1~) 후 산출 — 그 전까지 예정 표기
         {"label": "압착 마진(대두 가공 채산성)", "codes": ["BOARD_CRUSH_MARGIN"],
@@ -979,9 +1003,14 @@ def build_daily_brief(
     normal_n = len(alerts) - len(breach) - len(watch)
 
     # 데이터 적시성 (status_df 신선도 플래그)
+    # A-267: 적시성은 내용 기준 3분류 — ✅ 적시 · ⏳ 주기 내(월간·연간 정상 지연) · 🚨 기한 초과 · ❌ 미수집
     fresh_total = len(status_df) if not status_df.empty else 0
-    fresh_ok = int(status_df["신선도"].astype(str).str.contains("✅").sum()) \
-        if (not status_df.empty and "신선도" in status_df.columns) else 0
+    _fl = status_df["신선도"].astype(str) if (not status_df.empty and "신선도" in status_df.columns) else pd.Series(dtype=str)
+    fresh_ok = int(_fl.str.contains("✅").sum())
+    fresh_cycle = int(_fl.str.contains("⏳").sum())
+    fresh_over = int(_fl.str.contains("🚨").sum())
+    fresh_missing = int(_fl.str.contains("❌").sum())
+    fresh_timely = fresh_ok + fresh_cycle
 
     # ── KPI 블록 ──
     kpi_cards = []
@@ -1014,11 +1043,11 @@ def build_daily_brief(
       <div class="foot">기준 초과 {len(breach)} · 관찰 {len(watch)} · 정상 {normal_n}</div></div>""")
     kpi_cards.append(f"""
     <div class="card kpi"><div class="lbl">데이터 적시성</div>
-      <div class="val num">{fresh_ok}<span class="unit">/{fresh_total} 항목</span></div>
-      <div class="chg flat">{('<span class="pill ok">수집 정상</span>'
-                              if fresh_total and fresh_ok >= fresh_total * 0.8
-                              else '<span class="pill warn">지연 확인 필요</span>')}</div>
-      <div class="foot">신선도 ✅ 비율 기준 (월별 지표의 정기 지연 포함)</div></div>""")
+      <div class="val num">{fresh_timely}<span class="unit">/{fresh_total} 항목</span></div>
+      <div class="chg flat">{('<span class="pill ok">주기 내 수집</span>'
+                              if fresh_total and fresh_over == 0 and fresh_missing == 0
+                              else '<span class="pill warn">확인 필요</span>')}</div>
+      <div class="foot">적시 {fresh_ok} · 주기 내(월간·연간 정상 지연) {fresh_cycle} · 기한 초과 {fresh_over} · 미수집 {fresh_missing}</div></div>""")
 
     # ── 한눈 요약 4단 문장 (규칙 기반) ──
     if kpi and kpi.wk_pct is not None:
@@ -1044,13 +1073,34 @@ def build_daily_brief(
     s_care = (f"금일 기준 초과 {len(breach)}건 — 상세는 '금일 경보' 참조. 조달 결정은 담당자 승인 절차 필수."
               if breach else "금일 기준 초과 없음(검사 완료) — 조달 결정은 담당자 승인 절차 필수.")
     reliability_html = _reliability_block()
+    # A-267: 실행 시각은 UTC로 기록됨 → KST 변환 표기. '05:30 발행' 하드코딩 제거.
+    try:
+        _run_dt = pd.Timestamp(run_ts)
+        _run_dt = _run_dt.tz_localize("UTC") if _run_dt.tzinfo is None else _run_dt
+        _kst = _run_dt.tz_convert("Asia/Seoul")
+        run_kst_txt, run_kst_hm = _kst.strftime("%Y-%m-%d"), _kst.strftime("%H:%M")
+    except Exception:                                         # noqa: BLE001
+        run_kst_txt, run_kst_hm = str(run_ts)[:10], "—"
+    basis_gap_txt = ""
+    if kpi:
+        try:
+            _gap = (pd.Timestamp(run_kst_txt).date() - kpi.last_date).days
+            if _gap >= 2:
+                _wk = "주말 휴장" if pd.Timestamp(kpi.last_date).weekday() == 4 else "휴장·미정산일"
+                basis_gap_txt = f" · 발행일과 {_gap}일 차이는 {_wk} 때문 — 다음 정산가는 다음 발행에 반영"
+        except Exception:                                     # noqa: BLE001
+            basis_gap_txt = ""
     summary_top = _brief_box([("현황", s_now), ("요인", s_factor),
                               ("전망", s_outlook), ("유의", s_care)])
 
     # ── 핵심 변인 Top 5 ──
     drv_rows = []
     top5 = importance_df.head(5)
-    max_abs = float(top5["LASSO_계수"].abs().max()) if not top5.empty else 0.0
+    ranking_basis = str(getattr(importance_df, "attrs", {}).get("ranking_basis", "elastic_net"))
+    if not top5.empty and ranking_basis == "elastic_net" and float(top5["LASSO_계수"].abs().max()) <= 1e-12:
+        ranking_basis = "pearson_fallback"                     # attrs 유실 대비 2중 판정
+    max_abs = (float(top5["피어슨_r"].abs().max()) if ranking_basis == "pearson_fallback"
+               else float(top5["LASSO_계수"].abs().max())) if not top5.empty else 0.0
     for i, (_, row) in enumerate(top5.iterrows(), start=1):
         code = str(row["변수"])
         label = _label_ko(code)
@@ -1059,7 +1109,8 @@ def build_daily_brief(
         direction = ('<span class="dir up">상방 ▲</span>' if isinstance(r, float) and r > 0
                      else ('<span class="dir down">하방 ▼</span>' if isinstance(r, float) and r < 0
                            else ""))
-        width = int(abs(coef) / max_abs * 100) if (max_abs and isinstance(coef, float)) else 10
+        _mag = abs(r) if (ranking_basis == "pearson_fallback" and isinstance(r, float)) else (abs(coef) if isinstance(coef, float) else 0.0)
+        width = int(_mag / max_abs * 100) if max_abs else 10
         arts = _match_articles(code, signals)
         if arts:
             a0 = arts[0]
@@ -1076,6 +1127,9 @@ def build_daily_brief(
         <div class="barrow"><div class="bar" style="width:{max(width, 8)}%"></div>
           <span class="shap num">기여 {coef:+.4f} · 상관 {r:+.3f}</span></div>
         {news}</div></div>""")
+    drivers_cap = ("통계 선별에서 유의한 변인 없음 — 상관 기준 참고 순위 · 별점 = 최근 기사 연관 매핑 · 제목 클릭 시 원문"
+                   if ranking_basis == "pearson_fallback"
+                   else "별점 = 최근 기사와 변인의 연관 매핑 (★~★★★) · 제목 클릭 시 원문")
     drivers_html = ("".join(drv_rows) if drv_rows
                     else '<p class="cap">변인 중요도 산출 결과가 없습니다 — 미수집.</p>')
 
@@ -1266,8 +1320,8 @@ def build_daily_brief(
 <header>
   <div class="masthead"><h1>Nexus 일일 브리프</h1>
     <div class="sub">대두유 조달 신호 데스크 · 핵심 변인과 <b>과거 비슷한 시기의 실제 흐름</b> — <b>시범판</b></div></div>
-  <div class="dateblock"><strong>{run_ts[:10]}</strong>
-    한국시간 05:30 발행 · 데이터 기준일 {kpi.last_date if kpi else "미수집"} (시카고 시장 마감)</div>
+  <div class="dateblock"><strong>{run_kst_txt}</strong>
+    한국시간 {run_kst_hm} 발행 · 데이터 기준일 {kpi.last_date if kpi else "미수집"} (시카고 직전 정산 세션){basis_gap_txt}</div>
 </header>
 <div class="trust">
   <span class="sig">✔ 자동 점검 통과</span>
@@ -1294,7 +1348,7 @@ def build_daily_brief(
     {rng_fig}{inflection_html}{mech}
   </div>
   <div class="card drivers"><h3>핵심 변인 5개</h3>
-    <div class="cap">별점 = 최근 기사와 변인의 연관 매핑 (★~★★★) · 제목 클릭 시 원문</div>
+    <div class="cap">{drivers_cap}</div>
     {drivers_html}</div>
 </div></section>
 

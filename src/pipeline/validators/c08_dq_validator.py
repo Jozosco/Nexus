@@ -50,6 +50,8 @@ EXPECTED_ARTIFACTS: list[tuple[str, bool]] = [
     ("nasa_power_agroclimatology_historical", True),
     ("ice_monthly_volumes", True),
     ("unstructured_signals_historical", True),
+    ("fx_brl_usd_historical", True),      # A-266: 승인자 업로드(BRL/USD 15개년) — readiness 재구성
+    ("enso_oni_historical", True),        # A-266: 승인자 업로드(ONI 1950~) — readiness 재구성
 ]
 STALE_BDAYS = 5
 DQ_THRESHOLD = 0.70  # PASS 기준 (0.0~1.0)
@@ -71,6 +73,8 @@ REQUIRED_COLUMNS: dict[str, list[str]] = {
     "crop_data":            ["price_date"],
     "climate_data":         ["price_date", "indicator_code", "value"],
     "climate_forecast":     ["price_date", "valid_date", "lead_days", "indicator_code", "value"],
+    "fx_brl_usd_historical": ["price_date", "indicator_code", "value"],
+    "enso_oni_historical":   ["price_date", "indicator_code", "value"],
     "geopolitical_indices": ["price_date", "indicator_code", "value"],
     "production_data":      ["price_date"],
     "commodity_data":       ["price_date"],

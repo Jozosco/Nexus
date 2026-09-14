@@ -1,0 +1,25 @@
+dataset: enso_oni_historical
+source_connector: scripts/ingest_enso_oni_xlsx.py (승인자 업로드 xlsx → 월별 parquet, 2026-09-14 · A-266)
+output_path: data/raw/enso_oni_historical.parquet
+description: "ENSO ONI(Oceanic Niño Index) 1950-01~2026-07 월별 — NOAA PSL, Niño3.4 SST 5°N–5°S·170°W–120°W"
+note: >
+  코드 ENSO_ONI — API 수집 계열(NOAA CPC oni.ascii.txt → 코드 ONI, 2017~)과 분리한다. 두 계열은 기준기간·산출
+  방식이 달라 값이 0.05~0.1°C 차이 날 수 있는 별도 vintage이며 같은 코드에 섞으면 마트 (지표, event_time)
+  값충돌 하드 실패(D-033). 준비도·유사 시기·신뢰도·브리프는 ENSO_ONI를 우선 후보로 본다. 업로드본은 재산출 시
+  전량 재적재(vintage 단일)라 as-of 규칙 revises=False(개정 미보존 필터에 걸리지 않음 — A-270).
+columns:
+  - {name: price_date, dtype: datetime64[ns], nullable: false, description: "해당 월 1일"}
+  - {name: indicator_code, dtype: object, nullable: false, description: "ENSO_ONI"}
+  - {name: value, dtype: float64, nullable: false, description: "°C anomaly (±5 물리 가드)"}
+  - {name: unit, dtype: object, nullable: false, description: "°C anomaly"}
+  - {name: enso_phase, dtype: object, nullable: false, description: "El Niño(≥0.5) | La Niña(≤−0.5) | Neutral"}
+  - {name: region, dtype: object, nullable: false, description: "Niño3.4 (5N-5S, 170W-120W)"}
+  - {name: source_name, dtype: object, nullable: false, description: "NOAA_PSL_upload"}
+  - {name: note, dtype: object, nullable: true, description: "설명"}
+  - {name: ingested_at, dtype: "datetime64[ns, UTC]", nullable: false, description: "파서 실행 시각"}
+  - {name: event_time, dtype: datetime64[ns], nullable: false, description: "해당 월 1일"}
+  - {name: period_end, dtype: datetime64[ns], nullable: true, description: "해당 월 말"}
+  - {name: release_time, dtype: datetime64[ns], nullable: true, description: "익월 10일"}
+  - {name: available_at, dtype: datetime64[ns], nullable: false, description: "익월 10일(수집 시점 캡)"}
+  - {name: source_vintage, dtype: object, nullable: true, description: "null"}
+  - {name: vintage_known, dtype: bool, nullable: false, description: "n/a 규칙"}

@@ -149,6 +149,10 @@ RELEASE_RULES: dict[str, ReleaseRule] = {
     # ── FRED 계열: 시리즈별로 지연이 다르다 ────────────────────────────────
     "DEX":       ReleaseRule("immediate", lag_days=1,
                              note="FRED 일별 환율 — 익영업일 공개. T+2 결제 규약은 별개(M-002)"),
+    # A-266(2026-09-14): 승인자 업로드 15개년 환율(투자 포털 원본, BRL per USD로 역수 통일).
+    #   현물 환율은 개정이 없으므로 revises=False — 개정 이력 미보존 필터(D-034)에 걸리지 않는다.
+    "FX_BRL_":   ReleaseRule("immediate", lag_days=1, revises=False,
+                             note="업로드 BRL/USD 일별 — 당일 확정·익영업일 공개(FRED와 동일 규약)"),
     "FEDFUNDS":  ReleaseRule("monthly_on_day", day=8,
                              note="월평균 실효연방기금금리 — H.15 익월 초 16:15 ET. "
                                   "보수적으로 익월 8일(월말+5영업일)"),
@@ -190,6 +194,10 @@ RELEASE_RULES: dict[str, ReleaseRule] = {
     # ── 기후: 재분석 자료는 지연이 본질 ────────────────────────────────────
     "ONI":       ReleaseRule("monthly_on_day", day=10, revises=True,
                              note="NOAA CPC ONI — 익월 초 갱신. 3개월 이동평균이라 후속 개정 있음"),
+    # A-266: 승인자 업로드 PSL ONI 1950~(코드 분리). 업로드본은 재산출 시 전량 재적재(vintage 단일)라
+    #   revises=False — 개정 이력 미보존 필터에 걸려 분석·유사 시기에서 제외되던 결함(A-270) 회피.
+    "ENSO_ONI":  ReleaseRule("monthly_on_day", day=10, revises=False,
+                             note="NOAA PSL ONI 업로드본(2026-07 vintage) — 익월 10일 가용 가정"),
     "temperature_2m":  ReleaseRule("lag_days", lag_days=6,
                                    note="ERA5-Land 재분석 — 통상 5일 지연. 보수적 6일"),
     "precipitation_":  ReleaseRule("lag_days", lag_days=6, note="동일(ERA5-Land)"),

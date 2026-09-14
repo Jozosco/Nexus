@@ -1,0 +1,32 @@
+# BRL/USD 거래량 대리(CME 6L 선물) 채움 — 원샷 (2026-09-14 · A-266)
+# 발화: 이 파일 push(A-046 패턴) 또는 수동. yfinance는 샌드박스 프록시 차단이라 Actions에서만 실행.
+name: "FX Volume Proxy (BRL/USD ← CME 6L)"
+on:
+  push:
+    paths: [".github/workflows/fx_volume_proxy.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas pyarrow openpyxl yfinance curl_cffi
+      - name: Parse upload + fill proxy volume
+        run: |
+          python scripts/ingest_fx_brl_usd_xlsx.py
+          python scripts/fill_fx_volume_proxy.py
+      - name: Commit companion xlsx + report
+        run: |
+          git config user.name "nexus-daily-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add "data/raw/15yrs Dataset_BRL_USD Exchange Rate_volume_filled.xlsx" reports/market/fx_volume_proxy_*.md 2>/dev/null || true
+          if git diff --cached --quiet; then echo "무변경"; exit 0; fi
+          git commit -m "data: BRL/USD 거래량 대리 열(CME 6L 선물) 동반 파일 + 커버리지 보고 ($(date -u +%F)) [A-266]"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main

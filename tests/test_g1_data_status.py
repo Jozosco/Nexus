@@ -44,7 +44,7 @@ def test_row_from_tmp_csv(signals_csv: Path) -> None:
     assert row["행수"] == 3
     assert row["날짜범위"] == "2026-09-11 ~ 2026-09-12"
     assert row["무결성"].startswith("✅")
-    assert row["신선도"] == "✅ OK"
+    assert row["신선도"].startswith("✅")   # A-267: 내용 기준 적시성 라벨
 
 
 def test_missing_file_is_honest(tmp_path: Path) -> None:

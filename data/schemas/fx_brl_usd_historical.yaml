@@ -1,0 +1,31 @@
+dataset: fx_brl_usd_historical
+source_connector: scripts/ingest_fx_brl_usd_xlsx.py (승인자 업로드 xlsx → 롱포맷, 2026-09-14 · A-266)
+output_path: data/raw/fx_brl_usd_historical.parquet
+description: "BRL/USD 환율 15개년 일별(2010-01~현재) — 투자 포털 원본 업로드. 값은 BRL per USD(FRED DEXBZUS 방향)로 역수 통일"
+note: >
+  원본 파일 값은 USD per BRL(0.19~0.57)이며 파서가 역수를 취한다(고·저가는 역수 시 자리 교환). 원본 방향 값은
+  fx_usd_per_brl 열에 보존. 휴일 이월 행(주말·OHLC 동일)은 관측이 아니므로 제거. 거래량(volume)은 원본 'Vol.'
+  (투자 포털 자사 피드 틱 집계, 2019-01~2023-01만 존재)이며 다른 기간은 같은 정의로 복원 불가(DATA GAP).
+  CME 6L 선물 거래량 대리는 scripts/fill_fx_volume_proxy.py가 volume_proxy_cme_6l 열에 채운다(정의 상이 —
+  NOT COMPARABLE). as-of: RELEASE_RULES 'FX_BRL_' immediate·lag 1일·revises False.
+columns:
+  - {name: price_date, dtype: datetime64[ns], nullable: false, description: "거래일"}
+  - {name: indicator_code, dtype: object, nullable: false, description: "FX_BRL_USD"}
+  - {name: value, dtype: float64, nullable: false, description: "종가 BRL per USD (= 1 / 원본 Price)"}
+  - {name: open, dtype: float64, nullable: true, description: "시가(역수)"}
+  - {name: high, dtype: float64, nullable: true, description: "고가(역수 — 원본 Low의 역수)"}
+  - {name: low, dtype: float64, nullable: true, description: "저가(역수 — 원본 High의 역수)"}
+  - {name: fx_usd_per_brl, dtype: float64, nullable: false, description: "원본 방향 값 USD per BRL"}
+  - {name: volume, dtype: float64, nullable: true, description: "원본 Vol.(K→×1,000) — 2019-01~2023-01만"}
+  - {name: volume_source, dtype: object, nullable: true, description: "investing.com | null"}
+  - {name: volume_proxy_cme_6l, dtype: float64, nullable: true, description: "CME BRL/USD 선물(6L) 일별 거래량 대리(별도 스크립트) — 정의 상이"}
+  - {name: unit, dtype: object, nullable: false, description: "BRL/USD"}
+  - {name: source_name, dtype: object, nullable: false, description: "Investing.com_upload"}
+  - {name: note, dtype: object, nullable: true, description: "설명"}
+  - {name: ingested_at, dtype: "datetime64[ns, UTC]", nullable: false, description: "파서 실행 시각"}
+  - {name: event_time, dtype: datetime64[ns], nullable: false, description: "거래일"}
+  - {name: period_end, dtype: datetime64[ns], nullable: true, description: "거래일"}
+  - {name: release_time, dtype: datetime64[ns], nullable: true, description: "거래일"}
+  - {name: available_at, dtype: datetime64[ns], nullable: false, description: "거래일 + 1일"}
+  - {name: source_vintage, dtype: object, nullable: true, description: "null(개정 없음)"}
+  - {name: vintage_known, dtype: bool, nullable: false, description: "n/a 규칙 — 오염 표기 아님"}

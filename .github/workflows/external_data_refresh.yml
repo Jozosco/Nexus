@@ -767,6 +767,8 @@ jobs:
           python scripts/ingest_ice_volumes.py
           python scripts/ingest_nasa_power_xlsx.py
           python scripts/ingest_customs_gw_uploads.py   # A-247: 관세청 GW 업로드본 172파일 → 롱포맷(일별 편입)
+          python scripts/ingest_fx_brl_usd_xlsx.py       # A-266: BRL/USD 15개년 업로드(준비도 ⑤)
+          python scripts/ingest_enso_oni_xlsx.py         # A-266: ENSO ONI 1950~ 업로드(준비도 ⑥)
       - name: Run model readiness gate
         run: python scripts/data_readiness.py
       - name: Build and independently verify feature mart
@@ -785,6 +787,17 @@ jobs:
             data/gold/feature_mart.parquet
             data/gold/feature_contract.yaml
             data/raw/te_commodities_historical.parquet   # A-258: TE 수동본(BDI 9개년)을 G1 잡에 전달 — 없으면 API BDI(2017~) 폴백
+            # A-267(2026-09-14): 수동 파케이 전 종을 G1 잡에 전달 — 브리프 '데이터 적시성 11/23'의 실체는
+            #   미전달 10종이 '❌ 데이터 없음'으로 집계된 것(신선도 문제 아님)
+            data/raw/wasde_historical.parquet
+            data/raw/psd_historical.parquet
+            data/raw/gats_quantity_historical.parquet
+            data/raw/gats_value_historical.parquet
+            data/raw/ice_monthly_volumes*.parquet
+            data/raw/nasa_power_agroclimatology_historical.parquet
+            data/raw/customs_gw_uploads_historical.parquet
+            data/raw/fx_brl_usd_historical.parquet
+            data/raw/enso_oni_historical.parquet
           retention-days: 30
           if-no-files-found: error
 
@@ -831,6 +844,16 @@ jobs:
             mv "$te_src" "data/raw/te_commodities_historical.parquet"
             echo "복원: te_commodities_historical.parquet ($te_src)"
           fi
+          # A-267: Readiness가 재구성한 수동 파케이 전 종 복원(merge 다운로드로 data/raw/data/raw/에 착지)
+          for f in wasde_historical psd_historical gats_quantity_historical gats_value_historical \
+                   nasa_power_agroclimatology_historical customs_gw_uploads_historical \
+                   fx_brl_usd_historical enso_oni_historical; do
+            src=$(find data/raw -name "$f.parquet" -type f -not -path "data/raw/$f.parquet" | head -n 1)
+            if [ -n "$src" ]; then mv "$src" "data/raw/$f.parquet"; echo "복원: $f.parquet"; fi
+          done
+          for src in $(find data/raw -mindepth 2 -name "ice_monthly_volumes*.parquet" -type f); do
+            mv "$src" "data/raw/$(basename "$src")"; echo "복원: $(basename "$src")"
+          done
           if [ ! -f data/raw/te_commodities_historical.parquet ]; then
             echo "::warning::TE 수동본 parquet 미착지 — G1 BDI 경보는 API 계열 폴백(A-258)"
           fi

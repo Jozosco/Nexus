@@ -371,53 +371,34 @@ THRESHOLD_RATIONALE: list[dict] = [
 
 # ── LASSO 계수 진단 메시지 ────────────────────────────────────────────────────
 LASSO_ZERO_DIAGNOSIS: list[dict] = [
+    # A-268(2026-09-14) 현행화 — 구 진단 3종(수집 7일·LassoCV 폴드·ffill)은 마트 기반 현행 파이프라인에 없는 원인이었다.
     {
-        "cause_ko": "관측값 부족 (Phase A 초기)",
-        "cause_en": "Insufficient observations (Phase A early stage)",
-        "detail_ko": (
-            "LASSO는 최소 30~50개 관측치(거래일)가 있어야 통계적으로 유의미한 계수를 추정할 수 있음. "
-            "수집 7일 → 일간 정렬 후 결측치 제거 시 실제 유효 행 수가 3~5개에 불과. "
-            "LassoCV의 CV 폴드 수가 관측치 절반으로 제한되어 정규화 경로 전체가 α→∞ 방향으로 수렴 → 전 계수 0."
-        ),
-        "detail_en": (
-            "LASSO requires 30–50+ observations for statistically meaningful coefficient estimation. "
-            "With 7 days of data, after daily alignment and dropna, effective rows drop to 3–5. "
-            "LassoCV folds are capped at len(y)//2, causing the regularization path to converge toward α→∞ → all coefficients zeroed."
-        ),
-        "solution_ko": "30일+ 데이터 누적 후 재실행. 현재는 피어슨 상관계수(r)가 더 신뢰할 수 있는 중요도 지표.",
-        "solution_en": "Re-run after 30+ days of data accumulation. Pearson r is currently more reliable as an importance indicator.",
+        "cause_ko": "규제 강도 격자 하한이 타깃 척도에 비해 큼",
+        "cause_en": "Regularisation grid floor too strong for the target scale",
+        "detail_ko": ("타깃(20거래일 로그수익률, σ≈0.06)에 표준화 피처를 회귀할 때 α 하한 0.001은 절편 모형으로 수렴해 "
+                      "전 계수가 정확히 0이 됨. 이때 |계수| 정렬은 동점 → 마트 컬럼 알파벳 순이 '핵심 변인'으로 노출됨."),
+        "detail_en": ("With standardised features and a 20-day log-return target (σ≈0.06), an alpha floor of 0.001 "
+                      "collapses to the intercept-only model; ties then surface alphabetically-first columns."),
+        "solution_ko": "α 격자 하한 1e-5로 확장 + 정렬 키를 원시 |계수|→|피어슨 r|로. 전 계수 0이면 '상관 기준 참고 순위'로 명시 강등.",
+        "solution_en": "Extend alpha floor to 1e-5; sort by raw |coef| then |r|; when all zero, label the ranking as a Pearson fallback.",
     },
     {
-        "cause_ko": "다중공선성 (FX 변수 간)",
-        "cause_en": "Multicollinearity among FX variables",
-        "detail_ko": (
-            "DEXBZUS·DEXCHUS·DEXMAUS·USDKRW는 모두 달러 대비 환율 → 높은 상호 상관(Pearson r >0.7 빈번). "
-            "LASSO는 공선성 그룹에서 하나만 선택 → 나머지를 0으로 강제 설정. "
-            "그룹 내 어느 변수가 선택될지는 데이터에 따라 다름 — 해석에 주의."
-        ),
-        "detail_en": (
-            "DEXBZUS/DEXCHUS/DEXMAUS/USDKRW are all USD-denominated → high mutual correlation (Pearson r >0.7 common). "
-            "LASSO selects one from a collinear group and zeros the rest. "
-            "Which variable is selected depends on the sample — interpret with caution."
-        ),
-        "solution_ko": "Ridge 회귀(L2) 또는 Elastic Net 사용 시 공선성 그룹 모두 비-0 계수 획득 가능. Phase B에서 적용 예정.",
-        "solution_en": "Ridge (L2) or Elastic Net retains non-zero coefficients for all collinear variables. Planned for Phase B.",
+        "cause_ko": "개정 이력 미보존 필터로 경제·수급 변수 대거 제외",
+        "cause_en": "Revision-contamination filter removes most economic/supply features",
+        "detail_ko": ("개정 이력이 없는 소스(GATS·PSD·관세청·CPI·ONI 등 94종)는 point-in-time 보장이 안 돼 모델 경로에서 제외됨. "
+                      "남는 우주는 기후 격자 변수 위주라 동점 시 기후 코드가 앞에 섬."),
+        "detail_en": ("Sources without vintage history (94 codes) are excluded from the model path; the surviving universe "
+                      "is climate-grid dominated, so ties surface climate codes."),
+        "solution_ko": "모델 경로는 제외 유지(누수 방지) · 유사 시기·스냅샷 등 참조 경로는 비필터 레벨 프레임 사용(A-270).",
+        "solution_en": "Keep the exclusion on the model path; use the unfiltered level frame for reference paths.",
     },
     {
-        "cause_ko": "갱신 주기 불일치 (월별 vs 일별)",
-        "cause_en": "Frequency mismatch (monthly vs daily)",
-        "detail_ko": (
-            "VIXCLS·DEXBZUS 등은 일별 갱신이나 ENSO·CPI·WASDE 등은 월별. "
-            "일별 피벗 후 ffill(limit=3)로 3일 이상 결측이 채워지지 않음 → "
-            "dropna() 후 매우 적은 공통 관측치만 남아 LASSO 입력 차원이 수십 → 수 개로 축소."
-        ),
-        "detail_en": (
-            "VIXCLS/DEXBZUS etc. update daily, but ENSO/CPI/WASDE update monthly. "
-            "After daily pivot, ffill(limit=3) fails to fill gaps >3 days → "
-            "after dropna(), shared observation count collapses → LASSO input shrinks dramatically."
-        ),
-        "solution_ko": "월별 집계(resample('ME').last())로 주기 통일 후 상관 분석. 또는 target을 월별 지표로 설정.",
-        "solution_en": "Unify frequency via monthly resampling (resample('ME').last()). Or set target variable to a monthly indicator.",
+        "cause_ko": "다중공선성 (기후 격자·환율 군)",
+        "cause_en": "Multicollinearity (climate grid cells, FX group)",
+        "detail_ko": "인접 산지 격자·달러 대비 환율군은 상호 상관이 높아 규제 회귀가 한두 개만 남기거나 전부 축소함.",
+        "detail_en": "Adjacent grid cells and USD-cross FX are highly collinear; the penalised fit keeps one or shrinks all.",
+        "solution_ko": "Elastic Net(l1_ratio 0.2~0.8) 유지 + 상관·순열 중요도 삼각검증(M-009).",
+        "solution_en": "Keep Elastic Net with l1_ratio 0.2–0.8 and triangulate with correlation/permutation importance.",
     },
 ]
 
@@ -446,6 +427,9 @@ FILE_PATTERNS: dict[str, str] = {
     "unstructured_signals_historical": "비정형 신호 시계열(GAIN·FAO 요약 → 월별 태그·톤)",
     # A-145: 미등록 시 검증 통과 종가가 커버리지 보고에서 조용히 누락(A-054류)
     "cbot_session_close":  "상품가격(교차검증 세션 종가 CBOT_BO_CLOSE)",
+    # A-266(2026-09-14): 승인자 업로드 2종 — 준비도 차단 항목 ⑤·⑥ 해소
+    "fx_brl_usd_historical": "거시경제(BRL/USD 환율 15개년 업로드 — 투자 포털 원본)",
+    "enso_oni_historical":   "기후(ENSO ONI 1950~ 업로드 — NOAA PSL)",
 }
 
 
@@ -564,15 +548,70 @@ def _load_g1_feature_mart(
     return analysis, levels, target_label
 
 
-def _freshness_flag(df: pd.DataFrame, stale_days: int = 5) -> str:
-    """데이터 신선도 판정: STALE / OK."""
-    if "ingested_at" not in df.columns:
+def _label_ko_safe(code: object) -> str:
+    """브리프 한글 라벨 재사용(A-270) — import 실패 시 원문 코드."""
+    try:
+        from src.reporting.daily_brief import _label_ko
+        return _label_ko(code)
+    except Exception:                                         # noqa: BLE001
+        return str(code)
+
+
+# A-267(2026-09-14): 소스 주기별 허용 영업일 — '적시'는 수집 시각이 아니라 **내용(price_date)의 나이**로 판정한다.
+#   구 판정은 ingested_at 기준 5영업일이라 재파싱만 하면 낡은 월간 자료도 ✅였고, 로더의 7일 컷오프 때문에
+#   STALE 분기는 도달 불가였다(죽은 코드). 주기: daily 5 · monthly 45 · annual 400(영업일).
+SOURCE_CADENCE_BDAYS: dict[str, int] = {
+    "economic_indicators": 5, "shipping_indices": 5, "climate_data": 5, "geopolitical_indices": 5,
+    "commodity_data": 5, "cbot_session_close": 5, "geointel": 5, "te_commodities_historical": 5,
+    "fx_brl_usd_historical": 5, "customs_import": 45,
+    "crop_data": 45, "wasde_historical": 45, "psd_historical": 400, "enso_oni_historical": 45,
+    "nasa_power_agroclimatology_historical": 60, "ice_monthly_volumes": 60, "fao_amis_historical": 60,
+    "gain_historical": 60, "unstructured_signals_historical": 60, "gats_quantity_historical": 60,
+    "gats_value_historical": 60, "customs_gw_historical": 60, "customs_gw_uploads": 60,
+    "production_data": 400,
+}
+_DEFAULT_CADENCE_BDAYS = 45
+
+
+def _load_levels_all(mart_path: Path = FEATURE_MART_PATH) -> pd.DataFrame:
+    """A-270: 개정 이력 미보존 필터를 **적용하지 않은** 레벨 프레임(참조 경로 전용 — 모델 투입 금지).
+
+    유사 시기·스냅샷처럼 '과거 관측의 요약'만 하는 경로는 point-in-time 누수 개념이 없으므로
+    ONI·GPR·GATS 등 오염 표기 지표도 그대로 쓴다.
+    """
+    if not mart_path.is_file():
+        return pd.DataFrame()
+    mart = pd.read_parquet(mart_path)
+    cols = [c for c in mart.columns if c.startswith("feat_") and "__" not in c
+            and pd.api.types.is_numeric_dtype(mart[c])]
+    out = mart[cols].copy()
+    out.columns = [c.removeprefix("feat_") for c in out.columns]
+    out.index = pd.DatetimeIndex(pd.to_datetime(mart["price_date"], errors="coerce"))
+    return out
+
+
+def _freshness_flag(df: pd.DataFrame, stale_days: int = 5, cadence_bdays: int | None = None) -> str:
+    """데이터 적시성 판정 — 내용 기준(최신 price_date의 나이 vs 소스 주기 허용치).
+
+    ✅ 적시: 나이 ≤ 5영업일 · ⏳ 주기 내: 5 < 나이 ≤ 허용치(월간·연간 소스의 정상 지연) ·
+    🚨 기한 초과: 허용치 초과 · ⚠️ 수집일 미확인: 날짜 열 없음. `stale_days`는 구 호출부 호환용.
+    """
+    date_col = "price_date" if "price_date" in df.columns else ("ingested_at" if "ingested_at" in df.columns else None)
+    if date_col is None:
         return "⚠️ 수집일 미확인"
-    max_ingest = pd.to_datetime(df["ingested_at"], utc=True, errors="coerce").max()
-    if pd.isna(max_ingest):
+    dates = pd.to_datetime(df[date_col], utc=(date_col == "ingested_at"), errors="coerce").dropna()
+    if dates.empty:
         return "⚠️ 수집일 미확인"
-    biz_days_old = np.busday_count(max_ingest.date(), date.today())
-    return f"🚨 STALE ({biz_days_old}영업일)" if biz_days_old > stale_days else "✅ OK"
+    last = dates.max()
+    last_d = last.date() if hasattr(last, "date") else last
+    today = pd.Timestamp.now(tz="UTC").date()
+    age = int(np.busday_count(min(last_d, today), today))
+    allow = cadence_bdays if cadence_bdays is not None else max(stale_days, _DEFAULT_CADENCE_BDAYS)
+    if age <= stale_days:
+        return f"✅ 적시 ({age}영업일)"
+    if age <= allow:
+        return f"⏳ 주기 내 ({age}영업일 · 허용 {allow})"
+    return f"🚨 기한 초과 ({age}영업일 · 허용 {allow})"
 
 
 def _data_integrity_flag(df: pd.DataFrame) -> str:
@@ -651,7 +690,7 @@ def _daily_signals_status_row(path: Path = DAILY_SIGNALS_CSV) -> dict:
         "행수":         len(raw),
         "날짜범위":     date_range,
         "무결성":       _data_integrity_flag(proxy),
-        "신선도":       _freshness_flag(proxy),
+        "신선도":       _freshness_flag(pd.DataFrame({"price_date": dates}), cadence_bdays=5),
     }
 
 
@@ -681,7 +720,7 @@ def _build_data_status(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
             "행수":         len(df),
             "날짜범위":     date_range,
             "무결성":       _data_integrity_flag(df),
-            "신선도":       _freshness_flag(df),
+            "신선도":       _freshness_flag(df, cadence_bdays=SOURCE_CADENCE_BDAYS.get(key, _DEFAULT_CADENCE_BDAYS)),
         })
     rows.append(_daily_signals_status_row())   # 일별 비정형 신호 CSV(현황 표 전용 1행)
     if skipped_api:
@@ -828,7 +867,8 @@ def _lasso_importance(wide: pd.DataFrame, target_col: str) -> pd.DataFrame:
         search = GridSearchCV(
             pipeline,
             {
-                "model__alpha": [0.001, 0.01, 0.1, 1.0],
+                # A-268: 20일 로그수익률 타깃(σ≈0.06)에서 α 하한 0.001은 전 계수 0을 만들었다 — 하한 확장
+                "model__alpha": [1e-5, 1e-4, 1e-3, 1e-2, 1e-1],
                 "model__l1_ratio": [0.2, 0.5, 0.8],
             },
             cv=splitter,
@@ -854,11 +894,20 @@ def _lasso_importance(wide: pd.DataFrame, target_col: str) -> pd.DataFrame:
             "피어슨_r":  round(r, 3),
             "LASSO_계수": round(coef, 4),
             "포함여부":  "✅ 포함" if abs(coef) > 0.001 else "— 제외",
+            "_abs_coef_raw": abs(float(coef)),
+            "_abs_r": abs(r) if r == r else 0.0,
         })
 
     df_imp = pd.DataFrame(rows)
-    df_imp["abs_coef"] = df_imp["LASSO_계수"].abs()
-    return df_imp.sort_values("abs_coef", ascending=False).drop(columns="abs_coef")
+    # A-268: 정렬은 **원시 |계수| → |피어슨 r|** 2차 키. 구 코드는 반올림된 |계수|만 썼고 전 계수 0이면
+    #   동점 → 마트 컬럼 알파벳 순(ALLSKY_SFC_PAR_TOT_*)이 '핵심 변인 5개'로 매일 그대로 노출됐다.
+    all_zero = bool((df_imp["_abs_coef_raw"] <= 1e-12).all())
+    df_imp = df_imp.sort_values(["_abs_coef_raw", "_abs_r"], ascending=[False, False])
+    df_imp = df_imp.drop(columns=["_abs_coef_raw", "_abs_r"]).reset_index(drop=True)
+    df_imp.attrs["ranking_basis"] = "pearson_fallback" if all_zero else "elastic_net"
+    if all_zero:
+        print("[경고] Elastic Net 전 계수 0 — 변인 순위는 |피어슨 r| 기준 참고 순위로 강등(ranking_basis=pearson_fallback)")
+    return df_imp
 
 
 def _check_granger_conditions(
@@ -1200,10 +1249,22 @@ def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
             "데이터신선도": "❌ parquet 없음",
         })
 
-    # ENSO ONI
-    if "climate_data" in frames:
-        oni_df = frames["climate_data"]
-        oni = oni_df[oni_df["indicator_code"] == "ONI"] if "indicator_code" in oni_df.columns else pd.DataFrame()
+    # ENSO ONI — A-266: 승인자 업로드 PSL 계열(ENSO_ONI, 1950~) 우선 → API CPC 계열(ONI) 폴백.
+    #   두 계열은 vintage가 달라 코드가 분리돼 있다(마트 값충돌 방지). 경보 임계는 동일(|ONI| ≥ 0.5).
+    oni_df = pd.DataFrame(); oni_src = ""
+    if "enso_oni_historical" in frames and "indicator_code" in frames["enso_oni_historical"].columns:
+        cand = frames["enso_oni_historical"]
+        sub = cand[cand["indicator_code"] == "ENSO_ONI"]
+        if not sub.empty:
+            oni_df, oni_src = cand, "업로드(NOAA PSL 1950~)"
+    if oni_df.empty and "climate_data" in frames and "indicator_code" in frames["climate_data"].columns:
+        cand = frames["climate_data"]
+        sub = cand[cand["indicator_code"] == "ONI"]
+        if not sub.empty:
+            oni_df, oni_src = cand, "API(NOAA CPC)"
+    if not oni_df.empty:
+        code = "ENSO_ONI" if oni_src.startswith("업로드") else "ONI"
+        oni = oni_df[oni_df["indicator_code"] == code]
         if not oni.empty and "value" in oni.columns and not oni["value"].dropna().empty:
             # A-179: 무정렬 iloc[-1]은 파일 병합 순서의 마지막 행을 집음 — 날짜 정렬 후 최신값.
             #   물리 범위(±5) 밖이면 임계 판정 대신 데이터 이상으로 표기(단위/열 혼입 의심).
@@ -1222,21 +1283,21 @@ def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
                 "현재값": round(latest_oni, 2),
                 "임계값": "±0.5",
                 "상태": status,
-                "설명": THRESHOLDS["ENSO_ONI"]["label"],
+                "설명": THRESHOLDS["ENSO_ONI"]["label"] + f" · 원천 {oni_src}",
                 "데이터신선도": "✅ 최신" if fresh else "⚠️ STALE (월별 갱신 정상)",
             })
         else:
             alerts.append({
                 "변수": "ENSO_ONI", "현재값": "N/A", "임계값": "±0.5",
                 "상태": "❓ 데이터 미수집",
-                "설명": "ENSO ONI — climate_data 커넥터 수집 실패",
+                "설명": "ENSO ONI — 계열 비어 있음",
                 "데이터신선도": "❌ parquet 없음",
             })
     else:
         alerts.append({
             "변수": "ENSO_ONI", "현재값": "N/A", "임계값": "±0.5",
             "상태": "❓ 데이터 미수집",
-            "설명": "기후 레짐 전환 — climate_data 커넥터 수집 실패",
+            "설명": "기후 레짐 전환 — ENSO ONI 업로드·API 계열 모두 부재",
             "데이터신선도": "❌ parquet 없음",
         })
 
@@ -2287,7 +2348,7 @@ def run(days: int = 7) -> None:
         from src.reporting.daily_brief import build_daily_brief
         brief_html = build_daily_brief(
             frames, importance_df, alerts, status_df, run_ts, run_id, target_label,
-            n_features=wide.shape[1] - 1)
+            n_features=int(sum(1 for c in wide.columns if not str(c).startswith('target_'))))
         brief_path = f"{REPORT_DIR}/g1_daily_brief_{tag}.html"
         with open(brief_path, "w", encoding="utf-8") as fh:
             fh.write(brief_html)
@@ -2311,7 +2372,7 @@ def run(days: int = 7) -> None:
         ]
         for a in breach:
             alert_lines.append(
-                f"| {a['변수']} | {a['현재값']} | {a['임계값']} | {a['설명']} |")
+                f"| {_label_ko_safe(a['변수'])} | {a['현재값']} | {a['임계값']} | {a['설명']} |")
         alert_lines += [
             "",
             "## 상위 기여 변수 (중요도 순위 상위 3)",
@@ -2321,7 +2382,7 @@ def run(days: int = 7) -> None:
         for _, row in importance_df.head(3).iterrows():
             r_val = f"{row.get('피어슨_r'):.3f}" if isinstance(row.get("피어슨_r"), float) else "N/A"
             l_val = f"{row.get('LASSO_계수'):.4f}" if isinstance(row.get("LASSO_계수"), float) else "N/A"
-            alert_lines.append(f"| {row.get('변수', '?')} | {r_val} | {l_val} |")
+            alert_lines.append(f"| {_label_ko_safe(row.get('변수', '?'))} | {r_val} | {l_val} |")
         alert_lines += [
             "",
             "*일별 경보판은 임계값 초과 시에만 발행됨 (3계층 발행 체계 · 2026-08-14 승인)*",

@@ -194,13 +194,38 @@ def dedup_episodes(days: pd.DatetimeIndex, calendar: pd.DatetimeIndex,
     return pd.DatetimeIndex(kept)
 
 
-def case_badges_for(days: pd.DatetimeIndex) -> list[str]:
+MIN_BADGE_EPISODES = 3        # 창 안 에피소드 최소 건수
+BADGE_ENRICHMENT = 1.5         # 창 안 비중이 표본 기준 비중(창 길이/전체 창)의 이 배수 이상일 때만 부여
+
+
+def case_badges_for(days: pd.DatetimeIndex,
+                    sample_index: pd.DatetimeIndex | None = None) -> list[str]:
+    """위기 사례 배지 — A-270: 존재 검사(창 안 1일)에서 **밀도 검사**로 교체.
+
+    구 규칙은 2010~2025에 고르게 퍼진 에피소드면 4사례 창(전체의 ~34%)에 전부 걸려 배지가 정보량 0이었다.
+    신 규칙: 창 안 에피소드 ≥ MIN_BADGE_EPISODES **그리고** 창 안 비중이 창의 표본 비중 × BADGE_ENRICHMENT 이상.
+    반환 형식 '이름 (n회)' — 서사 조회는 `badge_name()`으로 이름만 추출.
+    """
+    if len(days) == 0:
+        return []
     badges = []
+    total = len(days)
+    if sample_index is None or len(sample_index) == 0:
+        sample_index = days
+    span = (sample_index.max() - sample_index.min()).days or 1
     for name, (s, e) in CASE_WINDOWS.items():
         s_ts, e_ts = pd.Timestamp(s), pd.Timestamp(e)
-        if any((d >= s_ts) and (d <= e_ts) for d in days):
-            badges.append(name)
+        inside = int(((days >= s_ts) & (days <= e_ts)).sum())
+        base_share = max((min(e_ts, sample_index.max()) - max(s_ts, sample_index.min())).days, 0) / span
+        share = inside / total
+        if inside >= MIN_BADGE_EPISODES and base_share > 0 and share >= base_share * BADGE_ENRICHMENT:
+            badges.append(f"{name} ({inside}회)")
     return badges
+
+
+def badge_name(badge: str) -> str:
+    """'사례 ③ … (7회)' → '사례 ③ …' (서사 조회 키)."""
+    return badge.rsplit(" (", 1)[0] if badge.endswith("회)") else badge
 
 
 def summarize_forward(analysis: pd.DataFrame, episodes: pd.DatetimeIndex,
@@ -221,14 +246,35 @@ def summarize_forward(analysis: pd.DataFrame, episodes: pd.DatetimeIndex,
             years)
 
 
+def _z90_from_level(level: pd.Series) -> pd.Series:
+    """마트 `__z90` 정의와 동일 — IQR 캡 없는 90일 롤링 표준화(관측≥30)."""
+    v = pd.to_numeric(level, errors="coerce")
+    m = v.rolling(90, min_periods=30).mean()
+    sd = v.rolling(90, min_periods=30).std(ddof=1)
+    return (v - m) / sd
+
+
 def _analogue_for_var(analysis: pd.DataFrame, code: str,
-                      horizons: tuple[int, ...]) -> list[AnalogueResult]:
+                      horizons: tuple[int, ...],
+                      levels_all: pd.DataFrame | None = None) -> list[AnalogueResult]:
     z_col = _resolve_z_column(analysis.columns, code)
     base = code.split("__")[0]
+    if z_col is None and levels_all is not None and not levels_all.empty:
+        # A-270: 모델 경로의 개정 미보존 필터가 ONI·GPR 등을 분석 프레임에서 제거하던 결함 —
+        #   참조 경로는 비필터 레벨에서 z90을 직접 만든다(원시 계열 기준 · 모델 투입 아님).
+        alias = [c for c in _ALERT_Z_ALIASES.get(code, []) + _ALERT_Z_ALIASES.get(base, [])]
+        lvl_candidates = [base] + [c.split("__")[0] for c in alias]
+        lvl = next((c for c in lvl_candidates if c in levels_all.columns), None)
+        if lvl is not None:
+            zc = f"{lvl}__z90"
+            z = _z90_from_level(levels_all[lvl]).reindex(analysis.index)
+            analysis = analysis.copy()
+            analysis[zc] = z
+            z_col = zc
     if z_col is None:
         return [AnalogueResult(base, "?", math.nan, "quantile_slice", h, 0, 0, 0, 0,
                                math.nan, math.nan, math.nan,
-                               guard_note="분석용 파생 지표 없음 — 산출 보류")
+                               guard_note="분석 데이터에 해당 계열 없음 — 산출 보류")
                 for h in horizons]
     out: list[AnalogueResult] = []
     for h in horizons:
@@ -240,7 +286,7 @@ def _analogue_for_var(analysis: pd.DataFrame, code: str,
             if n >= MIN_ANALOGUE_EPISODES:
                 res = AnalogueResult(base, z_col, cur_z, "quantile_slice", h,
                                      int(len(days)), n, n_up, n_down, p10, p50, p90,
-                                     years, case_badges_for(episodes), relax_step=step)
+                                     years, case_badges_for(episodes, analysis.index), relax_step=step)
                 break
         if res is None:
             days, cur_z = find_analogue_days_quantile(analysis[z_col])
@@ -263,10 +309,16 @@ def build_analogue_context(
 
     analysis 미지정 시 mart 로더 사용(실패 시 빈 목록 — 호출측 정직 강등).
     """
+    levels_all: pd.DataFrame | None = None
     if analysis is None:
         try:
-            from src.forecasting.variable_importance_g1 import _load_g1_feature_mart
+            from src.forecasting.variable_importance_g1 import (_load_g1_feature_mart,
+                                                                 _load_levels_all)
             analysis, _levels, _t = _load_g1_feature_mart()
+            try:
+                levels_all = _load_levels_all()
+            except Exception:                                    # noqa: BLE001
+                levels_all = None
         except Exception as e:                                   # noqa: BLE001 — 비치명
             print(f"[정보] 유사국면 — mart 로드 불가(산출 보류): {type(e).__name__}: {e}")
             return []
@@ -281,11 +333,18 @@ def build_analogue_context(
             break
     results: list[AnalogueResult] = []
     for c in codes:
-        results.extend(_analogue_for_var(analysis, c, horizons))
+        results.extend(_analogue_for_var(analysis, c, horizons, levels_all))
     return results
 
 
 _H_LABEL = {5: "약 1주", 20: "약 1개월", 60: "약 3개월"}
+
+
+def representative_badges(rs: list[AnalogueResult]) -> list[str]:
+    """A-270: 지평별 배지를 합집합하지 않고 **20일 지평(대표)**의 배지만 쓴다(없으면 가장 짧은 지평)."""
+    by_h = {r.horizon: r for r in rs}
+    r = by_h.get(20) or (rs[0] if rs else None)
+    return sorted(r.case_badges) if r else []
 
 
 def format_result_line(r: AnalogueResult) -> str:
@@ -312,16 +371,21 @@ def render_analogue_md(results: list[AnalogueResult]) -> list[str]:
         by_var.setdefault(r.var_code, []).append(r)
     for var, rs in by_var.items():
         z_txt = f"{rs[0].current_z:+.1f}" if rs[0].current_z == rs[0].current_z else "?"
-        lines.append(f"### {var} (현재 z {z_txt} · 기준 {rs[0].z_col})")
+        try:
+            from src.reporting.daily_brief import _label_ko
+            var_label = _label_ko(var)
+        except Exception:                                        # noqa: BLE001
+            var_label = var
+        lines.append(f"### {var_label} (현재 편차 {z_txt})")
         for r in sorted(rs, key=lambda x: x.horizon):
             lines.append(f"- {format_result_line(r)}")
-        badges = sorted({b for r in rs for b in r.case_badges})
+        badges = representative_badges(rs)
         if badges:
-            lines.append(f"- 겹치는 위기 사례: {' · '.join(badges)} "
+            lines.append(f"- 겹치는 위기 사례(1개월 지평 기준·밀도 검사 통과): {' · '.join(badges)} "
                          f"(→ `_reference/soybean_oil_historical_crisis_analysis.md` — "
                          f"재평가 기록 병독)")
             for b in badges:
-                narr = case_narrative_lines(b)
+                narr = case_narrative_lines(badge_name(b))
                 if narr:
                     lines.append(f"  - **{b} — 왜 유사한가**")
                     lines.extend(f"    - {t}" for t in narr)
