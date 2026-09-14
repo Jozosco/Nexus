@@ -8,14 +8,15 @@
 
 ## 요약
 
-- 총 검증 기록 **238건** — 판정 산출 177 · 실패(미판정) 61
-- 누적 지적: **[치명] 188건 · [높음] 1915건**
+- 총 검증 기록 **239건** — 판정 산출 178 · 실패(미판정) 61
+- 누적 지적: **[치명] 191건 · [높음] 1941건**
 - ⚠️ 실패 기록은 **그 대상이 검증되지 않았다**는 뜻 — 재검증 대상이다.
 
 ## 실행 이력
 
 | 일자 | 대상 | 상태 | 치명 | 높음 | 판정 요지 | 런 | 전문 |
 |---|---|---|---|---|---|---|---|
+| 2026-09-14 | `git diff HEAD~1` | ⚠️ 지적 | 3 | 26 | [높음] H1 폴드가 설명된 TimeSeriesSplit 구조와 다르며 안정성을 기계적으로 부풀린다. | 34796169698 | [xverify_2026-09-14_347961696…](../../reports/cross_verify/xverify_2026-09-14_34796169698_git_diff_HEAD_1_1.md) |
 | 2026-09-14 | `git diff HEAD~1` | ⚠️ 지적 | 0 | 9 | [높음] `.github/workflows/cross_verify.yml` — “이번 push에서 바뀐 파일” 판정이 실제로는 마지막 커밋만 포함한다. | 34795678963 | [xverify_2026-09-14_347956789…](../../reports/cross_verify/xverify_2026-09-14_34795678963_git_diff_HEAD_1_1.md) |
 | 2026-09-14 | `docs/research_desk/2026-08/glossary_mart_asof_duckdb` | ✅ 무지적 | 0 | 0 | 지적 사항 없음 | 34795678963 | [xverify_2026-09-14_347956789…](../../reports/cross_verify/xverify_2026-09-14_34795678963_docs_research_desk_2026-08_glossary_mart_asof_duckdb_2026_08_1.md) |
 | 2026-09-14 | `docs/research_desk/2026-08/g1_publication_schedule_p` | ⚠️ 지적 | 1 | 25 | [높음] 분석 기간이 15년과 16년으로 상충한다. | 34795678963 | [xverify_2026-09-14_347956789…](../../reports/cross_verify/xverify_2026-09-14_34795678963_docs_research_desk_2026-08_g1_publication_schedule_panel_202_1.md) |
