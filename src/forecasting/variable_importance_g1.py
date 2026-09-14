@@ -2247,6 +2247,18 @@ def run(days: int = 7) -> None:
     if importance_df.empty:
         raise RuntimeError("[오류] G1 변수 중요도가 비어 있습니다. 보고서를 생성하지 않습니다.")
     alerts        = _check_structural_breaks(frames)
+    # A-264: 실발행 경보 원장(P0-1) — 🚨 경보만 append, 실패는 비치명. 실행 폴더에도 사본을 남겨
+    #   E1 잡이 저장소(data/processed)로 옮겨 커밋한다(잡 간 파일 미공유).
+    try:
+        import shutil as _shutil
+        from src.evaluation.g1_reliability import ALERT_LEDGER, append_alert_ledger
+        _added = append_alert_ledger(alerts, run_ts, run_id)
+        if ALERT_LEDGER.is_file():
+            os.makedirs(REPORT_DIR, exist_ok=True)
+            _shutil.copy(ALERT_LEDGER, os.path.join(REPORT_DIR, "g1_alert_ledger.csv"))
+        print(f"[정보] 경보 원장 append {_added}건 → {ALERT_LEDGER}")
+    except Exception as _e:                                   # noqa: BLE001 — 비치명
+        print(f"[경고] 경보 원장 기록 실패(비치명): {type(_e).__name__}: {_e}")
 
     print(f"[C-03] 분석 타깃: {target_label} · 시점 정합 변수 수: {wide.shape[1] - 1}")
     print(f"[C-03] 구조적 단절 임계값 초과: {sum(1 for a in alerts if '🚨' in a.get('상태', ''))}/{len(alerts)}")

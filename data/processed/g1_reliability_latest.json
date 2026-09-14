@@ -1,0 +1,345 @@
+{
+ "generated_at": "2026-09-14T01:30:29+00:00",
+ "mode": "full",
+ "window": [
+  "2010-01-01",
+  "2025-12-31"
+ ],
+ "caption": "본 지표는 과거 관측의 요약과 과정 무결성의 측정이며 향후 전망·확률 주장이 아님. 참고 범위 포함률은 범위 폭 진단일 뿐 확률 밴드 주장이 아니므로 의사결정 근거로 쓰지 않음.",
+ "realtime": {
+  "R1_input_accuracy": {
+   "status": "마지막 확정 실측(2026-08-13 세션 종가 검증 통과)",
+   "source": "V-001",
+   "median_diff_pct": 0.1003,
+   "p99_diff_pct": 1.34,
+   "overlap_days": 3957,
+   "over_2pct_share": 0.0038
+  },
+  "R2_asof_accuracy": {
+   "status": "산출",
+   "n_features": 438,
+   "revision_contaminated": 94,
+   "asof_rule": "모델의 t일 입력 = available_at <= t 인 최근값 (CLAUDE.md §1)",
+   "window": {
+    "start": "2010-01-01",
+    "end": "2025-12-31",
+    "rows": 3822
+   }
+  },
+  "R3_alert_consistency": {
+   "status": "산출",
+   "stamp_date": "2026-09-13",
+   "stamp_alerts": 1,
+   "report_alerts": 1,
+   "consistent": true
+  },
+  "R4_publication_integrity": {
+   "status": "산출",
+   "rows": 16,
+   "from": "2026-08-26",
+   "to": "2026-09-13",
+   "verdicts": {
+    "✅": 7,
+    "⚠️": 7,
+    "🔴": 2
+   },
+   "gate_pass_streak_runs": 5,
+   "contaminated_note": "8/26~9/1 6행은 경보 열 오염(A-245) — 사실 기록 유지"
+  },
+  "R5_collection_channels": {
+   "status": "산출",
+   "rows": 263,
+   "indicators": 23,
+   "from": "2026-08-17",
+   "to": "2026-09-13",
+   "bday_arrival_rate": 0.9,
+   "by_category": {
+    "정책 뉴스": 92,
+    "지정학 이벤트": 88,
+    "전문 매체": 31,
+    "지정학 위험": 29,
+    "GeoIntel 복합": 22,
+    "운임(실시간)": 1
+   },
+   "media_channel_winners": {
+    "Google News": 10,
+    "공식 RSS": 5
+   },
+   "rss_codes": 31
+  },
+  "R6_rule_reverification": [
+   {
+    "유형": "일별 시세(시카고 정산가·환율)",
+    "과거 규칙": "마감(14:20 ET) 후 당일 확정 · 마감 이후 확정 지표는 +1일",
+    "실시간 관측": "브리프 데이터 기준일 2026-09-11 (발행일 전 거래일)",
+    "판정": "정합"
+   },
+   {
+    "유형": "해상운임(BDI)",
+    "과거 규칙": "발틱거래소 13:00 런던 발표 → 당일 즉시",
+    "실시간 관측": "스냅샷 사본 최신 2026-09-09 · 3단 폴백(API→stooq→사본)",
+    "판정": "정합(≤3영업일)"
+   },
+   {
+    "유형": "월간 수급 보고서(WASDE·PSD)",
+    "과거 규칙": "발표일 이후 가용(same_month) · 전망 행은 수집 시점 캡",
+    "실시간 관측": "품질 테스트 available_at ≤ 오늘 통과(#99)",
+    "판정": "정합"
+   },
+   {
+    "유형": "산지 기후(ERA5-Land·예보)",
+    "과거 규칙": "재분석 지연 6일 · 예보는 발행일 키(별도 파일)",
+    "실시간 관측": "예보 분리 반영 후 첫 정기 실행에서 판정",
+    "판정": "판정 대기"
+   },
+   {
+    "유형": "비정형(정책·지정학·매체)",
+    "과거 규칙": "수집 시점 가용 · 마감 후 수집분은 +1일",
+    "실시간 관측": "아카이브 영업일 도달률 0.9",
+    "판정": "정합"
+   }
+  ]
+ },
+ "ledger": {
+  "status": "산출",
+  "rows": 2,
+  "from": "2026-09-09",
+  "to": "2026-09-13",
+  "matured": {
+   "5": 0,
+   "20": 0,
+   "60": 0
+  },
+  "by_variable": {
+   "ENSO_ONI": 2
+  },
+  "note": "성숙 경보 8회 미만은 사후 성적 보류(실발행 원장은 2026-09-14 개설)"
+ },
+ "basis": "진단(부분) — Databento UTC 종가·수동 파케이 26지표",
+ "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv",
+ "historical": {
+  "H1_rank_stability": {
+   "status": "산출",
+   "n_rows": 3822,
+   "n_features": 23,
+   "n_folds": 5,
+   "pearson": {
+    "adjacent_fold_spearman": [
+     0.817,
+     0.838,
+     0.361,
+     0.973
+    ],
+    "mean_spearman": 0.747,
+    "sign_agreement_top": 0.975,
+    "top_last_fold": [
+     "TE_HEATING_OIL",
+     "TE_GASOLINE",
+     "TE_BRENT_CRUDE_OIL",
+     "TE_WTI_CRUDE_OIL",
+     "TE_NAPHTHA",
+     "TE_GSCI",
+     "TE_SOYBEANS",
+     "TE_CRB_INDEX",
+     "TE_ETHANOL",
+     "TE_CONTAINERIZED_FREIGHT_INDEX"
+    ]
+   },
+   "elastic_net": {
+    "status": "미산출(sklearn 부재 — CI에서 산출)"
+   }
+  },
+  "H2_granger_persistence": {
+   "status": "산출",
+   "n_vars": 10,
+   "alpha_bonferroni": 0.005,
+   "significant_full": [
+    "TE_HEATING_OIL",
+    "TE_SOYBEANS"
+   ],
+   "persistence_rate": 1.0,
+   "by_window": {
+    "전체(2010~2025)": [
+     "TE_HEATING_OIL",
+     "TE_SOYBEANS"
+    ],
+    "최근 5년(2021~2025)": [
+     "TE_SOYBEANS"
+    ],
+    "사건 연도 합집합": [
+     "TE_ETHANOL",
+     "TE_HEATING_OIL",
+     "TE_SOYBEANS"
+    ]
+   }
+  },
+  "H3_alert_rule_retro": {
+   "label": "실발행 아님 — 소급 합성",
+   "rule_version": "임계 규칙 v2026-08-25",
+   "unconditional_median_abs": {
+    "5": 0.0206,
+    "20": 0.0432,
+    "60": 0.0758
+   },
+   "rules": {
+    "해상운임(BDI) 90일 편차 > 2σ": {
+     "definition": "IQR 캡·90일 롤링(관측≥30) 표준화 지수 > 2",
+     "breach_days": 338,
+     "breach_share": 0.088,
+     "horizons": {
+      "5": {
+       "episodes": 81,
+       "false_alarm_proxy": 0.494,
+       "median_abs_move": 0.0206,
+       "ratio_vs_unconditional": 1.0,
+       "status": "산출"
+      },
+      "20": {
+       "episodes": 33,
+       "false_alarm_proxy": 0.455,
+       "median_abs_move": 0.047,
+       "ratio_vs_unconditional": 1.09,
+       "status": "산출"
+      },
+      "60": {
+       "episodes": 18,
+       "false_alarm_proxy": 0.389,
+       "median_abs_move": 0.0984,
+       "ratio_vs_unconditional": 1.3,
+       "status": "산출"
+      }
+     },
+     "status": "산출"
+    },
+    "엘니뇨·라니냐 강도 |ONI| ≥ 0.5": {
+     "definition": "절댓값 0.5°C 이상",
+     "status": "미평가(계열 부재)"
+    },
+    "지정학 위험 지수 ≥ 과거 5년 상위 10%": {
+     "definition": "직전 1,260거래일 P90 이상",
+     "status": "미평가(계열 부재)"
+    },
+    "재고사용비율 < 10%": {
+     "definition": "세계 대두유 STU < 10%",
+     "status": "미평가(계열 부재)"
+    },
+    "대두유−팜유 가격 차이 > 175 $/MT": {
+     "definition": "환산 파생 계열 미구축(P0-3) — 미평가",
+     "status": "미평가(계열 부재)"
+    }
+   }
+  },
+  "H4_reference_range": {
+   "label": "범위 폭 진단(확률 밴드 주장 아님)",
+   "nominal_coverage": 0.8,
+   "horizons": {
+    "5": {
+     "n": 3568,
+     "coverage": 0.754,
+     "mean_width_pct": 7.37,
+     "by_slice": {
+      "2012 가뭄": {
+       "n": 252,
+       "coverage": 0.861
+      },
+      "2018 미·중": {
+       "n": 241,
+       "coverage": 0.921
+      },
+      "2020 팬데믹": {
+       "n": 243,
+       "coverage": 0.646
+      },
+      "2022 러·우": {
+       "n": 242,
+       "coverage": 0.517
+      },
+      "2025": {
+       "n": 240,
+       "coverage": 0.783
+      }
+     }
+    },
+    "20": {
+     "n": 3553,
+     "coverage": 0.724,
+     "mean_width_pct": 14.91,
+     "by_slice": {
+      "2012 가뭄": {
+       "n": 252,
+       "coverage": 0.786
+      },
+      "2018 미·중": {
+       "n": 241,
+       "coverage": 0.892
+      },
+      "2020 팬데믹": {
+       "n": 243,
+       "coverage": 0.535
+      },
+      "2022 러·우": {
+       "n": 242,
+       "coverage": 0.405
+      },
+      "2025": {
+       "n": 240,
+       "coverage": 0.733
+      }
+     }
+    },
+    "60": {
+     "n": 3513,
+     "coverage": 0.72,
+     "mean_width_pct": 27.76,
+     "by_slice": {
+      "2012 가뭄": {
+       "n": 252,
+       "coverage": 0.817
+      },
+      "2018 미·중": {
+       "n": 241,
+       "coverage": 0.992
+      },
+      "2020 팬데믹": {
+       "n": 243,
+       "coverage": 0.206
+      },
+      "2022 러·우": {
+       "n": 242,
+       "coverage": 0.459
+      },
+      "2025": {
+       "n": 240,
+       "coverage": 0.825
+      }
+     }
+    }
+   }
+  },
+  "H5_analogue_discrimination": {
+   "horizon": 20,
+   "unconditional_iqr": 0.0866,
+   "vars": {
+    "TE_HEATING_OIL": {
+     "status": "산출",
+     "n": 3788,
+     "mean_conditional_iqr_ratio": 0.988,
+     "median_spread_across_bins": 0.023
+    },
+    "TE_GASOLINE": {
+     "status": "산출",
+     "n": 3788,
+     "mean_conditional_iqr_ratio": 0.994,
+     "median_spread_across_bins": 0.0257
+    },
+    "TE_BRENT_CRUDE_OIL": {
+     "status": "산출",
+     "n": 3793,
+     "mean_conditional_iqr_ratio": 1.005,
+     "median_spread_across_bins": 0.0264
+    }
+   }
+  }
+ },
+ "ledger_matured_now": 0
+}

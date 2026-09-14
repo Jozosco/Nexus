@@ -910,6 +910,17 @@ jobs:
           # 실행별 격리 디렉터리 — 과거 산출물 재발행 차단 (GPT 교차검증 정정)
           G1_REPORT_DIR: reports/pipeline/run_${{ github.run_id }}
         run: python src/forecasting/variable_importance_g1.py 7
+      - name: Run G1 reliability metrics (A-264 — 2단계 검증 지표)
+        # alert 모드는 실시간 R1~R6만(경량), weekly/monthly/full은 과거 H1~H5 포함. 비치명.
+        continue-on-error: true
+        env:
+          G1_PUBLISH_MODE: ${{ steps.pubmode.outputs.mode }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          python -m src.evaluation.g1_reliability \
+            --mode "${{ steps.pubmode.outputs.mode }}" \
+            --report-dir "reports/pipeline/run_${{ github.run_id }}" \
+            --json "reports/pipeline/run_${{ github.run_id }}/g1_reliability_latest.json"
       - name: Append G1 summary to GitHub Step Summary
         run: |
           python - <<'PYEOF'
@@ -950,6 +961,8 @@ jobs:
             reports/pipeline/run_${{ github.run_id }}/g1_variable_importance_*.pdf
             reports/pipeline/run_${{ github.run_id }}/g1_variable_importance_*.md
             reports/pipeline/run_${{ github.run_id }}/g1_alert_*.md
+            reports/pipeline/run_${{ github.run_id }}/g1_alert_ledger.csv
+            reports/pipeline/run_${{ github.run_id }}/g1_reliability_*
           retention-days: ${{ steps.pubmode.outputs.mode == 'monthly' && 90 || 30 }}
           if-no-files-found: ${{ steps.pubmode.outputs.mode == 'alert' && 'ignore' || 'error' }}
 
@@ -1007,6 +1020,11 @@ jobs:
           fi
           a=$(ls -t reports/pipeline/run_${{ github.run_id }}/g1_alert_*.md 2>/dev/null | head -1)
           if [ -n "$a" ]; then cp "$a" reports/pipeline/latest/g1_alert_latest.md; fi
+          # A-264: 경보 원장·신뢰도 지표 JSON을 저장소 경로로 승격(브리프 신뢰도 블록 입력)
+          r="reports/pipeline/run_${{ github.run_id }}"
+          [ -f "$r/g1_alert_ledger.csv" ] && cp "$r/g1_alert_ledger.csv" data/processed/g1_alert_ledger.csv && echo "경보 원장 착지"
+          [ -f "$r/g1_reliability_latest.json" ] && cp "$r/g1_reliability_latest.json" data/processed/g1_reliability_latest.json && echo "신뢰도 지표 착지"
+          true
       - name: Build signed daily stamp
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -1017,7 +1035,7 @@ jobs:
         run: |
           git config user.name "nexus-daily-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/processed/signed_daily_stamps.csv reports/pipeline/latest 2>/dev/null || true
+          git add data/processed/signed_daily_stamps.csv data/processed/g1_alert_ledger.csv data/processed/g1_reliability_latest.json reports/pipeline/latest 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "스탬프·브리프 무변경 — 커밋 생략"
             exit 0

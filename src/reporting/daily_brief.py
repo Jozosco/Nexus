@@ -891,6 +891,71 @@ def _snapshot_specs() -> list[dict]:
     ]
 
 
+_RELIABILITY_JSON = Path("data/processed/g1_reliability_latest.json")
+
+
+def _reliability_block() -> str:
+    """보고서 신뢰도 블록(A-264) — 최신 신뢰도 지표 JSON을 읽어 일별(①②⑥)·월별(③④⑤) 항목을 표시.
+
+    결측은 '미산출' 정직 강등. 수치는 과정 무결성·과거 관측 요약이며 확률·전망 주장이 아님(A-191).
+    """
+    try:
+        import json as _json
+        res = _json.loads(_RELIABILITY_JSON.read_text(encoding="utf-8"))
+    except Exception:                                         # noqa: BLE001
+        return ('<div class="card"><h3>보고서 신뢰도</h3><div class="cap">신뢰도 지표 미산출 — '
+                '첫 산출 후 표시됨</div></div>')
+    R = res.get("realtime", {})
+    H = res.get("historical", {}) or {}
+    items: list[tuple[str, str]] = []
+    r1 = R.get("R1_input_accuracy", {})
+    if r1.get("median_diff_pct") is not None:
+        items.append(("입력 정확도", f"기준 가격 교차검증 오차 중앙값 {r1['median_diff_pct']}% · 상위 1% {r1.get('p99_diff_pct')}%"))
+    r2 = R.get("R2_asof_accuracy", {})
+    if r2.get("status") == "산출":
+        items.append(("시점 정합", f"분석 변수 {r2['n_features']}개 중 개정 이력 미보존 {r2['revision_contaminated']}개는 분석에서 제외"))
+    r3 = R.get("R3_alert_consistency", {})
+    if r3.get("status") == "산출":
+        items.append(("경보 정합", f"경보판 {r3.get('report_alerts')}건 = 서명 기록 {r3.get('stamp_alerts')}건 "
+                                 f"({'일치' if r3.get('consistent') else '불일치'})"))
+    r4 = R.get("R4_publication_integrity", {})
+    if r4.get("status") == "산출":
+        items.append(("발행 무결성", f"자동 점검 연속 통과 {r4.get('gate_pass_streak_runs')}회 · 서명 기록 {r4.get('rows')}일"))
+    r5 = R.get("R5_collection_channels", {})
+    if r5.get("status") == "산출":
+        items.append(("수집 도달률", f"비정형 신호 영업일 도달률 {r5['bday_arrival_rate']*100:.0f}% · {r5['indicators']}지표"))
+    monthly: list[tuple[str, str]] = []
+    h1 = H.get("H1_rank_stability", {})
+    if h1.get("status") == "산출":
+        monthly.append(("변인 순위 안정성", f"표본을 나눠 다시 세도 순위 상관 {h1['pearson']['mean_spearman']} · 부호 일치 {h1['pearson']['sign_agreement_top']*100:.0f}%"))
+    h4 = H.get("H4_reference_range", {})
+    if h4.get("horizons"):
+        r60 = h4["horizons"].get("60", {})
+        if r60.get("coverage") is not None:
+            monthly.append(("참고 범위 폭 진단", f"과거 60거래일 참고 범위가 실제 변동을 담은 비율 {r60['coverage']*100:.0f}% (명목 80% · 범위 폭 진단일 뿐 확률 주장 아님)"))
+    h3 = H.get("H3_alert_rule_retro", {})
+    if h3.get("rules"):
+        for name, rr in h3["rules"].items():
+            hh = (rr.get("horizons") or {}).get("20", {})
+            if hh.get("status") == "산출":
+                monthly.append(("경보 규칙 소급 성적", f"{name}: 과거 소급 오경보 근사율 {hh['false_alarm_proxy']*100:.0f}% (실발행 아님 — 소급 합성)"))
+                break
+    led = res.get("ledger", {})
+    if led.get("rows"):
+        monthly.append(("실발행 경보 원장", f"{led['rows']}건 기록 · 성숙 전(사후 성적은 8회 이상부터 표기)"))
+    basis = _esc(res.get("basis", "경량 모드"))
+    gen = _esc(str(res.get("generated_at", ""))[:10])
+    rows = "".join(f"<tr><th>{_esc(k)}</th><td>{_esc(v)}</td></tr>" for k, v in items) or \
+           "<tr><td>일별 항목 미산출</td></tr>"
+    mrows = "".join(f"<tr><th>{_esc(k)}</th><td>{_esc(v)}</td></tr>" for k, v in monthly)
+    m_html = (f'<details><summary>월별 항목(과거 데이터 검증 — 산출 기준 {gen} · {basis})</summary>'
+              f'<table class="rel">{mrows}</table></details>') if mrows else ""
+    return (f'<div class="card"><h3>보고서 신뢰도 — 2단계 검증</h3>'
+            f'<div class="cap">1단계 과거 데이터 검증 · 2단계 실시간 수집 데이터 검증 — '
+            f'수치는 과정 무결성과 과거 관측의 요약이며 향후 전망·확률 주장이 아님</div>'
+            f'<table class="rel">{rows}</table>{m_html}</div>')
+
+
 def build_daily_brief(
     frames: dict[str, pd.DataFrame],
     importance_df: pd.DataFrame,
@@ -978,6 +1043,7 @@ def build_daily_brief(
                  else "참고 범위는 데이터 부족으로 산출하지 않음.")
     s_care = (f"금일 기준 초과 {len(breach)}건 — 상세는 '금일 경보' 참조. 조달 결정은 담당자 승인 절차 필수."
               if breach else "금일 기준 초과 없음(검사 완료) — 조달 결정은 담당자 승인 절차 필수.")
+    reliability_html = _reliability_block()
     summary_top = _brief_box([("현황", s_now), ("요인", s_factor),
                               ("전망", s_outlook), ("유의", s_care)])
 
@@ -1213,7 +1279,8 @@ def build_daily_brief(
 
 <section><div class="sec-h"><h2>한눈 요약</h2><span class="note">전 거래일 마감 기준</span></div>
 {summary_top}
-<div class="kpis">{"".join(kpi_cards)}</div></section>
+<div class="kpis">{"".join(kpi_cards)}</div>
+{reliability_html}</section>
 
 <section><div class="sec-h"><h2>가격 추세와 핵심 변인</h2>
   <span class="note">변인 순위: 통계 선별과 상관 분석의 교차 확인 (20거래일 기준)</span></div>
@@ -1311,6 +1378,10 @@ font-size:30px;letter-spacing:-.01em;line-height:1.2}
 border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;padding:10px 16px;
 font-size:12.5px;color:var(--ink2)}
 .trust .sig{font-weight:700;color:var(--ok)}
+table.rel{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+table.rel th{text-align:left;white-space:nowrap;padding:4px 10px 4px 0;color:var(--ink2);font-weight:600;width:130px}
+table.rel td{padding:4px 0;border-bottom:1px dashed var(--line)}
+.card details summary{cursor:pointer;color:var(--ink2);font-size:12.5px;margin-top:6px}
 .trust b{color:var(--ink);font-weight:500}
 section{margin-top:34px}
 .sec-h{display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line);
