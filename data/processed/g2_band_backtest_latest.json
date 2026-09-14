@@ -1,0 +1,423 @@
+{
+ "quantiles": [
+  0.1,
+  0.25,
+  0.5,
+  0.75,
+  0.9
+ ],
+ "roll": 250,
+ "window": [
+  "2010-01-01",
+  "2025-12-31"
+ ],
+ "lockbox": [
+  "2025-07-01",
+  "2025-12-31"
+ ],
+ "horizons": {
+  "5": {
+   "B1 최근값": {
+    "walk_forward": {
+     "n": 3702,
+     "pinball_p10": 0.01319,
+     "pinball_p50": 0.01341,
+     "pinball_p90": 0.01362,
+     "coverage_50": 0.003,
+     "coverage_80": 0.003,
+     "width_80_pct": 0.0,
+     "mae_p50_pct": 2.68
+    },
+    "lockbox": {
+     "n": 120,
+     "pinball_p10": 0.01222,
+     "pinball_p50": 0.01057,
+     "pinball_p90": 0.00891,
+     "coverage_50": 0.0,
+     "coverage_80": 0.0,
+     "width_80_pct": 0.0,
+     "mae_p50_pct": 2.11
+    },
+    "by_slice": {
+     "2012 가뭄": {
+      "n": 252,
+      "coverage_80": 0.004
+     },
+     "2018 미·중": {
+      "n": 241,
+      "coverage_80": 0.008
+     },
+     "2020 팬데믹": {
+      "n": 243,
+      "coverage_80": 0.0
+     },
+     "2022 러·우": {
+      "n": 242,
+      "coverage_80": 0.004
+     },
+     "2025": {
+      "n": 120,
+      "coverage_80": 0.0
+     }
+    }
+   },
+   "B2 롤링 경험 분위(250일)": {
+    "walk_forward": {
+     "n": 3578,
+     "pinball_p10": 0.00609,
+     "pinball_p50": 0.01341,
+     "pinball_p90": 0.00634,
+     "coverage_50": 0.488,
+     "coverage_80": 0.78,
+     "width_80_pct": 8.2,
+     "mae_p50_pct": 2.68
+    },
+    "lockbox": {
+     "n": 120,
+     "pinball_p10": 0.00526,
+     "pinball_p50": 0.01082,
+     "pinball_p90": 0.00559,
+     "coverage_50": 0.708,
+     "coverage_80": 0.925,
+     "width_80_pct": 10.23,
+     "mae_p50_pct": 2.16
+    },
+    "by_slice": {
+     "2012 가뭄": {
+      "n": 252,
+      "coverage_80": 0.813
+     },
+     "2018 미·중": {
+      "n": 241,
+      "coverage_80": 0.788
+     },
+     "2020 팬데믹": {
+      "n": 243,
+      "coverage_80": 0.704
+     },
+     "2022 러·우": {
+      "n": 242,
+      "coverage_80": 0.764
+     },
+     "2025": {
+      "n": 120,
+      "coverage_80": 0.808
+     }
+    }
+   },
+   "B3 계절 naive": {
+    "walk_forward": {
+     "n": 3578,
+     "pinball_p10": 0.00898,
+     "pinball_p50": 0.01835,
+     "pinball_p90": 0.00895,
+     "coverage_50": 0.363,
+     "coverage_80": 0.63,
+     "width_80_pct": 8.2,
+     "mae_p50_pct": 3.67
+    },
+    "lockbox": {
+     "n": 120,
+     "pinball_p10": 0.00825,
+     "pinball_p50": 0.01965,
+     "pinball_p90": 0.00963,
+     "coverage_50": 0.392,
+     "coverage_80": 0.667,
+     "width_80_pct": 10.23,
+     "mae_p50_pct": 3.93
+    },
+    "by_slice": {
+     "2012 가뭄": {
+      "n": 252,
+      "coverage_80": 0.619
+     },
+     "2018 미·중": {
+      "n": 241,
+      "coverage_80": 0.502
+     },
+     "2020 팬데믹": {
+      "n": 243,
+      "coverage_80": 0.605
+     },
+     "2022 러·우": {
+      "n": 242,
+      "coverage_80": 0.591
+     },
+     "2025": {
+      "n": 120,
+      "coverage_80": 0.683
+     }
+    }
+   }
+  },
+  "20": {
+   "B1 최근값": {
+    "walk_forward": {
+     "n": 3702,
+     "pinball_p10": 0.02647,
+     "pinball_p50": 0.02734,
+     "pinball_p90": 0.0282,
+     "coverage_50": 0.002,
+     "coverage_80": 0.002,
+     "width_80_pct": 0.0,
+     "mae_p50_pct": 5.47
+    },
+    "lockbox": {
+     "n": 120,
+     "pinball_p10": 0.02438,
+     "pinball_p50": 0.02084,
+     "pinball_p90": 0.01731,
+     "coverage_50": 0.0,
+     "coverage_80": 0.0,
+     "width_80_pct": 0.0,
+     "mae_p50_pct": 4.17
+    },
+    "by_slice": {
+     "2012 가뭄": {
+      "n": 252,
+      "coverage_80": 0.008
+     },
+     "2018 미·중": {
+      "n": 241,
+      "coverage_80": 0.0
+     },
+     "2020 팬데믹": {
+      "n": 243,
+      "coverage_80": 0.004
+     },
+     "2022 러·우": {
+      "n": 242,
+      "coverage_80": 0.0
+     },
+     "2025": {
+      "n": 120,
+      "coverage_80": 0.0
+     }
+    }
+   },
+   "B2 롤링 경험 분위(250일)": {
+    "walk_forward": {
+     "n": 3563,
+     "pinball_p10": 0.01249,
+     "pinball_p50": 0.02779,
+     "pinball_p90": 0.0133,
+     "coverage_50": 0.439,
+     "coverage_80": 0.739,
+     "width_80_pct": 16.33,
+     "mae_p50_pct": 5.56
+    },
+    "lockbox": {
+     "n": 120,
+     "pinball_p10": 0.00795,
+     "pinball_p50": 0.02505,
+     "pinball_p90": 0.01294,
+     "coverage_50": 0.625,
+     "coverage_80": 0.992,
+     "width_80_pct": 20.65,
+     "mae_p50_pct": 5.01
+    },
+    "by_slice": {
+     "2012 가뭄": {
+      "n": 252,
+      "coverage_80": 0.655
+     },
+     "2018 미·중": {
+      "n": 241,
+      "coverage_80": 0.743
+     },
+     "2020 팬데믹": {
+      "n": 243,
+      "coverage_80": 0.617
+     },
+     "2022 러·우": {
+      "n": 242,
+      "coverage_80": 0.74
+     },
+     "2025": {
+      "n": 120,
+      "coverage_80": 0.675
+     }
+    }
+   },
+   "B3 계절 naive": {
+    "walk_forward": {
+     "n": 3563,
+     "pinball_p10": 0.01959,
+     "pinball_p50": 0.03758,
+     "pinball_p90": 0.01895,
+     "coverage_50": 0.357,
+     "coverage_80": 0.606,
+     "width_80_pct": 16.33,
+     "mae_p50_pct": 7.52
+    },
+    "lockbox": {
+     "n": 120,
+     "pinball_p10": 0.01105,
+     "pinball_p50": 0.03011,
+     "pinball_p90": 0.01271,
+     "coverage_50": 0.55,
+     "coverage_80": 0.875,
+     "width_80_pct": 20.65,
+     "mae_p50_pct": 6.02
+    },
+    "by_slice": {
+     "2012 가뭄": {
+      "n": 252,
+      "coverage_80": 0.667
+     },
+     "2018 미·중": {
+      "n": 241,
+      "coverage_80": 0.544
+     },
+     "2020 팬데믹": {
+      "n": 243,
+      "coverage_80": 0.634
+     },
+     "2022 러·우": {
+      "n": 242,
+      "coverage_80": 0.723
+     },
+     "2025": {
+      "n": 120,
+      "coverage_80": 0.658
+     }
+    }
+   }
+  },
+  "60": {
+   "B1 최근값": {
+    "walk_forward": {
+     "n": 3702,
+     "pinball_p10": 0.04608,
+     "pinball_p50": 0.04813,
+     "pinball_p90": 0.05018,
+     "coverage_50": 0.001,
+     "coverage_80": 0.001,
+     "width_80_pct": 0.0,
+     "mae_p50_pct": 9.63
+    },
+    "lockbox": {
+     "n": 120,
+     "pinball_p10": 0.03424,
+     "pinball_p50": 0.05659,
+     "pinball_p90": 0.07895,
+     "coverage_50": 0.0,
+     "coverage_80": 0.0,
+     "width_80_pct": 0.0,
+     "mae_p50_pct": 11.32
+    },
+    "by_slice": {
+     "2012 가뭄": {
+      "n": 252,
+      "coverage_80": 0.0
+     },
+     "2018 미·중": {
+      "n": 241,
+      "coverage_80": 0.0
+     },
+     "2020 팬데믹": {
+      "n": 243,
+      "coverage_80": 0.0
+     },
+     "2022 러·우": {
+      "n": 242,
+      "coverage_80": 0.0
+     },
+     "2025": {
+      "n": 120,
+      "coverage_80": 0.0
+     }
+    }
+   },
+   "B2 롤링 경험 분위(250일)": {
+    "walk_forward": {
+     "n": 3523,
+     "pinball_p10": 0.02552,
+     "pinball_p50": 0.05168,
+     "pinball_p90": 0.02554,
+     "coverage_50": 0.366,
+     "coverage_80": 0.62,
+     "width_80_pct": 27.17,
+     "mae_p50_pct": 10.34
+    },
+    "lockbox": {
+     "n": 120,
+     "pinball_p10": 0.01751,
+     "pinball_p50": 0.05665,
+     "pinball_p90": 0.03729,
+     "coverage_50": 0.242,
+     "coverage_80": 0.608,
+     "width_80_pct": 22.65,
+     "mae_p50_pct": 11.33
+    },
+    "by_slice": {
+     "2012 가뭄": {
+      "n": 252,
+      "coverage_80": 0.778
+     },
+     "2018 미·중": {
+      "n": 241,
+      "coverage_80": 0.56
+     },
+     "2020 팬데믹": {
+      "n": 243,
+      "coverage_80": 0.272
+     },
+     "2022 러·우": {
+      "n": 242,
+      "coverage_80": 0.736
+     },
+     "2025": {
+      "n": 120,
+      "coverage_80": 0.225
+     }
+    }
+   },
+   "B3 계절 naive": {
+    "walk_forward": {
+     "n": 3523,
+     "pinball_p10": 0.03902,
+     "pinball_p50": 0.06803,
+     "pinball_p90": 0.03836,
+     "coverage_50": 0.297,
+     "coverage_80": 0.53,
+     "width_80_pct": 27.17,
+     "mae_p50_pct": 13.61
+    },
+    "lockbox": {
+     "n": 120,
+     "pinball_p10": 0.02003,
+     "pinball_p50": 0.05439,
+     "pinball_p90": 0.04267,
+     "coverage_50": 0.417,
+     "coverage_80": 0.6,
+     "width_80_pct": 22.65,
+     "mae_p50_pct": 10.88
+    },
+    "by_slice": {
+     "2012 가뭄": {
+      "n": 252,
+      "coverage_80": 0.77
+     },
+     "2018 미·중": {
+      "n": 241,
+      "coverage_80": 0.452
+     },
+     "2020 팬데믹": {
+      "n": 243,
+      "coverage_80": 0.309
+     },
+     "2022 러·우": {
+      "n": 242,
+      "coverage_80": 0.603
+     },
+     "2025": {
+      "n": 120,
+      "coverage_80": 0.283
+     }
+    }
+   }
+  }
+ },
+ "basis": "진단(부분) — Databento UTC 종가·수동 파케이 26지표"
+}
