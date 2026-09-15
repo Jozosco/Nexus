@@ -2321,6 +2321,12 @@ def run(days: int = 7) -> None:
     alerts        = _check_structural_breaks(frames)
     # A-264: 실발행 경보 원장(P0-1) — 🚨 경보만 append, 실패는 비치명. 실행 폴더에도 사본을 남겨
     #   E1 잡이 저장소(data/processed)로 옮겨 커밋한다(잡 간 파일 미공유).
+    # A-272: 스크립트 직접 실행 시 repo 루트가 sys.path에 없어 ModuleNotFoundError('src')로 원장 기록이
+    #   조용히 실패했음(런 #101 실증) — 브리프 훅(A-234)과 같은 루트 보정을 여기서도 선행
+    import sys as _sys0
+    _root0 = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if _root0 not in _sys0.path:
+        _sys0.path.insert(0, _root0)
     try:
         import shutil as _shutil
         from src.evaluation.g1_reliability import ALERT_LEDGER, append_alert_ledger
