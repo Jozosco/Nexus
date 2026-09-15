@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-09-14T01:30:29+00:00",
- "mode": "full",
+ "generated_at": "2026-09-15T22:36:40+00:00",
+ "mode": "alert",
  "window": [
   "2010-01-01",
   "2025-12-31"
@@ -17,68 +17,68 @@
   },
   "R2_asof_accuracy": {
    "status": "산출",
-   "n_features": 438,
-   "revision_contaminated": 94,
+   "n_features": 2422,
+   "revision_contaminated": 98,
    "asof_rule": "모델의 t일 입력 = available_at <= t 인 최근값 (CLAUDE.md §1)",
    "window": {
     "start": "2010-01-01",
     "end": "2025-12-31",
-    "rows": 3822
+    "rows": 4023
    }
   },
   "R3_alert_consistency": {
    "status": "산출",
-   "stamp_date": "2026-09-13",
-   "stamp_alerts": 1,
+   "stamp_date": "2026-09-15",
+   "stamp_alerts": 0,
    "report_alerts": 1,
-   "consistent": true
+   "consistent": false
   },
   "R4_publication_integrity": {
    "status": "산출",
-   "rows": 16,
+   "rows": 18,
    "from": "2026-08-26",
-   "to": "2026-09-13",
+   "to": "2026-09-15",
    "verdicts": {
-    "✅": 7,
+    "✅": 9,
     "⚠️": 7,
     "🔴": 2
    },
-   "gate_pass_streak_runs": 5,
+   "gate_pass_streak_runs": 7,
    "contaminated_note": "8/26~9/1 6행은 경보 열 오염(A-245) — 사실 기록 유지"
   },
   "R5_collection_channels": {
    "status": "산출",
-   "rows": 263,
+   "rows": 281,
    "indicators": 23,
    "from": "2026-08-17",
-   "to": "2026-09-13",
-   "bday_arrival_rate": 0.9,
+   "to": "2026-09-14",
+   "bday_arrival_rate": 0.905,
    "by_category": {
-    "정책 뉴스": 92,
-    "지정학 이벤트": 88,
-    "전문 매체": 31,
-    "지정학 위험": 29,
-    "GeoIntel 복합": 22,
+    "정책 뉴스": 96,
+    "지정학 이벤트": 92,
+    "전문 매체": 38,
+    "지정학 위험": 31,
+    "GeoIntel 복합": 23,
     "운임(실시간)": 1
    },
    "media_channel_winners": {
-    "Google News": 10,
-    "공식 RSS": 5
+    "Google News": 13,
+    "공식 RSS": 9
    },
-   "rss_codes": 31
+   "rss_codes": 38
   },
   "R6_rule_reverification": [
    {
     "유형": "일별 시세(시카고 정산가·환율)",
     "과거 규칙": "마감(14:20 ET) 후 당일 확정 · 마감 이후 확정 지표는 +1일",
-    "실시간 관측": "브리프 데이터 기준일 2026-09-11 (발행일 전 거래일)",
+    "실시간 관측": "브리프 데이터 기준일 2026-09-14 (발행일 전 거래일)",
     "판정": "정합"
    },
    {
     "유형": "해상운임(BDI)",
     "과거 규칙": "발틱거래소 13:00 런던 발표 → 당일 즉시",
-    "실시간 관측": "스냅샷 사본 최신 2026-09-09 · 3단 폴백(API→stooq→사본)",
-    "판정": "정합(≤3영업일)"
+    "실시간 관측": "스냅샷 사본 최신 미확인 · 3단 폴백(API→stooq→사본)",
+    "판정": "지연 확인 필요"
    },
    {
     "유형": "월간 수급 보고서(WASDE·PSD)",
@@ -95,7 +95,7 @@
    {
     "유형": "비정형(정책·지정학·매체)",
     "과거 규칙": "수집 시점 가용 · 마감 후 수집분은 +1일",
-    "실시간 관측": "아카이브 영업일 도달률 0.9",
+    "실시간 관측": "아카이브 영업일 도달률 0.905",
     "판정": "정합"
    }
   ]
@@ -115,8 +115,6 @@
   },
   "note": "성숙 경보 8회 미만은 사후 성적 보류(실발행 원장은 2026-09-14 개설)"
  },
- "basis": "진단(부분) — Databento UTC 종가·수동 파케이 26지표",
- "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv",
  "historical": {
   "H1_rank_stability": {
    "status": "산출",
@@ -341,5 +339,7 @@
    }
   }
  },
- "ledger_matured_now": 0
+ "historical_asof": "2026-09-14T01:30:29+00:00",
+ "basis": "진단(부분) — Databento UTC 종가·수동 파케이 26지표",
+ "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv"
 }
