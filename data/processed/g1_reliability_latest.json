@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-15T22:36:40+00:00",
+ "generated_at": "2026-09-16T22:47:44+00:00",
  "mode": "alert",
  "window": [
   "2010-01-01",
@@ -29,9 +29,9 @@
   "R3_alert_consistency": {
    "status": "산출",
    "stamp_date": "2026-09-15",
-   "stamp_alerts": 0,
+   "stamp_alerts": 1,
    "report_alerts": 1,
-   "consistent": false
+   "consistent": true
   },
   "R4_publication_integrity": {
    "status": "산출",
@@ -39,8 +39,8 @@
    "from": "2026-08-26",
    "to": "2026-09-15",
    "verdicts": {
-    "✅": 9,
-    "⚠️": 7,
+    "✅": 8,
+    "⚠️": 8,
     "🔴": 2
    },
    "gate_pass_streak_runs": 7,
@@ -48,30 +48,31 @@
   },
   "R5_collection_channels": {
    "status": "산출",
-   "rows": 281,
+   "rows": 298,
    "indicators": 23,
    "from": "2026-08-17",
-   "to": "2026-09-14",
-   "bday_arrival_rate": 0.905,
+   "to": "2026-09-15",
+   "bday_arrival_rate": 0.909,
    "by_category": {
-    "정책 뉴스": 96,
-    "지정학 이벤트": 92,
-    "전문 매체": 38,
-    "지정학 위험": 31,
-    "GeoIntel 복합": 23,
+    "정책 뉴스": 100,
+    "지정학 이벤트": 96,
+    "전문 매체": 45,
+    "지정학 위험": 32,
+    "GeoIntel 복합": 24,
     "운임(실시간)": 1
    },
    "media_channel_winners": {
-    "Google News": 13,
-    "공식 RSS": 9
+    "Google News": 15,
+    "공식 RSS": 13,
+    "Bing News": 1
    },
-   "rss_codes": 38
+   "rss_codes": 45
   },
   "R6_rule_reverification": [
    {
     "유형": "일별 시세(시카고 정산가·환율)",
     "과거 규칙": "마감(14:20 ET) 후 당일 확정 · 마감 이후 확정 지표는 +1일",
-    "실시간 관측": "브리프 데이터 기준일 2026-09-14 (발행일 전 거래일)",
+    "실시간 관측": "브리프 데이터 기준일 2026-09-15 (발행일 전 거래일)",
     "판정": "정합"
    },
    {
@@ -95,23 +96,23 @@
    {
     "유형": "비정형(정책·지정학·매체)",
     "과거 규칙": "수집 시점 가용 · 마감 후 수집분은 +1일",
-    "실시간 관측": "아카이브 영업일 도달률 0.905",
+    "실시간 관측": "아카이브 영업일 도달률 0.909",
     "판정": "정합"
    }
   ]
  },
  "ledger": {
   "status": "산출",
-  "rows": 2,
+  "rows": 3,
   "from": "2026-09-09",
-  "to": "2026-09-13",
+  "to": "2026-09-15",
   "matured": {
    "5": 0,
    "20": 0,
    "60": 0
   },
   "by_variable": {
-   "ENSO_ONI": 2
+   "ENSO_ONI": 3
   },
   "note": "성숙 경보 8회 미만은 사후 성적 보류(실발행 원장은 2026-09-14 개설)"
  },
@@ -339,7 +340,7 @@
    }
   }
  },
- "historical_asof": "2026-09-14T01:30:29+00:00",
+ "historical_asof": "2026-09-15T22:36:40+00:00",
  "basis": "진단(부분) — Databento UTC 종가·수동 파케이 26지표",
  "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv"
 }
