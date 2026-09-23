@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-22T22:36:30+00:00",
+ "generated_at": "2026-09-23T22:46:48+00:00",
  "mode": "alert",
  "window": [
   "2010-01-01",
@@ -17,7 +17,7 @@
   },
   "R2_asof_accuracy": {
    "status": "산출",
-   "n_features": 2425,
+   "n_features": 2427,
    "revision_contaminated": 98,
    "asof_rule": "모델의 t일 입력 = available_at <= t 인 최근값 (CLAUDE.md §1)",
    "window": {
@@ -28,51 +28,51 @@
   },
   "R3_alert_consistency": {
    "status": "산출",
-   "stamp_date": "2026-09-21",
+   "stamp_date": "2026-09-22",
    "stamp_alerts": 1,
    "report_alerts": 1,
    "consistent": true
   },
   "R4_publication_integrity": {
    "status": "산출",
-   "rows": 22,
+   "rows": 23,
    "from": "2026-08-26",
-   "to": "2026-09-21",
+   "to": "2026-09-22",
    "verdicts": {
-    "⚠️": 11,
+    "⚠️": 12,
     "✅": 9,
     "🔴": 2
    },
-   "gate_pass_streak_runs": 11,
+   "gate_pass_streak_runs": 12,
    "contaminated_note": "8/26~9/1 6행은 경보 열 오염(A-245) — 사실 기록 유지"
   },
   "R5_collection_channels": {
    "status": "산출",
-   "rows": 365,
+   "rows": 381,
    "indicators": 24,
    "from": "2026-08-17",
-   "to": "2026-09-21",
-   "bday_arrival_rate": 0.923,
+   "to": "2026-09-22",
+   "bday_arrival_rate": 0.926,
    "by_category": {
-    "정책 뉴스": 116,
-    "지정학 이벤트": 112,
-    "전문 매체": 69,
-    "지정학 위험": 37,
-    "GeoIntel 복합": 29,
+    "정책 뉴스": 120,
+    "지정학 이벤트": 116,
+    "전문 매체": 75,
+    "지정학 위험": 38,
+    "GeoIntel 복합": 30,
     "운임(실시간)": 2
    },
    "media_channel_winners": {
-    "공식 RSS": 25,
-    "Google News": 24,
+    "Google News": 28,
+    "공식 RSS": 27,
     "Bing News": 4
    },
-   "rss_codes": 69
+   "rss_codes": 75
   },
   "R6_rule_reverification": [
    {
     "유형": "일별 시세(시카고 정산가·환율)",
     "과거 규칙": "마감(14:20 ET) 후 당일 확정 · 마감 이후 확정 지표는 +1일",
-    "실시간 관측": "브리프 데이터 기준일 2026-09-21 (발행일 전 거래일)",
+    "실시간 관측": "브리프 데이터 기준일 2026-09-22 (발행일 전 거래일)",
     "판정": "정합"
    },
    {
@@ -96,23 +96,23 @@
    {
     "유형": "비정형(정책·지정학·매체)",
     "과거 규칙": "수집 시점 가용 · 마감 후 수집분은 +1일",
-    "실시간 관측": "아카이브 영업일 도달률 0.923",
+    "실시간 관측": "아카이브 영업일 도달률 0.926",
     "판정": "정합"
    }
   ]
  },
  "ledger": {
   "status": "산출",
-  "rows": 7,
+  "rows": 8,
   "from": "2026-09-09",
-  "to": "2026-09-21",
+  "to": "2026-09-22",
   "matured": {
    "5": 0,
    "20": 0,
    "60": 0
   },
   "by_variable": {
-   "ENSO_ONI": 7
+   "ENSO_ONI": 8
   },
   "note": "성숙 경보 8회 미만은 사후 성적 보류(실발행 원장은 2026-09-14 개설)"
  },
@@ -340,7 +340,7 @@
    }
   }
  },
- "historical_asof": "2026-09-21T23:11:46+00:00",
+ "historical_asof": "2026-09-22T22:36:30+00:00",
  "basis": "진단(부분) — Databento UTC 종가·수동 파케이 26지표",
  "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv"
 }
