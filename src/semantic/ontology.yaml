@@ -1129,6 +1129,36 @@ supply_chain:
       korea_processors: [TERM-161, TERM-162, TERM-163, TERM-164]
       korea_crush_note: 국내 압착 전망 800,000 MT(설비 1.1백만 MT의 73% · 10년 평균 대비 −20%) —
         조유 수입 의존의 지속을 시사(GAIN 2026-03 · D-045).
+    midstream_capacity_moves_2026:   # A-281 (2026-09-25) — 압착·정제 자산 변화. 전부 설계 능력·상태 분리.
+      label: CONFIRMED                 # 검색 스니펫 2곳 이상 교차검증(원문 페이지 열람 차단 — locator 미확인)
+      as_of: '2026-09-25'
+      source_ref: docs/research_desk/2026-09/market_structure_update_2026_09_25.md
+      rule: 능력(capacity)은 물량(throughput)에 합산하지 않으며 announced / under_construction / operational / pending 을 분리한다.
+      moves:
+      - {firm: ADM, entity_terms: [TERM-153], site: 'Frankfort IN · Deerfield MO · Lincoln NE · Spiritwood ND(Green Bison JV)', change: '압착 +약 700,000 t/yr(>25M bu)', status: announced, announced: '2026-07-30', completion: '2028말~2029초'}
+      - {firm: CHS, entity_terms: [TERM-159], site: 'Evansville WI', change: '압착 신설 80M bu/yr(US$700M)', status: announced, announced: '2026-09-14', completion: '2028 가을'}
+      - {firm: Incobrasa, site: 'Gilman IL', change: 'US$250M 신공장 준공 — 부지 합계 약 100M bu/yr(INFERENCE — 신공장 단독인지 합계인지 출처 충돌)', status: operational, completed: '2026-06-22'}
+      - {firm: 'Bartlett × Shell Rock', site: 'Cherryvale KS · Shell Rock IA', change: '압착 사업 결합(Shell Rock 능력 40M bu/yr)', status: pending, announced: '2026-06-18', completion: '2027-01'}
+      - {firm: Cargill, entity_terms: [TERM-155], site: 'Regina SK', change: '카놀라 압착 1 Mt/yr(C$350M)', status: operational, completed: '2026-04-21'}
+      - {firm: Cargill, entity_terms: [TERM-155], site: 'Nantong CN', change: '유지종자·유지 가공 약 US$500M(능력 DATA GAP)', status: under_construction, started: '2025-09-12'}
+      - {firm: LDC, entity_terms: [TERM-156], site: 'Bahía Blanca AR', change: '해바라기·대두 압착 4,000 t/day(US$400M)', status: announced, announced: '2026-06-08'}
+      - {firm: 'LDC → Campos Gerais JV(협동조합 7사)', entity_terms: [TERM-156], site: 'Ponta Grossa PR', change: '운영 주체 이전 · 3,400 t/day', status: operational, completed: '2026-08-03'}
+      - {firm: COFCO International, entity_terms: [TERM-157], site: 'Rondonópolis MT', change: '압착 4,500 → 10,000 t/day(R$20억)', status: announced, announced: '2026-04-14(시청 발표 · 회사 공시 미확인)', completion: '2028초'}
+      - {firm: 'VAL(Bunge × Wilmar)', entity_terms: [TERM-160], site: 'Phu My VN', change: '제2라인 +4,000 → 합계 7,800 t/day', status: operational, completed: '2025-12-10'}
+      - {firm: 'Bunge → COFCO International', entity_terms: [TERM-154, TERM-157], site: '브라질 제당소 2곳', change: '자산 매각 합의(비유지류 · 브라질 포트폴리오 이동)', status: pending, announced: '2026-09-01'}
+      brazil_capacity_outlook:
+        label: CONFIRMED-2차
+        source: Itaú BBA 집계 — Cultivar · UkrAgroConsult 재보도(2026-01)
+        crush_capacity_mt: {2024: 59.8, 2027: 72.1}
+        abiove_crush_2026_forecast_mt: 62.5
+        note: 능력(72.1)과 가동 전망(62.5)을 분리 기록 — 합산·치환 금지.
+      us_capacity_outlook:
+        label: CONFIRMED-2차
+        source: ASA Soybean Crush Expansion 2025 Update
+        new_capacity_2026_bu: 114000000
+        note: 2026년 중 가동 예정 신규 능력(2025년 75M bu) — 능력≠가동량.
+      interpretation: 미국(RVO·45Z) · 브라질 · 아르헨티나 · 베트남 · 중국에서 동시에 압착 능력이 늘어나는 국면이다.
+        대두박 공급 확대와 대두유 결합생산 증가가 예상되나 물량 실현은 가동 이후 통계로만 확인한다(INFERENCE).
     interpretation_rules:            # D-047 판독 규율 5칙 + 집중도 해석 2칙
     - 용량(capacity) ≠ 처리량(throughput) — 공시 설비 능력을 실제 물량으로 치환·합산하지 않는다.
     - 관세청 수입 CIF 단가 ≠ CFR 호가 — 통관 신고 단가를 시장 호가·베이시스의 대용으로 쓰지 않는다.
@@ -1220,6 +1250,10 @@ causal_edges:
     ref: docs/research_desk/references/climatepol_SAF_food_vs_fuel_ko.md
     locator: '아르헨 Decree 423/2026'
     note: '★역방향 작동 신호 — 수출세 인하 법령(대두 24%→2028년 말 15%, 2027년부터 월 0.25~0.5%p 단계 인하, 최종 목표 0%). 채산성 개선→공급 확대→하방 압력·AR 채널 CIF 할인 구조 변화. 관보 원문(B-4) 확보 시 승격, 월별 인하는 정책 캘린더(C4) 대상 (A-210)'
+  - source_type: research_doc
+    ref: docs/research_desk/2026-09/market_structure_update_2026_09_25.md
+    locator: '§2 G-11 · 검증 ②-9 — Decreto 423/2026(관보 2026-06-03 게재·06-05 발효)'
+    note: '공식 일정 확정(복수 매체 일치 · USDA GAIN 2026-06-05): 대두 24% → 2027-01부터 월 0.25%p → 2027-12 21% → 2028년 월 0.5%p → 2028-12 15%. 대두유·대두박은 22.5% → 2028-12 14%(대두와 동형 월별 경로 — 구 "비례 인하" 서술을 종착 수치로 정정). "2025-12부터 22.5%(종전 24.5%)" 부분은 미검증(DATA GAP). 대체유(홍화·유채·카리나타·카멜리나) 바이오디젤 수출세 0%. 정책 캘린더 시작일 2027-01-01 (A-281)'
 - edge_id: CE-004
   label_ko: EUDR 팜유 규제 강화 → EU 팜유 접근 차단 → EU 내 SBO 대체 수요 증가 → 국제가 상승
   category: 정책·규제
@@ -1723,6 +1757,9 @@ causal_edges:
         초과(2017년 ~2십억의 11배), BBD 전체 7.8→34.9십억 lb(2011~23 4.5배).
         SBO의 FAME 바이오디젤 투입은 8.6십억(2020 피크)→7.3십억 lb(2023)·평균
         점유 55.4% — RD 붐 이전·이후 원료 구조의 기준선 (A-239)"
+    - source_type: research_doc
+      ref: docs/research_desk/2026-09/market_structure_update_2026_09_25.md
+      locator: "§2 기업 공시 — ADM 2Q26(2026-08-04): 압착 하위부문 영업이익 US$363M(전년 33M) · 45Z 기대효과 2026 약 US$250M(콜 발언) · 2026-07-30 북미 압착 증설 4곳 +700,000 t/yr(완공 2028~29) · CHS Evansville 80M bu/yr(2026-09-14, 완공 2028 가을) · Incobrasa 신공장 준공(2026-06-22) — 정책(RVO·45Z)→압착 마진→증설 연쇄의 기업 측 실증. 전부 설계 능력·announced 분리(A-281, 검색 스니펫 교차검증·원문 locator 미확인)"
 - edge_id: CE-023
   label_ko: "브라질 바이오디젤 의무 인상(B15→B16) → 내수 압착 흡수 → 수출 잉여 축소 → 국제가 상승"
   category: "정책·규제"
