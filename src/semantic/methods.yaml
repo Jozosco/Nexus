@@ -612,3 +612,20 @@ method_precedents:
       quote_ko: 예측값과 반복 샘플링 분산을 각각 뷰와 신뢰도로 변환하고, 미래 참조를 설계 단계에서 차단한다.
     linked_contract: 뷰 결합 계층 설계(H0 동결) — 뷰 변환 체계 참고 원문
     status: 등재
+  - id: MP-18
+    title: 바이오연료 시대의 상품가격 변동성 — 의무수요가 수요곡선을 가파르게 만드는 효과
+    authors_year: Avileis, UC Davis 세미나 워킹페이퍼 2026-01(저자 소속 UNL) · 선행판 Avileis & Swanson, NCCC-134 2025
+    ref: summaries/Avileis_2026_commodity_volatility_biofuel_era.md
+    method: 내재변동성(1996~2024) 기반 식별 — 의무수요 비중 변화가 에너지→농산물 변동성 전이에 미친 효과 추정
+    target_goal: ['G2']
+    verdict: 배경
+    applies_to: ['AM-09']
+    constraints:
+      - '비심사 워킹페이퍼 — 수치(대두유 내재변동성 +19%, 2025판 +18%)는 판본 의존이므로 저자 추정으로만 병기'
+      - '원문 PDF 미회수(열람 차단) — 회수 후 references 규칙(PDF→md→요약) 적용 전에는 모델 파라미터로 사용 금지'
+      - '식별 전략(DID형)이 조달 도메인 변수와 다름 — 변동성 층의 정성 설계 근거로 한정'
+    evidence:
+      locator: market_structure_update_2026_09_25.md §4 A1 · 검증 ③-1
+      quote_ko: 바이오연료 의무가 수요곡선을 가파르게 만들어 대두유 가격 변동성을 구조적으로 높였고, 재생디젤 붐 이후 수출 대체 국면에서 변동성이 상승했다(초록 발췌 기준).
+    linked_contract: G2 변동성 층(EGARCH-X) — 정책 국면 더미·에너지 전이 항 설계 참고
+    status: 등재
