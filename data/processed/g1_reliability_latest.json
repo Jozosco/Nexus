@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-09-23T22:46:48+00:00",
- "mode": "alert",
+ "generated_at": "2026-09-25T09:49:33+00:00",
+ "mode": "full",
  "window": [
   "2010-01-01",
   "2025-12-31"
@@ -17,7 +17,7 @@
   },
   "R2_asof_accuracy": {
    "status": "산출",
-   "n_features": 2427,
+   "n_features": 2492,
    "revision_contaminated": 98,
    "asof_rule": "모델의 t일 입력 = available_at <= t 인 최근값 (CLAUDE.md §1)",
    "window": {
@@ -28,52 +28,53 @@
   },
   "R3_alert_consistency": {
    "status": "산출",
-   "stamp_date": "2026-09-22",
-   "stamp_alerts": 1,
+   "stamp_date": "2026-09-25",
+   "stamp_alerts": 0,
    "report_alerts": 1,
-   "consistent": true
+   "consistent": false
   },
   "R4_publication_integrity": {
    "status": "산출",
-   "rows": 23,
+   "rows": 26,
    "from": "2026-08-26",
-   "to": "2026-09-22",
+   "to": "2026-09-25",
    "verdicts": {
-    "⚠️": 12,
-    "✅": 9,
+    "⚠️": 13,
+    "✅": 11,
     "🔴": 2
    },
-   "gate_pass_streak_runs": 12,
+   "gate_pass_streak_runs": 15,
    "contaminated_note": "8/26~9/1 6행은 경보 열 오염(A-245) — 사실 기록 유지"
   },
   "R5_collection_channels": {
    "status": "산출",
-   "rows": 381,
-   "indicators": 24,
+   "rows": 432,
+   "indicators": 29,
    "from": "2026-08-17",
-   "to": "2026-09-22",
-   "bday_arrival_rate": 0.926,
+   "to": "2026-09-25",
+   "bday_arrival_rate": 0.933,
    "by_category": {
-    "정책 뉴스": 120,
-    "지정학 이벤트": 116,
-    "전문 매체": 75,
-    "지정학 위험": 38,
-    "GeoIntel 복합": 30,
+    "정책 뉴스": 132,
+    "지정학 이벤트": 128,
+    "전문 매체": 86,
+    "지정학 위험": 42,
+    "GeoIntel 복합": 36,
+    "지정학 동향": 6,
     "운임(실시간)": 2
    },
    "media_channel_winners": {
-    "Google News": 28,
-    "공식 RSS": 27,
-    "Bing News": 4
+    "Google News": 36,
+    "공식 RSS": 32,
+    "Bing News": 6
    },
-   "rss_codes": 75
+   "rss_codes": 90
   },
   "R6_rule_reverification": [
    {
     "유형": "일별 시세(시카고 정산가·환율)",
     "과거 규칙": "마감(14:20 ET) 후 당일 확정 · 마감 이후 확정 지표는 +1일",
-    "실시간 관측": "브리프 데이터 기준일 2026-09-22 (발행일 전 거래일)",
-    "판정": "정합"
+    "실시간 관측": "브리프 데이터 기준일 2026-09-24 (발행일 전 거래일)",
+    "판정": "일치"
    },
    {
     "유형": "해상운임(BDI)",
@@ -85,7 +86,7 @@
     "유형": "월간 수급 보고서(WASDE·PSD)",
     "과거 규칙": "발표일 이후 가용(same_month) · 전망 행은 수집 시점 캡",
     "실시간 관측": "품질 테스트 available_at ≤ 오늘 통과(#99)",
-    "판정": "정합"
+    "판정": "일치"
    },
    {
     "유형": "산지 기후(ERA5-Land·예보)",
@@ -96,81 +97,34 @@
    {
     "유형": "비정형(정책·지정학·매체)",
     "과거 규칙": "수집 시점 가용 · 마감 후 수집분은 +1일",
-    "실시간 관측": "아카이브 영업일 도달률 0.926",
-    "판정": "정합"
+    "실시간 관측": "아카이브 영업일 도달률 0.933",
+    "판정": "일치"
    }
   ]
  },
  "ledger": {
   "status": "산출",
-  "rows": 8,
+  "rows": 10,
   "from": "2026-09-09",
-  "to": "2026-09-22",
+  "to": "2026-09-24",
   "matured": {
    "5": 0,
    "20": 0,
    "60": 0
   },
   "by_variable": {
-   "ENSO_ONI": 8
+   "ENSO_ONI": 10
   },
   "note": "성숙 경보 8회 미만은 사후 성적 보류(실발행 원장은 2026-09-14 개설)"
  },
+ "basis": "진단(부분) — 이력 종가·수동 업로드 26지표",
+ "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv",
  "historical": {
   "H1_rank_stability": {
-   "status": "산출",
-   "n_rows": 3822,
-   "n_features": 23,
-   "n_folds": 5,
-   "pearson": {
-    "adjacent_fold_spearman": [
-     0.817,
-     0.838,
-     0.361,
-     0.973
-    ],
-    "mean_spearman": 0.747,
-    "sign_agreement_top": 0.975,
-    "top_last_fold": [
-     "TE_HEATING_OIL",
-     "TE_GASOLINE",
-     "TE_BRENT_CRUDE_OIL",
-     "TE_WTI_CRUDE_OIL",
-     "TE_NAPHTHA",
-     "TE_GSCI",
-     "TE_SOYBEANS",
-     "TE_CRB_INDEX",
-     "TE_ETHANOL",
-     "TE_CONTAINERIZED_FREIGHT_INDEX"
-    ]
-   },
-   "elastic_net": {
-    "status": "미산출(sklearn 부재 — CI에서 산출)"
-   }
+   "status": "미산출(피처 없음)"
   },
   "H2_granger_persistence": {
-   "status": "산출",
-   "n_vars": 10,
-   "alpha_bonferroni": 0.005,
-   "significant_full": [
-    "TE_HEATING_OIL",
-    "TE_SOYBEANS"
-   ],
-   "persistence_rate": 1.0,
-   "by_window": {
-    "전체(2010~2025)": [
-     "TE_HEATING_OIL",
-     "TE_SOYBEANS"
-    ],
-    "최근 5년(2021~2025)": [
-     "TE_SOYBEANS"
-    ],
-    "사건 연도 합집합": [
-     "TE_ETHANOL",
-     "TE_HEATING_OIL",
-     "TE_SOYBEANS"
-    ]
-   }
+   "status": "미산출"
   },
   "H3_alert_rule_retro": {
    "label": "실발행 아님 — 소급 합성",
@@ -183,32 +137,7 @@
    "rules": {
     "해상운임(BDI) 90일 편차 > 2σ": {
      "definition": "IQR 캡·90일 롤링(관측≥30) 표준화 지수 > 2",
-     "breach_days": 338,
-     "breach_share": 0.088,
-     "horizons": {
-      "5": {
-       "episodes": 81,
-       "false_alarm_proxy": 0.494,
-       "median_abs_move": 0.0206,
-       "ratio_vs_unconditional": 1.0,
-       "status": "산출"
-      },
-      "20": {
-       "episodes": 33,
-       "false_alarm_proxy": 0.455,
-       "median_abs_move": 0.047,
-       "ratio_vs_unconditional": 1.09,
-       "status": "산출"
-      },
-      "60": {
-       "episodes": 18,
-       "false_alarm_proxy": 0.389,
-       "median_abs_move": 0.0984,
-       "ratio_vs_unconditional": 1.3,
-       "status": "산출"
-      }
-     },
-     "status": "산출"
+     "status": "미평가(계열 부재)"
     },
     "엘니뇨·라니냐 강도 |ONI| ≥ 0.5": {
      "definition": "절댓값 0.5°C 이상",
@@ -318,29 +247,9 @@
   "H5_analogue_discrimination": {
    "horizon": 20,
    "unconditional_iqr": 0.0866,
-   "vars": {
-    "TE_HEATING_OIL": {
-     "status": "산출",
-     "n": 3788,
-     "mean_conditional_iqr_ratio": 0.988,
-     "median_spread_across_bins": 0.023
-    },
-    "TE_GASOLINE": {
-     "status": "산출",
-     "n": 3788,
-     "mean_conditional_iqr_ratio": 0.994,
-     "median_spread_across_bins": 0.0257
-    },
-    "TE_BRENT_CRUDE_OIL": {
-     "status": "산출",
-     "n": 3793,
-     "mean_conditional_iqr_ratio": 1.005,
-     "median_spread_across_bins": 0.0264
-    }
-   }
+   "vars": {}
   }
  },
- "historical_asof": "2026-09-22T22:36:30+00:00",
- "basis": "진단(부분) — Databento UTC 종가·수동 파케이 26지표",
- "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv"
+ "historical_asof": "2026-09-25T09:49:33+00:00",
+ "ledger_matured_now": 0
 }
