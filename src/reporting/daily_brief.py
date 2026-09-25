@@ -1124,8 +1124,9 @@ def _snapshot_specs() -> list[dict]:
     return [
         {"label": "대두유 선물 종가(시카고)", "codes": ["CBOT_BO_CLOSE"], "src": "시카고 거래소 정산가", "fmt": "{:,.2f}"},
         # A-274: 원천을 섞지 않는다 — TE(MYR/톤)와 달러/톤 환산 계열이 날마다 바뀌어 4,8xx↔1,2xx로 널뛰던 결함
-        {"label": "팜유(말레이시아 선물, MYR/톤)", "codes": ["TE_PALM_OIL"], "src": "트레이딩이코노믹스", "fmt": "{:,.0f}"},
-        {"label": "팜유(달러/톤 환산)", "codes": ["CPO_USD_MT", "CPO"], "src": "트레이딩이코노믹스·FRED", "fmt": "{:,.0f}"},
+        # A-282: MYR 계열(수동 xlsx TE_PALM_OIL → 일별 API CPO_MYR_MT)과 달러 계열(FRED CPO_USD_MT)을 분리
+        {"label": "팜유(말레이시아 선물, MYR/톤)", "codes": ["TE_PALM_OIL", "CPO_MYR_MT"], "src": "트레이딩이코노믹스", "fmt": "{:,.0f}"},
+        {"label": "팜유(달러/톤 환산)", "codes": ["CPO_USD_MT", "CPO"], "src": "FRED(IMF 벤치마크)", "fmt": "{:,.0f}"},
         {"label": "BDI 해상운임지수", "codes": ["TE_BDI", "BDI"], "src": "발틱 거래소", "fmt": "{:,.0f}"},
         {"label": "브라질 헤알 환율", "codes": ["DEXBZUS", "FX_BRL_USD"], "src": "미 연준 FRED·업로드", "fmt": "{:.2f}"},
         {"label": "원/달러 환율", "codes": ["DEXKOUS", "KRW_USD"], "src": "미 연준 FRED·한국은행", "fmt": "{:,.0f}"},

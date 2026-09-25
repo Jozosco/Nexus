@@ -287,6 +287,11 @@ def fetch_kosis_cpi_korea(start_yyyymm: str = "201001") -> pd.DataFrame:
                 print(f"[경고] KOSIS {tbl['tblId']}: 응답 없음")
                 continue
             records = raw if isinstance(raw, list) else raw.get("data", raw.get("row", []))
+            if not records:
+                # A-282: DT_1J22002가 매 런 0건 — 오류 본문을 숨기지 않고 노출(자기발견, A-106 패턴)
+                print(f"[경고] KOSIS {tbl['tblId']}: 레코드 0건 — 응답 본문: {str(raw)[:300]}")
+                continue
+            n_before = len(all_rows)
             for rec in records:
                 period = rec.get("PRD_DE", rec.get("prd_de", ""))
                 value  = rec.get("DT", rec.get("dt", None))
@@ -310,12 +315,18 @@ def fetch_kosis_cpi_korea(start_yyyymm: str = "201001") -> pd.DataFrame:
                     "tbl_id":         tbl["tblId"],
                     "class_name":     cls_name,
                 })
-            print(f"[정보] KOSIS {tbl['tblId']} ({tbl['label']}): {len(records)}건")
+            n_parsed = len(all_rows) - n_before
+            print(f"[정보] KOSIS {tbl['tblId']} ({tbl['label']}): 수신 {len(records)}건 → 적재 {n_parsed}건")
+            if n_parsed == 0:
+                # A-282: 런 #113 실측 — 22003은 200건 수신인데 적재 0건('전체 수집 실패'로 오표기).
+                #        PRD_DE·DT 키 부재가 원인이면 첫 레코드 키를 보여야 다음 런에서 교정 가능.
+                first = records[0] if isinstance(records[0], dict) else {}
+                print(f"[경고] KOSIS {tbl['tblId']}: 수신분 전량 미적재 — 첫 레코드 키: {sorted(first.keys())[:20]}")
         except Exception as e:
             print(f"[경고] KOSIS {tbl['tblId']} 수집 실패: {e}")
 
     if not all_rows:
-        print("[경고] KOSIS CPI 전체 수집 실패 — API 키 및 파라미터 확인 필요")
+        print("[경고] KOSIS CPI 적재 0건 — 위 테이블별 진단(응답 본문·레코드 키) 확인")
         return pd.DataFrame()
 
     df = pd.DataFrame(all_rows)

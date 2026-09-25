@@ -214,7 +214,9 @@ def fetch_bdi_te(start_date: str | None = None, end_date: str | None = None) -> 
     _end   = end_date or date.today().isoformat()
 
     # A-150: 검색으로 발견된 실제 심볼을 1순위로, 기존 추측(BDI/BALTDRYIDX/bdi)은 폴백 유지
-    discovered = _te_discover_symbols(te_key, "baltic dry", ("baltic", "dry"))
+    # A-282: 지수(:IND)·상품(:COM)만 허용 — 검색 결과의 해운 기업 주가가 BDI로 적재되는 경로 차단
+    discovered = [s for s in _te_discover_symbols(te_key, "baltic dry", ("baltic", "dry"))
+                  if s.endswith((":IND", ":COM"))]
     symbol_chain = tuple(dict.fromkeys((*discovered, "BDI", "BALTDRYIDX", "bdi")))
 
     for symbol in symbol_chain:
@@ -245,8 +247,13 @@ def fetch_bdi_te(start_date: str | None = None, end_date: str | None = None) -> 
             if not date_col or not value_col:
                 print(f"[경고] TE REST BDI({symbol}): 예상 컬럼 없음 ({list(df_raw.columns)[:5]})")
                 continue
+            # A-282: TE REST 날짜는 dd/mm/yyyy — 추론(dayfirst=False 경고)에 맡기지 않고 형식 고정
+            _dates = pd.to_datetime(df_raw[date_col], format="%d/%m/%Y", errors="coerce")
+            if _dates.isna().any():
+                _dates = _dates.where(_dates.notna(),
+                                      pd.to_datetime(df_raw[date_col], errors="coerce", format="ISO8601"))
             df = pd.DataFrame({
-                "price_date":     pd.to_datetime(df_raw[date_col], errors="coerce"),
+                "price_date":     _dates,
                 "value":          pd.to_numeric(df_raw[value_col], errors="coerce"),
                 "source_name":    "TradingEconomics/BalticExchange",
                 "indicator_code": "BDI",

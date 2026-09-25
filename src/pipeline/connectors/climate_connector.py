@@ -600,7 +600,12 @@ def fetch_ecmwf_era5() -> pd.DataFrame:
     """ECMWF CDS ERA5 — 원산지 월별 기온·강수 이상 (ECMWF_API_KEY 필요).
     ECMWF_API_KEY 형식: '{uid}:{key}' (Copernicus CDS 계정에서 발급)
     """
-    api_key = os.environ.get("ECMWF_API_KEY", "")
+    # A-282: CDS v2 API는 폐기됐고(A-083 308/404 · A-100 'CDS 미사용' 확정) 실제 기후 수집원은
+    #        Open-Meteo ERA5-Land(fetch_openmeteo_regional_climate)다. 키가 등록돼 있으면 이 함수가
+    #        매 런 3지역 404 경고를 찍으며 죽은 엔드포인트를 호출했으므로 호출 자체를 중단한다.
+    print("[정보] ECMWF CDS v2 경로는 폐기(A-100) — Open-Meteo ERA5-Land가 기후 수집원, 건너뜀")
+    return pd.DataFrame()
+    api_key = os.environ.get("ECMWF_API_KEY", "")   # pragma: no cover — 아래는 보존용 구 경로
     if not api_key:
         print("[경고] ECMWF_API_KEY 미등록 — ERA5 수집 건너뜀")
         return pd.DataFrame()

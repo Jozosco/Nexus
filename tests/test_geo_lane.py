@@ -96,8 +96,20 @@ def test_geo_status_line_only_when_elevated():
 
 def test_palm_snapshot_sources_not_mixed():
     specs = {s["label"]: s["codes"] for s in db._snapshot_specs()}
-    assert specs["팜유(말레이시아 선물, MYR/톤)"] == ["TE_PALM_OIL"]
+    assert specs["팜유(말레이시아 선물, MYR/톤)"] == ["TE_PALM_OIL", "CPO_MYR_MT"]   # A-282: MYR 계열만
     assert "CPO_USD_MT" in specs["팜유(달러/톤 환산)"] and "TE_PALM_OIL" not in specs["팜유(달러/톤 환산)"]
+    assert "CPO_MYR_MT" not in specs["팜유(달러/톤 환산)"]
+
+
+def test_te_cpo_symbol_filter_and_date_parsing():
+    """A-282: TE 자기발견은 상품(:COM)만 채택(주가 OKOMUOIL:NL 차단) + dd/mm/yyyy 고정 파싱."""
+    from src.pipeline.connectors import commodity_connector as cc
+    assert cc._te_commodity_symbols(["PLO:COM", "OKOMUOIL:NL", "XYZ:IND"]) == ["PLO:COM"]
+    assert cc._te_commodity_symbols(["OKOMUOIL:NL"]) == []
+    s = pd.Series(["05/09/2026", "13/09/2026", "2026-09-25T00:00:00"])
+    parsed = cc._parse_te_dates(s)
+    assert parsed.tolist() == [pd.Timestamp("2026-09-05"), pd.Timestamp("2026-09-13"), pd.Timestamp("2026-09-25")]
+    assert cc.CPO_TE_INDICATOR == "CPO_MYR_MT" and cc.CPO_MYR_PLAUSIBLE[0] < 4000 < cc.CPO_MYR_PLAUSIBLE[1]
 
 
 def test_landed_cost_finds_nested_session_parquet(tmp_path, monkeypatch):

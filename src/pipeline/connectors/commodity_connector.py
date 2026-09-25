@@ -389,9 +389,33 @@ def _te_discover_symbols(te_key: str, search_term: str,
     return symbols
 
 
+# A-282: TE 팜유 상품 호가(PLO:COM)는 Bursa Malaysia 선물 — 단위 MYR/MT. 구 코드는 이를 CPO_USD_MT
+#        (USD/MT)로 적재해 FRED 달러 프록시와 같은 코드에 섞었고, 상품 심볼이 409면 검색 결과의
+#        **기업 주가(OKOMUOIL:NL)** 로 넘어가 주가를 팜유 가격으로 적재했다(런 #113 실측 2,323건).
+CPO_TE_INDICATOR = "CPO_MYR_MT"
+CPO_MYR_PLAUSIBLE = (1_500.0, 9_000.0)     # Bursa CPO 3개월물 MYR/MT 관측 범위(2010~2026)의 여유 폭
+
+
+def _te_commodity_symbols(symbols: list[str]) -> list[str]:
+    """자기발견 결과에서 상품(:COM) 심볼만 남긴다 — 지수·주식 폴백 금지(A-282)."""
+    return [s for s in symbols if s.endswith(":COM")]
+
+
+def _parse_te_dates(series: pd.Series) -> pd.Series:
+    """TE REST 날짜 파싱 — dd/mm/yyyy 우선(추론 의존 금지), 실패분은 ISO로 재시도(A-282)."""
+    first = pd.to_datetime(series, format="%d/%m/%Y", errors="coerce")
+    missing = first.isna()
+    if missing.any():
+        first = first.where(~missing, pd.to_datetime(series[missing], errors="coerce", format="ISO8601"))
+    return first
+
+
 def _fetch_cpo_te_rest(te_key: str, start_date: str = "2017-01-01") -> pd.DataFrame:
     """TE REST /markets/historical/{symbol} — 자기발견 심볼로 CPO 히스토리 수집 (A-150)."""
-    discovered = _te_discover_symbols(te_key, "palm oil", ("palm", "oil"))
+    discovered = _te_commodity_symbols(_te_discover_symbols(te_key, "palm oil", ("palm", "oil")))
+    if not discovered:
+        print("[정보] TE 팜유 상품(:COM) 심볼 없음 — 주가·지수 폴백 금지(A-282), FRED 프록시로")
+        return pd.DataFrame()
     _end = date.today().isoformat()
     for symbol in discovered:
         try:
@@ -414,17 +438,22 @@ def _fetch_cpo_te_rest(te_key: str, start_date: str = "2017-01-01") -> pd.DataFr
                 print(f"[경고] TE CPO({symbol}): 예상 컬럼 없음 ({list(df_raw.columns)[:5]})")
                 continue
             df = pd.DataFrame({
-                "price_date":     pd.to_datetime(df_raw[date_col], errors="coerce"),
+                "price_date":     _parse_te_dates(df_raw[date_col]),
                 "value":          pd.to_numeric(df_raw[value_col], errors="coerce"),
                 "source_name":    "TradingEconomics/BursaMalaysia",
-                "indicator_code": "CPO_USD_MT",
-                "unit":           "USD/MT",
-                "note":           f"[TE-REST: CPO 자기발견 심볼 {symbol} ({start_date}~{_end})]",
-                "ingested_at":    pd.Timestamp.utcnow(),
+                "indicator_code": CPO_TE_INDICATOR,
+                "unit":           "MYR/MT",
+                "note":           f"[TE-REST: Bursa CPO 상품 심볼 {symbol} ({start_date}~{_end}) — MYR/MT]",
+                "ingested_at":    pd.Timestamp.now("UTC"),
             }).dropna(subset=["price_date", "value"])
-            if not df.empty:
-                print(f"[완료] TE REST CPO {len(df)}건 수집 (자기발견 심볼: {symbol})")
-                return df.sort_values("price_date").reset_index(drop=True)
+            if df.empty:
+                continue
+            med = float(df["value"].median())
+            if not (CPO_MYR_PLAUSIBLE[0] <= med <= CPO_MYR_PLAUSIBLE[1]):
+                print(f"[경고] TE CPO({symbol}) 중앙값 {med:,.0f}이 MYR/MT 관측 범위 밖 — 폐기(단위·자산 혼입 의심)")
+                continue
+            print(f"[완료] TE REST CPO {len(df)}건 수집 ({symbol}, {CPO_TE_INDICATOR} MYR/MT)")
+            return df.sort_values("price_date").reset_index(drop=True)
         except Exception as e:
             print(f"[경고] TE REST CPO({symbol}) 실패: {e}")
             continue
@@ -483,13 +512,12 @@ def run() -> None:
     frames = []
     # 1. CBOT 대두유 선물
     frames.append(fetch_cbot_soybean_oil(days_back=10))
-    # 2. CPO — Trading Economics 우선, FRED 프록시 폴백
+    # 2. CPO — A-282: TE(MYR/MT, CPO_MYR_MT)와 FRED 달러 프록시(USD/MT, CPO_USD_MT)는 단위가 다른
+    #    별개 계열이므로 **둘 다** 수집한다(구 '성공 시 FRED 건너뜀'은 같은 코드에 통화를 섞던 원인).
     cpo_te = fetch_cpo_te()
     if not cpo_te.empty:
         frames.append(cpo_te)
-        print("[정보] CPO: Trading Economics 수집 성공 — FRED 프록시 건너뜀")
-    else:
-        frames.append(fetch_cpo_proxy_fred())
+    frames.append(fetch_cpo_proxy_fred())
     # 3. ARS/USD 공식 환율
     frames.append(fetch_ars_usd_bcra(days_back=10))
     # 4. 미국 가뭄 지수
