@@ -143,3 +143,10 @@ def test_production_price_dates_normalized_across_tz(monkeypatch):
     assert str(out["price_date"].dtype).startswith("datetime64") and out["price_date"].dt.tz is None
     assert int(out["price_date"].isna().sum()) == 1            # 파싱 불가 문자열 1건만 NaT
     assert out.loc[out["source_name"] == "USDA_FAS_ESR", "price_date"].notna().all()
+
+
+def test_power_month_key_skips_annual_aggregate():
+    """A-277: NASA POWER monthly는 연간 집계를 YYYY13 키로 반환 — '2017-13-01' 생성 차단."""
+    from src.pipeline.connectors.production_connector import _power_month
+    assert _power_month("201701") == 1 and _power_month("202612") == 12
+    assert _power_month("201713") is None and _power_month("2017") is None and _power_month("ANN") is None

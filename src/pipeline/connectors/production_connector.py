@@ -303,9 +303,14 @@ def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
                 for ym, val in series.items():
                     if val is None or float(val) <= -999:   # POWER 결측 센티넬
                         continue
+                    # A-277: monthly API는 연간 집계를 월 '13'(YYYY13) 키로 함께 반환 —
+                    # "2017-13-01"이 to_datetime을 중단시킨 원인(런 #111). 1~12월만 적재.
+                    month = _power_month(ym)
+                    if month is None:
+                        continue
                     try:
                         rows.append({
-                            "price_date":     f"{ym[:4]}-{ym[4:]}-01",
+                            "price_date":     f"{ym[:4]}-{month:02d}-01",
                             "source_name":    "NASA_POWER",
                             "indicator_code": f"{param}_{location}",
                             "region":         location,
@@ -320,9 +325,18 @@ def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame()
     df = pd.DataFrame(rows)
-    df["price_date"] = pd.to_datetime(df["price_date"])
-    df["ingested_at"] = pd.Timestamp.utcnow()
+    df["price_date"] = pd.to_datetime(df["price_date"], errors="coerce")
+    df["ingested_at"] = pd.Timestamp.now("UTC")
     return df
+
+
+def _power_month(ym: str) -> int | None:
+    """NASA POWER monthly 키(YYYYMM)에서 월을 추출 — 연간 집계(월 13)·비정형 키는 None."""
+    s = str(ym)
+    if len(s) != 6 or not s.isdigit():
+        return None
+    month = int(s[4:])
+    return month if 1 <= month <= 12 else None
 
 
 def fetch_perplexity_production_regions() -> pd.DataFrame:
