@@ -1,4 +1,4 @@
-"""G1 보고서 신뢰도 지표 — 2단계 검증 (2026-09-14 · A-264).
+"""1단계 보고서 신뢰도 지표 — 2단계 검증 (2026-09-14 · A-264).
 
 승인자 요구: G1(약 15개년 과거 데이터로 현재 핵심 변인 식별)·G2(G1 결과 기반 가격 변동 범위)는
 ①과거 데이터 기반 1차 검증 → ②실시간 수집 데이터 유형별 적용 논리의 2차 검증을 거치므로,
@@ -127,7 +127,29 @@ def load_inputs() -> Inputs:
                               aggfunc="last").sort_index())
         levels = piv.reindex(close.index, method="ffill")
     return Inputs(close, levels, levels.copy() if not levels.empty else None,
-                  basis="진단(부분) — Databento UTC 종가·수동 파케이 26지표", source=files[-1])
+                  basis="진단(부분) — 이력 종가·수동 업로드 26지표", source=files[-1])
+
+def load_inputs_diag() -> Inputs:
+    """진단 입력(Databento UTC 종가 + 수동 파케이) — 마트 경로 실패 시 재시도용(A-274)."""
+    files = sorted(glob.glob(DATABENTO_CSV_GLOB))
+    if not files:
+        raise RuntimeError("[오류] 평가 입력 없음 — 마트도 Databento CSV도 없습니다.")
+    raw = pd.read_csv(files[-1])
+    raw["price_date"] = pd.to_datetime(raw["price_date"], errors="coerce")
+    raw = raw.dropna(subset=["price_date", "close"])
+    raw = raw[raw["price_date"].dt.weekday < 5]             # A-131: 일요일 저녁 세션 제거
+    close = (raw.sort_values(["price_date", "volume"])
+                .drop_duplicates("price_date", keep="last")   # 롤일: 거래량 최대 계약(A-111)
+                .set_index("price_date")["close"].astype(float))
+    levels = pd.DataFrame(index=close.index)
+    if TE_PARQUET.is_file():
+        te = pd.read_parquet(TE_PARQUET)
+        piv = (te.pivot_table(index="price_date", columns="indicator_code", values="value",
+                              aggfunc="last").sort_index())
+        levels = piv.reindex(close.index, method="ffill")
+    return Inputs(close, levels, levels.copy() if not levels.empty else None,
+                  basis="진단(부분) — 이력 종가·수동 업로드 26지표", source=files[-1])
+
 
 
 def _window(idx: pd.DatetimeIndex) -> pd.Series:
@@ -518,17 +540,17 @@ def realtime_metrics(today: date | None = None) -> dict[str, Any]:
         brief_date = m.group(1) if m else None
     rows.append({"유형": "일별 시세(시카고 정산가·환율)", "과거 규칙": "마감(14:20 ET) 후 당일 확정 · 마감 이후 확정 지표는 +1일",
                  "실시간 관측": f"브리프 데이터 기준일 {brief_date or '미확인'} (발행일 전 거래일)",
-                 "판정": "정합" if brief_date else "미확인"})
+                 "판정": "일치" if brief_date else "미확인"})
     rows.append({"유형": "해상운임(BDI)", "과거 규칙": "발틱거래소 13:00 런던 발표 → 당일 즉시",
                  "실시간 관측": f"스냅샷 사본 최신 {te_last.date() if te_last is not None else '미확인'} · 3단 폴백(API→stooq→사본)",
                  "판정": ("정합(≤3영업일)" if te_last is not None and np.busday_count(te_last.date(), today) <= 3 else "지연 확인 필요")})
     rows.append({"유형": "월간 수급 보고서(WASDE·PSD)", "과거 규칙": "발표일 이후 가용(same_month) · 전망 행은 수집 시점 캡",
-                 "실시간 관측": "품질 테스트 available_at ≤ 오늘 통과(#99)", "판정": "정합"})
+                 "실시간 관측": "품질 테스트 available_at ≤ 오늘 통과(#99)", "판정": "일치"})
     rows.append({"유형": "산지 기후(ERA5-Land·예보)", "과거 규칙": "재분석 지연 6일 · 예보는 발행일 키(별도 파일)",
                  "실시간 관측": "예보 분리 반영 후 첫 정기 실행에서 판정", "판정": "판정 대기"})
     rows.append({"유형": "비정형(정책·지정학·매체)", "과거 규칙": "수집 시점 가용 · 마감 후 수집분은 +1일",
                  "실시간 관측": (f"아카이브 영업일 도달률 {r5.get('bday_arrival_rate')}" if r5.get("status") == "산출" else "미확인"),
-                 "판정": "정합" if (r5.get("bday_arrival_rate") or 0) >= 0.8 else "부분"})
+                 "판정": "일치" if (r5.get("bday_arrival_rate") or 0) >= 0.8 else "부분"})
     out["R6_rule_reverification"] = rows
     return out
 
@@ -612,26 +634,57 @@ def evaluate(mode: str = "full") -> dict[str, Any]:
             ph = prev.get("historical")
             if isinstance(ph, dict) and "H1_rank_stability" in ph:
                 result["historical"] = ph
-                result["historical_asof"] = prev.get("generated_at")
+                # A-274: 이월의 이월이 날짜만 전진시키던 결함 — 원 정규판 산출 시각을 보존
+                result["historical_asof"] = prev.get("historical_asof") or prev.get("generated_at")
                 result["basis"] = prev.get("basis", "직전 정규판 이월")
                 result["source"] = prev.get("source", {})
         except Exception as e:                                  # noqa: BLE001
             result["historical_carry_error"] = f"{type(e).__name__}"
         return result
-    inp = load_inputs()
-    result["basis"] = inp.basis
-    result["source"] = inp.source
-    fwd = _forward_returns(inp.close)
-    target20 = fwd["target_ret20"]
+    # A-274: 주별 런 2회(9/17·9/24)에서 H-블록이 조용히 죽어 JSON 미착지 — 실패를 JSON에 남기고
+    #   마트 입력 실패 시 진단 입력으로 1회 재시도한다(원인은 traceback으로 노출).
+    import traceback as _tb
     hist: dict[str, Any] = {}
-    feats = inp.features if inp.features is not None else pd.DataFrame(index=inp.close.index)
-    hist["H1_rank_stability"] = rank_stability(feats, target20) if not feats.empty else {"status": "미산출(피처 없음)"}
-    top = hist["H1_rank_stability"].get("pearson", {}).get("top_last_fold", []) if hist["H1_rank_stability"].get("status") == "산출" else []
-    hist["H2_granger_persistence"] = granger_persistence(feats, target20, top) if top else {"status": "미산출"}
-    hist["H3_alert_rule_retro"] = alert_rule_retro(inp.levels, inp.close)
-    hist["H4_reference_range"] = reference_range_diagnosis(inp.close)
-    hist["H5_analogue_discrimination"] = analogue_discrimination(inp.levels, inp.close, top or ["TE_BDI"])
+    last_err: Exception | None = None
+    for attempt in ("mart", "diag"):
+        try:
+            inp = load_inputs() if attempt == "mart" else load_inputs_diag()
+            if attempt == "diag" and str(result.get("source", "")).endswith(".csv"):
+                break                                           # A-276: 1차가 이미 진단 입력이면 재시도 무의미
+            result["basis"] = inp.basis
+            result["source"] = inp.source
+            fwd = _forward_returns(inp.close)
+            target20 = fwd["target_ret20"]
+            hist = {}
+            feats = inp.features if inp.features is not None else pd.DataFrame(index=inp.close.index)
+            hist["H1_rank_stability"] = rank_stability(feats, target20) if not feats.empty else {"status": "미산출(피처 없음)"}
+            top = hist["H1_rank_stability"].get("pearson", {}).get("top_last_fold", []) if hist["H1_rank_stability"].get("status") == "산출" else []
+            hist["H2_granger_persistence"] = granger_persistence(feats, target20, top) if top else {"status": "미산출"}
+            hist["H3_alert_rule_retro"] = alert_rule_retro(inp.levels, inp.close)
+            hist["H4_reference_range"] = reference_range_diagnosis(inp.close)
+            hist["H5_analogue_discrimination"] = analogue_discrimination(inp.levels, inp.close, top or ["TE_BDI"])
+            last_err = None
+            break
+        except Exception as e:                                  # noqa: BLE001
+            last_err = e
+            print(f"[경고] 과거 검증(H1~H5) {attempt} 입력 산출 실패: {type(e).__name__}: {e}")
+            _tb.print_exc()                                     # 마트 실패 → 진단 입력으로 1회 재시도
+    if last_err is not None:
+        result["historical"] = {"status": f"산출 실패({type(last_err).__name__}) — 로그 참조"}
+        try:
+            prev = json.loads(LATEST_JSON.read_text(encoding="utf-8")) if LATEST_JSON.is_file() else {}
+            ph = prev.get("historical")
+            if isinstance(ph, dict) and "H1_rank_stability" in ph:
+                result["historical"] = ph
+                result["historical_asof"] = prev.get("historical_asof") or prev.get("generated_at")
+                result["basis"] = prev.get("basis", result.get("basis"))
+                result["source"] = prev.get("source", result.get("source"))
+                result["historical_note"] = f"이번 회차 재산출 실패({type(last_err).__name__}) — 직전 정규판 이월"
+        except Exception:                                       # noqa: BLE001
+            pass
+        return result
     result["historical"] = hist
+    result["historical_asof"] = result["generated_at"]
     try:
         result["ledger_matured_now"] = mature_alert_ledger(inp.close)
         result["ledger"] = ledger_summary()
@@ -650,7 +703,7 @@ def _label(code: str) -> str:
 
 def render_markdown(res: dict[str, Any]) -> str:
     L: list[str] = []
-    L.append(f"# G1 보고서 신뢰도 지표 — {res['generated_at'][:10]} ({res.get('mode')})")
+    L.append(f"# 1단계 보고서 신뢰도 지표 — {res['generated_at'][:10]} ({res.get('mode')})")
     L.append("")
     L.append(f"> {REQUIRED_CAPTION}")
     L.append(f"> 입력 기반: **{res.get('basis', '경량 모드')}** · 분석창 {res['window'][0]}~{res['window'][1]}")
@@ -676,12 +729,12 @@ def render_markdown(res: dict[str, Any]) -> str:
             L.append(f"- **H1 변인 순위 안정성**: {h1.get('status')} — {h1.get('reason', '')}")
         h2 = H["H2_granger_persistence"]
         if h2.get("status") == "산출":
-            L.append(f"- **H2 인과 검정 재현성**: 전체 창 유의 {len(h2['significant_full'])}/{h2['n_vars']}개 · "
+            L.append(f"- **H2 선행 관계 검정 재현성**: 전체 창 유의 {len(h2['significant_full'])}/{h2['n_vars']}개 · "
                      f"부분 창 지속률 **{h2['persistence_rate']}** (본페로니 α={h2['alpha_bonferroni']})")
         else:
-            L.append(f"- **H2 인과 검정 재현성**: {h2.get('status')}")
+            L.append(f"- **H2 선행 관계 검정 재현성**: {h2.get('status')}")
         h3 = H["H3_alert_rule_retro"]
-        L.append(f"- **H3 경보 규칙 소급 성적** ({h3['label']} · {h3['rule_version']}): "
+        L.append(f"- **H3 경보 규칙을 과거에 적용한 성적** ({h3['label']} · {h3['rule_version']}): "
                  f"무조건부 |변화율| 중앙값 5/20/60일 = "
                  + " / ".join(f"{h3['unconditional_median_abs'][str(h)]*100:.2f}%" for h in HORIZONS))
         L.append("")
@@ -721,21 +774,21 @@ def render_markdown(res: dict[str, Any]) -> str:
     L.append(f"- **R1 입력 정확도**: 정산가 교차검증 상대오차 중앙값 {r1.get('median_diff_pct')}% · P99 {r1.get('p99_diff_pct')}% ({r1['status']})")
     r2 = R["R2_asof_accuracy"]
     if r2.get("status") == "산출":
-        L.append(f"- **R2 시점 정확도**: 계약 피처 {r2['n_features']}종 중 개정 이력 미보존 {r2['revision_contaminated']}종(투입 제외·면책 자동 삽입) · 규칙 `{r2['asof_rule']}`")
+        L.append(f"- **R2 발표 시점 정확도**: 계약 피처 {r2['n_features']}종 중 개정 이력 미보존 {r2['revision_contaminated']}종(투입 제외·면책 자동 삽입) · 규칙 `{r2['asof_rule']}`")
     else:
-        L.append(f"- **R2 시점 정확도**: {r2.get('status')}")
+        L.append(f"- **R2 발표 시점 정확도**: {r2.get('status')}")
     r3 = R["R3_alert_consistency"]
     if r3.get("status") == "산출":
-        L.append(f"- **R3 경보 정합성**: 스탬프 {r3['stamp_date']} 경보 {r3['stamp_alerts']}건 ↔ 경보판 {r3['report_alerts']}건 → "
+        L.append(f"- **R3 경보 수 일치**: 일일 검사 기록 {r3['stamp_date']} 경보 {r3['stamp_alerts']}건 ↔ 경보 목록 {r3['report_alerts']}건 → "
                  f"{'일치' if r3['consistent'] else '불일치'}")
     r4 = R["R4_publication_integrity"]
     if r4.get("status") == "산출":
-        L.append(f"- **R4 발행 무결성**: 서명 스탬프 {r4['rows']}행({r4['from']}~{r4['to']}) · 판정 분포 {r4['verdicts']} · "
-                 f"게이트 연속 통과 {r4['gate_pass_streak_runs']}회 · {r4['contaminated_note']}")
+        L.append(f"- **R4 발행 일관성**: 일일 검사 기록 {r4['rows']}행({r4['from']}~{r4['to']}) · 판정 분포 {r4['verdicts']} · "
+                 f"품질 검사 연속 통과 {r4['gate_pass_streak_runs']}회 · {r4['contaminated_note']}")
     r5 = R["R5_collection_channels"]
     if r5.get("status") == "산출":
         L.append(f"- **R5 수집 채널 실적**: 비정형 아카이브 {r5['rows']}행·{r5['indicators']}지표({r5['from']}~{r5['to']}) · "
-                 f"영업일 도달률 {r5['bday_arrival_rate']*100:.0f}% · 매체 채널 승자 {r5['media_channel_winners']} · 매체 기사 행 {r5['rss_codes']}")
+                 f"신호가 들어온 영업일 비율 {r5['bday_arrival_rate']*100:.0f}% · 매체 채널 승자 {r5['media_channel_winners']} · 매체 기사 행 {r5['rss_codes']}")
     L.append("- **R6 데이터 유형별 규칙 재검증**:")
     L.append("")
     L.append("| 데이터 유형 | 과거 데이터에서 확립한 규칙 | 실시간 관측 | 판정 |")
@@ -744,11 +797,11 @@ def render_markdown(res: dict[str, Any]) -> str:
         L.append(f"| {row['유형']} | {row['과거 규칙']} | {row['실시간 관측']} | {row['판정']} |")
     L.append("")
     led = res.get("ledger", {})
-    L.append(f"- **경보 원장(실발행)**: {led.get('rows', 0)}행 · 성숙 {led.get('matured', {})} · {led.get('note', '')}")
+    L.append(f"- **경보 기록부(실제 발행분)**: {led.get('rows', 0)}행 · 성숙 {led.get('matured', {})} · {led.get('note', '')}")
     L.append("")
     L.append("## 판독")
     L.append("- 1단계 수치는 표본을 나눠 다시 세어도 같은 변인이 남는지, 규칙이 과거에 얼마나 헛돌았는지, 참고 범위가 실제 변동을 얼마나 담았는지를 재는 **과정 검증**임.")
-    L.append("- 2단계 수치는 지금 들어오는 데이터가 1단계에서 확립한 규칙(발표 시점·주기·임계)대로 처리되는지를 재는 **적용 검증**임. 실발행 경보의 사후 성적은 원장 성숙 8회 이상부터 표기함.")
+    L.append("- 2단계 수치는 지금 들어오는 데이터가 1단계에서 확립한 규칙(발표 시점·주기·임계)대로 처리되는지를 재는 **적용 검증**임. 실발행 경보의 사후 성적은 기록부에 8회 이상 쌓인 뒤부터 표기함.")
     md = "\n".join(L) + "\n"
     for bad in FORBIDDEN_PHRASES:
         assert bad not in md, f"[오류] 서술 계약 위반 표현: {bad}"
@@ -756,7 +809,7 @@ def render_markdown(res: dict[str, Any]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="G1 보고서 신뢰도 지표 산출")
+    ap = argparse.ArgumentParser(description="1단계 보고서 신뢰도 지표 산출")
     ap.add_argument("--mode", default=os.environ.get("G1_PUBLISH_MODE", "full"),
                     choices=["alert", "weekly", "monthly", "full"])
     ap.add_argument("--report-dir", default=os.environ.get("G1_REPORT_DIR", "reports/market"))

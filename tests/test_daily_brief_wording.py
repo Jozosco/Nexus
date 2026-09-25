@@ -119,4 +119,4 @@ def test_label_and_humanize_helpers() -> None:
     assert _humanize("운임 시장 전파(CE-010·CE-013) — 직접 경유 아님") == "운임 시장 전파 — 직접 경유 아님"
     assert _humanize("우회 국면(CE-013 validated) 근거") == "우회 국면(검증됨) 근거"
     t = _media_title("[정책] REPORT_DATE: 2026-09-11 CONSENSUS: 5.4 (https://x.y/z)", "X")
-    assert t.startswith("발표일: 2026-09-11 컨센서스: 5.4") and "http" not in t
+    assert t.startswith("발표일: 2026-09-11 시장 예상치: 5.4") and "http" not in t   # A-275: 컨센서스→시장 예상치

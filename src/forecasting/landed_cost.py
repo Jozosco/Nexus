@@ -118,13 +118,23 @@ def load_cbot_usd_mt() -> tuple[pd.Series, str, str]:
       강등 → 세션 parquet를 앞세운다) → ③ Databento UTC 일봉 CSV(**진단 계열 — 정산가
       아님**. V-001 실측: 정산가 대비 중앙값 괴리 0.10%. CBOT_BO_UTC_* 진단 용도).
     """
-    if CBOT_SESSION_PARQUET.exists():
-        df = pd.read_parquet(CBOT_SESSION_PARQUET)
+    # A-274: CI에서는 아티팩트 merge 다운로드가 data/raw/data/raw/cbot_session_close.parquet 에 착지(A-178 유형)해
+    #   고정 경로가 비어 mart(분석창 캡 2025-12)로 폴백 → 도착가 범위가 8회차 연속 1,154.93 $/t로 고정됐다.
+    #   재귀 탐색으로 최신 파일을 쓴다.
+    candidates = [CBOT_SESSION_PARQUET] if CBOT_SESSION_PARQUET.exists() else []
+    candidates += [Path(p) for p in glob.glob("data/raw/**/cbot_session_close.parquet", recursive=True)
+                   if Path(p) != CBOT_SESSION_PARQUET]
+    best: tuple[pd.Series, Path] | None = None
+    for cand in candidates:
+        df = pd.read_parquet(cand)
         df = df[df["indicator_code"] == "CBOT_BO_CLOSE"]
         if len(df):
             s = (df.assign(d=pd.to_datetime(df["event_time"]).dt.normalize())
                    .set_index("d")["value"].astype(float).sort_index())
-            return s * USC_LB_TO_USD_MT, "cbot_session_close.parquet(정산가·전기간)", ""
+            if best is None or s.index.max() > best[0].index.max():   # A-276: 가장 최신 계열 채택
+                best = (s, cand)
+    if best is not None:
+        return best[0] * USC_LB_TO_USD_MT, f"cbot_session_close.parquet(정산가·전기간 — {best[1].parent})", ""
     if GOLD_MART.exists():
         mart = pd.read_parquet(GOLD_MART)
         if "feat_CBOT_BO_CLOSE" in mart.columns:

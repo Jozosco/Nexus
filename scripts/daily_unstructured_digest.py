@@ -31,12 +31,17 @@ ARCHIVE = Path("data/processed/unstructured_daily_signals.csv")
 
 # 일 단위 갱신되는 비정형·프록시 지표 (커넥터별)
 DAILY_UNSTRUCTURED = {
-    "지정학 위험":   ["GPR_REALTIME", "GPR", "HORMUZ_THREAT_LEVEL", "HORMUZ_AWRP_MULTIPLIER"],
+    "지정학 위험":   ["GPR_REALTIME", "GPR", "GPR_QUALITATIVE", "HORMUZ_THREAT_LEVEL", "HORMUZ_AWRP_MULTIPLIER"],
     "정책 뉴스":     ["ARG_EXPORT_TAX_NEWS", "INDIA_DUTY_NEWS", "BIODIESEL_MANDATE_NEWS",
                      "WASDE_CONSENSUS_SCORE"],
     "지정학 이벤트": ["SUEZ_RED_SEA_RISK", "UKRAINE_GRAIN_CORRIDOR", "US_CHINA_TARIFF_STATUS",
                      "BRAZIL_HARVEST_PROGRESS"],
-    "해협 탱커":     ["AIS_HORMUZ_TANKERS", "AIS_MALACCA_TANKERS", "AIS_PANAMA_TANKERS",
+    # A-273(2026-09-25): 미국–이란·러시아–EU 분쟁 상태(검색 요약 2종) + 통신사 지정학 레인(농산물 맥락 불요)
+    "지정학 동향":   ["US_IRAN_CONFLICT_STATUS", "RUSSIA_EU_RELATIONS_STATUS",
+                     "RSS_REUTERS_GEO", "RSS_AP_GEO"],
+    # A-274: 커넥터 발행 코드명과 정합(구 AIS_*_TANKERS는 발행된 적 없음 → 아카이브 0행)
+    "해협 탱커":     ["AIS_HORMUZ_TANKER_COUNT", "AIS_MALACCA_TANKER_COUNT", "AIS_PANAMA_TANKER_COUNT",
+                     "AIS_HORMUZ_RISK", "AIS_MALACCA_RISK", "AIS_PANAMA_RISK",
                      "SBO_STRAIT_RISK_COMPOSITE"],
     "GeoIntel 복합": ["GEOINTEL_RISK_COMPOSITE", "SEISMIC_RISK", "GDELT_EVENT_SCORE"],
     "운임(실시간)":  ["BCAA", "BCTI_PROXY"],
@@ -85,6 +90,9 @@ _TOPIC_AP_COMMODITIES = ("(soybean OR \"soybean oil\" OR \"vegetable oil\" OR \"
                          "commodities OR futures OR CFTC OR tariff OR freight)")
 _TOPIC_AP_WORLD = ("(\"Red Sea\" OR Hormuz OR \"Black Sea\" OR \"Suez\" OR Argentina OR "
                    "Brazil OR drought OR tariff OR shipping)")
+# A-273: 지정학 레인 — 분쟁·제재·해협 기사(농산물 맥락 없이도 통과, 채널당 3건 캡)
+_TOPIC_GEO = ("(Iran OR Hormuz OR Houthi OR Russia OR Ukraine OR \"Black Sea\" OR sanctions OR "
+              "CIA OR ceasefire)")
 _CHANNEL_LABELS = {"gnews": "Google News", "gdelt": "GDELT", "bing": "Bing News",
                    "rss": "공식 RSS", "raw": "원문"}
 _GDELT_CALLS = 0   # 프로세스 내 GDELT 호출 수 — 첫 호출 전에는 대기하지 않는다(테스트가 patch 가능)
@@ -153,6 +161,17 @@ RSS_SOURCES = {
     #   표준 RSS 2.0) → ② GDELT DOC 2.0 domain: 한정(egress 기등재) → ③ Bing News RSS
     #   (egress v2.7) → ④ 승인자 원문 섹션 URL(비브라우저 차단 예상·열람용). 전 채널 비치명 —
     #   실제 통과 채널은 첫 Actions 런 로그·아카이브 note "[채널: …]"로 실증한다.
+    # A-273: 통신사 지정학 레인(미국–이란·러시아–EU·흑해·제재) — 같은 채널 체인, 전용 게이트(_GEO_SOURCES) · 통신사 농산물 레인보다 앞에 두어 해협 기사를 먼저 가져감(A-276)
+    "RSS_REUTERS_GEO": [
+        _gnews("reuters.com", _TOPIC_GEO),
+        _gdelt("reuters.com", _TOPIC_GEO),
+        _bing("reuters.com", _TOPIC_GEO),
+        "https://www.reuters.com/world/middle-east/"],
+    "RSS_AP_GEO": [
+        _gnews("apnews.com", _TOPIC_GEO),
+        _gdelt("apnews.com", _TOPIC_GEO),
+        _bing("apnews.com", _TOPIC_GEO),
+        "https://apnews.com/hub/iran"],
     "RSS_REUTERS_COMMODITIES": [
         _gnews("reuters.com", _TOPIC_REUTERS_COMMODITIES),
         _gdelt("reuters.com", _TOPIC_REUTERS_COMMODITIES),
@@ -187,14 +206,15 @@ _RSS_KEYWORDS_EN = (
     "soybean", "soy oil", "soyoil", "soybean oil", "vegetable oil", "oilseed",
     "palm oil", "canola", "rapeseed", "sunflower", "crush", "biodiesel",
     "renewable diesel", "wasde", "export tax", "tariff", "south korea",
-    "biofuel", "rvo", "cftc", "freight", "drought", "el niño", "el nino", "la niña", "la nina",
+    "biofuel", "freight", "drought", "el niño", "el nino", "la niña", "la nina",
     "red sea", "hormuz", "black sea",
 )
 _RSS_KEYWORDS_KO = (
     "대두", "대두유", "팜유", "식용유", "유지류", "바이오디젤", "바이오연료",
     "항공유", "지속가능항공유", "곡물", "수출세", "관세",
 )
-_RSS_KEYWORD_REGEX = (re.compile(r"\bsaf\b"),)          # 단어 경계 필수 — 'safety' 오탐 차단
+# 단어 경계 필수 — 'safety'·'nervous'(rvo) 오탐 차단(A-274). 그 자체로 특정적이라 맥락어 불요.
+_RSS_KEYWORD_REGEX = (re.compile(r"\bsaf\b"), re.compile(r"\brvo\b"), re.compile(r"\bcftc\b"))
 _TITLE_ONLY_SOURCES = {"RSS_CLIMATEPOL"}                  # 국문 종합 매체: 제목에 키워드가 있어야 통과
 _RSS_KEYWORDS = _RSS_KEYWORDS_EN + _RSS_KEYWORDS_KO       # 하위 호환(테스트·외부 참조)
 NOTE_BUDGET = 900                                          # A-269: 제목+요약 보존(구 500 — 제목만)
@@ -210,17 +230,30 @@ def _clean_desc(raw: str, n: int = 160) -> str:
 
 
 # 범용 키워드(관세·운임·가뭄·해협 등)는 농산물·유지 맥락어와 **동반될 때만** 통과 — 실측 오탐: AP 'Irish whiskey tariff'.
+# A-274: 'crush'(크리켓 crush Sri Lanka)·'el niño'(보건 기사)도 범용어로 — 농산물 맥락 동반 필수.
 _GENERIC_KEYWORDS = {"tariff", "export tax", "freight", "drought", "red sea", "hormuz", "black sea", "south korea",
-                     "cftc", "rvo", "biofuel", "관세", "수출세", "곡물"}
-_AGRI_CONTEXT = ("soy", "oil", "grain", "crop", "farm", "agri", "palm", "biodiesel", "canola", "rapeseed",
+                     "biofuel", "crush", "el niño", "el nino", "la niña", "la nina", "관세", "수출세", "곡물"}
+# A-274: 맥락어 'oil'은 원유 기사(한국 원유 수입 정책 등)를 통과시켰다 → 식용유·유지 표현으로 한정.
+_AGRI_CONTEXT = ("soy", "soyoil", "vegetable oil", "palm oil", "edible oil", "cooking oil", "oilseed",
+                 "grain", "crop", "farm", "agri", "palm", "biodiesel", "canola", "rapeseed",
                  "sunflower", "wheat", "corn", "vessel", "tanker", "ship", "strait", "commodit", "harvest",
                  "대두", "유지류", "곡물", "농산", "농업", "팜", "선박", "해협", "운임", "바이오")
+# A-273: 지정학 레인 전용 게이트 — 분쟁·제재·해협 어휘(단어 경계), 농산물 맥락 불요
+_GEO_SOURCES = {"RSS_REUTERS_GEO", "RSS_AP_GEO"}
+_GEO_KEYWORD_REGEX = re.compile(
+    r"\b(iran|iranian|hormuz|houthi|red sea|russia|russian|ukraine|ukrainian|black sea|sanctions?|cia|"
+    r"ceasefire|strait|tankers?|brent)\b|이란|호르무즈|러시아|우크라이나|흑해|제재", re.IGNORECASE)
+_GEO_LANE_CAP = 3
 
 
 def _match_keyword(title: str, desc: str, indicator: str = "") -> str | None:
-    """통과 키워드 반환(없으면 None). 국문 매체는 제목 기준, 그 외는 제목+요약. 범용어는 맥락어 동반 필수."""
+    """통과 키워드 반환(없으면 None). 국문 매체는 제목 기준, 그 외는 제목+요약. 범용어는 맥락어 동반 필수.
+    지정학 레인(_GEO_SOURCES)은 전용 어휘만 보고 농산물 맥락을 요구하지 않는다(A-273)."""
     t = str(title).lower(); d = str(desc).lower()
     blob = t if indicator in _TITLE_ONLY_SOURCES else f"{t} {d}"
+    if indicator in _GEO_SOURCES:
+        m = _GEO_KEYWORD_REGEX.search(blob)
+        return m.group(0).lower() if m else None
     has_ctx = any(c in blob for c in _AGRI_CONTEXT)
     for k in _RSS_KEYWORDS_EN + _RSS_KEYWORDS_KO:
         if k in blob and (k not in _GENERIC_KEYWORDS or has_ctx):
@@ -328,8 +361,21 @@ def _items_from_gdelt(spec: dict) -> list[dict]:
     return items
 
 
-def _filter_items(items: list[dict], cutoff: pd.Timestamp, indicator: str = "") -> list[dict]:
-    """2일 컷오프 + SBO 키워드 게이트(매칭어 기록) + 링크 중복 제거(첫 항목 유지)."""
+_TITLE_SUFFIX_RE = re.compile(r"\s*[-–|]\s*(ap news|reuters|apnews\.com|reuters\.com)\s*$", re.IGNORECASE)
+
+
+def _norm_title(title: str) -> str:
+    """채널 간 중복 판정용 제목 정규화 — 매체 접미('- AP News') 제거·소문자·공백 축약(A-274)."""
+    t = _TITLE_SUFFIX_RE.sub("", str(title or "")).lower()
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _filter_items(items: list[dict], cutoff: pd.Timestamp, indicator: str = "",
+                  seen_titles: set[str] | None = None, stats: dict | None = None) -> list[dict]:
+    """2일 컷오프 + 키워드 게이트(매칭어 기록) + 링크·제목 중복 제거(첫 항목 유지).
+
+    `seen_titles`를 넘기면 채널 간(AP 국제↔상품 등) 동일 기사를 뒤 채널에서 제거한다(A-274).
+    """
     kept: list[dict] = []
     seen_links: set[str] = set()
     for it in items:
@@ -342,7 +388,16 @@ def _filter_items(items: list[dict], cutoff: pd.Timestamp, indicator: str = "") 
         link = it["link"]
         if link and link in seen_links:
             continue
+        nt = _norm_title(it.get("title", ""))
+        if seen_titles is not None and nt and nt in seen_titles:
+            if stats is not None:
+                stats["dupes"] = stats.get("dupes", 0) + 1
+            continue
+        if indicator in _GEO_SOURCES and len(kept) >= _GEO_LANE_CAP:   # A-276: 캡을 기록 전에 적용
+            break
         seen_links.add(link)
+        if seen_titles is not None and nt:
+            seen_titles.add(nt)
         kept.append(it)
     return kept
 
@@ -365,6 +420,7 @@ def _fetch_specialist_media() -> list[dict]:
     cutoff = pd.Timestamp(date.today()) - pd.Timedelta(days=2)
     rows: list[dict] = []
     winners: dict[str, str] = {}
+    seen_titles: set[str] = set()                            # A-274: 채널 간 동일 기사 1회만
     for indicator, entries in RSS_SOURCES.items():
         kept: list[dict] = []
         channel = ""
@@ -381,9 +437,12 @@ def _fetch_specialist_media() -> list[dict]:
             except Exception as e:   # 네트워크·파싱 어느 쪽이든 비치명
                 print(f"[경고] 매체 수집 실패({indicator}·{ch}): {type(e).__name__} — 다음 채널로")
                 continue
-            kept = _filter_items(items, cutoff, indicator)
+            _st: dict = {}
+            kept = _filter_items(items, cutoff, indicator, seen_titles, _st)
             if kept:
                 channel = ch
+                break
+            if _st.get("dupes"):                              # A-276: 전부 중복이면 다음 채널로 넘기지 않음(재유입·호출 낭비 방지)
                 break
         if not kept:
             continue
@@ -530,6 +589,8 @@ _CANDIDATE_RULES = {
     "US_CHINA_TARIFF_STATUS": lambda v: v >= 2,
     "GEOINTEL_RISK_COMPOSITE": lambda v: v >= 60,
     "GPR_REALTIME":          lambda v: v >= 200,   # 소통용 직관 기준(스킬 정합)
+    "US_IRAN_CONFLICT_STATUS":    lambda v: v >= 2,   # A-273
+    "RUSSIA_EU_RELATIONS_STATUS": lambda v: v >= 2,   # A-273
 }
 
 

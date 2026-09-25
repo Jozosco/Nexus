@@ -274,7 +274,7 @@ THRESHOLDS: dict[str, dict] = {
     "BDI":              {"alert": None,    "dir": "z",  "label": "해운비용 급등 (90일 rolling z>2σ)"},
     "WASDE_STU":        {"alert": 0.10,   "dir": "<",  "label": "공급 스트레스"},
     "CPO_SBO_SPREAD":   {"alert": 175.0,  "dir": ">",  "label": "CPO 대체압력"},
-    "ENSO_ONI":         {"alert": 0.5,    "dir": "abs", "label": "기후 레짐 전환"},
+    "ENSO_ONI":         {"alert": 0.5,    "dir": "abs", "label": "기후 국면 전환"},
 }
 
 # ── C-03 임계값 산출 근거 설명 ─────────────────────────────────────────────────
@@ -430,6 +430,8 @@ FILE_PATTERNS: dict[str, str] = {
     # A-266(2026-09-14): 승인자 업로드 2종 — 준비도 차단 항목 ⑤·⑥ 해소
     "fx_brl_usd_historical": "거시경제(BRL/USD 환율 15개년 업로드 — 투자 포털 원본)",
     "enso_oni_historical":   "기후(ENSO ONI 1950~ 업로드 — NOAA PSL)",
+    # A-274: AIS 해협 탱커 파케이(ais_strait_risk_*) — 미등록이라 해상 위험 카드 '선박 위치 미수집'이 구조적이었음
+    "ais_strait_risk":       "해협 탱커 통항(AIS·검색 요약)",
 }
 
 
@@ -1308,7 +1310,7 @@ def _check_structural_breaks(frames: dict[str, pd.DataFrame]) -> list[dict]:
         alerts.append({
             "변수": "ENSO_ONI", "현재값": "N/A", "임계값": "±0.5",
             "상태": "❓ 데이터 미수집",
-            "설명": "기후 레짐 전환 — ENSO ONI 업로드·API 계열 모두 부재",
+            "설명": "기후 국면 전환 — ENSO ONI 업로드·API 계열 모두 부재",
             "데이터신선도": "❌ parquet 없음",
         })
 
@@ -2365,7 +2367,8 @@ def run(days: int = 7) -> None:
         from src.reporting.daily_brief import build_daily_brief
         brief_html = build_daily_brief(
             frames, importance_df, alerts, status_df, run_ts, run_id, target_label,
-            n_features=int(sum(1 for c in wide.columns if not str(c).startswith('target_'))))
+            n_features=int(sum(1 for c in wide.columns if not str(c).startswith('target_'))),
+            publish_mode=publish_mode)
         brief_path = f"{REPORT_DIR}/g1_daily_brief_{tag}.html"
         with open(brief_path, "w", encoding="utf-8") as fh:
             fh.write(brief_html)
@@ -2374,17 +2377,19 @@ def run(days: int = 7) -> None:
         print(f"[경고] 일별 브리프 생성 실패(비치명 — 기존 보고서 경로 계속): "
               f"{type(e).__name__}: {e}")
 
-    if publish_mode == "alert":
-        breach = [a for a in alerts if "🚨" in a.get("상태", "")]
-        if not breach:
-            print("[C-03] 경보판 — 임계값 초과 없음. 일별 브리프(서명된 무소식)로 발행 완료.")
-            return
+    # A-274: 경보판 md는 **모든 모드**에서 기준 초과 시 발행 — 주별·월별 런에서 미발행이라 E1 검사 기록이
+    #   금요일마다 '경보 0건'으로 기록되던 결함(9/17·9/24 실증).
+    breach = [a for a in alerts if "🚨" in a.get("상태", "")]
+    if not breach and publish_mode == "alert":
+        print("[C-03] 경보판 — 임계값 초과 없음. 일별 브리프(검사 완료·이상 없음)로 발행 완료.")
+        return
+    if breach:
         alert_lines = [
-            f"# G1 일별 경보판 — {run_ts[:10]}",
+            f"# 일일 경보 목록 — {run_ts[:10]}",
             f"**분석 타깃**: `{target_label}`  |  **생성 일자**: {run_ts[:10]}",
             "",
-            "## 🚨 구조적 단절 임계값 초과",
-            "| 변수 | 현재값 | 임계값 | 설명 |",
+            "## 🚨 주의 기준 초과",
+            "| 변수 | 현재값 | 기준 | 설명 |",
             "|---|---|---|---|",
         ]
         for a in breach:
@@ -2392,8 +2397,8 @@ def run(days: int = 7) -> None:
                 f"| {_label_ko_safe(a['변수'])} | {a['현재값']} | {a['임계값']} | {a['설명']} |")
         alert_lines += [
             "",
-            "## 상위 기여 변수 (중요도 순위 상위 3)",
-            "| 변수 | 피어슨 r | LASSO 계수 |",
+            "## 영향 큰 변수 상위 3",
+            "| 변수 | 함께 움직인 정도 | 선별 가중치 |",
             "|---|---|---|",
         ]
         for _, row in importance_df.head(3).iterrows():
@@ -2402,13 +2407,14 @@ def run(days: int = 7) -> None:
             alert_lines.append(f"| {_label_ko_safe(row.get('변수', '?'))} | {r_val} | {l_val} |")
         alert_lines += [
             "",
-            "*일별 경보판은 임계값 초과 시에만 발행됨 (3계층 발행 체계 · 2026-08-14 승인)*",
-            "*조달 결정은 CLAUDE.md §6 HITL 프로세스 필요*",
+            "*일일 경보 목록은 기준 초과 시에만 발행됨*",
+            "*조달 결정은 담당자 승인 절차 필요*",
         ]
         alert_path = f"{REPORT_DIR}/g1_alert_{tag}.md"
         with open(alert_path, "w", encoding="utf-8") as fh:
             fh.write("\n".join(alert_lines))
         print(f"[C-03 경보] 임계값 초과 {len(breach)}건 — 경보판 발행 → {alert_path}")
+    if publish_mode == "alert":
         return
 
     # ── Granger 인과검정: 전체 히스토리 parquet 사용 (2020~작년) ──────────────────
@@ -2461,18 +2467,18 @@ def run(days: int = 7) -> None:
         f"**데이터 범위**: {data_period if data_period else f'최근 {days}일'}  |  **생성 일자**: {run_ts[:10]}",
         f"**분석 타깃**: `{target_label}` (기준가격: `{G1_TARGET_COL}` · 단위: USc/lb)",
         "",
-        "## 구조적 단절 임계값 현황",
+        "## 주의 기준 초과 현황",
     ]
     if breach:
         for a in alerts:
             icon = "🚨" if "🚨" in a.get("상태", "") else "✅"
             md_lines.append(f"- {icon} **{a['변수']}**: {a['현재값']} (임계값 {a['임계값']}) — {a['설명']}")
     else:
-        md_lines.append("- ✅ 모든 구조적 단절 임계값 정상 범위 내")
+        md_lines.append("- ✅ 모든 감시 변수가 기준 범위 내")
     md_lines += [
         "",
         "## 변수 중요도 TOP 10",
-        "| 변수 | 피어슨 r | LASSO 계수 |",
+        "| 변수 | 함께 움직인 정도 | 선별 가중치 |",
         "|---|---|---|",
     ]
     if not importance_df.empty:

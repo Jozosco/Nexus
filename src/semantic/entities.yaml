@@ -1724,6 +1724,56 @@ geopolitics_and_security:
   source_code: GH-README,GH-P102
   status: active
   owner_agent: P1-06
+- term_id: TERM-231
+  canonical: US-Iran Conflict (Strait of Hormuz channel)
+  canonical_ko: 미국–이란 분쟁(호르무즈 경로)
+  class: GeopoliticalEvent
+  category: 지정학·안보
+  subcategory: 분쟁·제재
+  abbr: 'US_IRAN'
+  synonyms:
+  - US-Iran conflict
+  - Iran-US tensions
+  - 미국-이란 분쟁
+  - 호르무즈 봉쇄 위협
+  definition: '미국과 이란 간 군사·안보 충돌 상태 — 호르무즈 해협 탱커 통항·공격·전쟁위험보험료 경로로 관측한다(2026-09-25 승인자 지시로 일별 검색 요약 US_IRAN_CONFLICT_STATUS 신설).'
+  interpretation_rules: '수준(1~3)은 검색 요약의 질적 판정이며 사건·통항 수·보험료 배수는 note에 보존한다 · 대두유 가격 영향은 CE-010(호르무즈→탱커 운임·전쟁보험료→한국 도착가) 검증 경로로만 서술하고 방향·확률 주장은 하지 않는다 · 한국향 3항로 직접 경유 아님(운임 시장 전파 축).'
+  impact_target: Logistics/Trade
+  price_direction: UP_RISK
+  unit_range: '1=Low/2=Med/3=High'
+  alert_criteria: '수준 ≥2 → 온톨로지 후보 큐(검증 대기)'
+  priority: A
+  ambiguity_risk: 중
+  relations: AFFECTS
+  source_code: src/pipeline/connectors/gpr_connector.py,scripts/daily_unstructured_digest.py
+  status: candidate
+  owner_agent: P1-06
+  data_codes: [US_IRAN_CONFLICT_STATUS, HORMUZ_THREAT_LEVEL, HORMUZ_AWRP_MULTIPLIER, RSS_REUTERS_GEO, RSS_AP_GEO]
+- term_id: TERM-232
+  canonical: Russia-EU Relations (sanctions · energy · Black Sea)
+  canonical_ko: 러시아–EU 관계(제재·에너지·흑해)
+  class: GeopoliticalEvent
+  category: 지정학·안보
+  subcategory: 분쟁·제재
+  abbr: 'RU_EU'
+  synonyms:
+  - Russia-EU tensions
+  - EU sanctions on Russia
+  - 러시아-EU 관계
+  - 대러 제재
+  definition: '러시아와 EU 간 정치·제재·에너지 긴장 상태 — 공식·정보기관(CIA 등) 발언, 제재·에너지 조치, 흑해 회랑 영향으로 관측한다(2026-09-25 승인자 지시로 일별 검색 요약 RUSSIA_EU_RELATIONS_STATUS 신설).'
+  interpretation_rules: '수준(1~3)은 검색 요약의 질적 판정이며 발언·조치 원문은 note에 보존한다 · 대두유 가격 서술은 금지(흑해 회랑 CE-014는 후보, 유가→바이오디젤 CE-020은 별도 관측 지표로만 연결) · 해바라기유 수출 경로·경유 가격 관찰 표시까지만.'
+  impact_target: Logistics/Trade
+  price_direction: CONTEXT
+  unit_range: '1=Low/2=Med/3=High'
+  alert_criteria: '수준 ≥2 → 온톨로지 후보 큐(검증 대기)'
+  priority: B
+  ambiguity_risk: 상
+  relations: AFFECTS
+  source_code: src/pipeline/connectors/gpr_connector.py,scripts/daily_unstructured_digest.py
+  status: candidate
+  owner_agent: P1-06
+  data_codes: [RUSSIA_EU_RELATIONS_STATUS, UKRAINE_GRAIN_CORRIDOR, RSS_REUTERS_GEO, RSS_AP_GEO]
 - term_id: TERM-081
   canonical: Strait of Hormuz
   canonical_ko: 호르무즈 해협

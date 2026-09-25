@@ -43,7 +43,10 @@ VAR_LABELS: dict[str, str] = {
     "GPR_NORMALIZED": "지정학 위험(GPR 정규화)", "GPR": "지정학 위험(GPR)",
     "ENSO_ONI": "ENSO ONI(엘니뇨 지수)", "ONI": "ENSO ONI(엘니뇨 지수)",
     "CPO_SBO_SPREAD": "대두유−팜유 가격 차이", "WASDE_SBO_STU": "WASDE 재고사용비율",
-    "TE_PALM_OIL": "CPO 팜유(TE)", "TE_SOYBEANS": "CBOT 대두(TE)",
+    "TE_PALM_OIL": "팜유(말레이시아 선물, MYR/톤)", "TE_SOYBEANS": "CBOT 대두(TE)",
+    # A-273: 지정학 동향 프록시 2종 + 정성 GPR
+    "US_IRAN_CONFLICT_STATUS": "미국–이란 분쟁 상태", "RUSSIA_EU_RELATIONS_STATUS": "러시아–EU 관계 상태",
+    "GPR_QUALITATIVE": "지정학 위험(정성 판정)",
     "FEDFUNDS": "미 기준금리", "CPIAUCSL": "미 CPI",
     "GDELT_EVENT_SCORE": "대두유 관련 국제 사건 기사 수", "GDELT_SBO_EVENT_COUNT": "대두유 관련 국제 사건 수",
     "HORMUZ_THREAT_LEVEL": "호르무즈 해협 위협 수준",
@@ -63,7 +66,7 @@ VAR_LABELS: dict[str, str] = {
     "BOARD_CRUSH_MARGIN": "압착 마진(대두 가공 채산성)",
     "ARG_EXPORT_TAX_NEWS": "아르헨티나 수출세 뉴스", "INDIA_DUTY_NEWS": "인도 식용유 관세 뉴스",
     "BIODIESEL_MANDATE_NEWS": "바이오디젤 의무혼합 뉴스",
-    "WASDE_CONSENSUS_SCORE": "USDA 수급 전망 컨센서스",
+    "WASDE_CONSENSUS_SCORE": "USDA 수급 전망 예상치 대비",
     "CPO_USD_MT": "팜유 가격(달러/톤)", "CPO": "팜유 가격",
     "KRW_USD": "원/달러 환율", "CBOT_BO_ROLLDAY": "대두유 선물 만기 교체일",
 }
@@ -111,6 +114,7 @@ _RSS_ORG_KO: dict[str, str] = {
     "RSS_TFM": "토탈 팜 마케팅", "RSS_UKRAGRO": "우크라그로컨설트",
     "RSS_REUTERS_COMMODITIES": "로이터(상품·탄소)", "RSS_REUTERS_CLIMATE_ENERGY": "로이터(기후·에너지)",
     "RSS_AP_COMMODITIES": "AP 통신(상품·선물)", "RSS_AP_WORLD": "AP 통신(국제)",
+    "RSS_REUTERS_GEO": "로이터(지정학)", "RSS_AP_GEO": "AP 통신(지정학)",
 }
 _SOURCE_KO: list[tuple[str, str]] = [
     ("PolicyProxy", "정책 뉴스 요약"), ("GeoEventProxy", "지정학 사건 요약"),
@@ -129,16 +133,20 @@ _TARGET_KO: dict[str, str] = {"target_ret1": "1거래일 뒤 가격 변화율",
 _GATE_KO: dict[str, str] = {"PASS": "통과", "WARNING": "통과(주의)", "REJECTED": "불합격",
                             "SKIPPED": "생략"}
 _NOTE_KEY_KO: dict[str, str] = {
-    "REPORT_DATE": "발표일", "CONSENSUS": "컨센서스", "RATE": "세율", "PROGRESS": "진척",
+    "REPORT_DATE": "발표일", "CONSENSUS": "시장 예상치", "RATE": "세율", "PROGRESS": "진척",
     "STATUS": "상태", "LEVEL": "수준", "SCORE": "점수", "SOURCE": "출처", "MULTIPLIER": "배수",
     "VALUE": "값", "DATE": "일자", "COUNT": "건수",
     # A-269: 프록시 프롬프트가 실제로 내는 키 전량 — 미매핑 키가 영문 Title Case로 새던 결함
-    "DUTY_RATE": "관세율", "CHANGE": "변동", "ACTUAL": "실제", "SURPRISE": "서프라이즈",
+    "DUTY_RATE": "관세율", "CHANGE": "변동", "ACTUAL": "실제", "SURPRISE": "예상과의 차이",
     "RISK": "위험", "DIVERSIONS": "우회 선박", "FREIGHT_IMPACT": "운임 영향",
     "SUNFLOWER_OIL_EXPORTS": "해바라기유 수출", "TARIFF_LEVEL": "관세 수준",
     "SOYBEAN_OIL_TARIFF": "대두유 관세", "VS_LAST_YEAR": "전년 대비", "WEATHER_RISK": "기상 위험",
     "INDONESIA": "인도네시아", "MALAYSIA": "말레이시아", "QUALITATIVE": "정성 판정",
     "COMPOSITE": "복합 점수", "AWRP": "전쟁위험보험료", "THREAT": "위협",
+    # A-273: 지정학 동향 프록시·호르무즈 서사 키
+    "KEY_EVENT": "핵심 사건", "HORMUZ_IMPACT": "호르무즈 영향", "TENSION": "긴장 수준",
+    "KEY_STATEMENT": "핵심 발언", "SANCTIONS_ENERGY": "제재·에너지 조치", "BLACK_SEA_IMPACT": "흑해 영향",
+    "METRIC": "항목", "TRANSITS": "통항 수", "DISRUPTION": "차질",
 }
 _VALUE_KO: dict[str, str] = {
     "unchanged": "변동 없음", "increase": "인상", "decrease": "인하", "high": "높음", "medium": "중간",
@@ -146,8 +154,12 @@ _VALUE_KO: dict[str, str] = {
     "reduced": "감소", "suspended": "중단", "bullish": "강세", "bearish": "약세", "neutral": "중립",
     "yes": "있음", "no": "없음", "none": "없음", "unknown": "미확인", "ahead": "앞섬", "behind": "뒤처짐",
     "on-track": "정상", "critical": "심각", "elevated": "상승",
+    "escalating": "고조", "de-escalating": "완화", "stable": "안정", "closure threat": "봉쇄 위협",
+    "high escalation": "높음", "medium escalation": "중간", "low escalation": "낮음",
+    "attacks on tankers": "탱커 공격", "transits reduced": "통항 감소",
 }
 _PREFIX_TAG_RE = re.compile(r"^\s*\[[^\]]*\]\s*")
+_LONG_VALUE_KEYS = {"핵심 사건", "핵심 발언", "제재·에너지 조치", "흑해 영향"}   # A-276: 60자 절단 예외
 
 
 def _parse_kv(note: str) -> list[tuple[str, str]]:
@@ -167,12 +179,16 @@ def _parse_kv(note: str) -> list[tuple[str, str]]:
         val = re.sub(r"\s*\([^)]*\)\s*$", "", val) if len(val) > 40 else val   # 긴 괄호 부연 제거
         low = val.lower().strip(".")
         val_ko = _VALUE_KO.get(low, val)
-        out.append((_NOTE_KEY_KO.get(key, key.replace("_", " ").title()), val_ko[:60]))
+        key_ko = _NOTE_KEY_KO.get(key, key.replace("_", " ").title())
+        cap = 220 if key_ko in _LONG_VALUE_KEYS else 60          # A-276: 사건·발언 서사는 문장 보존
+        out.append((key_ko, val_ko[:cap]))
     return out if len(out) >= 2 else []
 _CODE_TOKEN_RE = re.compile(r"\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b")
 _INTERNAL_REF_RE = re.compile(r"\b(?:A|CE|DQ|M|V|R|C|P1|S|TERM)-\d{1,3}\b")
 _WORD_KO: list[tuple[str, str]] = [
     ("DATA GAP", "자료 없음"), ("INFERENCE", "추정"), ("CONFIRMED", "확인됨"),
+    ("mandate", "의무 혼합"), ("MMT", "백만 톤"), ("USc/lb", "센트/파운드"),   # A-275: 수집 원문·사례 서사 잔존 영문
+    ("Databento UTC 종가", "이력 종가"), ("수동 파케이", "수동 업로드"), ("파케이", "데이터 파일"),   # A-275: 신뢰도 JSON basis 이월분
     ("validated", "검증됨"), ("candidate", "후보"), ("evidence", "근거"),
     ("war_zone", "전쟁 지역"), ("critical", "심각"), ("elevated", "상승"), ("normal", "보통"),
     ("high", "높음"), ("AIS", "선박 위치 자료"), ("JWC", "합동전쟁위원회"),
@@ -309,6 +325,7 @@ _RSS_ORG_EN: dict[str, str] = {   # A-269: 승인자 지시 — 부록 소스명
     "RSS_TFM": "Total Farm Marketing", "RSS_UKRAGRO": "UkrAgroConsult",
     "RSS_REUTERS_COMMODITIES": "Reuters — Commodities", "RSS_REUTERS_CLIMATE_ENERGY": "Reuters — Climate & Energy",
     "RSS_AP_COMMODITIES": "AP — Commodities", "RSS_AP_WORLD": "AP — World",
+    "RSS_REUTERS_GEO": "Reuters — Geopolitics", "RSS_AP_GEO": "AP — Geopolitics",
 }
 
 
@@ -400,7 +417,7 @@ _ONTOLOGY_CHAINS: dict[str, list[str]] = {
     "INDIA_DUTY_NEWS": ["기사", "신호: 수입관세", "후보 인과 경로(검증 대기)",
                         "인도 수입 수요", "수요 변동", "방향 조건부"],
     "HORMUZ_THREAT_LEVEL": ["선박 위치·뉴스 관측", "해협 위협 점수", "검증된 인과 경로",
-                            "탱커 운임·전쟁보험료", "도착가 잔차층", "참고 범위 폭"],
+                            "탱커 운임·전쟁보험료", "도착가 실측 차이", "참고 범위 폭"],
     "SUEZ_RED_SEA_RISK": ["관측", "해협 위협 점수", "검증된 인과 경로",
                           "희망봉 우회(+12~15일)", "운임 상승", "도착가 상방"],
     "UKRAINE_GRAIN_CORRIDOR": ["관측", "흑해 회랑 상태", "후보 인과 경로(검증 대기)",
@@ -425,17 +442,74 @@ _ONTOLOGY_CHAINS: dict[str, list[str]] = {
     "RSS_GRAIN_ORG": ["기사", "신호: 토지·정책", "후보 인과 경로(검증 대기)", "삼림 규제(EUDR)", "대체 수요", "방향 조건부"],
     "RSS_SOYGROWERS": ["기사", "신호: 미국 대두 정책", "검증된 인과 경로", "45Z 세액공제·바이오디젤", "수출 여력", "가격 상방"],
     "RSS_CLIMATEPOL": ["기사", "신호: 국내 바이오연료·SAF 정책", "검증된 인과 경로", "원유·경유→바이오디젤 경제성", "산업 수요", "가격 상방"],
-    "RSS_AGMARKET": ["기사", "신호: 선물 시장 동향", "후보 인과 경로(검증 대기)", "투기 포지션(COT)", "선물 모멘텀", "방향 조건부"],
+    "RSS_AGMARKET": ["기사", "신호: 선물 시장 동향", "후보 인과 경로(검증 대기)", "투기 자금 동향", "선물 가격 흐름", "방향 조건부"],
     "RSS_GRAINCENTRAL": ["기사", "신호: 작황·기상(호주·아시아)", "검증된 인과 경로", "엘니뇨·강우", "남미·호주 작황", "가격 상방"],
-    "RSS_TFM": ["기사", "신호: 선물 시장 동향", "후보 인과 경로(검증 대기)", "투기 포지션(COT)", "선물 모멘텀", "방향 조건부"],
+    "RSS_TFM": ["기사", "신호: 선물 시장 동향", "후보 인과 경로(검증 대기)", "투기 자금 동향", "선물 가격 흐름", "방향 조건부"],
     "RSS_UKRAGRO": ["기사", "신호: 흑해 수출 경로", "후보 인과 경로(검증 대기)", "해바라기유 수출", "대체 수요", "방향 조건부"],
     "BRAZIL_HARVEST_PROGRESS": ["관측", "신호: 브라질 수확 진척", "후보 인과 경로(검증 대기)", "수출 일정", "공급 시점", "방향 조건부"],
     "GPR_REALTIME": ["관측", "신호: 지정학 위험 지수", "검증된 인과 경로", "해협 위험·운임", "도착가", "가격 상방"],
     "GEOINTEL_RISK_COMPOSITE": ["관측", "신호: 복합 지정학 사건", "검증된 인과 경로", "해협 위험·운임", "도착가", "가격 상방"],
-    "WASDE_CONSENSUS_SCORE": ["발표", "신호: WASDE 서프라이즈", "후보 인과 경로(검증 대기)", "재고사용비율 신호", "투기 순매수", "방향 조건부"],
+    "WASDE_CONSENSUS_SCORE": ["발표", "신호: 수급 전망 예상 대비 차이", "후보 인과 경로(검증 대기)", "재고사용비율 신호", "투기 순매수", "방향 조건부"],
     "HORMUZ_AWRP_MULTIPLIER": ["관측", "신호: 전쟁위험보험료", "검증된 인과 경로", "탱커 운임", "도착가", "가격 상방"],
     "BCAA": ["관측", "신호: 식물성유지 탱커 운임", "검증된 인과 경로", "운임층", "도착가", "가격 상방"],
+    # A-273(2026-09-25): 지정학 동향 — 호르무즈는 검증된 운임·보험료 경로, 흑해·에너지 제재는 후보 경로(대두유 가격 서술 금지)
+    "US_IRAN_CONFLICT_STATUS": ["검색 요약", "신호: 미국–이란 분쟁 상태", "검증된 인과 경로",
+                                "호르무즈 탱커 운임·전쟁보험료", "도착가 실측 차이", "참고 범위 폭"],
+    "RUSSIA_EU_RELATIONS_STATUS": ["검색 요약", "신호: 러시아–EU 긴장·제재", "후보 인과 경로(검증 대기)",
+                                   "흑해 회랑·유가(경유)", "해바라기유 공급·바이오디젤 경제성", "검증 대기"],
+    "RSS_REUTERS_GEO": ["기사", "전문 매체 채널: 로이터(지정학)", "주제 태깅(후속)", "해협·제재 관찰", "검증 대기"],
+    "RSS_AP_GEO": ["기사", "전문 매체 채널: AP 통신(지정학)", "주제 태깅(후속)", "해협·제재 관찰", "검증 대기"],
 }
+# A-273: 지정학 동향 카드군 대상 코드 — 시장 뉴스 블록에서는 제외하고 전용 블록에 표시
+_GEO_CODES = ("US_IRAN_CONFLICT_STATUS", "RUSSIA_EU_RELATIONS_STATUS", "RSS_REUTERS_GEO", "RSS_AP_GEO")
+_TITLE_SUFFIX_RE = re.compile(r"\s*[-–|]\s*(ap news|reuters|apnews\.com|reuters\.com)\s*$", re.IGNORECASE)
+
+
+def _norm_title(title: str) -> str:
+    t = _TITLE_SUFFIX_RE.sub("", str(title or "")).lower()
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _latest_note(frames: dict[str, pd.DataFrame], code: str) -> str:
+    """parquet 프레임에서 지표 코드의 최신 note 문자열(없으면 빈 문자열)."""
+    best_d, best_note = None, ""
+    for df in frames.values():
+        if "indicator_code" not in df.columns or "note" not in df.columns or "price_date" not in df.columns:
+            continue
+        sub = df[df["indicator_code"] == code]
+        if sub.empty:
+            continue
+        sub = sub.assign(_d=pd.to_datetime(sub["price_date"], errors="coerce")).dropna(subset=["_d"])
+        if sub.empty:
+            continue
+        r = sub.sort_values("_d").iloc[-1]
+        if best_d is None or r["_d"] > best_d:
+            best_d, best_note = r["_d"], str(r.get("note", "") or "")
+    return best_note
+
+
+def _kv_value(note: str, key_ko: str) -> str:
+    for k, v in _parse_kv(note) or []:
+        if k == key_ko:
+            return v
+    return ""
+
+
+def _geo_status_line(frames: dict[str, pd.DataFrame]) -> str:
+    """한눈 요약 [유의]용 지정학 관찰 한 줄 — 상태 2단계 이상일 때만, 과거 사실 기술(전망 아님)."""
+    parts: list[str] = []
+    lvl_ko = {3.0: "높음", 2.0: "중간", 1.0: "낮음"}
+    for code, label in (("US_IRAN_CONFLICT_STATUS", "미국–이란 분쟁"),
+                        ("RUSSIA_EU_RELATIONS_STATUS", "러시아–EU 긴장")):
+        ser = _dated_series(frames, [code])
+        if ser.empty:
+            continue
+        v = float(ser.iloc[-1]["value"])
+        if v >= 2:
+            parts.append(f"{label} {lvl_ko.get(v, str(v))}")
+    if not parts:
+        return ""
+    return "지정학 관찰: " + " · ".join(parts) + " — 운임·전쟁보험료·흑해 경로는 관찰 항목이며 방향 판단이 아님."
 
 
 # ── 데이터 추출 헬퍼 ──────────────────────────────────────────────────────────
@@ -770,7 +844,7 @@ def _maritime_block(frames: dict[str, pd.DataFrame]) -> tuple[dict[str, str], st
         lt = s.lead_time_impact or {}
         lt_txt = " · ".join(x for x in (
             f"추가 일수 {lt['added_days']}" if lt.get("added_days") else "",
-            f"운임 {lt['freight_pct']}" if lt.get("freight_pct") else "") if x) or "리드타임 영향 근거 없음"
+            f"운임 {lt['freight_pct']}" if lt.get("freight_pct") else "") if x) or "도착 소요 기간 영향 근거 없음"
         lt_src = _humanize(lt.get("source", ""))
         comp_rows = "".join(
             f'<div class="cp-comp"><span>{lbl}</span><b class="num">'
@@ -779,7 +853,19 @@ def _maritime_block(frames: dict[str, pd.DataFrame]) -> tuple[dict[str, str], st
                            ("선박 위치", s.components["ais"]), ("급감", s.components["anomaly"])))
         awrp = (f'<div class="cap">관측 전쟁위험보험료 배수 ×{s.awrp_multiplier:.2f}</div>'
                 if s.awrp_multiplier is not None else "")
-        partial = (f'<span class="pill acc">부분 산출 · 미확인 {len([c for c in s.components.values() if c.points is None])}</span>'
+        # A-273: 최신 사건·발언 한 줄(과거 사실 기술) — 호르무즈=미국–이란 상태, 흑해=러시아–EU 상태
+        _narr = ""
+        _geo_src = {"hormuz": ("US_IRAN_CONFLICT_STATUS", "핵심 사건", "HORMUZ_THREAT_LEVEL"),
+                    "black_sea": ("RUSSIA_EU_RELATIONS_STATUS", "핵심 발언", "UKRAINE_GRAIN_CORRIDOR")}
+        if s.key in _geo_src:
+            _code, _key, _fb = _geo_src[s.key]
+            _txt = _kv_value(_latest_note(frames, _code), _key)
+            if not _txt:
+                _txt = _media_title(_latest_note(frames, _fb), _fb, n=140) if _latest_note(frames, _fb) else ""
+            if _txt and _txt not in ("미확인", "unknown"):
+                _narr = f'<div class="cap">최근 관측: {_esc(_txt[:160])}</div>'
+        awrp = awrp + _narr
+        partial = (f'<span class="pill acc">일부 항목만 계산 · 미확인 {len([c for c in s.components.values() if c.points is None])}</span>'
                    if s.partial else "")
         cards.append(f"""
     <div class="card cp-card">
@@ -789,9 +875,9 @@ def _maritime_block(frames: dict[str, pd.DataFrame]) -> tuple[dict[str, str], st
       <div class="cap">{_esc(_humanize(s.tier_basis or s.tier_source))}</div>
       {comp_rows}
       <div class="cp-meta"><span>항로</span>{_esc(rel)}</div>
-      <div class="cp-meta"><span>리드타임</span>{_esc(lt_txt)} <small>{_esc(lt_src)}</small></div>
+      <div class="cp-meta"><span>소요 기간</span>{_esc(lt_txt)} <small>{_esc(lt_src)}</small></div>
       {awrp}
-      {('<div class="cap">미확인 성분: ' + _esc(_humanize(" · ".join(s.missing))) + '</div>') if s.missing else ''}
+      {('<div class="cap">확인 못 한 항목: ' + _esc(_humanize(" · ".join(s.missing))) + '</div>') if s.missing else ''}
     </div>""")
     kd, pr = res["korea_direct"], res["propagation"]
     def _idx_txt(d: dict, label: str) -> str:
@@ -849,7 +935,7 @@ def _svg_route_map(st: dict[str, str]) -> str:
 
     kx, ky = P["kor"]
     return (f'<svg viewBox="0 0 {W} {H}" style="width:100%;height:auto;display:block" '
-            f'role="img" aria-label="주요 원산지에서 한국까지의 공급 경로 모식도">'
+            f'role="img" aria-label="주요 원산지에서 한국까지의 공급 경로 약식 지도">'
             + grid + routes
             + origin("usg", "미국 멕시코만", "조유·정제유")
             + origin("bra", "브라질", "조유")
@@ -1001,7 +1087,7 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
         badges = representative_badges(rs)          # A-270: 20일 지평 대표·밀도 검사 통과분만
         badge_parts = []
         if badges:
-            badge_parts.append(f'<div class="src">겹치는 위기 사례(1개월 지평·밀도 검사 통과): '
+            badge_parts.append(f'<div class="src">겹치는 위기 사례(1개월 기준·충분히 겹친 경우만): '
                                f'{_esc(" · ".join(badges))}</div>')
             # W-B(조정자 R1): 배지 클릭 → 왜 유사한가 — 원인→경로→가격 실측→유사점/차이점
             for b in badges:
@@ -1022,7 +1108,7 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
       {badge_html}</div>""")
     mech = """
     <details class="mech"><summary>산출 방식 (클릭)</summary>
-      변수의 최근 90일 기준 평소 대비 편차가 현재와 같은 구간(십분위)이었던 과거 거래일을 찾아,
+      변수의 최근 90일 기준 평소 대비 편차가 현재와 같은 구간(10등분 구간)이었던 과거 거래일을 찾아,
       그 날들로부터 약 1주(5거래일)/약 1개월(20거래일)/약 3개월(60거래일) 뒤의
       <b>실측</b> 가격 변화를 집계함(2010~ 전 구간). 유사일 사이에 최소 간격을 두어
       중복 시기를 제거하고, 최근 60거래일은 집계에서 제외함(전방 구간 겹침 방지).
@@ -1037,7 +1123,9 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
 def _snapshot_specs() -> list[dict]:
     return [
         {"label": "대두유 선물 종가(시카고)", "codes": ["CBOT_BO_CLOSE"], "src": "시카고 거래소 정산가", "fmt": "{:,.2f}"},
-        {"label": "팜유(말레이시아 선물)", "codes": ["TE_PALM_OIL", "CPO_USD_MT", "CPO"], "src": "트레이딩이코노믹스", "fmt": "{:,.0f}"},
+        # A-274: 원천을 섞지 않는다 — TE(MYR/톤)와 달러/톤 환산 계열이 날마다 바뀌어 4,8xx↔1,2xx로 널뛰던 결함
+        {"label": "팜유(말레이시아 선물, MYR/톤)", "codes": ["TE_PALM_OIL"], "src": "트레이딩이코노믹스", "fmt": "{:,.0f}"},
+        {"label": "팜유(달러/톤 환산)", "codes": ["CPO_USD_MT", "CPO"], "src": "트레이딩이코노믹스·FRED", "fmt": "{:,.0f}"},
         {"label": "BDI 해상운임지수", "codes": ["TE_BDI", "BDI"], "src": "발틱 거래소", "fmt": "{:,.0f}"},
         {"label": "브라질 헤알 환율", "codes": ["DEXBZUS", "FX_BRL_USD"], "src": "미 연준 FRED·업로드", "fmt": "{:.2f}"},
         {"label": "원/달러 환율", "codes": ["DEXKOUS", "KRW_USD"], "src": "미 연준 FRED·한국은행", "fmt": "{:,.0f}"},
@@ -1073,37 +1161,37 @@ def _reliability_block() -> str:
         items.append(("입력 정확도", f"기준 가격 교차검증 오차 중앙값 {r1['median_diff_pct']}% · 상위 1% {r1.get('p99_diff_pct')}%"))
     r2 = R.get("R2_asof_accuracy", {})
     if r2.get("status") == "산출":
-        items.append(("시점 정합", f"분석 변수 {r2['n_features']}개 중 개정 이력 미보존 {r2['revision_contaminated']}개는 분석에서 제외"))
+        items.append(("발표 시점 정렬", f"분석 변수 {r2['n_features']}개 중 수정 전 값 미보존 {r2['revision_contaminated']}개는 분석에서 제외"))
     r3 = R.get("R3_alert_consistency", {})
     if r3.get("status") == "산출":
-        items.append(("경보 정합", f"경보판 {r3.get('report_alerts')}건 = 서명 기록 {r3.get('stamp_alerts')}건 "
+        items.append(("경보 수 일치", f"경보 목록 {r3.get('report_alerts')}건 = 일일 검사 기록 {r3.get('stamp_alerts')}건 "
                                  f"({'일치' if r3.get('consistent') else '불일치'})"))
     r4 = R.get("R4_publication_integrity", {})
     if r4.get("status") == "산출":
-        items.append(("발행 무결성", f"자동 점검 연속 통과 {r4.get('gate_pass_streak_runs')}회 · 서명 기록 {r4.get('rows')}일"))
+        items.append(("발행 일관성", f"자동 점검 연속 통과 {r4.get('gate_pass_streak_runs')}회 · 일일 검사 기록 {r4.get('rows')}일"))
     r5 = R.get("R5_collection_channels", {})
     if r5.get("status") == "산출":
-        items.append(("수집 도달률", f"비정형 신호 영업일 도달률 {r5['bday_arrival_rate']*100:.0f}% · {r5['indicators']}지표"))
+        items.append(("수집 도달률", f"뉴스·매체 신호가 들어온 영업일 비율 {r5['bday_arrival_rate']*100:.0f}% · {r5['indicators']}지표"))
     monthly: list[tuple[str, str]] = []
     h1 = H.get("H1_rank_stability", {})
     if h1.get("status") == "산출":
-        monthly.append(("변인 순위 안정성", f"표본을 나눠 다시 세도 순위 상관 {h1['pearson']['mean_spearman']} · 부호 일치 {h1['pearson']['sign_agreement_top']*100:.0f}%"))
+        monthly.append(("변인 순위 안정성", f"표본을 나눠 다시 세도 순위 일치도 {h1['pearson']['mean_spearman']} · 방향 일치 {h1['pearson']['sign_agreement_top']*100:.0f}%"))
     h4 = H.get("H4_reference_range", {})
     if h4.get("horizons"):
         r60 = h4["horizons"].get("60", {})
         if r60.get("coverage") is not None:
-            monthly.append(("참고 범위 폭 진단", f"과거 60거래일 참고 범위가 실제 변동을 담은 비율 {r60['coverage']*100:.0f}% (명목 80% · 범위 폭 진단일 뿐 확률 주장 아님)"))
+            monthly.append(("참고 범위 폭 진단", f"과거 60거래일 참고 범위가 실제 변동을 담은 비율 {r60['coverage']*100:.0f}% (목표 80% · 범위 폭 진단일 뿐 확률 주장 아님)"))
     h3 = H.get("H3_alert_rule_retro", {})
     if h3.get("rules"):
         for name, rr in h3["rules"].items():
             hh = (rr.get("horizons") or {}).get("20", {})
             if hh.get("status") == "산출":
-                monthly.append(("경보 규칙 소급 성적", f"{name}: 과거 소급 오경보 근사율 {hh['false_alarm_proxy']*100:.0f}% (실발행 아님 — 소급 합성)"))
+                monthly.append(("경보 규칙을 과거에 적용한 성적", f"{name}: 과거 적용 시 헛경보 비율(근사) {hh['false_alarm_proxy']*100:.0f}% (실제 발행분 아님 — 과거에 되돌려 계산)"))
                 break
     led = res.get("ledger", {})
     if led.get("rows"):
-        monthly.append(("실발행 경보 원장", f"{led['rows']}건 기록 · 성숙 전(사후 성적은 8회 이상부터 표기)"))
-    basis = _esc(res.get("basis", "경량 모드"))
+        monthly.append(("실제 발행 경보 기록부", f"{led['rows']}건 기록 · 아직 초기(사후 성적은 8회 이상부터 표기)"))
+    basis = _esc(_humanize(res.get("basis", "경량 모드")))   # A-275: 과거 JSON의 공급사·파일 형식 용어 정리
     gen = _esc(str(res.get("generated_at", ""))[:10])
     rows = "".join(f"<tr><th>{_esc(k)}</th><td>{_esc(v)}</td></tr>" for k, v in items) or \
            "<tr><td>일별 항목 미산출</td></tr>"
@@ -1112,8 +1200,78 @@ def _reliability_block() -> str:
               f'<table class="rel">{mrows}</table></details>') if mrows else ""
     return (f'<div class="card"><h3>보고서 신뢰도 — 2단계 검증</h3>'
             f'<div class="cap">1단계 과거 데이터 검증 · 2단계 실시간 수집 데이터 검증 — '
-            f'수치는 과정 무결성과 과거 관측의 요약이며 향후 전망·확률 주장이 아님</div>'
+            f'수치는 처리 과정 검증과 과거 관측의 요약이며 향후 전망·확률 주장이 아님</div>'
             f'<table class="rel">{rows}</table>{m_html}</div>')
+
+
+def _chain_html(ind: str) -> str:
+    chain = _ONTOLOGY_CHAINS.get(ind)
+    if not chain:
+        return ""
+    nodes = ""
+    for j, nname in enumerate(chain):
+        cls = "edge" if "인과 경로" in nname else ("ent" if j in (1, 3) else "")
+        nodes += f'<span class="node {cls}">{_esc(nname)}</span>'
+        if j < len(chain) - 1:
+            nodes += '<span class="arr">→</span>'
+    return (f'<details class="chain"><summary>분석 연결(어떤 경로로 반영되는가)</summary>'
+            f'<div class="row">{nodes}</div>'
+            f'<div class="meta">검증된 연결만 변인 분석에 반영함 · 근거 발췌 보존</div></details>')
+
+
+def _geo_cards_html(signals: pd.DataFrame, seen_titles: set[str] | None = None) -> str:
+    """A-273: 지정학 동향 카드군 — 검색 요약 2종(최신 1건씩) + 통신사 지정학 기사 최대 2건(채널 간 제목 중복 제거)."""
+    if signals.empty or "indicator" not in signals.columns:
+        return ('<div class="card sig-item"><p>지정학 동향 수집분이 아직 없음 — 다음 수집부터 '
+                '미국–이란·러시아–EU 상태와 통신사 기사가 이 자리에 표시됨.</p></div>')
+    seen_titles = set() if seen_titles is None else seen_titles
+    cards: list[str] = []
+    for code in ("US_IRAN_CONFLICT_STATUS", "RUSSIA_EU_RELATIONS_STATUS"):
+        grp = signals[signals["indicator"].astype(str) == code]
+        if grp.empty:
+            continue
+        row = grp.iloc[0]
+        note = str(row.get("note", ""))
+        url = _first_url(note)
+        title = _esc(_media_title(note, code, n=220))
+        head = f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>' if url else title
+        when = pd.Timestamp(row.get("date")).strftime("%m-%d") if pd.notna(row.get("date")) else ""
+        cards.append(f"""
+    <div class="card sig-item">
+      <span class="tag">지정학 동향</span> <span class="src">{_esc(_label_ko(code))}</span>
+      <p>{head}</p>
+      <div class="src">검색 요약(대리 수집) · {when}</div>
+      {_chain_html(code)}</div>""")
+    n_media = 0
+    for code in ("RSS_REUTERS_GEO", "RSS_AP_GEO"):
+        grp = signals[signals["indicator"].astype(str) == code]
+        if grp.empty or n_media >= 2:
+            continue
+        row = grp.iloc[0]
+        note = str(row.get("note", ""))
+        items = [it for it in _media_items(note) if _norm_title(it["title"]) not in seen_titles]
+        if not items:
+            continue
+        it0 = items[0]
+        seen_titles.add(_norm_title(it0["title"]))
+        url = it0["url"]
+        title = _esc(it0["title"][:120])
+        desc_html = f'<div class="src">{_esc(it0["desc"][:160])}</div>' if it0.get("desc") else ""
+        more = f' <span class="src">외 {len(items) - 1}건</span>' if len(items) > 1 else ""
+        head = ((f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>' if url else title)
+                + more + desc_html)
+        when = pd.Timestamp(row.get("date")).strftime("%m-%d") if pd.notna(row.get("date")) else ""
+        cards.append(f"""
+    <div class="card sig-item">
+      <span class="tag">지정학 동향</span> <span class="src">{_esc(_label_ko(code))}</span>
+      <p>{head}</p>
+      <div class="src">{_esc(_RSS_ORG_KO.get(code, code))} · {when}</div>
+      {_chain_html(code)}</div>""")
+        n_media += 1
+    if not cards:
+        return ('<div class="card sig-item"><p>최근 5일 내 지정학 동향 수집분 없음 — 검색 요약(미국–이란·러시아–EU)과 '
+                '통신사 지정학 기사는 다음 수집부터 표시됨.</p></div>')
+    return "".join(cards)
 
 
 def build_daily_brief(
@@ -1125,9 +1283,16 @@ def build_daily_brief(
     run_id: str,
     target_label: str,
     n_features: int | None = None,
+    publish_mode: str = "alert",
 ) -> str:
     """일별 브리프 HTML 문자열 생성 — 모든 블록은 결측 시 정직 강등."""
     today = date.today()
+    try:                                                      # A-274: D-day 기준일 = 발행일(KST)
+        _rd = pd.Timestamp(run_ts)
+        _rd = _rd.tz_localize("UTC") if _rd.tzinfo is None else _rd
+        today = _rd.tz_convert("Asia/Seoul").date()
+    except Exception:                                         # noqa: BLE001
+        pass
     kpi = _kpi_close(frames)
     full_close = _dated_series(frames, ["CBOT_BO_CLOSE"])["value"]
     rng = _reference_range_usclb(full_close) if len(full_close) else None
@@ -1209,6 +1374,9 @@ def build_daily_brief(
                  else "참고 범위는 데이터 부족으로 산출하지 않음.")
     s_care = (f"금일 기준 초과 {len(breach)}건 — 상세는 '금일 경보' 참조. 조달 결정은 담당자 승인 절차 필수."
               if breach else "금일 기준 초과 없음(검사 완료) — 조달 결정은 담당자 승인 절차 필수.")
+    _geo_line = _geo_status_line(frames)                       # A-273
+    if _geo_line:
+        s_care += " " + _geo_line
     reliability_html = _reliability_block()
     # A-267: 실행 시각은 UTC로 기록됨 → KST 변환 표기. '05:30 발행' 하드코딩 제거.
     try:
@@ -1261,16 +1429,16 @@ def build_daily_brief(
             news = (f'<div class="news"><span class="stars">{_stars(len(arts))}</span> '
                     f'{link} · {_esc(_source_ko(a0["source"]))}</div>')
         else:
-            news = '<div class="news">관련 기사 매핑 없음</div>'
+            news = '<div class="news">관련 기사 연결 없음</div>'
         drv_rows.append(f"""
       <div class="drv"><span class="rank num">{i}</span><div>
         <span class="name">{_esc(label)}</span>{direction}
         <div class="barrow"><div class="bar" style="width:{max(width, 8)}%"></div>
-          <span class="shap num">기여 {coef:+.4f} · 상관 {r:+.3f}</span></div>
+          <span class="shap num">영향 크기 {coef:+.4f} · 함께 움직인 정도 {r:+.3f}</span></div>
         {news}</div></div>""")
-    drivers_cap = ("통계 선별에서 유의한 변인 없음 — 상관 기준 참고 순위 · 별점 = 최근 기사 연관 매핑 · 제목 클릭 시 원문"
+    drivers_cap = ("통계 선별에서 유의한 변인 없음 — 상관 기준 참고 순위 · 별점 = 최근 기사와의 연관 정도 · 제목 클릭 시 원문"
                    if ranking_basis == "pearson_fallback"
-                   else "별점 = 최근 기사와 변인의 연관 매핑 (★~★★★) · 제목 클릭 시 원문")
+                   else "별점 = 최근 기사와 변인의 연관 정도 (★~★★★) · 제목 클릭 시 원문")
     drivers_html = ("".join(drv_rows) if drv_rows
                     else '<p class="cap">변인 중요도 산출 결과가 없습니다 — 미수집.</p>')
 
@@ -1298,10 +1466,10 @@ def build_daily_brief(
           <li><b>가격 원천</b>: 시카고 거래소 대두유 선물 — 정산가 교차검증을 거친 종가 계열.</li>
           <li><b>기준 가격층</b>: 과거 60거래일 변동 분포(2010~ 전 구간)의 하위 10%·
             중앙값·상위 10% 지점을 최근 종가에 적용함.</li>
-          <li><b>실측 잔차층</b>: 관세청 수입 실적(선적 100톤 이상)의 도착 단가(운임·보험 포함)에서 같은 달
-            시카고 선물 가격을 뺀 차이 — 최근 12개월 분포(운임·프리미엄이 섞인 잔차층).</li>
-          <li><b>결합</b>: 두 층을 몬테카를로 방식으로 결합함(2만 회 추출·결과 재현 가능).
-            분위 수치의 단순 합산은 통계적으로 부정확하여 쓰지 않음.</li>
+          <li><b>실측 차이(운임·프리미엄 포함)</b>: 관세청 수입 실적(선적 100톤 이상)의 도착 단가(운임·보험 포함)에서 같은 달
+            시카고 선물 가격을 뺀 차이 — 최근 12개월 분포(운임·프리미엄이 섞인 차이).</li>
+          <li><b>결합</b>: 두 층을 무작위 결합 계산으로 합침(2만 회 추출·결과 재현 가능).
+            구간 경계값을 그냥 더하는 방식은 통계적으로 부정확하여 쓰지 않음.</li>
           <li><b>한계</b>: 과거 변동이 이중으로 반영될 수 있어 <b>"확률 범위"가 아닌
             "참고 범위"</b>로만 제공함. 예측 범위 모델 가동 시 이 층이 교체됨.</li>
         </ol></details>"""
@@ -1324,7 +1492,7 @@ def build_daily_brief(
         alerts_html = ("""
     <div class="card" style="padding:14px 18px">
       <b style="color:var(--ok)">✔ 이상 없음(검사 완료)</b> — 감시 변인 전체가 기준 범위 내에 있음.
-      침묵이 아니라 검사를 통과한 결과임 (게이트·검증 상태는 상단 신뢰 스트립 참조).</div>""")
+      침묵이 아니라 검사를 통과한 결과임 (검사·검증 상태는 상단 점검 표시줄 참조).</div>""")
         s_alert_now = f"{len(alerts)}개 감시 변인 전체가 기준 범위 안에 있음(미수집 {len(watch)}건 별도)."
         s_alert_out = "이상 징후 없음 — 정기 감시를 지속함."
     summary_alert = _brief_box([
@@ -1378,16 +1546,21 @@ def build_daily_brief(
             if rr is not None:
                 ordered_rows.append(rr)
     n_proxy = n_media = 0
+    seen_titles: set[str] = set()                              # A-274: 채널 간 동일 기사 카드 중복 제거
     for row in ordered_rows:
         ind = str(row.get("indicator", ""))
         is_media = ind.startswith("RSS_")
+        if ind in _GEO_CODES:                                  # A-273: 지정학 동향 전용 블록에서 표시
+            continue
         if ind in seen_ind or (is_media and n_media >= 3) or (not is_media and n_proxy >= 3):
             continue
-        seen_ind.add(ind)
         note = str(row.get("note", ""))
         if is_media:
-            items = _media_items(note)
-            it0 = items[0] if items else {"title": _media_title(note, ind), "desc": "", "url": _first_url(note) or ""}
+            items = [it for it in _media_items(note) if _norm_title(it["title"]) not in seen_titles]
+            if not items:
+                continue
+            seen_titles.add(_norm_title(items[0]["title"]))
+            it0 = items[0]
             url = it0["url"]
             title = _esc(it0["title"][:120])
             desc_html = f'<div class="src">{_esc(it0["desc"][:160])}</div>' if it0.get("desc") else ""
@@ -1395,7 +1568,9 @@ def build_daily_brief(
             head = ((f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>' if url else title)
                     + more + desc_html)
             n_media += 1
+            seen_ind.add(ind)
         else:
+            seen_ind.add(ind)
             url = _first_url(note)
             llm = _llm_summary(note, ind) if not _parse_kv(note) else None
             title = _esc(llm or _media_title(note, ind))
@@ -1424,6 +1599,7 @@ def build_daily_brief(
     signals_html = ("".join(sig_cards) if sig_cards else
                     '<div class="card sig-item"><p>최근 5일 내 수집된 언론·매체 신호가 없음 — '
                     '일별 다이제스트 실행 여부 확인 필요.</p></div>')
+    geo_html = _geo_cards_html(signals, seen_titles)           # A-273
 
     # ── 주목해야 할 일정 ──
     cal_items = []
@@ -1445,6 +1621,7 @@ def build_daily_brief(
 
     # ── 부록: 전문 기관(RSS 소스별 최신 1건) ──
     appx_cards = []
+    _appx_seen: set[str] = set()
     if not signals.empty:
         rss = signals[signals["indicator"].astype(str).str.startswith("RSS_")]
         for src, grp in rss.groupby("indicator"):
@@ -1452,6 +1629,10 @@ def build_daily_brief(
             note = str(row.get("note", ""))
             org = _RSS_ORG_EN.get(str(src), str(src).replace("RSS_", "").replace("_", " ").title())
             items = _media_items(note)[:3] or [{"title": _media_title(note, str(src), n=130), "desc": "", "url": _first_url(note) or ""}]
+            items = [it for it in items if _norm_title(it["title"]) not in _appx_seen]   # A-274: 채널 간 중복 제거
+            if not items:
+                continue
+            _appx_seen.update(_norm_title(it["title"]) for it in items)
             art_html = ""
             for it in items:                                    # A-269: 기사별(제목·요약·원문) — 제목 뭉개기 해소
                 link = (f' <a href="{_esc(it["url"])}" target="_blank" rel="noopener">원문</a>' if it.get("url") else "")
@@ -1462,7 +1643,7 @@ def build_daily_brief(
     <div class="card appx-item"><div class="org">{_esc(org)} <span class="src">{when}</span></div>
       {art_html}</div>""")
     appx_html = ("".join(appx_cards) if appx_cards else
-                 '<div class="card appx-item"><p>전문 매체 RSS 수집분이 아직 없음 — 첫 수집 '
+                 '<div class="card appx-item"><p>전문 매체 기사 수집분이 아직 없음 — 첫 수집 '
                  '이후 기관별 최신 발간물이 이 자리에 표시됨.</p></div>')
 
     # ── 경로 모식도 ──
@@ -1470,13 +1651,14 @@ def build_daily_brief(
     route_svg = _svg_route_map(st)
 
     # ── E1 신뢰 스트립 ──
-    gate = os.environ.get("E1_GATE_STATUS", "").strip() or "미확인(게이트 잡 별도)"
+    gate = os.environ.get("E1_GATE_STATUS", "").strip() or "미확인(별도 검사 단계)"
     feat_txt = f"{n_features:,}" if n_features else "—"
 
     css = _CSS
     breach_pill = (f'🚨 기준 초과 {len(breach)}건' if breach else '이상 없음(검사 완료)')
     gate_ko = _GATE_KO.get(gate.upper(), gate)
     target_ko = _label_ko(target_label)
+    edition_txt = {"weekly": "주별 정규판", "monthly": "월별 심층판"}.get(str(publish_mode), "시범판")   # A-274
     return f"""<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1489,9 +1671,9 @@ def build_daily_brief(
 <div class="page">
 <header>
   <div class="masthead"><h1>Nexus 일일 브리프</h1>
-    <div class="sub">대두유 조달 신호 데스크 · 핵심 변인과 <b>과거 비슷한 시기의 실제 흐름</b> — <b>시범판</b></div></div>
+    <div class="sub">대두유 조달 신호 데스크 · 핵심 변인과 <b>과거 비슷한 시기의 실제 흐름</b> — <b>{edition_txt}</b></div></div>
   <div class="dateblock"><strong>{run_kst_txt}</strong>
-    한국시간 {run_kst_hm} 발행 · 데이터 기준일 {kpi.last_date if kpi else "미수집"} (시카고 직전 정산 세션){basis_gap_txt}</div>
+    한국시간 {run_kst_hm} 발행 · 데이터 기준일 {kpi.last_date if kpi else "미수집"} (시카고 직전 거래일 마감 기준){basis_gap_txt}</div>
 </header>
 <div class="trust">
   <span class="sig">✔ 자동 점검 통과</span>
@@ -1531,7 +1713,7 @@ def build_daily_brief(
 {analogue_html}</section>
 
 <section><div class="sec-h"><h2>공급 경로와 해상 위험</h2>
-  <span class="note">모식도 — 점등은 해협별 위험 점수 구간(정상 20 미만 · 주의 20~49 · 심각 50 이상) · 정상 항로는 설명을 생략함</span></div>
+  <span class="note">약식 지도 — 점등은 해협별 위험 점수 구간(정상 20 미만 · 주의 20~49 · 심각 50 이상) · 정상 항로는 설명을 생략함</span></div>
 <div class="card mapbox"><h3>주요 원산지 → 한국 항로와 요충 해협</h3>
 {route_svg}
 <div class="map-legend"><span><span class="dot ok"></span>정상</span>
@@ -1542,10 +1724,14 @@ def build_daily_brief(
 {maritime_html}</section>
 
 <section><div class="sec-h"><h2>주요 지표 현황</h2>
-  <span class="note">편차 = 최근 90일 평균 대비 표준편차 배수(잠정 기준) · 상승 적색/하락 청색</span></div>
+  <span class="note">편차 = 최근 90일 평균에서 벗어난 정도(평소 변동 폭의 몇 배 · 잠정 기준) · 상승 적색/하락 청색</span></div>
 <div class="card tablewrap"><table>
   <thead><tr><th>지표</th><th>값</th><th>일간</th><th>주간</th><th>평소 대비 편차</th><th>추세</th></tr></thead>
   <tbody>{"".join(snap_rows)}</tbody></table></div></section>
+
+<section><div class="sec-h"><h2>지정학 동향</h2>
+  <span class="note">미국–이란 분쟁·러시아–EU 관계 등 — 검색 요약과 통신사 기사(과거 사실 기술 · 방향 판단 아님)</span></div>
+<div class="signals">{geo_html}</div></section>
 
 <section><div class="sec-h"><h2>오늘의 시장 뉴스</h2>
   <span class="note">일별 수집 + 전문 매체 — 제목 클릭 시 원문 · '분석 연결'에서 반영 경로 확인</span></div>
@@ -1564,8 +1750,8 @@ def build_daily_brief(
     승인 절차를 거침. 구매/보류 신호와 국면 판정은 정식판에서 제공 예정. 위기 국면에는
     시나리오와 행동 옵션을 담은 특별 브리프 체계로 전환됨.</div>
   데이터 시점 규율: 모든 입력은 발행 시점 이전에 확정된 값만 사용함 — 시카고 장 마감(미
-  동부시간 14:20) 이후 확정되는 지표는 하루 지연해 반영함. 산출: 자동 분석 파이프라인
-  (통계 변수 선별·기여도 분해·선행성 검정의 교차 확인) · 생성 {run_ts} (협정세계시)
+  동부시간 14:20) 이후 확정되는 지표는 하루 지연해 반영함. 산출: 자동 분석 절차
+  (통계 변수 선별·영향 크기 분해·선행 관계 검정의 교차 확인) · 생성 {run_ts} (세계 표준시)
 </footer>
 </div></body></html>"""
 

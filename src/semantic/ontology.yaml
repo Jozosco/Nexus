@@ -761,13 +761,15 @@ signal_tag_mapping:
     entities_v32: [TERM-167, TERM-168, TERM-169]   # v3.2 — 말라카·수에즈·홍해 병목 추가 참조
     daily_codes: ['SUEZ_RED_SEA_RISK', 'HORMUZ_THREAT_LEVEL', 'HORMUZ_AWRP_MULTIPLIER',
                   'GEOINTEL_RISK_COMPOSITE',
-                  'AIS_HORMUZ_TANKERS', 'AIS_MALACCA_TANKERS', 'AIS_PANAMA_TANKERS',
+                  'AIS_HORMUZ_TANKER_COUNT', 'AIS_MALACCA_TANKER_COUNT', 'AIS_PANAMA_TANKER_COUNT',   # A-274: 발행 코드명 정합
+                  'AIS_HORMUZ_RISK', 'AIS_MALACCA_RISK', 'AIS_PANAMA_RISK',
                   'SBO_STRAIT_RISK_COMPOSITE', 'BCAA', 'BCTI_PROXY']   # v3.2 확장
   - tag_ko: 지정학위험                    # v3.2 신설 — 사건 위험지수 계열(물류 경로 사건과 분리)
     unstr_codes: []                      # 코퍼스 태그 미대응 — 일별 정형·프록시 신호 전용
     absa_indicator: null                 # 지정학 전용 ABSA aspect 미정의 — Phase B 후보
-    entities: [TERM-073, TERM-081, TERM-170]
-    daily_codes: ['GPR', 'GPR_REALTIME', 'GDELT_EVENT_SCORE', 'SEISMIC_RISK']
+    entities: [TERM-073, TERM-081, TERM-170, TERM-231, TERM-232]
+    daily_codes: ['GPR', 'GPR_REALTIME', 'GPR_QUALITATIVE', 'GDELT_EVENT_SCORE', 'SEISMIC_RISK',
+                  'US_IRAN_CONFLICT_STATUS', 'RUSSIA_EU_RELATIONS_STATUS']   # A-273: 분쟁 상태 검색 요약 2종
     note: GPR_REALTIME은 v3.1에서 물류충격에 있었으나 GPR과 같은 지수 계열이므로 v3.2에서 이관했다
       (일별 코드는 한 태그에만 배정 — 브리지 중복 금지).
   - tag_ko: 전문매체                      # v3.2 신설 — RSS 수집 채널(주제 태그가 아닌 소스 채널)
@@ -783,7 +785,8 @@ signal_tag_mapping:
                   'RSS_SOYGROWERS', 'RSS_CLIMATEPOL', 'RSS_AGMARKET', 'RSS_GRAINCENTRAL',
                   'RSS_TFM', 'RSS_UKRAGRO',
                   'RSS_REUTERS_COMMODITIES', 'RSS_REUTERS_CLIMATE_ENERGY',   # 2026-09-13 승인자 지시
-                  'RSS_AP_COMMODITIES', 'RSS_AP_WORLD']
+                  'RSS_AP_COMMODITIES', 'RSS_AP_WORLD',
+                  'RSS_REUTERS_GEO', 'RSS_AP_GEO']   # A-273(2026-09-25): 지정학 레인(분쟁·제재·해협 — 농산물 맥락 불요)
     note: >-
       값은 일자별 관련 기사 수이며 주제 신호가 아니다 — 주제 귀속은 기사 본문 태깅(P1-05) 이후에만.
       공식 RSS가 없는 매체(Reuters·AP)는 채널 체인 Google News RSS 검색 프록시 → GDELT DOC 2.0(domain 필터 한정)
@@ -816,6 +819,9 @@ media_sources:
   - {code: RSS_REUTERS_CLIMATE_ENERGY, publisher: TERM-176, chain: [CH-GNEWS, CH-GDELT, CH-BING, CH-RAW], topic: 바이오연료·RVO·가뭄·ENSO·기후}
   - {code: RSS_AP_COMMODITIES,         publisher: TERM-177, chain: [CH-GNEWS, CH-GDELT, CH-BING, CH-RAW], topic: 대두·식물성유지·상품 선물·관세·운임}
   - {code: RSS_AP_WORLD,               publisher: TERM-177, chain: [CH-GNEWS, CH-GDELT, CH-BING, CH-RAW], topic: 홍해·호르무즈·흑해·수에즈·남미 수출국·해운}
+  # A-273(2026-09-25): 지정학 레인 — 미국–이란·러시아–EU·흑해·제재(전용 어휘 게이트, 채널당 3건)
+  - {code: RSS_REUTERS_GEO,            publisher: TERM-176, chain: [CH-GNEWS, CH-GDELT, CH-BING, CH-RAW], topic: 이란·호르무즈·후티·러시아·우크라이나·흑해·제재·CIA·휴전}
+  - {code: RSS_AP_GEO,                 publisher: TERM-177, chain: [CH-GNEWS, CH-GDELT, CH-BING, CH-RAW], topic: 이란·호르무즈·후티·러시아·우크라이나·흑해·제재·CIA·휴전}
   # 공식 RSS 2.0 직접 수집 — 매체 1:1
   - {code: RSS_FARMDOC_DAILY, publisher: TERM-181, chain: [CH-RSS]}
   - {code: RSS_WORLD_GRAIN,   publisher: TERM-182, chain: [CH-RSS]}

@@ -22,8 +22,11 @@ COLUMNS = ["변수 항목", "변수별 항목 수", "행수", "날짜범위", "�
 def signals_csv(tmp_path: Path) -> Path:
     """3행·2지표 일별 신호 CSV — appended_at은 오늘(UTC)로 신선."""
     now = datetime.now(timezone.utc).isoformat()
+    # A-274: 고정 날짜는 실행일이 지나면 '기한 초과'로 바뀌어 테스트가 날짜에 종속됐다 → 오늘 기준 상대 날짜
+    _d1 = (datetime.now(timezone.utc) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    _d0 = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     df = pd.DataFrame({
-        "date": ["2026-09-11", "2026-09-12", "2026-09-12"],
+        "date": [_d1, _d0, _d0],
         "indicator": ["RSS_FARMDOC_DAILY", "RSS_FARMDOC_DAILY", "HORMUZ_THREAT_LEVEL"],
         "category": ["전문 매체", "전문 매체", "해협"],
         "value": [2.0, 1.0, 3.0],
@@ -42,7 +45,9 @@ def test_row_from_tmp_csv(signals_csv: Path) -> None:
     assert row["변수 항목"] == vi.DAILY_SIGNALS_LABEL
     assert row["변수별 항목 수"] == 2
     assert row["행수"] == 3
-    assert row["날짜범위"] == "2026-09-11 ~ 2026-09-12"
+    _d1 = (datetime.now(timezone.utc) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    _d0 = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    assert row["날짜범위"] == f"{_d1} ~ {_d0}"
     assert row["무결성"].startswith("✅")
     assert row["신선도"].startswith("✅")   # A-267: 내용 기준 적시성 라벨
 

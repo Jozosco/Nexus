@@ -264,13 +264,15 @@ def _fetch_hormuz_realtime() -> pd.DataFrame:
         parsed_level = _parse_threat_level(threat_scope) or _parse_threat_level(clean_text)
         if parsed_level:
             level_value, level_label = parsed_level
+            narrative = re.sub(r"\s+", " ", clean_text).strip()[:600]
             rows.append({
                 "price_date":     today,
                 "source_name":    "Perplexity/Hormuz",
                 "indicator_code": "HORMUZ_THREAT_LEVEL",
                 "value":          level_value,
                 "unit":           "1=Low/2=Med/3=High",
-                "note":           f"[QUALITATIVE:{level_label}]",
+                # A-273: 답변 본문(사건·통항·보험료 서사)을 보존 — 종전엔 라벨만 남겨 서사가 소실됐다
+                "note":           f"[QUALITATIVE:{level_label}] {narrative}",
             })
         else:
             # 파싱 실패 → 원문 로그 + 결측 처리(행 미생성)
@@ -496,6 +498,32 @@ def _fetch_geopolitical_event_proxy() -> pd.DataFrame:
             "% harvested",
             "브라질 대두 수확 진척률",
         ),
+        # A-273(2026-09-25 승인자 지시): 미국–이란 분쟁·러시아–EU 관계 — 호르무즈·흑해·에너지 채널 서사
+        (
+            "US_IRAN_CONFLICT_STATUS",
+            (
+                "What is the latest status of the US-Iran conflict as it affects Strait of Hormuz tanker "
+                "traffic (past 7 days)? Format: LEVEL: [HIGH/MEDIUM/LOW] | "
+                "KEY_EVENT: [one dated sentence, max 25 words] | "
+                "HORMUZ_IMPACT: [closure threat/attacks on tankers/transits reduced/normal] | "
+                "SOURCE: [source] | DATE: [date]"
+            ),
+            "1=Low/2=Med/3=High",
+            "미국–이란 분쟁 상태",
+        ),
+        (
+            "RUSSIA_EU_RELATIONS_STATUS",
+            (
+                "What are the latest official or intelligence statements (past 48 hours, including CIA, EU "
+                "or Russian officials) on Russia-EU relations, sanctions or energy? Format: "
+                "TENSION: [HIGH/MEDIUM/LOW] | KEY_STATEMENT: [who said what, dated, max 25 words] | "
+                "SANCTIONS_ENERGY: [new measure or none] | "
+                "BLACK_SEA_IMPACT: [shipping or grain corridor effect, or none] | "
+                "SOURCE: [source] | DATE: [date]"
+            ),
+            "1=Low/2=Med/3=High",
+            "러시아–EU 관계 상태",
+        ),
     ]
 
     rows: list[dict] = []
@@ -511,7 +539,8 @@ def _fetch_geopolitical_event_proxy() -> pd.DataFrame:
             # 위험 수준(HIGH/MEDIUM/LOW) → 숫자 인코딩 우선 시도
             level_match = re.search(r"\b(HIGH|MEDIUM|LOW)\b", text, re.IGNORECASE)
 
-            if level_match and indicator_code in ("SUEZ_RED_SEA_RISK", "UKRAINE_GRAIN_CORRIDOR", "US_CHINA_TARIFF_STATUS"):
+            if level_match and indicator_code in ("SUEZ_RED_SEA_RISK", "UKRAINE_GRAIN_CORRIDOR", "US_CHINA_TARIFF_STATUS",
+                                                  "US_IRAN_CONFLICT_STATUS", "RUSSIA_EU_RELATIONS_STATUS"):
                 level_map = {"HIGH": 3.0, "MEDIUM": 2.0, "LOW": 1.0}
                 value = level_map[level_match.group(1).upper()]
             elif "PROGRESS" in text and "%" in text:

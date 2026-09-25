@@ -178,7 +178,8 @@ def test_gdelt_paced_six_seconds_between_calls(monkeypatch) -> None:
     monkeypatch.setattr(dg, "_gdelt_get_json", lambda params: _canned_gdelt())
     monkeypatch.setattr(dg.time, "sleep", lambda s: sleeps.append(s))
     rows = dg._fetch_specialist_media()
-    assert len(rows) == 2 and sleeps == [6]    # 두 번째 GDELT 호출 앞에서만 6초
+    # A-274: 두 채널이 같은 기사(동일 제목)를 내면 뒤 채널에서는 제거되므로 행은 1건 — 호출·대기는 그대로 2회·[6]
+    assert len(rows) == 1 and sleeps == [6]    # 두 번째 GDELT 호출 앞에서만 6초
 
 
 def test_gdelt_not_called_when_gnews_relevant(monkeypatch) -> None:
