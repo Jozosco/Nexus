@@ -166,3 +166,20 @@ def test_esr_rows_use_official_fields_and_esr_prefix():
     assert _esr_rows({"weekSales": 1}, "SBO_EXPORT", 2026) == []      # 날짜 키 부재 → 빈 목록
     from src.pipeline.asof import rule_for
     assert "ESR" in (rule_for("ESR_SBO_KR_WEEKLY_EXPORTS", "USDA_FAS_ESR").note or "")
+
+
+def test_esr_marketing_year_boundary_week_keeps_new_my():
+    """A-280: 경계 주가 MY yr·yr+1 양쪽에서 반환되면 신 MY 행만 남긴다(mart 값충돌 차단)."""
+    from src.pipeline.connectors.production_connector import dedupe_esr_marketing_year_boundary
+    d = pd.Timestamp("2017-10-05")
+    df = pd.DataFrame({
+        "indicator_code": ["ESR_SBO_KR_ACCUM_EXPORTS"] * 2 + ["ESR_SBO_KR_WEEKLY_EXPORTS"],
+        "price_date": [d, d, pd.Timestamp("2017-10-12")],
+        "market_year": [2018, 2017, 2018],          # 정렬 전 순서 무관
+        "value": [120.0, 9800.0, 300.0],
+    })
+    out = dedupe_esr_marketing_year_boundary(df)
+    assert len(out) == 2
+    row = out[out["indicator_code"] == "ESR_SBO_KR_ACCUM_EXPORTS"].iloc[0]
+    assert row["market_year"] == 2018 and row["value"] == 120.0
+    assert not out.duplicated(subset=["indicator_code", "price_date"]).any()

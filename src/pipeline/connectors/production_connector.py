@@ -554,8 +554,28 @@ def fetch_fas_esr_soybean_oil(start_year: int = 2017) -> pd.DataFrame:
         return pd.DataFrame()
     df = pd.DataFrame(rows)
     df["price_date"] = pd.to_datetime(df["price_date"], errors="coerce")
-    df["ingested_at"] = pd.Timestamp.utcnow()
-    return df.dropna(subset=["value"])
+    df["ingested_at"] = pd.Timestamp.now("UTC")
+    return dedupe_esr_marketing_year_boundary(df.dropna(subset=["value"]))
+
+
+def dedupe_esr_marketing_year_boundary(df: pd.DataFrame) -> pd.DataFrame:
+    """마케팅연도 경계 주 중복 제거 — 신 마케팅연도 보고를 채택한다.
+
+    A-280: ESR은 MY 경계 주(10월 첫 주)를 구 MY 조회(구곡 마감분)와 신 MY 조회(신곡 첫 주)
+    양쪽에서 반환하며 누적치가 MY마다 리셋되므로 값이 다르다. 코드에 MY 축이 없으면
+    (지표, event_time) 값충돌로 feature mart 게이트(D-033)가 차단된다(런 #113, 46건).
+    규칙: 같은 (indicator_code, price_date)면 market_year가 큰 행(신 MY)만 남긴다.
+    """
+    if df.empty or "market_year" not in df.columns:
+        return df
+    before = len(df)
+    out = (df.sort_values(["indicator_code", "price_date", "market_year"], kind="stable")
+             .drop_duplicates(subset=["indicator_code", "price_date"], keep="last")
+             .reset_index(drop=True))
+    dropped = before - len(out)
+    if dropped:
+        print(f"[정보] FAS ESR 마케팅연도 경계 주 중복 {dropped}건 제거 — 신 마케팅연도 보고 채택")
+    return out
 
 
 def normalize_price_dates(frames: list[pd.DataFrame]) -> pd.DataFrame:
