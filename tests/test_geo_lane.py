@@ -150,3 +150,19 @@ def test_power_month_key_skips_annual_aggregate():
     from src.pipeline.connectors.production_connector import _power_month
     assert _power_month("201701") == 1 and _power_month("202612") == 12
     assert _power_month("201713") is None and _power_month("2017") is None and _power_month("ANN") is None
+
+
+def test_esr_rows_use_official_fields_and_esr_prefix():
+    """A-277: ESR v2 실필드(weekEndingDate·weeklyExports 등) 파싱 + 'ESR_' 접두(as-of 규칙 적용)."""
+    from src.pipeline.connectors.production_connector import _esr_rows
+    entry = {"commodityCode": 902, "countryCode": 5800, "weekEndingDate": "2026-09-18T00:00:00",
+             "weeklyExports": 1200.0, "outstandingSales": 8000, "currentMYNetSales": 500,
+             "accumulatedExports": 3400, "unitName": "Metric Tons"}
+    rows = _esr_rows(entry, "SBO_EXPORT", 2026)
+    codes = {r["indicator_code"] for r in rows}
+    assert codes == {"ESR_SBO_KR_WEEKLY_EXPORTS", "ESR_SBO_KR_OUTSTANDING_SALES",
+                     "ESR_SBO_KR_NET_SALES", "ESR_SBO_KR_ACCUM_EXPORTS"}
+    assert all(r["price_date"] == "2026-09-18" and r["market_year"] == 2026 for r in rows)
+    assert _esr_rows({"weekSales": 1}, "SBO_EXPORT", 2026) == []      # 날짜 키 부재 → 빈 목록
+    from src.pipeline.asof import rule_for
+    assert "ESR" in (rule_for("ESR_SBO_KR_WEEKLY_EXPORTS", "USDA_FAS_ESR").note or "")

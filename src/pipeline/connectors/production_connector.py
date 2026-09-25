@@ -453,6 +453,47 @@ def _fetch_fas_esr(url: str, api_key: str = "", max_retries: int = 2) -> list | 
     raise RuntimeError(f"[오류] FAS ESR API 호출 실패 (인증 3방식 모두): {last_error}")
 
 
+# A-277: ESR v2 응답 실필드(공식 문서 — weekEndingDate·weeklyExports·outstandingSales·
+# currentMYNetSales·accumulatedExports). 구 코드의 weeklyExportSalesDate/weekSales는 존재하지 않는
+# 키라 1,058행 전량이 날짜 결측·값 0으로 폐기돼 왔다(A-175의 '1,048행 결측'이 이 결함).
+_ESR_DATE_KEYS = ("weekEndingDate", "weeklyExportSalesDate", "weekEnding", "date")
+_ESR_VALUE_KEYS = {
+    "WEEKLY_EXPORTS": ("weeklyExports", "weekSales"),
+    "OUTSTANDING_SALES": ("outstandingSales",),
+    "NET_SALES": ("currentMYNetSales", "netSales"),
+    "ACCUM_EXPORTS": ("accumulatedExports",),
+}
+
+
+def _esr_rows(entry: dict, indicator_prefix: str, yr: int) -> list[dict]:
+    """ESR 레코드 1건 → 지표별 행. 날짜 키 부재 시 빈 목록(상위에서 필드명 자기발견 로그)."""
+    wk_date = next((str(entry[k])[:10] for k in _ESR_DATE_KEYS if entry.get(k)), "")
+    if not wk_date:
+        return []
+    # 지표코드는 'ESR_' 접두 — asof.py RELEASE_RULES["ESR_"](대상주 다음 목요일 발표) 적용 대상.
+    # 마케팅연도별 코드 분리는 시계열을 조각내므로 폐기 — market_year 컬럼으로 보존.
+    base = f"ESR_{indicator_prefix.replace('_EXPORT', '')}_KR"
+    out: list[dict] = []
+    for suffix, keys in _ESR_VALUE_KEYS.items():
+        raw = next((entry[k] for k in keys if entry.get(k) is not None), None)
+        if raw is None:
+            continue
+        try:
+            val = float(raw)
+        except (ValueError, TypeError):
+            continue
+        out.append({
+            "price_date":     wk_date,
+            "source_name":    "USDA_FAS_ESR",
+            "indicator_code": f"{base}_{suffix}",
+            "country":        "KOR",
+            "value":          val,
+            "unit":           str(entry.get("unitName") or "MT"),
+            "market_year":    yr,
+        })
+    return out
+
+
 def fetch_fas_esr_soybean_oil(start_year: int = 2017) -> pd.DataFrame:
     """USDA FAS Export Sales Reporting (ESR) — 대두유 수출 판매량 (국가별·마케팅연도별).
 
@@ -485,6 +526,7 @@ def fetch_fas_esr_soybean_oil(start_year: int = 2017) -> pd.DataFrame:
     DEST_KOREA = "5800"
 
     rows: list[dict] = []
+    schema_logged = False
 
     for yr in range(start_year, date.today().year + 1):
         for cmd_code, indicator_prefix in COMMODITY_CODES.items():
@@ -495,20 +537,13 @@ def fetch_fas_esr_soybean_oil(start_year: int = 2017) -> pd.DataFrame:
                 if not data:
                     continue
                 entries = data if isinstance(data, list) else data.get("data", [])
+                n_before = len(rows)
                 for entry in entries:
-                    try:
-                        wk_date = str(entry.get("weeklyExportSalesDate", ""))[:10]
-                        rows.append({
-                            "price_date":     wk_date,
-                            "source_name":    "USDA_FAS_ESR",
-                            "indicator_code": f"{indicator_prefix}_TO_KR_{yr}",
-                            "country":        "KOR",
-                            "value":          float(entry.get("weekSales", 0) or 0),
-                            "unit":           "MT",
-                            "market_year":    yr,
-                        })
-                    except (ValueError, TypeError):
-                        continue
+                    rows.extend(_esr_rows(entry, indicator_prefix, yr))
+                if entries and len(rows) == n_before and not schema_logged:
+                    # A-277 자기발견: 필드명 불일치 시 실제 키를 노출(추측 교정 금지 — A-106 패턴)
+                    print(f"[경고] FAS ESR 응답 필드 불일치 — 첫 레코드 키: {sorted(entries[0].keys())}")
+                    schema_logged = True
                 print(f"[정보] FAS ESR {cmd_code} → 한국 {yr}: {len(entries)}건")
             except Exception as e:
                 print(f"[경고] FAS ESR {cmd_code}/{yr}: {e}")
