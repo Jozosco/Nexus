@@ -47,8 +47,18 @@ SYSTEM = (
 def _gather(args: list[str]) -> tuple[str, str]:
     if args and args[0] == "--diff":
         ref = args[1] if len(args) > 1 else "HEAD~1"
-        text = subprocess.run(["git", "diff", ref, "--", "*.py", "*.yml"],
-                              capture_output=True, text=True).stdout
+        # A-283: 구 필터(*.py, *.yml)는 온톨로지(*.yaml)·연구 문서(*.md) 변경을 전부 누락해 빈 diff를
+        #        모델에 보냈고, 모델은 "diff를 붙여 달라"는 회신을 했는데 이것이 ✅ 판정문으로 기록됐다
+        #        (런 36120741590). 대상 확장 + 빈 diff는 호출 없이 종료.
+        proc = subprocess.run(["git", "diff", ref, "--", "*.py", "*.yml", "*.yaml", "*.md"],
+                              capture_output=True, text=True)
+        if proc.returncode != 0:
+            print(f"[경고] git diff {ref} 실패(rc={proc.returncode}) — 검증 건너뜀: {proc.stderr.strip()[:200]}")
+            sys.exit(0)
+        text = proc.stdout
+        if not text.strip():
+            print(f"[정보] git diff {ref} 결과 없음(검증 대상 확장자 변경 없음) — 모델 호출 없이 건너뜀")
+            sys.exit(0)
         return f"git diff {ref}", text
     paths: list[str] = []
     for a in args:
