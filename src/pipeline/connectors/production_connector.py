@@ -283,7 +283,8 @@ def fetch_nasa_power_agromet(start_date: date | None = None) -> pd.DataFrame:
             "longitude":  coord["lon"],
             "community":  "AG",
             "format":     "JSON",
-            "user":       "nexus_project",
+            # A-277: POWER API가 밑줄 포함 user를 422로 거부("alphanumeric user") — 영숫자만 사용
+            "user":       "nexusproject",
             "header":     "true",
         }
         try:
@@ -508,6 +509,30 @@ def fetch_fas_esr_soybean_oil(start_year: int = 2017) -> pd.DataFrame:
     return df.dropna(subset=["value"])
 
 
+def normalize_price_dates(frames: list[pd.DataFrame]) -> pd.DataFrame:
+    """원천 프레임의 price_date를 tz 없는 datetime으로 통일한 뒤 결합한다.
+
+    A-277: naive·tz-aware price_date 프레임을 그대로 concat하면 object dtype이 되고
+    이후 to_datetime(errors="coerce")가 aware 원소를 NaT로 만든다 — 원천별 파싱 실패와
+    겹치면 event_time 전량 결측(런 #110)으로 fail-loud 중단. 프레임별 정규화 + 원천별
+    NaT 건수 로그로 원인을 드러낸다.
+    """
+    normalized: list[pd.DataFrame] = []
+    for f in frames:
+        f = f.copy()
+        src = str(f["source_name"].iloc[0]) if "source_name" in f.columns and len(f) else "?"
+        if "price_date" not in f.columns:
+            print(f"[경고] {src}: price_date 컬럼 없음 — 전 행 NaT 처리")
+            f["price_date"] = pd.NaT
+        pd_col = pd.to_datetime(f["price_date"], errors="coerce", utc=True)
+        f["price_date"] = pd_col.dt.tz_localize(None)
+        n_nat = int(f["price_date"].isna().sum())
+        if n_nat:
+            print(f"[경고] {src}: price_date 파싱 실패 {n_nat}/{len(f)}건")
+        normalized.append(f)
+    return pd.concat(normalized, ignore_index=True)
+
+
 def run() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = date.today().strftime("%Y%m%d")
@@ -523,14 +548,16 @@ def run() -> None:
     if not frames:
         print("[경고] 생산량 데이터: 수집된 항목 없음")
         return
-    combined = pd.concat(frames, ignore_index=True)
+    combined = normalize_price_dates(frames)
     out = f"{OUTPUT_DIR}/production_data_{today}.parquet"
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
     combined = attach_asof(combined, source="PRODUCTION")
     # A-175: 13차 런에서 1,048/1,580행 as-of 결측(ESR 등 날짜 미파싱 행) — 날짜 없는
     # 관측은 시계열 투입이 불가하므로 원인 로그 후 제외(전량 결측이면 결함으로 중단).
     if combined["event_time"].isna().all():
-        raise RuntimeError("[오류] production event_time 전량 결측 — price_date 파생 결함.")
+        diag = combined["source_name"].value_counts().to_dict()
+        raise RuntimeError(
+            f"[오류] production event_time 전량 결측 — price_date 파생 결함. 원천별 행 수: {diag}")
     n_nat = int(combined["event_time"].isna().sum())
     if n_nat:
         bad_src = combined.loc[combined["event_time"].isna(), "source_name"].value_counts()

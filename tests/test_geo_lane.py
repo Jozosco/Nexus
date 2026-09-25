@@ -125,3 +125,21 @@ def test_no_specialist_jargon_in_smoke_brief():
               "리드타임", "모식도", "신뢰 스트립", "USc/lb", "MMT"]
     hits = [w for w in banned if w in text]
     assert not hits, f"비전문가 용어 잔존: {hits}"
+
+
+def test_production_price_dates_normalized_across_tz(monkeypatch):
+    """A-277: naive·tz-aware 혼합 프레임 concat 후 event_time 전량 NaT(런 #110) 회귀 방지."""
+    from src.pipeline.connectors import production_connector as pc
+    naive = pd.DataFrame({"price_date": pd.to_datetime(["2026-01-01", "2026-02-01"]),
+                          "source_name": ["NASA_POWER"] * 2, "indicator_code": ["T2M_US"] * 2,
+                          "value": [1.0, 2.0]})
+    aware = pd.DataFrame({"price_date": pd.to_datetime(["2026-09-18", "2026-09-25"], utc=True),
+                          "source_name": ["USDA_FAS_ESR"] * 2, "indicator_code": ["ESR_KR"] * 2,
+                          "value": [3.0, 4.0]})
+    strings = pd.DataFrame({"price_date": ["2025-01-01", "not-a-date"],
+                            "source_name": ["FAOSTAT"] * 2, "indicator_code": ["PROD_BR"] * 2,
+                            "value": [5.0, 6.0]})
+    out = pc.normalize_price_dates([naive, aware, strings])
+    assert str(out["price_date"].dtype).startswith("datetime64") and out["price_date"].dt.tz is None
+    assert int(out["price_date"].isna().sum()) == 1            # 파싱 불가 문자열 1건만 NaT
+    assert out.loc[out["source_name"] == "USDA_FAS_ESR", "price_date"].notna().all()
