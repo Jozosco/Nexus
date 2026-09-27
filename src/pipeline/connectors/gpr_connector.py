@@ -357,30 +357,33 @@ def _wasde_release_dates() -> tuple[date, ...]:
     return tuple(sorted(out)) or _WASDE_RELEASE_DATES_2026
 
 
-def _last_wasde_release(today: date | None = None) -> date | None:
-    """직전 발표일. 표(2026)가 소진되면 관행(매월 9~12일 발표)으로 근사해 프록시가 영구 중단되지 않게 한다(적대 검증 지적)."""
+def _last_wasde_release(today: date | None = None) -> tuple[date | None, bool]:
+    """(직전 발표일, 근사 여부). 표(2026)가 소진되면 관행(매월 10일경)으로 근사해 프록시가 영구 중단되지 않게 한다.
+    근사값은 실제 발표일(9~12일)과 다를 수 있어 호출측이 창을 보수적으로 잡는다(교차검증 지적)."""
     t = today or date.today()
     past = [d for d in _wasde_release_dates() if d <= t]
     last = past[-1] if past else None
     if last is not None and (t - last).days <= 45:
-        return last
+        return last, False
     approx = date(t.year, t.month, 10)
     if approx > t:
         approx = (approx.replace(day=1) - timedelta(days=1)).replace(day=10)
     if last is None or approx > last:
         print(f"[정보] WASDE 발표일표 소진 — 관행(매월 10일경)으로 근사 {approx} · WASDE_RELEASE_DATES로 교정 가능")
-        return approx
-    return last
+        return approx, True
+    return last, False
 
 
 def _wasde_query_window(today: date | None = None) -> bool:
-    """발표일 당일부터 3영업일 이내에만 True — 그 밖은 질의하지 않는다(카드 자동 숨김·비용 절감)."""
+    """발표일 당일부터 3영업일 이내에만 True — 그 밖은 질의하지 않는다(카드 자동 숨김·비용 절감).
+    발표일이 근사값이면 [+2, +5]영업일로 창을 늦춰 발표 전(사전 컨센서스만 있는 시점) 질의를 피한다."""
     import numpy as _np
     t = today or date.today()
-    last = _last_wasde_release(t)
+    last, approx = _last_wasde_release(t)
     if last is None:
         return False
-    return 0 <= int(_np.busday_count(last, t)) <= WASDE_QUERY_WINDOW_BDAYS
+    n = int(_np.busday_count(last, t))
+    return (2 <= n <= WASDE_QUERY_WINDOW_BDAYS + 2) if approx else (0 <= n <= WASDE_QUERY_WINDOW_BDAYS)
 
 
 def _fetch_policy_news_proxy() -> pd.DataFrame:
@@ -438,7 +441,7 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
             (
                 # A-284(검증 4·WASDE 카드 정정): 대상을 '세계 대두유 기말재고(컨센서스 조사 부재 → unknown 반복)'에서
                 #   '미국 대두유 수급표 vs 사전 애널리스트 조사(Reuters/Bloomberg 설문)'로 정정. 발표 후 3영업일에만 질의.
-                f"USDA WASDE report released {_last_wasde_release().isoformat() if _last_wasde_release() else 'most recently'}: "
+                f"USDA WASDE report released {(_last_wasde_release()[0].isoformat() if _last_wasde_release()[0] else 'most recently')}: "
                 "compare the U.S. soybean oil balance sheet (ending stocks, million lbs; biofuel use) and U.S. soybean ending stocks "
                 "(million bushels) against the pre-report analyst survey average (Reuters or Bloomberg poll). "
                 "Format: REPORT_DATE: [date] | ITEM: [US soybean oil ending stocks or US soybean ending stocks] | "
