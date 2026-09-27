@@ -1,6 +1,8 @@
 """G1/G2 Preview 진입 조건을 외부 데이터 없이 검증하는 회귀 테스트."""
 from __future__ import annotations
 
+import re
+import shlex
 from datetime import timedelta
 from pathlib import Path
 
@@ -107,15 +109,80 @@ def unstructured_index_file(tmp_path: Path) -> Path:
     return path
 
 
+_RELEASE_WORKFLOWS = (
+    ".github/workflows/external_data_refresh.yml",
+    ".github/workflows/historical_backfill.yml",
+    ".github/workflows/unstructured_analysis.yml",
+)
+
+# 발행 워크플로우에서 main 커밋·push가 승인된 잡과, 각 잡이 스테이징할 수 있는 경로 접두사.
+# 승인 근거: A-181(일별 비정형 신호 아카이브)·A-284(한국어 헤드라인 캐시)·A-202(E1 스탬프)·
+# DQ-23(최신 브리프 배포 브리지)·A-184/A-255(관세청 `_API.xlsx` — 업로드 원본 불변).
+# 여기 없는 잡이 contents: write를 선언하거나 push하면 게이트 우회로 간주한다.
+_APPROVED_WRITE_JOBS: dict[str, tuple[str, ...]] = {
+    "daily-unstructured-digest": ("data/processed/", "data/semantic/events"),
+    "signed-daily-stamp": ("data/processed/", "reports/pipeline/latest"),
+    "customs-import-stats": ("data/raw/관세청/",),
+    "customs-gw-extended": ("data/raw/관세청/",),
+}
+# data/raw 예외는 API 수집 동반 파일에만 허용 — 업로드 원본·parquet 스테이징 차단(A-184).
+_RAW_STAGING_SUFFIX = "_API.xlsx"
+_GIT_ADD_RE = re.compile(r"\bgit add\s+([^|&;\n]*)")
+
+
+def _strip_comments(run_script: str) -> str:
+    """run 스크립트에서 주석을 제거한 명령 행만 반환(주석 속 'git push' 오탐 방지)."""
+    return "\n".join(line.split("#", 1)[0] for line in run_script.splitlines())
+
+
+def _job_run_text(job: dict) -> str:
+    runs = [step.get("run") for step in job.get("steps") or [] if isinstance(step, dict)]
+    return "\n".join(_strip_comments(str(run)) for run in runs if run)
+
+
+def _grants_contents_write(job: dict) -> bool:
+    permissions = job.get("permissions")
+    if isinstance(permissions, str):
+        return permissions == "write-all"
+    return isinstance(permissions, dict) and permissions.get("contents") == "write"
+
+
+def _staged_paths(run_text: str) -> list[str]:
+    """`git add` 인자를 경로 단위로 추출한다(플래그·리다이렉션 제외)."""
+    paths: list[str] = []
+    for match in _GIT_ADD_RE.finditer(run_text):
+        for token in shlex.split(match.group(1)):
+            if token.startswith("-"):
+                raise AssertionError(f"[오류] git add 플래그({token}) 사용 — 경로를 명시해야 함")
+            if ">" in token:
+                continue
+            paths.append(token)
+    return paths
+
+
 @pytest.fixture
 def release_workflow_text() -> str:
     root = Path(__file__).resolve().parents[1]
-    paths = [
-        root / ".github/workflows/external_data_refresh.yml",
-        root / ".github/workflows/historical_backfill.yml",
-        root / ".github/workflows/unstructured_analysis.yml",
-    ]
-    return "\n".join(path.read_text(encoding="utf-8") for path in paths)
+    return "\n".join(
+        (root / relative).read_text(encoding="utf-8") for relative in _RELEASE_WORKFLOWS
+    )
+
+
+@pytest.fixture
+def release_workflow_jobs() -> list[tuple[str, str, dict]]:
+    """(워크플로우 파일명, 잡 이름, 잡 정의) 목록 — yaml.safe_load 기준."""
+    root = Path(__file__).resolve().parents[1]
+    jobs: list[tuple[str, str, dict]] = []
+    for relative in _RELEASE_WORKFLOWS:
+        workflow = yaml.safe_load((root / relative).read_text(encoding="utf-8"))
+        top_level = workflow.get("permissions")
+        assert not _grants_contents_write({"permissions": top_level}), (
+            f"[오류] {relative}: 워크플로우 전역 contents: write 금지 — 잡 단위로 선언해야 함"
+        )
+        for name, job in (workflow.get("jobs") or {}).items():
+            jobs.append((Path(relative).name, name, job))
+    assert jobs, "[오류] 발행 워크플로우 잡을 하나도 읽지 못함"
+    return jobs
 
 
 def test_databento_missing_key_is_fatal(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -265,16 +332,114 @@ def test_unstructured_index_does_not_emit_nan_tags(
     assert _as_bool(pd.Series(["False", "True"])).tolist() == [False, True]
 
 
-def test_release_workflows_do_not_bypass_model_gates(release_workflow_text: str) -> None:
+def _needs(job: dict) -> list[str]:
+    needs = job.get("needs") or []
+    return [needs] if isinstance(needs, str) else list(needs)
+
+
+def _gated_on_model_readiness(job: dict) -> bool:
+    """needs에 model-readiness가 있고 if:가 그 success를 요구해야 게이트로 인정."""
+    return "model-readiness" in _needs(job) and (
+        "needs.model-readiness.result == 'success'" in str(job.get("if", ""))
+    )
+
+
+def test_release_workflows_do_not_bypass_model_gates(
+    release_workflow_text: str, release_workflow_jobs: list[tuple[str, str, dict]]
+) -> None:
     forbidden = [
         "validate_asof.py --warn",
         "build_unstructured_timeseries.py || true",
-        "git push origin HEAD:main",
-        "contents: write",
     ]
     for pattern in forbidden:
-        assert pattern not in release_workflow_text
-    assert release_workflow_text.count("needs: [model-readiness]") >= 2
+        assert pattern not in release_workflow_text, f"[오류] 게이트 우회 패턴 잔존: {pattern}"
+    # 일별·백필 양쪽 G1 분석 잡이 Model Readiness success에 종속돼야 한다.
+    # (구 검사 `needs: [model-readiness]` 리터럴은 일별 잡의 needs 확장으로 1건만 매칭 — 구조 검사로 대체)
+    gated = {
+        f"{workflow}/{name}"
+        for workflow, name, job in release_workflow_jobs
+        if name == "g1-analysis" and _gated_on_model_readiness(job)
+    }
+    assert len(gated) >= 2, f"[오류] Model Readiness 게이트를 통과하는 G1 잡 부족: {gated}"
+
+
+def _check_write_scope(workflow: str, name: str, job: dict) -> bool:
+    """잡 하나의 main 커밋 범위를 검사한다. 쓰기(권한 선언 또는 push) 잡이면 True."""
+    run_text = _job_run_text(job)
+    pushes = "git push" in run_text
+    writes = _grants_contents_write(job)
+    if not (pushes or writes):
+        assert not _staged_paths(run_text), (
+            f"[오류] {workflow}/{name}: 쓰기 권한 없는 잡의 git add — 승인 목록 확인"
+        )
+        return False
+    assert name in _APPROVED_WRITE_JOBS, (
+        f"[오류] {workflow}/{name}: 미승인 잡의 contents: write 또는 git push"
+    )
+    assert not re.search(r"\bgit commit\s+(-a\b|--all\b)", run_text), (
+        f"[오류] {workflow}/{name}: git commit -a는 추적 파일 전량 스테이징 — 금지"
+    )
+    staged = _staged_paths(run_text)
+    assert staged, f"[오류] {workflow}/{name}: push 잡인데 git add 경로가 없음"
+    for path in staged:
+        assert path.startswith(_APPROVED_WRITE_JOBS[name]), (
+            f"[오류] {workflow}/{name}: 승인 범위 밖 경로 스테이징 — {path}"
+        )
+        if path.startswith("data/raw/"):
+            assert path.endswith(_RAW_STAGING_SUFFIX), (
+                f"[오류] {workflow}/{name}: data/raw는 {_RAW_STAGING_SUFFIX}만 허용 — {path}"
+            )
+    return True
+
+
+def test_release_workflows_commit_only_from_approved_jobs(
+    release_workflow_jobs: list[tuple[str, str, dict]],
+) -> None:
+    """main 커밋·push는 승인된 잡(A-181·A-202·DQ-23·A-184·A-255)에서, 승인된 경로만."""
+    seen_write_jobs = {
+        name for workflow, name, job in release_workflow_jobs
+        if _check_write_scope(workflow, name, job)
+    }
+    # 승인 목록의 잡이 실제로 존재해야 한다 — 잡 개명 시 허용 목록이 조용히 비지 않도록
+    assert seen_write_jobs == set(_APPROVED_WRITE_JOBS), (
+        f"[오류] 승인 목록과 워크플로우 불일치: {set(_APPROVED_WRITE_JOBS) ^ seen_write_jobs}"
+    )
+
+
+def test_release_workflow_guard_rejects_unapproved_staging() -> None:
+    """가드 자체 검증 — 미승인 잡·소스/gold/워크플로우 경로·일괄 스테이징은 반드시 걸린다."""
+    push = "git commit -m x && git push origin HEAD:main"
+    approved = {"permissions": {"contents": "write"}}
+
+    def job(add: str) -> dict:
+        return {**approved, "steps": [{"run": f"git add {add} 2>/dev/null || true\n{push}"}]}
+
+    with pytest.raises(AssertionError, match="미승인 잡"):
+        _check_write_scope("w.yml", "g1-analysis", job("data/processed/x.csv"))
+    for path in ("src/x.py", "data/gold/feature_mart.parquet", ".github/workflows/a.yml", "."):
+        with pytest.raises(AssertionError, match="승인 범위 밖"):
+            _check_write_scope("w.yml", "signed-daily-stamp", job(path))
+    with pytest.raises(AssertionError, match="_API.xlsx"):
+        _check_write_scope("w.yml", "customs-gw-extended", job("data/raw/관세청/upload.xlsx"))
+    with pytest.raises(AssertionError, match="플래그"):
+        _check_write_scope("w.yml", "signed-daily-stamp", job("-A"))
+    with pytest.raises(AssertionError, match="commit -a"):
+        _check_write_scope(
+            "w.yml", "signed-daily-stamp", {**approved, "steps": [{"run": "git commit -a -m x"}]}
+        )
+    # 쓰기 권한도 push도 없는 잡의 git add 역시 차단
+    with pytest.raises(AssertionError, match="쓰기 권한 없는"):
+        _check_write_scope("w.yml", "geointel", {"steps": [{"run": "git add data/processed/a"}]})
+    # 정상 경로: 승인 잡 + 승인 경로(따옴표·리다이렉션·|| 폴백 포함)는 통과
+    assert _check_write_scope(
+        "w.yml",
+        "daily-unstructured-digest",
+        job('data/processed/a.csv "data/semantic/events" || git add data/processed/b.json'),
+    )
+    # 주석 속 'git push'는 push로 세지 않는다
+    assert "git push" not in _job_run_text(
+        {"steps": [{"run": "echo ok   # D-026 신규 git push 저장소 금지"}]}
+    )
 
 
 def test_g1_loads_only_asof_noncontaminated_features(
