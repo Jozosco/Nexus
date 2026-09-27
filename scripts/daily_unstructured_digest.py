@@ -688,6 +688,9 @@ def _attach_proxy_ko(rows: list[dict]) -> None:
         body = body.strip()
         if not body or KO_SEP in body or _is_kv_note(body) or len(body) < 40:
             continue
+        hangul = sum(1 for ch in body if "가" <= ch <= "힣")
+        if hangul / max(1, len(body)) > 0.3:                  # 이미 한글 서술(GDELT 집계 등)은 요약 불요(런 #115 실측)
+            continue
         cand.append((r, tag, body))
     if not cand:
         return
