@@ -1115,6 +1115,12 @@ _VALUE_ONLY_PROXIES = {"BIODIESEL_MANDATE_NEWS", "ARG_EXPORT_TAX_NEWS", "INDIA_D
                        "BRAZIL_HARVEST_PROGRESS", "WASDE_CONSENSUS_SCORE"}
 
 
+# A-289: 변동일 '당시 신호'의 기본 키워드 — 상위 변인과 무관하게 대두유 자체 재료를 잡기 위함
+_INFLECTION_BASE_KWS = ["soybean oil", "soyoil", "soy oil", "대두유", "vegetable oil", "biofuel", "biodiesel",
+                        "renewable diesel", "rvo", "small refinery", "45z", "rin", "nopa", "crush", "압착",
+                        "wasde", "palm oil", "팜유", "canola", "sunflower", "해바라기", "iran", "hormuz", "diesel"]
+
+
 def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
                          window_days: int = 2, used: set[str] | None = None) -> list[dict]:
     """변동일 '당시 신호' 선택 규칙 (A-284 · 검증 1 ②).
@@ -1146,6 +1152,8 @@ def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
         if is_media:
             for it in _media_items(note)[:3]:
                 hits = _kw_hits(kws_l, f"{it.get('ko', '')} {it['title']} {it.get('desc', '')}")
+                if not hits:
+                    continue                                  # A-289: 대두유·변인 키워드 무적중 기사는 '당시 신호'가 아님
                 cands.append({"title": it.get("ko") or it["title"][:110], "orig": it["title"] if it.get("ko") else "",
                               "url": it.get("url"), "source": row.get("source_name", ""), "indicator": ind,
                               "date": d_key, "media": 1, "hits": hits,
@@ -1494,6 +1502,7 @@ def _inflection_block(points: list[dict], importance_df: pd.DataFrame,
     kws: list[str] = []
     for c in top_codes:
         kws.extend(_driver_keywords(c))
+    kws.extend(_INFLECTION_BASE_KWS)                           # 대두유 자체 재료(정책·압착·수급) 키워드
     kws = list(dict.fromkeys(kws))
 
     cards = []
@@ -2016,7 +2025,7 @@ def build_daily_brief(
       <div class="drv"><span class="rank num">{i}</span><div>
         <span class="name">{_esc(label)}</span>{direction}
         <div class="barrow"><div class="bar" style="width:{max(width, 8)}%"></div>
-          <span class="shap num">영향 크기 {coef:+.4f} · 함께 움직인 정도 {r:+.3f}</span></div>
+          <span class="shap num">{(f"영향 크기 {coef:+.4f} · " if abs(coef) > 0 else "")}함께 움직인 정도 {r:+.3f}</span></div>
         {news}{link_line}</div></div>""")
     drivers_cap = ("통계 선별에서 유의한 변인 없음 — 상관 기준 참고 순위 · 별점 = 최근 14일 기사와의 연관 정도(키워드 일치) · 제목 클릭 시 원문 · "
                    "연결 근거 = 용어·인과 사전에 등재된 경로(사전의 검증 상태 표기 — 당일 인과 식별 아님)"

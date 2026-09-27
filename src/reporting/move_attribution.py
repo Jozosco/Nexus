@@ -142,10 +142,21 @@ def attribute_move(frames: dict[str, pd.DataFrame], d: pd.Timestamp, move_pct: f
     att.resid_sigma = abs(att.residual) / resid_sd if resid_sd > 0 else float("nan")
     energy = att.same_day.get("난방유(경유 계열)", 0.0)
     brent = att.same_day.get("브렌트유", 0.0)
+    energy_share = att.contributions.get("난방유(경유 계열)", 0.0)
+    veg_share = sum(v for k, v in att.contributions.items() if k in ("카놀라", "팜유", "대두"))
+    energy_shock = abs(energy) >= 3 or abs(brent) >= 3
+    shock_txt = f"난방유 {energy:+.1f}% · 브렌트 {brent:+.1f}%"
     if att.resid_sigma >= RESID_FLAG_SIGMA:
         att.verdict = "대두유 고유 재료 가능성 — 관련 시장으로 설명되지 않는 몫이 큼"
-    elif abs(energy) >= 3 or abs(brent) >= 3:
-        att.verdict = "에너지 시장 충격 동반 — 바이오연료 경제성 경로로 대두유에 전이된 날로 보임"
+        if energy_shock:
+            att.verdict += f"(같은 날 에너지 충격 {shock_txt} 동반)"
+    elif energy_shock and abs(energy_share) >= abs(att.move_pct) * 0.3:
+        att.verdict = (f"에너지 시장 충격({shock_txt})이 경유 경로로 직접 전이 — "
+                       f"경유 계열 몫 {energy_share:+.2f}%p")
+    elif energy_shock:
+        # A-289: 에너지 충격일이어도 경유 경로 몫이 작으면 '직접 전이'로 쓰지 않음(2022년 이후 연결도 약화 — JARE 2026)
+        att.verdict = (f"에너지 시장 충격일({shock_txt}) — 대두유 변동은 경유 경로 몫({energy_share:+.2f}%p)보다 "
+                       f"식물성유·대두 동반 변동({veg_share:+.2f}%p)으로 나타남(공통 요인 — 인과 아님)")
     elif abs(att.explained) >= abs(att.move_pct) * 0.6:
         att.verdict = "식물성유·곡물 시장 전반의 동반 변동"
     else:
@@ -163,7 +174,7 @@ def render_attribution_items(att: Attribution) -> list[str]:
     if att.contributions and att.explained == att.explained:
         contrib = " · ".join(f"{k} {v:+.2f}%p" for k, v in sorted(att.contributions.items(), key=lambda kv: -abs(kv[1])))
         items.append(f"변동 분해: 관련 시장 동반 변동으로 {att.explained:+.2f}%p({contrib}) · 대두유 고유 {att.residual:+.2f}%p"
-                     f"(평소의 {att.resid_sigma:.1f}배)")
+                     f"(평소의 {att.resid_sigma:.1f}배) — 카놀라·팜유는 같은 식물성유 충격에 함께 반응하는 동행 지표(원인 아님)")
     if att.verdict:
         items.append(f"판정: {att.verdict}")
     for e in att.events[:3]:
