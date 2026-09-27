@@ -201,8 +201,8 @@ def _write_report(path: Path, verdict: str, symbol: str,
         "- 상대차 정의: |utc_close − settle| / settle",
         "",
         "## PASS 기준",
-        f"| 기준 | 임계값 |",
-        f"|---|---|",
+        "| 기준 | 임계값 |",
+        "|---|---|",
         f"| 교집합 일수 | ≥ {MIN_OVERLAP_DAYS}일 |",
         f"| 상대차 중앙값 | ≤ {MAX_MEDIAN_PCT:.2f}% |",
         f"| 상대차 P99 | ≤ {MAX_P99_PCT:.2f}% |",
@@ -224,7 +224,7 @@ def _write_report(path: Path, verdict: str, symbol: str,
         lines.append("")
         lines.append("> CBOT_BO_ROLLDAY 지표 부재 — 롤일 분리 불가. 전 표본을 '롤일 제외'로 간주함.")
     if note:
-        lines += ["", f"## 비고", note]
+        lines += ["", "## 비고", note]
     if worst is not None and not worst.empty:
         lines += ["", "## 어긋난 날짜 상위 20건", "",
                   "| 날짜 | UTC 종가 | 정산가 표본 | 상대차 |", "|---|---|---|---|"]

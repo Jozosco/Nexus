@@ -11,7 +11,6 @@ from pathlib import Path
 
 import openpyxl
 import pytest
-import yaml
 
 from scripts import sync_glossary_xlsx as sync
 

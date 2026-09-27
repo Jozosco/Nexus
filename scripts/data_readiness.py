@@ -146,9 +146,6 @@ def _load_index() -> tuple[dict[str, list[str]], dict[str, dict]]:
             in_win = d[(d >= WINDOW_START) & (d <= WINDOW_END)]
             available = (pd.to_datetime(g["available_at"], utc=True, errors="coerce")
                          if has_asof else pd.Series(pd.NaT, index=g.index, dtype="datetime64[ns, UTC]"))
-            event = (pd.to_datetime(g["event_time"], utc=True, errors="coerce")
-                     if "event_time" in g.columns else pd.Series(pd.NaT, index=g.index,
-                                                                  dtype="datetime64[ns, UTC]"))
             eligible = _as_bool(g.get("target_eligible", pd.Series(False, index=g.index)))
             bases = sorted(g.get("time_basis", pd.Series("UNSPECIFIED", index=g.index))
                            .dropna().astype(str).unique().tolist())

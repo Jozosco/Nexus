@@ -60,7 +60,6 @@ def build(o: dict, ent_count: int) -> str:
     pr = o.get("production_regions", {})
     n_t1, n_t2 = len(pr.get("tier1", []) or []), len(pr.get("tier2", []) or [])
     ev_block = o.get("evaluation", {})
-    meta = o.get("causal_edges_meta", {})
     n_ev = sum(e["ev"] for e in edges)
     data = {"edges": edges, "badge": badge, "sc": {"routes": routes}, "channels": channels,
             "ds": ds, "regions": {"tier1": n_t1, "tier2": n_t2}, "eval": ev_block}

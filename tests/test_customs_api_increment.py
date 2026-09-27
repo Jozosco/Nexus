@@ -6,7 +6,6 @@ from pathlib import Path
 
 import openpyxl
 import pandas as pd
-import pytest
 
 from scripts import customs_gw_api_increment as inc
 from scripts import ingest_customs_gw_uploads as up

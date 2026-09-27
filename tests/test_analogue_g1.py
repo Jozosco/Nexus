@@ -6,9 +6,7 @@ import pandas as pd
 import pytest
 
 from src.forecasting.analogue_g1 import (
-    ANALOGUE_QUANTILE_BINS,
     EXCLUDE_RECENT_TRADING_DAYS,
-    MIN_ANALOGUE_EPISODES,
     build_analogue_context,
     dedup_episodes,
     find_analogue_days_quantile,

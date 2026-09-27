@@ -457,7 +457,7 @@ def _reading_m2(lp: pd.DataFrame) -> list[str]:
         out.append(f"- {proxy} 1σ 반응(2010~2025): " + ", ".join(parts) + ".")
         if not s.empty:
             parts_s = [f"h={h} {_pct(s.loc[h, 'beta'])}" for h in LP_HORIZONS if h in s.index]
-            out.append(f"  - 2020~2025 부분표본: " + ", ".join(parts_s) + ".")
+            out.append("  - 2020~2025 부분표본: " + ", ".join(parts_s) + ".")
         if 20 in f.index:
             r = f.loc[20]
             out.append(f"  - 대형 충격 h=20: +2σ 초과일 {_pct(r['big_pos'])}"

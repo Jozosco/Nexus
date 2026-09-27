@@ -5,7 +5,6 @@ import re
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from scripts import daily_unstructured_digest as dg
 from src.reporting import daily_brief as db

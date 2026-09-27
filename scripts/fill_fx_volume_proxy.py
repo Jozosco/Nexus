@@ -71,7 +71,6 @@ def apply_proxy(vol: pd.Series, symbol: str) -> pd.DataFrame:
 
 def write_filled_xlsx(df: pd.DataFrame) -> None:
     """원본 시트 구조(연도 시트·Month/Day/…)를 복제하고 대리 열 2개를 덧붙인다 — 원본 파일은 불변."""
-    import openpyxl
     from openpyxl import load_workbook
     wb = load_workbook(SRC_XLSX)
     lookup = df.set_index("price_date")
