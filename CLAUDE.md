@@ -20,7 +20,7 @@
 |---|---|
 | **Commodity** | Soybean oil (대두유) — crude + refined. Scope is fixed; do not extend without explicit instruction. |
 | **Decision output** | Daily Buy / Hold procurement signal. AI recommends; human approves. Never execute autonomously. |
-| **Goals** | G1: 동인 순위+**과거 유사국면 실측 참조** · G2: 확률 가격밴드(P10/P50/P90) · G3: 레짐 확률+**3-시뮬레이션**(per-MT regret) — 정본: README §QR (2026-08-28 재정립) |
+| **Goals** | G1: 동인 순위+**과거 유사국면 실측 참조** — 차별점: **대두유 시장·유통 구조를 통합해 실무에서 놓치기 쉬운 요인까지 정량 지표로 제시**(README §QR, 상시 원칙) · G2: 확률 가격밴드(P10/P50/P90) · G3: 레짐 확률+**3-시뮬레이션**(per-MT regret) — 정본: README §QR (2026-08-28 재정립) |
 | **Horizons** | 1 · 5 · 20 · 60 거래일 직접 예측 (≈1일·1주·1개월·3개월). 60일 = 약 3개월 조달 의사결정 지평 |
 | **Model policy** | 단일 거대 모델 확정 금지 — **Champion–Challenger 포트폴리오**. 승격은 사전 등록된 규칙으로만 (→ `docs/research_desk/2026-08/model_strategy_2026_08_12/`) |
 | **Data scope** | 외부 파이프라인 데이터 **전용**(MEMORY **D-021**이 D-006을 대체 — 내부 S&OP/ERP는 학습·검증·피처·proxy 어디에도 투입 금지). G2 학습은 Azure ML Studio |

@@ -20,6 +20,12 @@
 | **Current Scope** | Soybean oil only — do NOT extend to other raw materials without explicit instruction |
 | **Human Gate** | AI recommends; procurement team approves. No autonomous execution. |
 
+### 프로젝트 차별점 (승인자 상시 원칙 — 2026-09-27)
+> **대상 원료(대두유)의 시장·유통 구조를 공급·가격 예측에 통합한다.** G1의 목표는 실제 운영에서 **놓치기 쉬운 세부 요인·변수까지
+> 찾아내 분석하고 정량 지표로 제시**하는 것이다. 따라서 G1 산출물은 ① 흔한 거시 동인(유가·환율)의 반복이 아니라 구조 요인
+> (원산지 채널·압착 채산성·가공사 증설·정책 일정·물류 경로·경쟁 유지 수급)을 드러내야 하고, ② 같은 경로를 재는 변수는 묶어
+> 한 번만 세며, ③ 각 변동·변인에는 정량 수치(분해 몫·편차·시차)와 날짜가 확인된 근거를 붙인다.
+
 ### Goal Labels (used throughout all project files)
 > 2026-08-28 조정자 최종 재정립 반영 — 과거 연도 데이터의 하이브리드 분석(정량+정성)
 > 위에서 단계별 목표를 구축하는 구매 의사결정 지원 솔루션.
@@ -54,6 +60,8 @@ An F&B manufacturer importing soybean oil faces three structural procurement fai
 
 ### G1 — Variable Importance & Risk Alerts + 과거 유사국면 참조
 Identify which macro/micro factors most influence soybean oil prices and build automated alert triggers when those factors breach thresholds.
+**차별점(2026-09-27 승인자 상시 원칙)**: 시장·유통 구조(원산지 채널·압착·가공사·정책·물류·경쟁 유지)를 변수화해
+실무에서 놓치기 쉬운 요인까지 정량 지표로 제시한다 — 위 §QR '프로젝트 차별점' 참조.
 **유사국면 참조(2026-08-28 재정립)**: 실무자는 모든 변수를 상시 주시할 수 없으므로,
 특정 변수의 상태가 현재와 유사했던 과거 연도들에서 이후 수급·가격이 어떻게 변했는지를
 실측 분포로 제공해 참조하게 한다 — 과거 관측의 요약이며 전망 주장이 아니다(A-191).
