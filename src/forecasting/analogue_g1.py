@@ -85,7 +85,7 @@ CASE_PROFILES: dict[str, CaseProfile] = {
         "발표 이벤트(WASDE) 전후로 가격이 빠르게 재평가되는 패턴.",
         "당시는 운임(BDI) 저수준·수입 수요 부진의 삼중 부정 구조 — 고점이 지속되지 "
         "못한 조건이 겹쳐 있었음.",
-        related=('ENSO', 'ONI', 'T2M', 'PRECTOTCORR', 'PRECIPITATION', 'GWET', 'SOIL_', 'USDM', 'DROUGHT', 'CROP_CONDITION', 'SOYBEAN_PROD', 'WASDE', 'PSD_SOY', 'WASDE_CONSENSUS', 'FCST_')),
+        related=('ENSO', 'ONI', 'T2M', 'PRECTOTCORR', 'PRECIPITATION', 'GWET', 'GWETROOT', 'GWETTOP', 'SOIL_', 'USDM', 'DROUGHT', 'CROP_CONDITION', 'SOYBEAN_PROD', 'WASDE', 'PSD_SOY', 'WASDE_CONSENSUS', 'FCST_')),
     "사례 ③ · 2021-22 복합 위기": CaseProfile(
         "2020-08-01", "2022-06-30",
         "2년 연속 라니냐(아르헨 감산) + 러시아-우크라이나 전쟁(해바라기유 공급 45~50% "
@@ -111,7 +111,7 @@ CASE_PROFILES: dict[str, CaseProfile] = {
         "주요 원산지 한 곳의 충격이 발생해도 대체 원산지 물량이 완충하는 구조 — 현재도 "
         "브라질 생산이 역대 최고 수준이라는 점이 같은 완충 요인임.",
         "당시는 기후 단일 요인 — 물류·정책 충격이 결합하지 않았음.",
-        related=('ENSO', 'ONI', 'ARG', 'ARS_USD', 'DEXBZUS', 'FX_BRL', 'PSD_SOY', 'PSD_', 'SOYBEAN_PROD', 'WASDE_SBO', 'T2M', 'PRECTOTCORR', 'GWET', 'KCS', 'CROP_CONDITION')),
+        related=('ENSO', 'ONI', 'ARG', 'ARS_USD', 'DEXBZUS', 'FX_BRL', 'PSD_SOY', 'PSD_', 'SOYBEAN_PROD', 'WASDE_SBO', 'T2M', 'PRECTOTCORR', 'GWET', 'GWETROOT', 'GWETTOP', 'KCS', 'CROP_CONDITION')),
 }
 
 # 하위 호환: 창(window)만 쓰는 기존 경로용 파생 뷰

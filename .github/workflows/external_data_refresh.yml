@@ -849,8 +849,8 @@ jobs:
           merge-multiple: true
       - name: Rebuild manual-upload parquets for the brief (A-284 — 날짜 기준 편차·스냅샷 원시 계열)
         # 브리프의 변동일 편차·유사 시기 '현재 편차'·주요 지표 표는 원시 수집 계열(TE 에너지·팜유, ICE, 관세청 GW,
-        # BRL/USD, ENSO)을 직접 읽는다. Readiness 잡의 재구성 산출물은 이 잡에 전달되지 않아(아티팩트에 mart만)
-        # 팜유(MYR)·에너지 계열이 '미수집'으로 표시됐다(런 #114 브리프 실증). 결정적 파서라 재실행이 정본(I-001).
+        # BRL/USD, ENSO)을 직접 읽는다. 런 #114 브리프에서 팜유(MYR)·에너지 계열이 '미수집'으로 표시돼(아티팩트 착지 경로
+        # 의존) 이 잡에서 결정적 파서를 직접 재실행해 원시 계열을 보장한다(I-001). 뒤의 복원 스텝과 내용은 동일.
         run: |
           for s in ingest_te_xlsx ingest_wasde_xlsx ingest_psd_data ingest_gats_data ingest_ice_volumes \
                    ingest_nasa_power_xlsx ingest_customs_gw_uploads ingest_fx_brl_usd_xlsx ingest_enso_oni_xlsx; do

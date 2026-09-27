@@ -192,3 +192,39 @@ def test_wasde_query_window_and_consensus_unknown() -> None:
     assert g._wasde_query_window(date(2026, 9, 11)) and g._wasde_query_window(date(2026, 9, 16))
     assert not g._wasde_query_window(date(2026, 9, 27))
     assert g._extract_value("CONSENSUS: 1,250 million lbs | ACTUAL: 1,300 | SURPRISE_SCORE: -0.4", ("SURPRISE_SCORE",)) == -0.4
+
+
+def test_proxy_change_rule_nan_and_note(tmp_path) -> None:
+    """적대 검증 반영: NaN 값은 note 비교, 값이 같아도 사건 서술이 바뀌면 변경."""
+    arc = pd.DataFrame([
+        {"date": pd.Timestamp("2026-09-24"), "indicator": "US_IRAN_CONFLICT_STATUS", "value": 2.0,
+         "note": "[P] LEVEL: MEDIUM | KEY_EVENT: A | DATE: x"},
+        {"date": pd.Timestamp("2026-09-24"), "indicator": "WASDE_CONSENSUS_SCORE", "value": float("nan"),
+         "note": "[P] CONSENSUS: unknown | ACTUAL: 21"},
+    ])
+    same_geo = pd.Series({"date": pd.Timestamp("2026-09-25"), "indicator": "US_IRAN_CONFLICT_STATUS", "value": 2.0,
+                          "note": "[P] LEVEL: MEDIUM | KEY_EVENT: A | DATE: x"})
+    new_geo = same_geo.copy(); new_geo["note"] = "[P] LEVEL: MEDIUM | KEY_EVENT: B | DATE: y"
+    nan_same = pd.Series({"date": pd.Timestamp("2026-09-25"), "indicator": "WASDE_CONSENSUS_SCORE",
+                          "value": float("nan"), "note": "[P] CONSENSUS: unknown | ACTUAL: 21"})
+    assert not db._proxy_value_changed(same_geo, arc)
+    assert db._proxy_value_changed(new_geo, arc)
+    assert not db._proxy_value_changed(nan_same, arc)
+
+
+def test_match_articles_prefers_latest_on_tie() -> None:
+    sig = pd.DataFrame([
+        {"date": pd.Timestamp("2026-09-15"), "indicator": "RSS_WORLD_GRAIN", "source_name": "x",
+         "note": "[채널: 원문] Heating oil futures jump — d (https://old)"},
+        {"date": pd.Timestamp("2026-09-26"), "indicator": "RSS_WORLD_GRAIN", "source_name": "x",
+         "note": "[채널: 원문] Heating oil futures fall — d (https://new)"},
+    ])
+    arts = db._match_articles("TE_HEATING_OIL", sig)
+    assert arts[0]["url"] == "https://new"
+
+
+def test_dated_series_handles_tz_aware() -> None:
+    df = pd.DataFrame({"price_date": pd.date_range("2026-01-01", periods=3, tz="UTC"),
+                       "indicator_code": "X", "value": [1.0, 2.0, 3.0]})
+    s = db._dated_series({"a": df}, ["X"])
+    assert s["price_date"].dt.tz is None and len(s) == 3

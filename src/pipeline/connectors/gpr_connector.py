@@ -9,7 +9,7 @@ from __future__ import annotations
 import io
 import os
 import re
-from datetime import date
+from datetime import date, timedelta
 
 import httpx
 import pandas as pd
@@ -358,9 +358,19 @@ def _wasde_release_dates() -> tuple[date, ...]:
 
 
 def _last_wasde_release(today: date | None = None) -> date | None:
+    """직전 발표일. 표(2026)가 소진되면 관행(매월 9~12일 발표)으로 근사해 프록시가 영구 중단되지 않게 한다(적대 검증 지적)."""
     t = today or date.today()
     past = [d for d in _wasde_release_dates() if d <= t]
-    return past[-1] if past else None
+    last = past[-1] if past else None
+    if last is not None and (t - last).days <= 45:
+        return last
+    approx = date(t.year, t.month, 10)
+    if approx > t:
+        approx = (approx.replace(day=1) - timedelta(days=1)).replace(day=10)
+    if last is None or approx > last:
+        print(f"[정보] WASDE 발표일표 소진 — 관행(매월 10일경)으로 근사 {approx} · WASDE_RELEASE_DATES로 교정 가능")
+        return approx
+    return last
 
 
 def _wasde_query_window(today: date | None = None) -> bool:
@@ -457,8 +467,9 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
             pref = {"ARG_EXPORT_TAX_NEWS": ("RATE",), "INDIA_DUTY_NEWS": ("DUTY_RATE", "RATE"),
                     "BIODIESEL_MANDATE_NEWS": ("INDONESIA",), "WASDE_CONSENSUS_SCORE": ("SURPRISE_SCORE", "SCORE", "ACTUAL", "CONSENSUS")}
             value = _extract_value(text, pref.get(indicator_code, ()))
+            _clean_txt = str(text or "").replace("**", "").replace("[", "").replace("]", "")   # _extract_value와 동일 정규화
             if indicator_code == "WASDE_CONSENSUS_SCORE" and re.search(
-                    r"CONSENSUS\s*:\s*\**\s*(unknown|n/?a|not available|none)", str(text), re.IGNORECASE):
+                    r"CONSENSUS\s*:\s*(unknown|n/?a|not available|none)", _clean_txt, re.IGNORECASE):
                 value = float("nan")                          # A-284: 컨센서스 미확인이면 점수 0으로 위장하지 않음
 
             rows.append({

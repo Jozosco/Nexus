@@ -233,7 +233,7 @@ KO_MAX_CHARS = 40
 _KO_SYSTEM = ("너는 대두유 조달 데스크의 편집자다. 영문(또는 국문) 기사 제목과 요약을 읽고 한국어 헤드라인 한 줄로 "
               f"바꿔라. 규칙: ①{KO_MAX_CHARS}자 이내 ②사실만(전망·확률·매수·매도 판단 표현 금지) ③고유명사·수치·단위 보존 "
               "④기관·매체 이름은 통용 한글 표기 ⑤JSON만 출력.")
-_KV_KEY_RE = re.compile(r"\b[A-Z][A-Z_]{2,}:\s")
+_KV_KEY_RE = re.compile(r"(?:^|[\s|])([A-Z][A-Z_]{1,}):\s*")   # 브리프 _parse_kv와 같은 키 정의(2자+·공백 선택)
 
 
 def _is_kv_note(text: str) -> bool:
@@ -299,6 +299,7 @@ def _llm_ko_batch(items: list[dict]) -> dict[str, str]:
         try:
             i = int(h.get("id"))
             ko = re.sub(r"\s+", " ", str(h.get("ko", ""))).strip().replace(KO_SEP.strip(), "|")
+            ko = ko.replace(" ⋅ ", " · ").replace(" — ", " - ")            # note 분할 규약(⋅·—) 보호
         except (TypeError, ValueError):
             continue
         if 0 <= i < len(items) and ko:

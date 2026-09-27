@@ -408,8 +408,8 @@ _DRIVER_KEYWORDS: dict[str, list[str]] = {
     "CPO": ["palm", "mpob", "팜유", "올레인"],
     "PALM": ["palm", "mpob", "팜유"],
     "BDI": ["freight", "shipping", "bdi", "운임", "해운"],
-    "DEXBZUS": ["brazil", "real", "브라질", "헤알"],
-    "BRL": ["brazil", "real", "브라질", "헤알"],
+    "DEXBZUS": ["brazil", "brazilian real", "브라질", "헤알"],
+    "BRL": ["brazil", "brazilian real", "브라질", "헤알"],
     "ARG": ["argentin", "export tax", "아르헨", "수출세", "rosario", "로사리오"],
     "EXPORT_TAX": ["argentin", "export tax", "수출세"],
     "ONI": ["el nino", "la nina", "enso", "drought", "엘니뇨", "라니냐", "가뭄"],
@@ -429,7 +429,7 @@ _DRIVER_KEYWORDS: dict[str, list[str]] = {
     "SOIL_": ["soil moisture", "drought", "토양", "가뭄", "dry"],
     "RH2M": ["humidity", "습도", "weather", "기상"],
     "FCST_": ["forecast", "예보", "weather", "기상"],
-    "FX_BRL_USD": ["brazil", "real", "브라질", "헤알"],
+    "FX_BRL_USD": ["brazil", "brazilian real", "브라질", "헤알"],
     "ENSO_ONI": ["el nino", "la nina", "enso", "drought", "엘니뇨", "라니냐", "가뭄"],
 }
 
@@ -465,8 +465,8 @@ _DRIVER_ALIAS: dict[str, dict[str, list[str]]] = {
     "TE_BDI": {"kw": ["freight", "shipping", "bdi", "tanker", "vessel", "운임", "해운", "선박"],
                "edges": ["CE-010", "CE-016", "CE-013"]},
     "BDI": {"kw": ["freight", "shipping", "bdi", "tanker", "운임", "해운"], "edges": ["CE-010", "CE-016", "CE-013"]},
-    "DEXBZUS": {"kw": ["brazil", "real", "브라질", "헤알", "farmer selling", "농가"], "edges": ["CE-021"]},
-    "FX_BRL_USD": {"kw": ["brazil", "real", "브라질", "헤알"], "edges": ["CE-021"]},
+    "DEXBZUS": {"kw": ["brazil", "brazilian real", "브라질", "헤알", "farmer selling", "농가"], "edges": ["CE-021"]},
+    "FX_BRL_USD": {"kw": ["brazil", "brazilian real", "브라질", "헤알"], "edges": ["CE-021"]},
     "ENSO_ONI": {"kw": ["el nino", "el niño", "la nina", "la niña", "enso", "drought", "엘니뇨", "라니냐", "가뭄"],
                  "edges": ["CE-006", "CE-007", "CE-009"]},
     "ONI": {"kw": ["el nino", "el niño", "la nina", "la niña", "enso", "엘니뇨", "라니냐"], "edges": ["CE-006", "CE-007", "CE-009"]},
@@ -478,7 +478,7 @@ _DRIVER_ALIAS: dict[str, dict[str, list[str]]] = {
     "TE_RAPESEED": {"kw": ["rapeseed", "canola", "유채", "카놀라", "eu biodiesel"], "edges": ["CE-004"]},
     "TE_CANOLA": {"kw": ["canola", "rapeseed", "카놀라", "유채", "canada", "캐나다"], "edges": ["CE-004"]},
     "TE_SOYBEANS": {"kw": ["soybean", "soybeans", "cbot", "대두", "시카고"], "edges": ["CE-017"]},
-    "GPR": {"kw": ["geopolit", "war", "conflict", "sanction", "지정학", "전쟁", "분쟁", "제재"], "edges": ["CE-010", "CE-013"]},
+    "GPR": {"kw": ["geopolitical", "war risk", "military", "conflict", "sanction", "attack", "지정학", "전쟁", "분쟁", "제재"], "edges": ["CE-010", "CE-013"]},
     "HORMUZ": {"kw": ["hormuz", "iran", "tanker", "호르무즈", "이란", "탱커"], "edges": ["CE-010"]},
     "VIXCLS": {"kw": ["volatility", "vix", "risk-off", "변동성", "위험 회피"], "edges": []},
     "DEXKOUS": {"kw": ["won", "korea", "원화", "원/달러", "환율"], "edges": []},
@@ -726,7 +726,8 @@ def _dated_series(frames: dict[str, pd.DataFrame], codes: list[str]) -> pd.DataF
         if not parts:
             continue
         merged = pd.concat(parts, ignore_index=True)
-        merged["price_date"] = pd.to_datetime(merged["price_date"], errors="coerce")
+        # A-284: tz-aware 프레임(커넥터별 상이)이 섞여도 naive 일자로 통일 — 비교 TypeError 차단
+        merged["price_date"] = pd.to_datetime(merged["price_date"], errors="coerce", utc=True).dt.tz_localize(None)
         merged["value"] = pd.to_numeric(merged["value"], errors="coerce")
         merged = (merged.dropna().sort_values("price_date")
                   .drop_duplicates("price_date", keep="last").reset_index(drop=True))
@@ -771,42 +772,49 @@ def _display_level_codes(code: str) -> list[str]:
 
 def _display_z_at(frames: dict[str, pd.DataFrame], code: str,
                   d: pd.Timestamp | date | None = None) -> tuple[float | None, str]:
-    """표시용 '평소 대비 편차' — **그 날짜 기준** 원시 수집 계열의 90일 롤링 표준화 (A-284 · 검증 1).
+    """표시용 '평소 대비 편차' — **그 날짜 기준** 원시 수집 계열의 롤링 표준화 (A-284 · 검증 1).
 
     구 코드는 분석용 통합 표(분석창 2025-12 종료)를 `index ≤ d`로 조회해 2026년 변동일 전부가
     2025-12-31 행을 읽었다(편차가 4건 동일 — 승인자 지적). 표시는 원시 계열에서 날짜별로 계산하고,
     추정(변수 선별·유사일 탐색)은 분석창을 유지한다 — 표시와 추정의 분리.
 
-    반환: (z, 사유). z=None이면 사유에 '당시 값 없음(관측 …)' 등 정직 강등 문구.
-    조회 규칙: 관측일 ≤ d 중 최근값이되, d와 DISPLAY_Z_MAX_GAP_BDAYS 거래일 초과 차이면 None.
+    척도는 분석용 통합 표와 같은 규칙(적대 검증 지적 — 버킷 분포와 정의가 달라지지 않게):
+      · 일별 계열(관측 간격 ≤4일): 원시 관측 90개 롤링·최소 45개
+      · 월·연 계열: 거래일 격자로 펼친(ffill) 뒤 252거래일 롤링·최소 126개
+    반환: (z, 관측일 또는 사유). z=None이면 사유에 '당시 값 없음(…)' 정직 강등 문구.
+    조회 규칙: 관측일 ≤ d 중 최근값이되, 허용 간격(일별 5거래일·월별 관측 간격 중앙값×1.5) 초과면 None.
+    d=None은 오늘(발행일) 기준 — 같은 간격 검사를 적용한다.
     """
     ser = _dated_series(frames, _display_level_codes(code))
     if ser.empty:
         return None, "당시 값 없음(원시 계열 미수집)"
     s = ser.set_index("price_date")["value"].astype(float)
-    if d is None:
-        d_ts = s.index[-1]
-    else:
-        d_ts = pd.Timestamp(d).normalize()
-    try:
-        from src.forecasting.analogue_g1 import _z90_from_level
-        z_all = _z90_from_level(s)
-    except Exception:                                         # noqa: BLE001
-        m = s.rolling(90, min_periods=30).mean()
-        sd = s.rolling(90, min_periods=30).std(ddof=1)
-        z_all = (s - m) / sd
-    upto = z_all[z_all.index <= d_ts].dropna()
-    if upto.empty:
-        return None, "당시 값 없음(관측 부족 — 90일 기준 계산 불가)"
-    obs_d = upto.index[-1]
-    gap = int(np.busday_count(obs_d.date(), d_ts.date())) if obs_d < d_ts else 0
-    # 주기 인지 허용 간격: 일별 계열은 5거래일, 월별·연별 계열은 관측 간격 중앙값의 1.5배(월별 ≈ 33거래일).
+    d_ts = pd.Timestamp(date.today()) if d is None else pd.Timestamp(d)
+    if pd.isna(d_ts):
+        return None, "당시 값 없음(조회 일자 없음)"
+    d_ts = d_ts.normalize()
     spacing = s.index.to_series().diff().dt.days.dropna()
-    med_gap_bd = float(spacing.median()) * 5 / 7 if len(spacing) else 0.0
-    allowed = max(DISPLAY_Z_MAX_GAP_BDAYS, int(round(med_gap_bd * 1.5)))
+    med_gap = float(spacing.median()) if len(spacing) else 1.0
+    if med_gap > 4:                                            # 월·연 계열 — 통합 표 z252 규칙
+        grid = pd.bdate_range(s.index.min(), max(s.index.max(), d_ts))
+        lvl = s.reindex(s.index.union(grid)).ffill().reindex(grid)
+        z_all = (lvl - lvl.rolling(252, min_periods=126).mean()) / lvl.rolling(252, min_periods=126).std(ddof=1)
+        obs_series = s                                         # 관측일 판정은 원시 관측 기준
+    else:                                                      # 일별 계열 — 통합 표 z90 규칙
+        z_all = (s - s.rolling(90, min_periods=45).mean()) / s.rolling(90, min_periods=45).std(ddof=1)
+        obs_series = s
+    obs_upto = obs_series[obs_series.index <= d_ts]
+    if obs_upto.empty:
+        return None, "당시 값 없음(관측 없음)"
+    obs_d = obs_upto.index[-1]
+    gap = int(np.busday_count(obs_d.date(), d_ts.date())) if obs_d < d_ts else 0
+    allowed = max(DISPLAY_Z_MAX_GAP_BDAYS, int(round(med_gap * 5 / 7 * 1.5)))
     if gap > allowed:
         return None, f"당시 값 없음(최근 관측 {obs_d.strftime('%Y-%m-%d')} — {gap}거래일 전)"
-    return float(upto.iloc[-1]), obs_d.strftime("%Y-%m-%d")
+    z_upto = z_all[z_all.index <= d_ts].dropna()
+    if z_upto.empty:
+        return None, "당시 값 없음(관측 부족 — 롤링 기준 계산 불가)"
+    return float(z_upto.iloc[-1]), obs_d.strftime("%Y-%m-%d")
 
 
 @dataclass
@@ -932,7 +940,7 @@ def _match_articles(var_code: str, signals: pd.DataFrame) -> list[dict]:
                 out.append({"hits": hits, "media": 0, "date": d_key, "note": note[:400],
                             "ko": _ko_of(note), "title": "", "indicator": ind,
                             "source": row.get("source_name", ""), "url": _first_url(note)})
-    return sorted(out, key=lambda x: (-x["hits"], -x["media"], x["date"]), reverse=False)[:3]
+    return sorted(out, key=lambda x: (x["hits"], x["media"], x["date"]), reverse=True)[:3]   # 적중→매체→최신
 
 
 _KO_SEP = " ‖ "        # A-284: 다이제스트가 저장한 한국어 헤드라인 구분자 — `ko ‖ 원제 — 요약 (url)`
@@ -997,20 +1005,30 @@ def _signals_around(center: pd.Timestamp, window_days: int = 2) -> pd.DataFrame:
 
 
 def _proxy_value_changed(row: pd.Series, archive: pd.DataFrame) -> bool:
-    """매일 반복되는 검색 요약 행(수출세·바이오디젤 등)이 **직전 관측과 값이 달라졌는지** 판정.
+    """매일 반복되는 검색 요약 행(수출세·바이오디젤 등)이 **직전 관측과 달라졌는지** 판정.
 
-    같은 지표의 직전 행이 없으면(첫 관측) 변경으로 본다. 값 파싱 불가는 note 본문 비교로 대체.
+    값이 (둘 다 유효하고) 달라졌거나, 값이 같아도 태그를 뺀 note 본문(핵심 사건·발언)이 달라졌으면 변경으로 본다 —
+    지정학 상태 프록시는 등급(1~3)이 수 주간 같고 사건만 바뀐다(적대 검증 지적). NaN 값은 note 비교로만 판정.
+    같은 지표의 직전 행이 없으면(첫 관측) 변경으로 본다.
     """
     ind = str(row.get("indicator", ""))
     d = row.get("date")
+    if "indicator" not in archive.columns or "date" not in archive.columns:
+        return True
     prev = archive[(archive["indicator"].astype(str) == ind) & (archive["date"] < d)].sort_values("date")
     if prev.empty:
         return True
     p = prev.iloc[-1]
+    val_changed = False
     try:
-        return float(str(row.get("value")).replace(",", "")) != float(str(p.get("value")).replace(",", ""))
+        a = float(str(row.get("value")).replace(",", ""))
+        b = float(str(p.get("value")).replace(",", ""))
+        val_changed = (a == a) and (b == b) and (a != b)
     except (TypeError, ValueError):
-        return _PREFIX_TAG_RE.sub("", str(row.get("note", "")))[:200] != _PREFIX_TAG_RE.sub("", str(p.get("note", "")))[:200]
+        val_changed = False
+    note_now = _PREFIX_TAG_RE.sub("", str(row.get("note", "")))[:200]
+    note_prev = _PREFIX_TAG_RE.sub("", str(p.get("note", "")))[:200]
+    return val_changed or (note_now != note_prev)
 
 
 def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
@@ -1026,6 +1044,8 @@ def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
     try:
         archive = pd.read_csv(SIGNALS_CSV)
         archive["date"] = pd.to_datetime(archive["date"], errors="coerce")
+        if not {"indicator", "date", "note"} <= set(archive.columns):
+            archive = sig
     except Exception:                                         # noqa: BLE001
         archive = sig
     kws_l = [k.lower() for k in kws]
@@ -1043,7 +1063,11 @@ def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
                               "date": d_key, "media": 1, "hits": hits,
                               "rank": (0 if hits else 1, -hits)})
         else:
-            if not _proxy_value_changed(row, archive):
+            try:
+                changed = _proxy_value_changed(row, archive)
+            except Exception:                                 # noqa: BLE001 — 비치명(판정 불가 시 포함)
+                changed = True
+            if not changed:
                 continue                                      # 매일 반복되는 동일 요약은 '당시 신호'가 아님
             hits = _kw_hits(kws_l, f"{ind} {note}")
             geo = ind in _GEO_CODES
@@ -1423,7 +1447,7 @@ def _inflection_block(points: list[dict], importance_df: pd.DataFrame,
                 else:
                     miss_parts.append(f'{_esc(_label_ko(base))}: {_esc(why)}')
         if z_parts:
-            rows.append(f'<li>당시 상위 변인의 평소 대비 편차(그 날짜 기준 90일 표준화): {" · ".join(z_parts)}</li>')
+            rows.append(f'<li>당시 상위 변인의 평소 대비 편차(그 날짜 기준 표준화 — 일별 90거래일·월별 252거래일): {" · ".join(z_parts)}</li>')
         if miss_parts:
             rows.append(f'<li><span class="src">{" · ".join(miss_parts)}</span></li>')
         if not z_parts and not miss_parts:
@@ -1456,15 +1480,18 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame,
         top_codes = ([str(r["변수"]) for _, r in importance_df.head(4).iterrows()]
                      if not importance_df.empty else [])
         cz_map: dict[str, float] = {}
+        cz_obs: dict[str, str] = {}
         if frames:
             for c in alert_codes + top_codes:
-                z, _why = _display_z_at(frames, c)
+                z, why = _display_z_at(frames, c)
                 if z is not None:
                     cz_map[str(c).split("__")[0]] = z
+                    cz_obs[str(c).split("__")[0]] = why
         results = build_analogue_context(alert_codes, top_codes, current_z_map=cz_map)
     except Exception as e:                                    # noqa: BLE001 — 비치명
         print(f"[정보] 유사국면 블록 생성 불가(비치명): {type(e).__name__}: {e}")
         results = []
+        cz_obs = {}
     if not results:
         return ('<div class="card sig-item"><p>과거 유사 시기 참조: 분석 데이터 미가용 '
                 '또는 대상 변수 부재 — 산출 보류. 실산출은 CI 실행에서 분석 데이터와 함께 '
@@ -1475,6 +1502,11 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame,
     cards = []
     for var, rs in list(by_var.items())[:3]:
         z_txt = f"{rs[0].current_z:+.1f}" if rs[0].current_z == rs[0].current_z else "?"
+        obs = cz_obs.get(var)
+        if obs and obs != date.today().isoformat():
+            z_txt += f" <span class=\"src\">({obs[5:]} 관측)</span>"
+        elif not obs:
+            z_txt += ' <span class="src">(분석 데이터 기준)</span>'
         label = _label_ko(var)
         lines = "".join(f"<li>{_esc(format_result_line(r))}</li>"
                         for r in sorted(rs, key=lambda x: x.horizon))
