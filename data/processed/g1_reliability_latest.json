@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-09-27T13:03:55+00:00",
- "mode": "full",
+ "generated_at": "2026-09-27T22:40:06+00:00",
+ "mode": "alert",
  "window": [
   "2010-01-01",
   "2025-12-31"
@@ -17,7 +17,7 @@
   },
   "R2_asof_accuracy": {
    "status": "산출",
-   "n_features": 2491,
+   "n_features": 2493,
    "revision_contaminated": 98,
    "asof_rule": "모델의 t일 입력 = available_at <= t 인 최근값 (CLAUDE.md §1)",
    "window": {
@@ -48,7 +48,7 @@
   },
   "R5_collection_channels": {
    "status": "산출",
-   "rows": 454,
+   "rows": 455,
    "indicators": 30,
    "from": "2026-08-17",
    "to": "2026-09-27",
@@ -56,7 +56,7 @@
    "by_category": {
     "정책 뉴스": 136,
     "지정학 이벤트": 132,
-    "전문 매체": 90,
+    "전문 매체": 91,
     "지정학 위험": 44,
     "GeoIntel 복합": 38,
     "지정학 동향": 12,
@@ -65,9 +65,9 @@
    "media_channel_winners": {
     "Google News": 43,
     "공식 RSS": 33,
-    "Bing News": 6
+    "Bing News": 7
    },
-   "rss_codes": 98
+   "rss_codes": 99
   },
   "R6_rule_reverification": [
    {
@@ -117,8 +117,6 @@
   },
   "note": "성숙 경보 8회 미만은 사후 성적 보류(실발행 원장은 2026-09-14 개설)"
  },
- "basis": "진단(부분) — 이력 종가·수동 업로드 26지표",
- "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv",
  "historical": {
   "H1_rank_stability": {
    "status": "산출",
@@ -351,5 +349,6 @@
   }
  },
  "historical_asof": "2026-09-27T13:03:55+00:00",
- "ledger_matured_now": 0
+ "basis": "진단(부분) — 이력 종가·수동 업로드 26지표",
+ "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv"
 }
