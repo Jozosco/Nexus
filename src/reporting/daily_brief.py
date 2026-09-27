@@ -595,6 +595,27 @@ def _driver_edges(var_code: str) -> list[dict]:
     return sorted(out, key=lambda r: (r["status"] != "validated", r["id"]))
 
 
+# A-289: 같은 경로를 재는 변인 묶음 — 난방유·휘발유·원유는 일간 상관 0.73~0.80(2025-08~2026-08 실측)으로
+#   사실상 같은 에너지 경로. 순위에서 두 번째부터는 '앞 순위와 같은 경로'로 묶고 기사·사례를 반복하지 않는다.
+_CHANNEL_GROUPS: list[tuple[str, tuple[str, ...]]] = [
+    ("에너지(경유·원유)", ("TE_HEATING_OIL", "TE_GASOLINE", "TE_BRENT", "TE_WTI", "TE_NAPHTHA", "TE_ETHANOL", "ICE_EU_OIL_PRODUCTS",
+                           "ICE_EU_BRENT", "ICE_EU_GASOIL", "HEATING_OIL")),
+    ("경쟁 식물성유", ("TE_PALM_OIL", "CPO", "TE_CANOLA", "TE_RAPESEED", "TE_SUNFLOWER_OIL")),
+    ("대두·곡물", ("TE_SOYBEANS", "TE_CORN", "TE_WHEAT", "PSD_SOY", "WASDE_SOY")),
+    ("미국 대두유 수급", ("WASDE_US_SBO", "WASDE_USDOM_SBO", "WASDE_SBO", "GATS_US_", "ESR_SBO")),
+    ("한국 수입", ("KCS_",)),
+    ("기후(엘니뇨)", ("ENSO", "ONI")),
+]
+
+
+def _channel_of(code: str) -> str | None:
+    up = str(code).upper().split("__")[0]
+    for name, prefixes in _CHANNEL_GROUPS:
+        if any(up.startswith(p) for p in prefixes):
+            return name
+    return None
+
+
 def _driver_link_line(var_code: str) -> str:
     """변인→대두유 연결 근거 한 줄(화면용 — 내부 코드는 노출하지 않음, korean_style §5).
 
@@ -1072,7 +1093,15 @@ def _proxy_value_changed(row: pd.Series, archive: pd.DataFrame) -> bool:
         val_changed = (a == a) and (b == b) and (a != b)
     except (TypeError, ValueError):
         val_changed = False
+    if ind in _VALUE_ONLY_PROXIES:
+        # A-289: 정책 수치 요약(의무혼합률·세율·관세율)은 **값**이 바뀔 때만 새 소식 — 서술 문구는 매일 달라짐
+        #   (런 #115 실측: B50/B15 요약이 문구만 바뀌어 네 변동일 전부의 '당시 신호'로 채택됨)
+        return val_changed
     return val_changed or (_note_core(row.get("note", "")) != _note_core(p.get("note", "")))
+
+
+_VALUE_ONLY_PROXIES = {"BIODIESEL_MANDATE_NEWS", "ARG_EXPORT_TAX_NEWS", "INDIA_DUTY_NEWS", "US_CHINA_TARIFF_STATUS",
+                       "BRAZIL_HARVEST_PROGRESS", "WASDE_CONSENSUS_SCORE"}
 
 
 def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
@@ -1459,6 +1488,15 @@ def _inflection_block(points: list[dict], importance_df: pd.DataFrame,
         rows: list[str] = [
             f'<li>일간 변화율 <span class="chg {cls} num">{arrow} {chg:+.2f}%</span> · '
             f'종가 <span class="num">{p["close"]:.2f}</span> 센트/파운드</li>']
+        # A-289: 원인 분해 — 교차시장 동반 변동(계수는 그 날짜 이전 250거래일) + 날짜 확인된 사건 달력
+        if frames:
+            try:
+                from src.reporting.move_attribution import (attribute_move, load_event_calendar,
+                                                            render_attribution_items)
+                att = attribute_move(frames, d, chg, load_event_calendar())
+                rows += [f"<li>{_esc(t)}</li>" for t in render_attribution_items(att)]
+            except Exception as e:                            # noqa: BLE001 — 비치명
+                rows.append(f'<li><span class="src">원인 분해 생략({type(e).__name__})</span></li>')
         # ① 당시 수집 신호(±2일) — 매체·지정학 우선 · 값이 바뀐 요약만 · 변인 키워드 우선
         picks = _pick_signals_around(d, kws)
         if picks:
@@ -1545,7 +1583,17 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame,
     for r in results:
         by_var.setdefault(r.var_code, []).append(r)
     cards = []
+    shown_cases: set[str] = set()                             # A-289: 같은 사례 서술 반복 방지
+    shown_chan: dict[str, str] = {}
     for var, rs in list(by_var.items())[:3]:
+        chan = _channel_of(var)
+        if chan and chan in shown_chan:                        # 같은 경로 두 번째 변인 — 한 줄 요약만
+            cards.append(f'<div class="card sig-item"><span class="tag">{_esc(_label_ko(var))}</span>'
+                         f'<p class="src">앞 카드({_esc(shown_chan[chan])})와 같은 경로({_esc(chan)})라 과거 흐름·사례가 사실상 같음 — '
+                         f'중복 표시 생략</p></div>')
+            continue
+        if chan:
+            shown_chan[chan] = _label_ko(var)
         z_txt = f"{rs[0].current_z:+.1f}" if rs[0].current_z == rs[0].current_z else "?"
         obs = cz_obs.get(var)
         if obs and obs != (asof or date.today()).isoformat():
@@ -1564,6 +1612,10 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame,
                                f'{_esc(" · ".join(badges))}</div>')
             # W-B(조정자 R1): 배지 클릭 → 왜 유사한가 — 원인→경로→가격 실측→유사점/차이점
             for b in badges:
+                if badge_name(b) in shown_cases:
+                    badge_parts.append(f'<div class="src">{_esc(badge_name(b))} — 서술은 위 카드 참조</div>')
+                    continue
+                shown_cases.add(badge_name(b))
                 narr = case_narrative_lines(badge_name(b))
                 if narr:
                     items = "".join(f"<li>{_esc(t)}</li>" for t in narr)
@@ -1900,6 +1952,8 @@ def build_daily_brief(
         ranking_basis = "pearson_fallback"                     # attrs 유실 대비 2중 판정
     max_abs = (float(top5["피어슨_r"].abs().max()) if ranking_basis == "pearson_fallback"
                else float(top5["LASSO_계수"].abs().max())) if not top5.empty else 0.0
+    used_articles: set[str] = set()                           # A-289: 변인 간 기사 중복 방지
+    used_channels: set[str] = set()                           # A-289: 같은 경로 변인 묶음
     for i, (_, row) in enumerate(top5.iterrows(), start=1):
         code = str(row["변수"])
         label = _label_ko(code)
@@ -1911,7 +1965,12 @@ def build_daily_brief(
         _mag = abs(r) if (ranking_basis == "pearson_fallback" and isinstance(r, float)) else (abs(coef) if isinstance(coef, float) else 0.0)
         width = int(_mag / max_abs * 100) if (max_abs and max_abs == max_abs) else 10   # NaN 가드(A-271)
         arts = _match_articles(code, signals14)               # A-284: 창 5→14일 · 기사 단위 매칭 · 지정학 카드 포함
+        # A-289: 앞 순위 변인에 이미 붙은 기사는 다시 붙이지 않음(승인자 지적 — 1·2번 동일 기사)
+        arts = [a for a in arts if _norm_title(a.get("title") or a.get("note", ""))[:80] not in used_articles]
+        chan = _channel_of(code)
+        same_chan_prev = chan is not None and chan in used_channels
         if arts:
+            used_articles.add(_norm_title(arts[0].get("title") or arts[0].get("note", ""))[:80])
             a0 = arts[0]
             head_txt = a0.get("ko") or (a0["title"] if a0.get("media") else _media_title(a0["note"], str(a0["indicator"]), n=70))
             title = _esc(str(head_txt)[:80])
@@ -1923,8 +1982,13 @@ def build_daily_brief(
             news = (f'<div class="news"><span class="stars">{_stars(len(arts))}</span> '
                     f'{link}{orig} · {_esc(_source_ko(a0["source"]))}{when}</div>')
         else:
-            news = '<div class="news">최근 14일 기사 중 이 변인과 연결된 기사 없음(정량 신호만 반영)</div>'
+            news = '<div class="news">최근 14일 기사 중 이 변인과 연결된 새 기사 없음(정량 신호만 반영)</div>'
         link_line = f'<div class="news">{_esc(_driver_link_line(code))}</div>'   # A-284: 하이브리드 연결 근거
+        if same_chan_prev:                                     # A-289: 같은 경로 반복 표시 — 독립 변인으로 세지 않음
+            link_line = (f'<div class="news">앞 순위 변인과 같은 경로({_esc(chan)}) — 별도 원인으로 세지 않음'
+                         f'(일간 움직임이 거의 같음)</div>')
+        if chan:
+            used_channels.add(chan)
         drv_rows.append(f"""
       <div class="drv"><span class="rank num">{i}</span><div>
         <span class="name">{_esc(label)}</span>{direction}
