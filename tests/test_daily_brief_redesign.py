@@ -70,7 +70,7 @@ def test_driver_keywords_and_edges_cover_energy_ice_customs() -> None:
     assert "베트남" in db._driver_keywords("KCS_1507901010_IMP_USD_WORLD")
     assert any(e["id"] == "CE-022" for e in db._driver_edges("WASDE_US_SBO_EXPORTS"))
     line = db._driver_link_line("TE_HEATING_OIL")
-    assert "검증된 인과 경로" in line and "CE-" not in line          # 화면에 내부 코드 노출 금지
+    assert "사전 등재 경로(검증됨)" in line and "CE-" not in line     # 화면에 내부 코드 노출 금지
     assert "상관 기반 참고" in db._driver_link_line("TOTALLY_UNKNOWN_CODE")
 
 
@@ -223,8 +223,46 @@ def test_match_articles_prefers_latest_on_tie() -> None:
     assert arts[0]["url"] == "https://new"
 
 
-def test_dated_series_handles_tz_aware() -> None:
-    df = pd.DataFrame({"price_date": pd.date_range("2026-01-01", periods=3, tz="UTC"),
+def test_dated_series_handles_tz_aware_wall_clock() -> None:
+    """tz-aware 자정(+09:00)이 전날로 밀리지 않는다 — 벽시계 보존 후 일자 정규화."""
+    df = pd.DataFrame({"price_date": pd.date_range("2026-01-01", periods=3, tz="Asia/Seoul"),
                        "indicator_code": "X", "value": [1.0, 2.0, 3.0]})
     s = db._dated_series({"a": df}, ["X"])
     assert s["price_date"].dt.tz is None and len(s) == 3
+    assert s["price_date"].iloc[0] == pd.Timestamp("2026-01-01")
+    df2 = pd.DataFrame({"price_date": ["2026-01-01 15:00", "2026-01-01 16:00"], "indicator_code": "Y", "value": [1.0, 2.0]})
+    s2 = db._dated_series({"a": df2}, ["Y"])
+    assert len(s2) == 1 and float(s2["value"].iloc[0]) == 2.0        # 같은 날 복수 시각 → 1행(최신)
+
+
+def test_display_z_respects_available_at() -> None:
+    """발표 시점 정렬: available_at이 d 이후인 관측은 '당시 값'에서 제외."""
+    dates = pd.date_range("2020-01-01", "2026-08-01", freq="MS")
+    vals = np.sin(np.arange(len(dates)) / 5)
+    df = pd.DataFrame({"price_date": dates, "indicator_code": "ONI", "value": vals,
+                       "available_at": dates + pd.Timedelta(days=12)})        # 익월 12일 발표
+    frames = {"enso": df}
+    z_before, why_before = db._display_z_at(frames, "ENSO_ONI", pd.Timestamp("2026-07-05"))
+    assert why_before == "2026-06-01"                                    # 7/1 관측은 7/13 발표 — 7/5에는 미가용
+    z_after, why_after = db._display_z_at(frames, "ENSO_ONI", pd.Timestamp("2026-07-20"))
+    assert why_after == "2026-07-01" and z_after is not None and z_before != z_after
+
+
+def test_note_core_ignores_metadata() -> None:
+    a = "[P] LEVEL: HIGH | KEY_EVENT: Tankers halted | DATE: September 24, 2026 | SOURCE: Reuters (https://a/1)"
+    b = "[P] LEVEL: HIGH | KEY_EVENT: Tankers halted | DATE: September 25, 2026 | SOURCE: AP (https://b/2)"
+    c = "[P] LEVEL: HIGH | KEY_EVENT: Tankers resume | DATE: September 25, 2026 | SOURCE: AP"
+    assert db._note_core(a) == db._note_core(b) and db._note_core(a) != db._note_core(c)
+
+
+def test_case_related_prefix_covers_soil_moisture_codes() -> None:
+    assert ag.case_related_to("사례 ② · 2012 미국 대가뭄", "GWETROOT_Iowa")
+    assert not ag.case_related_to("사례 ③ · 2021-22 복합 위기", "GWETROOT_Iowa")
+
+
+def test_wasde_consensus_unknown_in_brackets_is_nan() -> None:
+    from src.pipeline.connectors import gpr_connector as g
+    txt = "REPORT_DATE: [September 11, 2026] | CONSENSUS: [unknown] | ACTUAL: 21.0 | SURPRISE_SCORE: 0"
+    clean = txt.replace("**", "").replace("[", "").replace("]", "")
+    import re as _re
+    assert _re.search(r"CONSENSUS\s*:\s*(unknown|n/?a|not available|none)", clean, _re.IGNORECASE)
