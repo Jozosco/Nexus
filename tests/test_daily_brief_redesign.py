@@ -261,7 +261,6 @@ def test_case_related_prefix_covers_soil_moisture_codes() -> None:
 
 
 def test_wasde_consensus_unknown_in_brackets_is_nan() -> None:
-    from src.pipeline.connectors import gpr_connector as g
     txt = "REPORT_DATE: [September 11, 2026] | CONSENSUS: [unknown] | ACTUAL: 21.0 | SURPRISE_SCORE: 0"
     clean = txt.replace("**", "").replace("[", "").replace("]", "")
     import re as _re

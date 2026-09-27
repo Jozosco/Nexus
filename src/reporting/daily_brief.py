@@ -15,14 +15,13 @@ import html as _html
 import os
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from src.risk.maritime_threat import (Observation, compute_maritime_threat, explain_ko,
-                                      load_registry)
+from src.risk.maritime_threat import (Observation, compute_maritime_threat, load_registry)
 
 SIGNALS_CSV = Path("data/processed/unstructured_daily_signals.csv")
 LB_PER_MT = 2204.62262            # USc/lb → $/MT 환산 (×22.0462)
@@ -1954,7 +1953,7 @@ def build_daily_brief(
         chart_svg = '<p class="cap">목표변수 미수집 — 차트를 생성하지 않음.</p>'
         chart_cap, rng_fig, inflection_html = "", "", ""
 
-    mech = f"""
+    mech = """
       <details class="mech"><summary>참고 범위 산출 근거 (클릭)</summary>
         <ol>
           <li><b>가격 원천</b>: 시카고 거래소 대두유 선물 — 정산가 교차검증을 거친 종가 계열.</li>

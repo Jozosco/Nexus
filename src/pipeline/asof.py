@@ -37,6 +37,7 @@ available_at vs release_time:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Literal
 
 import pandas as pd
@@ -443,7 +444,7 @@ def attach_asof(
 
 
 def drop_future_observations(df: pd.DataFrame, label: str,
-                             today: "date | None" = None) -> pd.DataFrame:
+                             today: date | None = None) -> pd.DataFrame:
     """관측(observation) 계열에서 price_date > 수집일 행을 제거하고 지표별 건수를 로그로 남긴다.
 
     A-246(런 #88~#93 pytest 실측): shipping_indices·commodity_data에 미래 price_date가
@@ -454,8 +455,7 @@ def drop_future_observations(df: pd.DataFrame, label: str,
     """
     if df.empty or "price_date" not in df.columns:
         return df
-    from datetime import date as _date
-    cutoff = pd.Timestamp(today or _date.today())
+    cutoff = pd.Timestamp(today or date.today())
     df = df.reset_index(drop=True)          # concat 잔여 중복 인덱스 방어
     pdates = pd.to_datetime(df["price_date"], errors="coerce")
     future = (pdates > cutoff).fillna(False)

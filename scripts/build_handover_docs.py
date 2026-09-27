@@ -92,7 +92,7 @@ def _set_run_font(run, name: str, size_pt: float, bold: bool = False, color: str
 
 def _textbox(slide, x, y, w, h, text: str, *, font=F_BODY, size=11, bold=False, color=INK,
              align="l", anchor="t", line_spacing=1.15, wrap=True, margin=0.04):
-    from pptx.util import Inches, Pt
+    from pptx.util import Inches
     from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
     tb = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
     tf = tb.text_frame
@@ -241,7 +241,7 @@ def _render_blocks(slide, blocks: list[tuple], x: float, y: float, w: float, sca
 
 
 def _render_table(slide, block, x, y, w, scale) -> None:
-    from pptx.util import Inches, Pt
+    from pptx.util import Inches
     from pptx.enum.text import MSO_ANCHOR
     rows = block[1]
     opts = block[2] if len(block) > 2 and block[2] else {}
@@ -588,7 +588,7 @@ def _docx_shade(cell, hexs: str) -> None:
 
 def build_docx(md_path: Path, out_path: Path, meta: dict) -> None:
     from docx import Document
-    from docx.shared import Pt, Inches, RGBColor
+    from docx.shared import Pt, Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.oxml.ns import qn
