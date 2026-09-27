@@ -67,7 +67,9 @@ def test_driver_keywords_and_edges_cover_energy_ice_customs() -> None:
     assert "난방유" in db._driver_keywords("TE_HEATING_OIL")
     assert any(e["id"] == "CE-020" for e in db._driver_edges("TE_HEATING_OIL"))
     assert "거래량" in db._driver_keywords("ICE_EU_OIL_PRODUCTS_OPTIONS")
-    assert "베트남" in db._driver_keywords("KCS_1507901010_IMP_USD_WORLD")
+    kcs_kws = db._driver_keywords("KCS_1507901010_IMP_USD_WORLD")
+    assert "대두유 수입" in kcs_kws and "korea" not in kcs_kws          # 국가명 단독 제거(런 #115 오연결 실측)
+    assert db._kw_hits(kcs_kws, "Zelenskyy says Ukraine sent 2 North Korean prisoners of war to South Korea") == 0
     assert any(e["id"] == "CE-022" for e in db._driver_edges("WASDE_US_SBO_EXPORTS"))
     line = db._driver_link_line("TE_HEATING_OIL")
     assert "사전 등재 경로(검증됨)" in line and "CE-" not in line     # 화면에 내부 코드 노출 금지

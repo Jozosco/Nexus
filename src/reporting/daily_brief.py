@@ -259,13 +259,16 @@ _KCS_FLOW_KO = {"IMP": "수입", "EXP": "수출", "BAL": "무역수지"}
 _KCS_UNIT_KO = {"USD": "금액(달러)", "KG": "물량(kg)"}
 _ICE_MARKET_KO = {"EU": "유럽", "US": "미국"}
 _ICE_CONTRACT_KO = {"FUTURES": "선물", "OPTIONS": "옵션", "FO": "선물·옵션"}
+_ICE_PRODUCT_KO = {"OIL_PRODUCTS": "석유제품", "BRENT": "브렌트유", "GASOIL": "경유", "WTI": "WTI 원유", "NATURAL_GAS": "천연가스",
+                   "SUGAR": "설탕", "CANOLA": "카놀라", "COFFEE": "커피", "COCOA": "코코아", "COTTON": "면화", "AGRICULTURE": "농산물",
+                   "ENERGY": "에너지", "TOTAL": "전체", "CRUDE_OIL": "원유", "EMISSIONS": "탄소배출권", "POWER": "전력"}
 
 
 def _label_structured(base: str) -> str | None:
     """ICE_{시장}_{상품}_{계약} · KCS_{HS}_{흐름}_{단위}_{국가} 코드의 구조 해석 라벨. 해당 없으면 None."""
     m = re.match(r"^ICE_(EU|US)_(.+)_(FUTURES|OPTIONS|FO)$", base)
     if m:
-        prod = m.group(2).replace("_", " ").lower()
+        prod = _ICE_PRODUCT_KO.get(m.group(2), m.group(2).replace("_", " ").lower())
         return f"ICE {_ICE_MARKET_KO[m.group(1)]} {prod} {_ICE_CONTRACT_KO[m.group(3)]} 거래량"
     m = re.match(r"^KCS_(\d{6,10})_(IMP|EXP|BAL)_(USD|KG)_([A-Z_]+)$", base)
     if m:
@@ -448,9 +451,10 @@ _DRIVER_ALIAS: dict[str, dict[str, list[str]]] = {
     "TE_ETHANOL": {"kw": ["ethanol", "corn", "biofuel", "에탄올", "옥수수"], "edges": ["CE-020"]},
     "ICE": {"kw": ["ice futures", "options market", "open interest", "trading volume", "speculative", "speculators",
                    "managed money", "cftc", "거래량", "옵션", "투기", "미결제약정"], "edges": ["CE-017"]},
-    "KCS": {"kw": ["south korea", "korea", "korean", "cif", "vietnam", "vietnamese", "soybean oil import", "soyoil import",
-                   "crude soybean oil", "refined soybean oil", "한국", "대두유 수입", "베트남", "관세청", "도착가", "수입 단가"],
-            "edges": ["CE-024", "CE-010", "CE-022"]},
+    "KCS": {"kw": ["korea import", "korean import", "korean buyer", "south korea import", "korea soybean oil", "korean crusher",
+                   "cif korea", "soybean oil import", "soyoil import", "crude soybean oil", "refined soybean oil", "vegetable oil import",
+                   "한국 대두유", "대두유 수입", "식용유 수입", "관세청", "도착가", "수입 단가", "국내 압착"],
+            "edges": ["CE-024", "CE-010", "CE-022"]},   # 국가명 단독(korea·vietnam) 제거 — 런 #115 실측 오연결(북한 포로 기사)
     "WASDE_SBO_EXPORTS": {"kw": ["wasde", "usda", "soybean oil export", "soyoil export", "export sales", "renewable diesel",
                                  "biofuel", "대두유 수출", "재생디젤", "수출 판매"], "edges": ["CE-022", "CE-001"]},
     "WASDE_USDOM_SBO_EXPORTS": {"kw": ["wasde", "usda", "soybean oil export", "soyoil export", "export sales", "renewable diesel",
@@ -2011,7 +2015,10 @@ def build_daily_brief(
         val = spec["fmt"].format(float(v.iloc[-1]))
         d1 = _pct(float(v.iloc[-1]), float(v.iloc[-2])) if len(v) >= 2 else None
         d5 = _pct(float(v.iloc[-1]), float(v.iloc[-6])) if len(v) >= 6 else None
-        z = _z90(v)
+        # A-288: 표의 편차도 변동일·유사 시기와 같은 척도(_display_z_at — 일별 90/45·월별 252거래일 격자·발표 시점 반영)
+        z, _zwhy = _display_z_at(frames, spec["codes"][0], d=s["price_date"].iloc[-1]) if len(v) >= 30 else (None, "")
+        if z is None:
+            z = _z90(v)
         z_txt = (f'<span class="z-hot">{z:+.1f}</span>' if (z is not None and abs(z) >= 2)
                  else (f"{z:+.1f}" if z is not None else "—"))
         if spec.get("monthly"):
