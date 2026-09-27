@@ -452,6 +452,19 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
             "USDA WASDE 컨센서스",
         ),
     ]
+    # A-289: 미국 바이오연료 정책·압착 — 런 #115 감사에서 8/17(NOPA)·8/21~31(SRE·RFS) 대두유 고유 변동의 원인이
+    #   수집 대상에 없었음(DATA GAP) → 일별 1회 질의 추가(Perplexity 1건/일)
+    queries.append((
+        "US_BIOFUEL_POLICY_NEWS",
+        (
+            "Latest U.S. biofuel policy news affecting soybean oil in the past 3 days: EPA RFS volumes (RVO), small refinery "
+            "exemptions (SRE) and reallocation, 45Z clean fuel credit guidance, D4 RIN price, and the latest NOPA monthly crush "
+            "(soybean oil stocks). Format: EVENT: [one dated sentence ≤30 words or none] | D4_RIN: [$ value or unknown] | "
+            "NOPA_SBO_STOCKS: [million lbs + month or unknown] | DIRECTION: [bullish/bearish/neutral for soybean oil] | DATE: [date] | SOURCE: [source]"
+        ),
+        "D4 RIN $",
+        "미국 바이오연료 정책·압착",
+    ))
     if not _wasde_query_window():
         queries = [q for q in queries if q[0] != "WASDE_CONSENSUS_SCORE"]
         print("[정보] WASDE 컨센서스 프록시 건너뜀 — 발표 후 3영업일 창 밖(다음 발표일 이후 재질의)")
@@ -468,7 +481,8 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
 
             # A-269: 선언 키 값 우선 추출(구 코드는 본문 첫 숫자 — 'September 11'의 11을 점수로 오독)
             pref = {"ARG_EXPORT_TAX_NEWS": ("RATE",), "INDIA_DUTY_NEWS": ("DUTY_RATE", "RATE"),
-                    "BIODIESEL_MANDATE_NEWS": ("INDONESIA",), "WASDE_CONSENSUS_SCORE": ("SURPRISE_SCORE", "SCORE", "ACTUAL", "CONSENSUS")}
+                    "BIODIESEL_MANDATE_NEWS": ("INDONESIA",), "WASDE_CONSENSUS_SCORE": ("SURPRISE_SCORE", "SCORE", "ACTUAL", "CONSENSUS"),
+                    "US_BIOFUEL_POLICY_NEWS": ("D4_RIN",)}
             value = _extract_value(text, pref.get(indicator_code, ()))
             _clean_txt = str(text or "").replace("**", "").replace("[", "").replace("]", "")   # _extract_value와 동일 정규화
             if indicator_code == "WASDE_CONSENSUS_SCORE" and re.search(

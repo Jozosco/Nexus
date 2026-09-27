@@ -1,0 +1,62 @@
+# 날짜와 출처가 확인된 시장 사건 달력 (A-289 · 2026-09-27)
+# 규칙: 날짜가 명시된 출처가 있는 사건만 등재. label: CONFIRMED(출처가 대두유·대두 복합 변동 원인으로 직접 지목)
+#       / INFERENCE(사건 자체는 확인됐으나 대두유 전이는 경로 추정). 추정 날짜·출처 없는 사건은 넣지 않는다.
+# 브리프 변동일 카드는 변동일 ±1영업일 안의 사건을 붙인다(src/reporting/move_attribution.py).
+# 조사: 시장 조사 관점(웹 검색 발췌 — 원문 열람은 사내 프록시 차단으로 발췌 기준). 정기 발표 일정은 공식 달력 기준.
+events:
+  - date: 2026-07-08
+    title_ko: "미국의 이란 재타격·휴전 종료 선언 → 원유 급등, 바이오연료 원료 수요 기대로 대두유 3주 최고"
+    channel: 에너지(원유)→바이오연료 경제성
+    label: CONFIRMED
+    source: "Bloomberg 2026-07-08 'Soybean Oil Hits Three-Week High on Renewed US-Iran Tensions'; CNBC 2026-07-08"
+  - date: 2026-07-08
+    title_ko: "러시아 디젤 수출 금지 → 미국 경유(ULSD) 선물 +11.6%, 2022년 3월 이후 최대 일간 상승"
+    channel: 에너지(경유)→재생디젤 마진
+    label: INFERENCE
+    source: "US News/Reuters 2026-07-08 'US diesel futures post biggest daily gains in four years after Russia bans exports' — 대두유 전이는 경로 추정"
+  - date: 2026-07-27
+    title_ko: "미국의 대이란 타격 중단·이란도 공격 중단 → 브렌트 −8.7%, 대두유 한 달 새 최대 하락"
+    channel: 에너지(원유)→바이오연료 경제성
+    label: CONFIRMED
+    source: "Bloomberg 2026-07-27 'Soybean Oil Drops Most in a Month After US Halts Strikes on Iran'; CNBC 2026-07-27"
+  - date: 2026-08-17
+    title_ko: "이란의 잠정 합의 연장 거부·호르무즈 통항 0척 → 원유 상승, 대두 복합 동반 상승"
+    channel: 에너지(원유)→바이오연료 경제성
+    label: CONFIRMED
+    source: "CNBC 2026-08-17; Investing.com 2026-08-17 'Soybean futures rise on higher crude oil prices and stronger crush margins'"
+  - date: 2026-08-17
+    title_ko: "NOPA 7월 압착 216.65백만 부셸(7월 사상 최대), 대두유 재고 전월 대비 −9.4%로 예상 하회"
+    channel: 미국 대두유 수급(재고 감소)
+    label: CONFIRMED
+    source: "NOPA 월간 압착 보고서(2026-08-17 발표); AgWeb/Pro Farmer 'Record July NOPA soybean crush' — 가격 기여 크기는 추정"
+  - date: 2026-08-21
+    title_ko: "RFS 준수 기한 연장·소규모 정유사 면제(SRE) 우려 → 대두유 3거래일 −7.1%(8/24까지)"
+    channel: 미국 바이오연료 정책(RIN 수요)
+    label: CONFIRMED
+    source: "IndexBox·DTN 2026-08-25 'Soybean oil futures drop 7% on biofuel policy uncertainty'"
+  - date: 2026-08-28
+    title_ko: "대두 작황 감소 전망·견조한 수요로 대두박·대두유 급등(주간 강세 마감) — 8/21~24 급락 뒤 되돌림"
+    channel: 대두 작황·수요 + 정책 급락 되돌림
+    label: CONFIRMED
+    source: "Brownfield 'Wheat, soybeans, corn see more gains to end bullish week'(8/28 추정 게재); Brownfield 종가 2026-08-28 'Sep. soybean oil 70.59, up 259'"
+  - date: 2026-08-31
+    title_ko: "EPA SRE 결정 발표(1.76십억 RIN) + 2026~27년 100% 재배분 제안 → 대두유 12월물 8/26 67.74 → 9/1 72.63"
+    channel: 미국 바이오연료 정책(RIN 수요)
+    label: CONFIRMED
+    source: "S&P Global 2026-09-02 'CBOT soybean oil rises 7.2% as EPA reallocation shifts biofuel outlook'; DTN 2026-08-31"
+  # 정기 발표(공식 일정)
+  - date: 2026-07-10
+    title_ko: "USDA WASDE 7월호 발표"
+    channel: 수급 전망
+    label: INFERENCE
+    source: "USDA 발표 일정"
+  - date: 2026-08-12
+    title_ko: "USDA WASDE 8월호 발표"
+    channel: 수급 전망
+    label: INFERENCE
+    source: "USDA 발표 일정"
+  - date: 2026-09-11
+    title_ko: "USDA WASDE 9월호 발표"
+    channel: 수급 전망
+    label: INFERENCE
+    source: "USDA 발표 일정"

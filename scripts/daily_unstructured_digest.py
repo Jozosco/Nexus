@@ -33,7 +33,7 @@ ARCHIVE = Path("data/processed/unstructured_daily_signals.csv")
 DAILY_UNSTRUCTURED = {
     "지정학 위험":   ["GPR_REALTIME", "GPR", "GPR_QUALITATIVE", "HORMUZ_THREAT_LEVEL", "HORMUZ_AWRP_MULTIPLIER"],
     "정책 뉴스":     ["ARG_EXPORT_TAX_NEWS", "INDIA_DUTY_NEWS", "BIODIESEL_MANDATE_NEWS",
-                     "WASDE_CONSENSUS_SCORE"],
+                     "WASDE_CONSENSUS_SCORE", "US_BIOFUEL_POLICY_NEWS"],   # A-289: 미국 RFS·SRE·45Z·RIN·NOPA
     "지정학 이벤트": ["SUEZ_RED_SEA_RISK", "UKRAINE_GRAIN_CORRIDOR", "US_CHINA_TARIFF_STATUS",
                      "BRAZIL_HARVEST_PROGRESS"],
     # A-273(2026-09-25): 미국–이란·러시아–EU 분쟁 상태(검색 요약 2종) + 통신사 지정학 레인(농산물 맥락 불요)
@@ -205,7 +205,7 @@ RSS_SOURCES = {
 _RSS_KEYWORDS_EN = (
     "soybean", "soy oil", "soyoil", "soybean oil", "vegetable oil", "oilseed",
     "palm oil", "canola", "rapeseed", "sunflower", "crush", "biodiesel",
-    "renewable diesel", "wasde", "export tax", "tariff", "south korea",
+    "renewable diesel", "wasde", "export tax", "tariff", "south korea", "nopa", "small refinery", "45z",
     "biofuel", "freight", "drought", "el niño", "el nino", "la niña", "la nina",
     "red sea", "hormuz", "black sea",
 )

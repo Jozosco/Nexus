@@ -734,7 +734,7 @@ signal_tag_mapping:
     unstr_codes: [UNSTR_GAIN_바이오연료수요, UNSTR_FAO_바이오연료수요]
     absa_indicator: BIODIESEL_POLICY_SENTIMENT
     entities: [TERM-066, TERM-067, TERM-068]
-    daily_codes: ['BIODIESEL_MANDATE_NEWS']   # A-198: 일별 아카이브 지표 연결(브리지 확장)
+    daily_codes: ['BIODIESEL_MANDATE_NEWS', 'US_BIOFUEL_POLICY_NEWS']   # A-198: 일별 아카이브 지표 연결(브리지 확장)
   - tag_ko: 기상이변
     unstr_codes: [UNSTR_GAIN_기상이변, UNSTR_FAO_기상이변]
     absa_indicator: null                 # 기상은 정형 ENSO_ONI·기상 커넥터 담당 — ABSA aspect 후보(Phase B)

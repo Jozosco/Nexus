@@ -112,11 +112,25 @@ def attribute_move(frames: dict[str, pd.DataFrame], d: pd.Timestamp, move_pct: f
     fitted = A @ beta
     resid_sd = float(np.std(hist["ZL"].values - fitted, ddof=1))
     att.r2 = float(1 - np.var(hist["ZL"].values - fitted) / np.var(hist["ZL"].values))
-    x = r.loc[d]
+    x = r.loc[d].copy()
+    # 자료 이상 검사(표시 전용 품질 점검): 그날 변동이 평소의 3배 이상이고 다음 관측에서 같은 크기로 되돌아가면
+    # 원천 값 오류로 보고 분해에서 제외(예: 2026-08-28 팜유 −3.9% → 9/1 +7.2% → 9/2 −6.8% — 보도 종가와 불일치)
+    suspects = []
+    for k in keys:
+        sd = hist[k].std()
+        after = r[k].loc[r.index > d].dropna()
+        after = after[after != 0]                              # 결측을 앞값으로 채운 0 변동은 건너뜀
+        if pd.notna(x.get(k)) and sd > 0 and abs(x[k]) > 2.5 * sd and len(after) and \
+                abs(after.iloc[0]) > 2.5 * sd and np.sign(after.iloc[0]) != np.sign(x[k]):
+            suspects.append(labels[k])
+            x[k] = 0.0
+    if suspects:
+        att.note = f"자료 이상 의심으로 분해에서 제외: {', '.join(suspects)}(급변 직후 같은 크기로 되돌림 — 원천 값 재확인 필요)"
     for i, k in enumerate(keys):
         if pd.notna(x.get(k)):
             att.contributions[labels[k]] = float(beta[i + 1] * x[k])
-            att.same_day[labels[k]] = float(np.expm1(x[k] / 100.0) * 100.0)
+            if labels[k] not in suspects:
+                att.same_day[labels[k]] = float(np.expm1(x[k] / 100.0) * 100.0)
     for codes, label in REFERENCE_MARKETS:
         s = _series(frames, codes)
         if len(s) > 2 and d in s.index:
@@ -155,8 +169,10 @@ def render_attribution_items(att: Attribution) -> list[str]:
     for e in att.events[:3]:
         src = e.get("source", "")
         lab = {"CONFIRMED": "확인", "INFERENCE": "추정"}.get(str(e.get("label", "")), str(e.get("label", "")))
-        items.append(f"확인된 사건({lab}·{str(e.get('date'))[5:]}): {e.get('title_ko', '')} — {src}")
-    if not att.events:
+        after = pd.Timestamp(e["date"]) > att.date
+        head = "변동일 이후 발표(원인 아님 — 선반영 여부 미확인)" if after else f"확인된 사건({lab})"
+        items.append(f"{head}·{str(e.get('date'))[5:]}: {e.get('title_ko', '')} — {src}")
+    if not [e for e in att.events if pd.Timestamp(e["date"]) <= att.date]:
         items.append("날짜가 확인된 사건 없음(사건 달력 기준) — 위 분해만으로 판단")
     if att.note:
         items.append(att.note)

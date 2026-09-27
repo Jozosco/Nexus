@@ -267,3 +267,34 @@ def test_wasde_consensus_unknown_in_brackets_is_nan() -> None:
     clean = txt.replace("**", "").replace("[", "").replace("]", "")
     import re as _re
     assert _re.search(r"CONSENSUS\s*:\s*(unknown|n/?a|not available|none)", clean, _re.IGNORECASE)
+
+
+def test_move_attribution_separates_energy_shock_and_flags_spike() -> None:
+    """A-289: 교차시장 분해 — 에너지 충격일 판정, 급변·되돌림 자료 이상 제외, 이후 발표 사건 구분."""
+    from src.reporting.move_attribution import attribute_move, render_attribution_items
+    rng = np.random.default_rng(1)
+    idx = pd.bdate_range("2025-06-02", periods=320)
+    ho = 100 * np.exp(np.cumsum(rng.normal(0, 0.015, 320)))
+    palm = 4000 * np.exp(np.cumsum(rng.normal(0, 0.01, 320)))
+    zl = 60 * np.exp(np.cumsum(0.3 * np.diff(np.log(ho), prepend=np.log(ho[0])) + rng.normal(0, 0.01, 320)))
+    d = idx[300]
+    ho[300:] *= 1.10                                   # 에너지 +10% 충격
+    zl[300:] *= 1.035
+    palm[300] *= 0.95                                  # 하루 급락 후 되돌림(자료 이상)
+    frames = {"x": pd.concat([
+        pd.DataFrame({"price_date": idx, "indicator_code": "CBOT_BO_CLOSE", "value": zl}),
+        pd.DataFrame({"price_date": idx, "indicator_code": "TE_HEATING_OIL", "value": ho}),
+        pd.DataFrame({"price_date": idx, "indicator_code": "TE_PALM_OIL", "value": palm})])}
+    events = [{"date": str(idx[301].date()), "title_ko": "이후 사건", "label": "CONFIRMED", "source": "t"}]
+    att = attribute_move(frames, d, 3.5, events)
+    txt = "\n".join(render_attribution_items(att))
+    assert "에너지 시장 충격" in att.verdict
+    assert "팜유" in att.note and "자료 이상" in att.note
+    assert "변동일 이후 발표" in txt
+
+
+def test_same_channel_drivers_grouped() -> None:
+    assert db._channel_of("TE_HEATING_OIL") == db._channel_of("TE_GASOLINE") == db._channel_of("TE_BRENT_CRUDE_OIL")
+    assert db._channel_of("TE_PALM_OIL") != db._channel_of("TE_HEATING_OIL")
+    assert db._kw_hits(["디젤"], "인도네시아 바이오디젤 의무") == 0      # 한글 복합어 오적중 차단
+    assert db._kw_hits(["디젤"], "미국 디젤 가격 급등") == 1

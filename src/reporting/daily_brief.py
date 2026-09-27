@@ -66,6 +66,7 @@ VAR_LABELS: dict[str, str] = {
     "ARG_EXPORT_TAX_NEWS": "아르헨티나 수출세 뉴스", "INDIA_DUTY_NEWS": "인도 식용유 관세 뉴스",
     "BIODIESEL_MANDATE_NEWS": "바이오디젤 의무혼합 뉴스",
     "WASDE_CONSENSUS_SCORE": "USDA 수급 전망 예상치 대비",
+    "US_BIOFUEL_POLICY_NEWS": "미국 바이오연료 정책·압착(RFS·SRE·45Z·RIN·NOPA)",
     "CPO_USD_MT": "팜유 가격(달러/톤)", "CPO": "팜유 가격",
     # A-284: 에너지·곡물 계열 표시명 — 종전 '국제 상품 가격(te heating oil)' 기계 풀이를 교체
     "TE_HEATING_OIL": "난방유 선물(뉴욕)", "TE_GASOLINE": "휘발유 선물(뉴욕 RBOB)",
@@ -154,6 +155,7 @@ _NOTE_KEY_KO: dict[str, str] = {
     "KEY_EVENT": "핵심 사건", "HORMUZ_IMPACT": "호르무즈 영향", "TENSION": "긴장 수준",
     "KEY_STATEMENT": "핵심 발언", "SANCTIONS_ENERGY": "제재·에너지 조치", "BLACK_SEA_IMPACT": "흑해 영향",
     "METRIC": "항목", "TRANSITS": "통항 수", "DISRUPTION": "차질",
+    "EVENT": "사건", "D4_RIN": "D4 RIN 가격", "NOPA_SBO_STOCKS": "NOPA 대두유 재고", "DIRECTION": "방향",
 }
 _VALUE_KO: dict[str, str] = {
     "unchanged": "변동 없음", "increase": "인상", "decrease": "인하", "high": "높음", "medium": "중간",
@@ -633,6 +635,8 @@ def _driver_link_line(var_code: str) -> str:
 # 일별 비정형 지표 → 온톨로지 체인 (signal_tag_mapping·CE evidence 기반 정적 렌더 —
 # 실검증 상태는 ontology.yaml이 원천, 여기서는 표시용 최소 사본)
 _ONTOLOGY_CHAINS: dict[str, list[str]] = {
+    "US_BIOFUEL_POLICY_NEWS": ["검색 요약", "신호: 미국 바이오연료 정책·압착", "후보 인과 경로(검증 대기)",
+                               "RIN 수요·재배분", "미국 대두유 산업 수요", "방향 조건부"],
     "BIODIESEL_MANDATE_NEWS": ["기사", "신호: 바이오연료 수요", "검증된 인과 경로",
                                "바이오연료 의무량", "SBO 수요 ▲", "가격 상방"],
     "ARG_EXPORT_TAX_NEWS": ["기사", "신호: 수출세 경로", "검증된 인과 경로",
@@ -960,9 +964,16 @@ def _kw_hits(kws: list[str], blob: str) -> int:
                 _ASCII_KW_RE_CACHE[wl] = rx
             if rx.search(low):
                 n += 1
-        elif wl in low:
-            n += 1
+        else:
+            # A-289: 한글은 복합어 오적중 차단 — '디젤'이 '바이오디젤'에, '원유'가 '원유가'…에 걸리지 않게 앞 글자가 한글이면 제외
+            if re.search(r"(?<![가-힣])" + re.escape(wl), low):
+                n += 1
     return n
+
+
+def _match_body(text: str) -> str:
+    """매칭용 본문 — 접두 태그([PERPLEXITY-PROXY: …바이오디젤 의무])와 URL을 제거(태그 문구 오적중 차단, A-289)."""
+    return _URL_RE.sub(" ", _PREFIX_TAG_RE.sub("", str(text or "")))
 
 
 def _match_articles(var_code: str, signals: pd.DataFrame) -> list[dict]:
@@ -990,7 +1001,7 @@ def _match_articles(var_code: str, signals: pd.DataFrame) -> list[dict]:
                                 "ko": it.get("ko", ""), "title": it["title"],
                                 "indicator": ind, "source": row.get("source_name", ""), "url": it.get("url")})
         else:
-            hits = _kw_hits(kws, f"{ind} {note}")
+            hits = _kw_hits(kws, _match_body(note))
             if hits:
                 out.append({"hits": hits, "media": 0, "date": d_key, "note": note[:400],
                             "ko": _ko_of(note), "title": "", "indicator": ind,
@@ -1105,7 +1116,7 @@ _VALUE_ONLY_PROXIES = {"BIODIESEL_MANDATE_NEWS", "ARG_EXPORT_TAX_NEWS", "INDIA_D
 
 
 def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
-                         window_days: int = 2) -> list[dict]:
+                         window_days: int = 2, used: set[str] | None = None) -> list[dict]:
     """변동일 '당시 신호' 선택 규칙 (A-284 · 검증 1 ②).
 
     (a) 매체·지정학 기사 우선 (b) 검색 요약 행은 값이 직전 관측과 달라진 경우만 (c) 변인 키워드와 겹치는 행 우선.
@@ -1123,6 +1134,10 @@ def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
         archive = sig
     kws_l = [k.lower() for k in kws]
     cands: list[dict] = []
+    try:
+        first_obs_date = pd.to_datetime(archive["date"]).min()
+    except Exception:                                         # noqa: BLE001
+        first_obs_date = None
     for _, row in sig.iterrows():
         ind = str(row.get("indicator", ""))
         note = str(row.get("note", ""))
@@ -1142,7 +1157,9 @@ def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
                 changed = True
             if not changed:
                 continue                                      # 매일 반복되는 동일 요약은 '당시 신호'가 아님
-            hits = _kw_hits(kws_l, f"{ind} {note}")
+            if first_obs_date is not None and pd.Timestamp(row.get("date")) <= first_obs_date:
+                continue                                      # A-289: 아카이브 첫날은 기준선 — '새 소식' 판정 불가
+            hits = _kw_hits(kws_l, _match_body(note))
             geo = ind in _GEO_CODES
             cands.append({"title": _media_title(note, ind, n=110), "orig": "", "url": _first_url(note),
                           "source": row.get("source_name", ""), "indicator": ind, "date": d_key,
@@ -1152,7 +1169,7 @@ def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
     cands.sort(key=lambda c: (c["rank"][0], -c["media"], c["rank"][1],
                               abs((pd.Timestamp(c["date"]) - center).days) if c["date"] else 9))
     out: list[dict] = []
-    seen: set[str] = set()
+    seen: set[str] = set() if used is None else used          # A-289: 카드 간 공유 — 같은 신호를 여러 변동일에 반복하지 않음
     for c in cands:
         key = _norm_title(c["title"])
         if key in seen:
@@ -1480,6 +1497,7 @@ def _inflection_block(points: list[dict], importance_df: pd.DataFrame,
     kws = list(dict.fromkeys(kws))
 
     cards = []
+    used_signals: set[str] = set()
     for p in points:
         d: pd.Timestamp = p["date"]
         chg = p["chg"]
@@ -1498,7 +1516,7 @@ def _inflection_block(points: list[dict], importance_df: pd.DataFrame,
             except Exception as e:                            # noqa: BLE001 — 비치명
                 rows.append(f'<li><span class="src">원인 분해 생략({type(e).__name__})</span></li>')
         # ① 당시 수집 신호(±2일) — 매체·지정학 우선 · 값이 바뀐 요약만 · 변인 키워드 우선
-        picks = _pick_signals_around(d, kws)
+        picks = _pick_signals_around(d, kws, used=used_signals)
         if picks:
             for k, c in enumerate(picks):
                 title = _esc(c["title"])
@@ -1969,6 +1987,10 @@ def build_daily_brief(
         arts = [a for a in arts if _norm_title(a.get("title") or a.get("note", ""))[:80] not in used_articles]
         chan = _channel_of(code)
         same_chan_prev = chan is not None and chan in used_channels
+        # A-289: 반복 정책 요약(값 불변 프록시)은 '기사'가 아님 — 변인 카드에는 매체·지정학 기사와 새 요약만
+        arts = [a for a in arts if a.get("media") or str(a.get("indicator", "")) not in _VALUE_ONLY_PROXIES]
+        if same_chan_prev:
+            arts = []                                          # 같은 경로 변인은 기사 재배정 없음
         if arts:
             used_articles.add(_norm_title(arts[0].get("title") or arts[0].get("note", ""))[:80])
             a0 = arts[0]
@@ -1982,7 +2004,8 @@ def build_daily_brief(
             news = (f'<div class="news"><span class="stars">{_stars(len(arts))}</span> '
                     f'{link}{orig} · {_esc(_source_ko(a0["source"]))}{when}</div>')
         else:
-            news = '<div class="news">최근 14일 기사 중 이 변인과 연결된 새 기사 없음(정량 신호만 반영)</div>'
+            news = ('' if same_chan_prev else
+                    '<div class="news">최근 14일 기사 중 이 변인과 연결된 새 기사 없음(정량 신호만 반영)</div>')
         link_line = f'<div class="news">{_esc(_driver_link_line(code))}</div>'   # A-284: 하이브리드 연결 근거
         if same_chan_prev:                                     # A-289: 같은 경로 반복 표시 — 독립 변인으로 세지 않음
             link_line = (f'<div class="news">앞 순위 변인과 같은 경로({_esc(chan)}) — 별도 원인으로 세지 않음'
