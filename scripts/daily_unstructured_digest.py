@@ -217,11 +217,126 @@ _RSS_KEYWORDS_KO = (
 _RSS_KEYWORD_REGEX = (re.compile(r"\bsaf\b"), re.compile(r"\brvo\b"), re.compile(r"\bcftc\b"))
 _TITLE_ONLY_SOURCES = {"RSS_CLIMATEPOL"}                  # 국문 종합 매체: 제목에 키워드가 있어야 통과
 _RSS_KEYWORDS = _RSS_KEYWORDS_EN + _RSS_KEYWORDS_KO       # 하위 호환(테스트·외부 참조)
-NOTE_BUDGET = 900                                          # A-269: 제목+요약 보존(구 500 — 제목만)
+NOTE_BUDGET = 2400                                         # A-284: 한국어 헤드라인+원제+요약 400자×3건(구 900)
+DESC_CHARS = 400                                           # A-284: 요약 저장 160→400자(승인자 지시 — 본문 근거 보존)
 _TAG_RE = re.compile(r"<[^>]+>")
 
+# ── A-284(검증 4): 기사별 한국어 헤드라인 — 다이제스트 단계에서 1회 생성·캐시·커밋 ──────────
+# 모델: 승인자 지정 gpt-5.6-luna(추론 xhigh — 독해·번역 정확도 최우선). 실패·키 부재는 원제 폴백(비치명).
+# 비용 통제: 기사당 1회(hashlib 캐시 커밋) · 일 상한 KO_HEADLINE_DAILY_CAP(기본 60) · 배치 호출(지표당 1회).
+KO_SEP = " ‖ "                                             # note 규약: `ko ‖ 원제 — 요약 (url)` — 브리프 파서와 공유
+KO_CACHE = Path("data/processed/ko_headline_cache.json")
+KO_DAILY_CAP = int(os.environ.get("KO_HEADLINE_DAILY_CAP", "60"))
+KO_MODEL = os.environ.get("BRIEF_LLM_MODEL", "gpt-5.6-luna")
+KO_EFFORT = os.environ.get("BRIEF_LLM_EFFORT", "xhigh")
+KO_MAX_CHARS = 40
+_KO_SYSTEM = ("너는 대두유 조달 데스크의 편집자다. 영문(또는 국문) 기사 제목과 요약을 읽고 한국어 헤드라인 한 줄로 "
+              f"바꿔라. 규칙: ①{KO_MAX_CHARS}자 이내 ②사실만(전망·확률·매수·매도 판단 표현 금지) ③고유명사·수치·단위 보존 "
+              "④기관·매체 이름은 통용 한글 표기 ⑤JSON만 출력.")
+_KV_KEY_RE = re.compile(r"\b[A-Z][A-Z_]{2,}:\s")
 
-def _clean_desc(raw: str, n: int = 160) -> str:
+
+def _is_kv_note(text: str) -> bool:
+    """`KEY: value | KEY: value` 구조화 응답인가(키 2개 이상) — 구조화 행은 브리프가 이미 한글로 렌더."""
+    return len(_KV_KEY_RE.findall(str(text or "").replace("**", ""))) >= 2
+
+
+def _ko_key(title: str, desc: str) -> str:
+    import hashlib
+    return hashlib.sha1(f"{title}|{str(desc)[:300]}".encode("utf-8")).hexdigest()[:20]
+
+
+def _load_ko_cache() -> dict:
+    try:
+        import json
+        return json.loads(KO_CACHE.read_text(encoding="utf-8")) if KO_CACHE.is_file() else {}
+    except Exception:                                          # noqa: BLE001
+        return {}
+
+
+def _save_ko_cache(cache: dict) -> None:
+    import json
+    KO_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    KO_CACHE.write_text(json.dumps(cache, ensure_ascii=False, indent=0, sort_keys=True), encoding="utf-8")
+
+
+def _llm_ko_batch(items: list[dict]) -> dict[str, str]:
+    """[{key,title,desc}] → {key: ko}. OpenAI 직접 호출(reasoning_effort 미지원 시 자동 생략). 실패는 빈 사전."""
+    import json
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not key or not items:
+        return {}
+    try:
+        from openai import OpenAI
+    except ImportError:
+        print("[정보] openai 패키지 미설치 — 한국어 헤드라인 생략(원제 유지)")
+        return {}
+    payload = [{"id": i, "title": it["title"][:200], "desc": str(it.get("desc", ""))[:400]}
+               for i, it in enumerate(items)]
+    req = {"model": KO_MODEL,
+           "messages": [{"role": "system", "content": _KO_SYSTEM},
+                        {"role": "user", "content": "다음 기사 각각의 한국어 헤드라인을 만들어라. "
+                                                    'JSON {"headlines":[{"id":0,"ko":"..."}]} 형식만. 기사: '
+                                                    + json.dumps(payload, ensure_ascii=False)}],
+           "response_format": {"type": "json_object"}}
+    try:
+        client = OpenAI(api_key=key)
+        try:
+            resp = client.chat.completions.create(**req, reasoning_effort=KO_EFFORT)
+        except TypeError:
+            resp = client.chat.completions.create(**req)
+        except Exception as e:                                 # noqa: BLE001 — 400(effort 미지원) 등
+            if "reasoning" in str(e).lower() or "effort" in str(e).lower():
+                resp = client.chat.completions.create(**req)
+            else:
+                raise
+        data = json.loads(resp.choices[0].message.content or "{}")
+    except Exception as e:                                     # noqa: BLE001 — 비치명(원제 폴백)
+        print(f"[경고] 한국어 헤드라인 호출 실패(비치명 · 모델 {KO_MODEL}): {type(e).__name__}: {str(e)[:160]}")
+        return {}
+    out: dict[str, str] = {}
+    for h in data.get("headlines", []) or []:
+        try:
+            i = int(h.get("id"))
+            ko = re.sub(r"\s+", " ", str(h.get("ko", ""))).strip().replace(KO_SEP.strip(), "|")
+        except (TypeError, ValueError):
+            continue
+        if 0 <= i < len(items) and ko:
+            out[items[i]["key"]] = ko[:KO_MAX_CHARS + 20]
+    return out
+
+
+def ko_headlines(items: list[dict]) -> dict[str, str]:
+    """기사 목록 [{title, desc}] → {key: ko}. 캐시 우선·일 상한·배치 호출. 키 없거나 실패면 빈 값(원제 폴백)."""
+    if not items:
+        return {}
+    cache = _load_ko_cache()
+    today_k = f"_calls_{date.today().isoformat()}"
+    used = int(cache.get(today_k, 0) or 0)
+    result: dict[str, str] = {}
+    todo: list[dict] = []
+    for it in items:
+        k = _ko_key(it.get("title", ""), it.get("desc", ""))
+        it["key"] = k
+        if k in cache and cache[k]:
+            result[k] = cache[k]
+        elif len(todo) + used < KO_DAILY_CAP:
+            todo.append(it)
+    if todo and os.environ.get("OPENAI_API_KEY", "").strip():
+        got = _llm_ko_batch(todo)
+        if got:
+            cache.update(got)
+            cache[today_k] = used + len(todo)
+            _save_ko_cache(cache)
+            result.update(got)
+            print(f"[한국어 헤드라인] 신규 {len(got)}/{len(todo)}건 생성(캐시 적중 {len(result) - len(got)}) · "
+                  f"모델 {KO_MODEL}/{KO_EFFORT} · 일 사용 {used + len(todo)}/{KO_DAILY_CAP}")
+    elif todo:
+        print(f"[정보] OPENAI_API_KEY 미설정 — 한국어 헤드라인 {len(todo)}건 생략(원제 유지)")
+    return result
+
+
+def _clean_desc(raw: str, n: int = DESC_CHARS) -> str:
     """RSS description/summary → 태그·개행 제거 후 n자."""
     import html as _html
     txt = _html.unescape(_TAG_RE.sub(" ", str(raw or "")))
@@ -450,10 +565,18 @@ def _fetch_specialist_media() -> list[dict]:
         label = _CHANNEL_LABELS.get(channel, channel)
         by_date: dict[str, list[str]] = {}
         kws_by_date: dict[str, set[str]] = {}
+        try:                                                  # A-284: 기사별 한국어 헤드라인(비치명)
+            kos = ko_headlines([{"title": it["title"], "desc": it.get("desc", "")} for it in kept])
+        except Exception as e:                                # noqa: BLE001
+            print(f"[경고] 한국어 헤드라인 단계 실패(비치명): {type(e).__name__}")
+            kos = {}
         for it in kept:
             d_key = str(it["date"].date())
             desc = it.get("desc", "")
             body = f"{it['title']} — {desc}" if desc else it["title"]
+            ko = kos.get(_ko_key(it["title"], desc), "")
+            if ko:
+                body = f"{ko}{KO_SEP}{body}"
             by_date.setdefault(d_key, []).append(f"{body} ({it['link']})")
             kws_by_date.setdefault(d_key, set()).add(str(it.get("_kw", "")))
         for d, notes in sorted(by_date.items()):
@@ -488,9 +611,15 @@ def main() -> int:
                 "indicator": str(r["indicator_code"]),
                 "date": str(pd.Timestamp(r["price_date"]).date()),
                 "value": r.get("value"),
-                "note": str(r.get("note", "") or "")[:400],
+                "note": str(r.get("note", "") or "")[:900],   # A-284: 산문 근거 보존(구 400)
                 "source": str(r.get("source_name", "") or ""),
             })
+
+    # A-284: 산문형 프록시(브라질 수확·호르무즈 서사·정성 GPR 등)도 한국어 헤드라인 — 구조화(KEY: value) 행은 제외
+    try:
+        _attach_proxy_ko(rows)
+    except Exception as e:                                    # noqa: BLE001 — 비치명
+        print(f"[경고] 프록시 한국어 헤드라인 단계 실패(비치명): {type(e).__name__}: {e}")
 
     # 전문 매체 RSS (조정자 지시 8/25) — 실패해도 다이제스트는 계속
     try:
@@ -541,6 +670,35 @@ def main() -> int:
     _append_archive(rows)
     _emit_ontology_candidates(rows)
     return 0
+
+
+_PROXY_TAG_RE = re.compile(r"^(\s*\[[^\]]*\]\s*)(.*)$", re.S)
+
+
+def _attach_proxy_ko(rows: list[dict]) -> None:
+    """산문형 프록시 note에 `ko ‖ ` 삽입(접두 태그 뒤). 구조화 행·빈 본문·이미 삽입된 행은 건너뜀."""
+    targets = set(sum(DAILY_UNSTRUCTURED.values(), []))
+    cand: list[tuple[dict, str, str]] = []
+    for r in rows:
+        if r["indicator"] not in targets or str(r["indicator"]).startswith("RSS_"):
+            continue
+        m = _PROXY_TAG_RE.match(str(r.get("note", "")))
+        tag, body = (m.group(1), m.group(2)) if m else ("", str(r.get("note", "")))
+        body = body.strip()
+        if not body or KO_SEP in body or _is_kv_note(body) or len(body) < 40:
+            continue
+        cand.append((r, tag, body))
+    if not cand:
+        return
+    kos = ko_headlines([{"title": body[:200], "desc": body[200:600]} for _, _, body in cand])
+    n = 0
+    for r, tag, body in cand:
+        ko = kos.get(_ko_key(body[:200], body[200:600]), "")
+        if ko:
+            r["note"] = f"{tag}{ko}{KO_SEP}{body}"[:NOTE_BUDGET]
+            n += 1
+    if n:
+        print(f"[한국어 헤드라인] 프록시 산문 {n}/{len(cand)}건 삽입")
 
 
 def _append_archive(rows: list[dict]) -> None:

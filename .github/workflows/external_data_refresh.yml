@@ -432,23 +432,31 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install pandas pyarrow httpx
+        run: pip install pandas pyarrow httpx openai   # openai: 기사별 한국어 헤드라인(A-284 — 승인자 지정 gpt-5.6-luna)
       - uses: actions/download-artifact@v4
         with:
           path: data/raw/
           merge-multiple: true
       - name: Build daily digest
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # A-284: 한국어 헤드라인 모델·추론 강도 — 승인자 지시(독해·번역 정확도 최고 모델). 모델 ID 변경 시 Variables로 교정.
+          BRIEF_LLM_MODEL: ${{ vars.BRIEF_LLM_MODEL || 'gpt-5.6-luna' }}
+          BRIEF_LLM_EFFORT: ${{ vars.BRIEF_LLM_EFFORT || 'xhigh' }}
+          KO_HEADLINE_DAILY_CAP: ${{ vars.KO_HEADLINE_DAILY_CAP || '60' }}
         run: python scripts/daily_unstructured_digest.py >> "$GITHUB_STEP_SUMMARY"
       - name: Commit daily signal archive (A-181 — 변수별 영구 축적)
         run: |
-          if git diff --quiet -- data/processed/unstructured_daily_signals.csv 2>/dev/null \
-             && git ls-files --error-unmatch data/processed/unstructured_daily_signals.csv >/dev/null 2>&1; then
+          if git diff --quiet -- data/processed/unstructured_daily_signals.csv data/processed/ko_headline_cache.json 2>/dev/null \
+             && git ls-files --error-unmatch data/processed/unstructured_daily_signals.csv >/dev/null 2>&1 \
+             && [ -z "$(git ls-files --others --exclude-standard data/processed/ko_headline_cache.json)" ]; then
             echo "아카이브 무변경 — 커밋 생략"
             exit 0
           fi
           git config user.name "nexus-daily-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/processed/unstructured_daily_signals.csv "data/semantic/events" 2>/dev/null || git add data/processed/unstructured_daily_signals.csv
+          git add data/processed/ko_headline_cache.json 2>/dev/null || true   # A-284: 한국어 헤드라인 캐시(기사당 1회 호출 보장)
           git commit -m "data: 일별 비정형 신호 아카이브 append ($(date -u +%F)) [A-181]" || exit 0
           # A-271: bot push 경합(교차검증·다른 bot 커밋) 3회 재시도 — 실패는 잡 실패로 가시화
           for i in 1 2 3; do
@@ -834,11 +842,20 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install -y fonts-noto-cjk libpango-1.0-0 libpangocairo-1.0-0 2>/dev/null || true
-          pip install pandas pyarrow pyyaml scikit-learn statsmodels numpy weasyprint markdown2 openpyxl   # openpyxl: 관세청 GW xlsx → 도착가 범위(A-272)
+          pip install pandas pyarrow pyyaml scikit-learn statsmodels numpy weasyprint markdown2 openpyxl xlrd   # openpyxl: 관세청 GW xlsx → 도착가 범위(A-272)
       - uses: actions/download-artifact@v4
         with:
           path: data/raw/
           merge-multiple: true
+      - name: Rebuild manual-upload parquets for the brief (A-284 — 날짜 기준 편차·스냅샷 원시 계열)
+        # 브리프의 변동일 편차·유사 시기 '현재 편차'·주요 지표 표는 원시 수집 계열(TE 에너지·팜유, ICE, 관세청 GW,
+        # BRL/USD, ENSO)을 직접 읽는다. Readiness 잡의 재구성 산출물은 이 잡에 전달되지 않아(아티팩트에 mart만)
+        # 팜유(MYR)·에너지 계열이 '미수집'으로 표시됐다(런 #114 브리프 실증). 결정적 파서라 재실행이 정본(I-001).
+        run: |
+          for s in ingest_te_xlsx ingest_wasde_xlsx ingest_psd_data ingest_gats_data ingest_ice_volumes \
+                   ingest_nasa_power_xlsx ingest_customs_gw_uploads ingest_fx_brl_usd_xlsx ingest_enso_oni_xlsx; do
+            python "scripts/$s.py" > "/tmp/$s.log" 2>&1 && echo "재구성: $s" || { echo "::warning::$s 실패(비치명) — $(tail -n 2 /tmp/$s.log)"; }
+          done
       - name: Restore feature mart to data/gold (A-178 — merge 다운로드 착지 보정)
         # Readiness 잡이 만든 mart(gold)는 아티팩트 내부 경로가 data/gold/*라서
         # merge 다운로드 시 data/raw/data/gold/에 착지 — G1 로더 기대 경로로 복원.

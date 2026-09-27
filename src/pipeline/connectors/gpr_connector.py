@@ -336,6 +336,43 @@ def _extract_value(text: str, preferred_keys: tuple[str, ...]) -> float:
     return float(m.group(1)) if m else float("nan")
 
 
+# A-284: WASDE 발표일(2026) — daily_brief.WASDE_SCHEDULE와 동일 원천. 환경변수 WASDE_RELEASE_DATES(콤마 ISO)로 교정 가능.
+_WASDE_RELEASE_DATES_2026 = (
+    date(2026, 1, 12), date(2026, 2, 10), date(2026, 3, 10), date(2026, 4, 9), date(2026, 5, 12), date(2026, 6, 11),
+    date(2026, 7, 10), date(2026, 8, 12), date(2026, 9, 11), date(2026, 10, 9), date(2026, 11, 10), date(2026, 12, 10),
+)
+WASDE_QUERY_WINDOW_BDAYS = 3
+
+
+def _wasde_release_dates() -> tuple[date, ...]:
+    raw = os.environ.get("WASDE_RELEASE_DATES", "").strip()
+    if not raw:
+        return _WASDE_RELEASE_DATES_2026
+    out = []
+    for tok in raw.split(","):
+        try:
+            out.append(date.fromisoformat(tok.strip()))
+        except ValueError:
+            print(f"[경고] WASDE_RELEASE_DATES 형식 오류 무시: {tok!r}")
+    return tuple(sorted(out)) or _WASDE_RELEASE_DATES_2026
+
+
+def _last_wasde_release(today: date | None = None) -> date | None:
+    t = today or date.today()
+    past = [d for d in _wasde_release_dates() if d <= t]
+    return past[-1] if past else None
+
+
+def _wasde_query_window(today: date | None = None) -> bool:
+    """발표일 당일부터 3영업일 이내에만 True — 그 밖은 질의하지 않는다(카드 자동 숨김·비용 절감)."""
+    import numpy as _np
+    t = today or date.today()
+    last = _last_wasde_release(t)
+    if last is None:
+        return False
+    return 0 <= int(_np.busday_count(last, t)) <= WASDE_QUERY_WINDOW_BDAYS
+
+
 def _fetch_policy_news_proxy() -> pd.DataFrame:
     """Perplexity 실시간 검색 — 대두유 가격 주요 정책·수급 뉴스 4종.
 
@@ -389,15 +426,22 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
         (
             "WASDE_CONSENSUS_SCORE",
             (
-                "What is the latest USDA WASDE report release date and the market consensus vs actual "
-                "for global soybean oil ending stocks or production? Was the report bullish or bearish vs consensus? "
-                "Format: REPORT_DATE: [date] | CONSENSUS: [value + unit] | ACTUAL: [value + unit] | "
-                "SURPRISE: [bullish/bearish/neutral] | SURPRISE_SCORE: [number from -1 bearish to +1 bullish, 0 neutral] | SOURCE: [source]"
+                # A-284(검증 4·WASDE 카드 정정): 대상을 '세계 대두유 기말재고(컨센서스 조사 부재 → unknown 반복)'에서
+                #   '미국 대두유 수급표 vs 사전 애널리스트 조사(Reuters/Bloomberg 설문)'로 정정. 발표 후 3영업일에만 질의.
+                f"USDA WASDE report released {_last_wasde_release().isoformat() if _last_wasde_release() else 'most recently'}: "
+                "compare the U.S. soybean oil balance sheet (ending stocks, million lbs; biofuel use) and U.S. soybean ending stocks "
+                "(million bushels) against the pre-report analyst survey average (Reuters or Bloomberg poll). "
+                "Format: REPORT_DATE: [date] | ITEM: [US soybean oil ending stocks or US soybean ending stocks] | "
+                "CONSENSUS: [survey average + unit] | ACTUAL: [USDA value + unit] | "
+                "SURPRISE: [bullish/bearish/neutral for soybean oil prices] | SURPRISE_SCORE: [number from -1 bearish to +1 bullish, 0 neutral] | SOURCE: [source]"
             ),
             "surprise score",
             "USDA WASDE 컨센서스",
         ),
     ]
+    if not _wasde_query_window():
+        queries = [q for q in queries if q[0] != "WASDE_CONSENSUS_SCORE"]
+        print("[정보] WASDE 컨센서스 프록시 건너뜀 — 발표 후 3영업일 창 밖(다음 발표일 이후 재질의)")
 
     rows: list[dict] = []
     for indicator_code, prompt, unit_hint, label_kr in queries:
@@ -413,6 +457,9 @@ def _fetch_policy_news_proxy() -> pd.DataFrame:
             pref = {"ARG_EXPORT_TAX_NEWS": ("RATE",), "INDIA_DUTY_NEWS": ("DUTY_RATE", "RATE"),
                     "BIODIESEL_MANDATE_NEWS": ("INDONESIA",), "WASDE_CONSENSUS_SCORE": ("SURPRISE_SCORE", "SCORE", "ACTUAL", "CONSENSUS")}
             value = _extract_value(text, pref.get(indicator_code, ()))
+            if indicator_code == "WASDE_CONSENSUS_SCORE" and re.search(
+                    r"CONSENSUS\s*:\s*\**\s*(unknown|n/?a|not available|none)", str(text), re.IGNORECASE):
+                value = float("nan")                          # A-284: 컨센서스 미확인이면 점수 0으로 위장하지 않음
 
             rows.append({
                 "price_date":     today,

@@ -68,6 +68,14 @@ VAR_LABELS: dict[str, str] = {
     "BIODIESEL_MANDATE_NEWS": "바이오디젤 의무혼합 뉴스",
     "WASDE_CONSENSUS_SCORE": "USDA 수급 전망 예상치 대비",
     "CPO_USD_MT": "팜유 가격(달러/톤)", "CPO": "팜유 가격",
+    # A-284: 에너지·곡물 계열 표시명 — 종전 '국제 상품 가격(te heating oil)' 기계 풀이를 교체
+    "TE_HEATING_OIL": "난방유 선물(뉴욕)", "TE_GASOLINE": "휘발유 선물(뉴욕 RBOB)",
+    "TE_BRENT_CRUDE_OIL": "브렌트유", "TE_WTI_CRUDE_OIL": "WTI 원유", "TE_NATURAL_GAS": "천연가스(미국)",
+    "TE_EU_NATURAL_GAS": "천연가스(유럽 TTF)", "TE_ETHANOL": "에탄올 선물", "TE_SUNFLOWER_OIL": "해바라기유 가격",
+    "TE_RAPESEED": "유채씨 선물(유럽)", "TE_CANOLA": "카놀라 선물(캐나다)", "TE_CORN": "옥수수 선물(시카고)",
+    "TE_WHEAT": "밀 선물(시카고)", "TE_SUGAR": "설탕 선물", "TE_CRB_INDEX": "CRB 상품지수", "TE_GSCI": "GSCI 상품지수",
+    "WASDE_US_SBO_EXPORTS": "USDA 미국 대두유 수출 전망(WASDE)", "WASDE_USDOM_SBO_EXPORTS": "USDA 미국 대두유 수출 전망(WASDE)",
+    "WASDE_SBO_EXPORTS": "USDA 세계 대두유 수출 전망(WASDE)",
     "KRW_USD": "원/달러 환율", "CBOT_BO_ROLLDAY": "대두유 선물 만기 교체일",
 }
 
@@ -224,6 +232,9 @@ def _label_ko(code: object) -> str:
     cat = _catalog_ko().get(base)
     if cat:
         return cat
+    fmt = _label_structured(base)                 # A-284: ICE·관세청 코드 구조 해석(기계 풀이 대신)
+    if fmt:
+        return fmt
     forecast = base.startswith("FCST_")          # 15일 예보 계열(Open-Meteo) — 관측과 구분 표기
     if forecast:
         base = base[5:]
@@ -237,6 +248,32 @@ def _label_ko(code: object) -> str:
         if base.startswith(prefix):
             return f"{ko}({base.lower().replace('_', ' ')})"
     return f"기타 변수({base.lower().replace('_', ' ')})"
+
+
+_HS_KO: dict[str, str] = {
+    "1507101000": "조대두유(식품용)", "1507901010": "정제 대두유(식품용)", "1507901020": "정제 대두유(바이오디젤용)",
+    "1507901090": "정제 대두유(기타)", "1507909000": "대두유 분획물", "150710": "조대두유", "150790": "정제 대두유",
+    "151110": "조팜유", "151190": "정제 팜유", "151211": "조해바라기유", "151219": "정제 해바라기유",
+    "151411": "조유채유", "151419": "정제 유채유", "120190": "대두(채유용)", "230400": "대두박", "382600": "바이오디젤",
+}
+_KCS_FLOW_KO = {"IMP": "수입", "EXP": "수출", "BAL": "무역수지"}
+_KCS_UNIT_KO = {"USD": "금액(달러)", "KG": "물량(kg)"}
+_ICE_MARKET_KO = {"EU": "유럽", "US": "미국"}
+_ICE_CONTRACT_KO = {"FUTURES": "선물", "OPTIONS": "옵션", "FO": "선물·옵션"}
+
+
+def _label_structured(base: str) -> str | None:
+    """ICE_{시장}_{상품}_{계약} · KCS_{HS}_{흐름}_{단위}_{국가} 코드의 구조 해석 라벨. 해당 없으면 None."""
+    m = re.match(r"^ICE_(EU|US)_(.+)_(FUTURES|OPTIONS|FO)$", base)
+    if m:
+        prod = m.group(2).replace("_", " ").lower()
+        return f"ICE {_ICE_MARKET_KO[m.group(1)]} {prod} {_ICE_CONTRACT_KO[m.group(3)]} 거래량"
+    m = re.match(r"^KCS_(\d{6,10})_(IMP|EXP|BAL)_(USD|KG)_([A-Z_]+)$", base)
+    if m:
+        hs = _HS_KO.get(m.group(1), f"HS {m.group(1)}")
+        cty = "전 세계" if m.group(4) == "WORLD" else m.group(4).replace("_", " ").title()
+        return f"관세청 {hs} {_KCS_FLOW_KO[m.group(2)]} {_KCS_UNIT_KO[m.group(3)]} · {cty}"
+    return None
 
 
 def _humanize(text: object) -> str:
@@ -274,6 +311,9 @@ def _media_title(note: str, indicator: str, n: int = 110) -> str:
     ④ 산문은 문장·구분자 경계에서 n자 안으로 절단 · 빈 본문은 정성 라벨(예: 위협 수준 높음)
     """
     raw = str(note)
+    ko_head = _ko_of(raw)                                     # A-284: 다이제스트 한국어 헤드라인 우선
+    if ko_head:
+        return ko_head[:n]
     kv = _parse_kv(raw)
     if kv:
         txt = " · ".join(f"{k} {v}" for k, v in kv[:5])
@@ -312,8 +352,9 @@ def _media_items(note: str) -> list[dict]:
         txt = _URL_RE.sub("", part)
         txt = re.sub(r"\(\s*\)?\s*$", "", txt)               # 절단된 '(https…' 잔여 괄호 제거
         txt = re.sub(r"\(\s*\)", "", txt).strip(" ⋅·-(")
+        ko, txt = _split_ko(txt)                              # A-284: `ko ‖ 원제 — 요약`
         title, desc = (txt.split(" — ", 1) + [""])[:2] if " — " in txt else (txt, "")
-        items.append({"title": title.strip(), "desc": desc.strip(), "url": url})
+        items.append({"title": title.strip(), "desc": desc.strip(), "url": url, "ko": ko})
     return items
 
 
@@ -393,19 +434,177 @@ _DRIVER_KEYWORDS: dict[str, list[str]] = {
 }
 
 
-def _driver_keywords(var_code: str) -> list[str]:
-    """변인 코드 → 키워드. A-268: 접두/정확 매칭 + 지역명 추가(부분 문자열 오탐 — BOARD_CRUSH_MARGIN→ARG — 제거)."""
-    up = var_code.upper().split("__")[0]
-    kws: list[str] = []
-    for key, words in _DRIVER_KEYWORDS.items():
+# A-284(검증 2): 온톨로지가 아직 바인딩하지 않은 실산출 코드의 키워드·인과 경로 보완표.
+#   에너지(난방유·휘발유·원유)→CE-020, ICE 거래량→CE-017(유동성·투기 — 후보), 관세청 수입→CE-024/CE-010/CE-022,
+#   WASDE 수출→CE-022/CE-001. 온톨로지 바인딩이 생기면 이 표는 자동으로 뒤로 밀린다(파생표 우선).
+_DRIVER_ALIAS: dict[str, dict[str, list[str]]] = {
+    "TE_HEATING_OIL": {"kw": ["heating oil", "diesel", "distillate", "crack spread", "crude", "brent", "oil price",
+                              "난방유", "경유", "디젤", "유가", "원유", "정유"], "edges": ["CE-020"]},
+    "TE_GASOLINE": {"kw": ["gasoline", "rbob", "crude", "brent", "oil price", "ethanol", "refinery",
+                           "휘발유", "유가", "원유", "에탄올", "정유"], "edges": ["CE-020"]},
+    "TE_BRENT_CRUDE_OIL": {"kw": ["brent", "crude", "oil price", "opec", "원유", "유가", "브렌트"], "edges": ["CE-020"]},
+    "TE_WTI_CRUDE_OIL": {"kw": ["wti", "crude", "oil price", "opec", "원유", "유가"], "edges": ["CE-020"]},
+    "TE_NATURAL_GAS": {"kw": ["natural gas", "lng", "fertilizer", "천연가스", "비료"], "edges": []},
+    "TE_EU_NATURAL_GAS": {"kw": ["natural gas", "ttf", "eu gas", "천연가스"], "edges": []},
+    "TE_ETHANOL": {"kw": ["ethanol", "corn", "biofuel", "에탄올", "옥수수"], "edges": ["CE-020"]},
+    "ICE": {"kw": ["ice futures", "options market", "open interest", "trading volume", "speculative", "speculators",
+                   "managed money", "cftc", "거래량", "옵션", "투기", "미결제약정"], "edges": ["CE-017"]},
+    "KCS": {"kw": ["south korea", "korea", "korean", "cif", "vietnam", "vietnamese", "soybean oil import", "soyoil import",
+                   "crude soybean oil", "refined soybean oil", "한국", "대두유 수입", "베트남", "관세청", "도착가", "수입 단가"],
+            "edges": ["CE-024", "CE-010", "CE-022"]},
+    "WASDE_SBO_EXPORTS": {"kw": ["wasde", "usda", "soybean oil export", "soyoil export", "export sales", "renewable diesel",
+                                 "biofuel", "대두유 수출", "재생디젤", "수출 판매"], "edges": ["CE-022", "CE-001"]},
+    "WASDE_USDOM_SBO_EXPORTS": {"kw": ["wasde", "usda", "soybean oil export", "soyoil export", "export sales", "renewable diesel",
+                                       "biofuel", "대두유 수출", "재생디젤", "수출 판매"], "edges": ["CE-022", "CE-001"]},
+    "WASDE_US_SBO_EXPORTS": {"kw": ["wasde", "usda", "soybean oil export", "soyoil export", "export sales", "renewable diesel",
+                                    "biofuel", "대두유 수출", "재생디젤", "수출 판매"], "edges": ["CE-022", "CE-001"]},
+    "WASDE": {"kw": ["wasde", "usda", "stocks", "재고", "수급"], "edges": ["CE-008"]},
+    "TE_PALM_OIL": {"kw": ["palm", "mpob", "팜유", "올레인", "indonesia", "malaysia", "인도네시아", "말레이시아"],
+                    "edges": ["CE-015", "CE-002"]},
+    "CPO": {"kw": ["palm", "mpob", "팜유"], "edges": ["CE-015", "CE-002"]},
+    "TE_BDI": {"kw": ["freight", "shipping", "bdi", "tanker", "vessel", "운임", "해운", "선박"],
+               "edges": ["CE-010", "CE-016", "CE-013"]},
+    "BDI": {"kw": ["freight", "shipping", "bdi", "tanker", "운임", "해운"], "edges": ["CE-010", "CE-016", "CE-013"]},
+    "DEXBZUS": {"kw": ["brazil", "real", "브라질", "헤알", "farmer selling", "농가"], "edges": ["CE-021"]},
+    "FX_BRL_USD": {"kw": ["brazil", "real", "브라질", "헤알"], "edges": ["CE-021"]},
+    "ENSO_ONI": {"kw": ["el nino", "el niño", "la nina", "la niña", "enso", "drought", "엘니뇨", "라니냐", "가뭄"],
+                 "edges": ["CE-006", "CE-007", "CE-009"]},
+    "ONI": {"kw": ["el nino", "el niño", "la nina", "la niña", "enso", "엘니뇨", "라니냐"], "edges": ["CE-006", "CE-007", "CE-009"]},
+    "PSD_SOY_CRUSH": {"kw": ["crush", "crushing", "압착", "가공"], "edges": ["CE-018", "CE-019", "CE-024"]},
+    "BOARD_CRUSH_MARGIN": {"kw": ["crush margin", "crush", "압착 마진", "압착"], "edges": ["CE-018", "CE-019"]},
+    "GATS_US_SBO": {"kw": ["export sales", "export", "korea", "수출", "한국"], "edges": ["CE-022"]},
+    "GATS_US_RSBO": {"kw": ["export sales", "export", "korea", "refined", "수출", "한국", "정제"], "edges": ["CE-022"]},
+    "TE_SUNFLOWER_OIL": {"kw": ["sunflower", "ukraine", "black sea", "해바라기", "우크라이나", "흑해"], "edges": ["CE-014"]},
+    "TE_RAPESEED": {"kw": ["rapeseed", "canola", "유채", "카놀라", "eu biodiesel"], "edges": ["CE-004"]},
+    "TE_CANOLA": {"kw": ["canola", "rapeseed", "카놀라", "유채", "canada", "캐나다"], "edges": ["CE-004"]},
+    "TE_SOYBEANS": {"kw": ["soybean", "soybeans", "cbot", "대두", "시카고"], "edges": ["CE-017"]},
+    "GPR": {"kw": ["geopolit", "war", "conflict", "sanction", "지정학", "전쟁", "분쟁", "제재"], "edges": ["CE-010", "CE-013"]},
+    "HORMUZ": {"kw": ["hormuz", "iran", "tanker", "호르무즈", "이란", "탱커"], "edges": ["CE-010"]},
+    "VIXCLS": {"kw": ["volatility", "vix", "risk-off", "변동성", "위험 회피"], "edges": []},
+    "DEXKOUS": {"kw": ["won", "korea", "원화", "원/달러", "환율"], "edges": []},
+    "KRW_USD": {"kw": ["won", "korea", "원화", "원/달러", "환율"], "edges": []},
+}
+_ONTOLOGY_PATH = Path("src/semantic/ontology.yaml")
+_ENTITIES_PATH = Path("src/semantic/entities.yaml")
+_onto_cache: dict | None = None
+
+
+def _ontology_index() -> dict:
+    """온톨로지(entities·ontology.yaml)에서 변인 키워드·인과 경로를 **파생** — 검증 2(하이브리드) 기반 자료.
+
+    {'code_keywords': {지표코드: [한·영 표현]}, 'code_edges': {지표코드: [{'id','label','status','direction'}]},
+     'edges': {edge_id: {...}}}. yaml 부재·파싱 실패는 빈 사전(수동 보완표만으로 동작 — 비치명).
+    """
+    global _onto_cache
+    if _onto_cache is not None:
+        return _onto_cache
+    idx: dict = {"code_keywords": {}, "code_edges": {}, "edges": {}}
+    try:
+        import yaml
+        ent = yaml.safe_load(_ENTITIES_PATH.read_text(encoding="utf-8")) or {}
+        onto = yaml.safe_load(_ONTOLOGY_PATH.read_text(encoding="utf-8")) or {}
+    except Exception as e:                                    # noqa: BLE001 — 비치명
+        print(f"[정보] 온톨로지 파생표 생략(비치명): {type(e).__name__}")
+        _onto_cache = idx
+        return idx
+    term_names: dict[str, list[str]] = {}
+    for sec, items in ent.items():
+        if not isinstance(items, list):
+            continue
+        for t in items:
+            if not isinstance(t, dict) or not t.get("term_id"):
+                continue
+            names = [str(t.get("canonical", "")).lower(), str(t.get("canonical_ko", ""))]
+            names += [str(s).lower() for s in (t.get("synonyms") or [])]
+            names = [n.strip() for n in names if n and len(n.strip()) >= 3]
+            term_names[str(t["term_id"])] = names
+            for code in (t.get("data_codes") or []):
+                idx["code_keywords"].setdefault(str(code), []).extend(names)
+    bindings = onto.get("indicator_bindings") or {}
+    for group in ("unstructured", "structured"):
+        for b in bindings.get(group) or []:
+            code = str(b.get("indicator", ""))
+            for tid in b.get("entities") or []:
+                idx["code_keywords"].setdefault(code, []).extend(term_names.get(str(tid), []))
+    for tag in ((onto.get("signal_tag_mapping") or {}).get("tags") or []):
+        names = [str(tag.get("tag_ko", ""))]
+        for tid in tag.get("entities") or []:
+            names += term_names.get(str(tid), [])
+        for code in (tag.get("daily_codes") or []) + ([tag.get("absa_indicator")] if tag.get("absa_indicator") else []):
+            idx["code_keywords"].setdefault(str(code), []).extend([n for n in names if n])
+    for e in onto.get("causal_edges") or []:
+        eid = str(e.get("edge_id", ""))
+        rec = {"id": eid, "label": str(e.get("label_ko", "")), "status": str(e.get("status", "")),
+               "direction": str(e.get("direction", ""))}
+        idx["edges"][eid] = rec
+        for ind in e.get("indicators") or []:
+            idx["code_edges"].setdefault(str(ind), []).append(rec)
+    for code, kws in idx["code_keywords"].items():
+        idx["code_keywords"][code] = list(dict.fromkeys(k for k in kws if k))
+    _onto_cache = idx
+    return idx
+
+
+def _driver_match_keys(var_code: str) -> list[str]:
+    """변인 코드와 접두·정확 일치하는 사전 키 목록(길이 내림차순 — 구체적 키 우선)."""
+    up = str(var_code).upper().split("__")[0]
+    if up.startswith("FEAT_"):
+        up = up[5:]
+    keys: list[str] = []
+    pool = set(_DRIVER_KEYWORDS) | set(_DRIVER_ALIAS) | set(_ontology_index()["code_keywords"]) \
+        | set(_ontology_index()["code_edges"])
+    for key in pool:
         k = key.upper()
-        if up == k or up.startswith(k) or up.startswith(k + "_") or f"_{k}_" in f"_{up}_":
-            kws.extend(words)
+        if up == k or up.startswith(k + "_") or f"_{k}_" in f"_{up}_":
+            keys.append(key)
+    return sorted(keys, key=len, reverse=True)
+
+
+def _driver_keywords(var_code: str) -> list[str]:
+    """변인 코드 → 키워드. A-284: 온톨로지 파생표(entities data_codes·indicator_bindings·signal_tag_mapping)
+    + 수동 보완표(_DRIVER_ALIAS·_DRIVER_KEYWORDS) + 지역명. 접두/정확 매칭(부분 문자열 오탐 방지 — A-268)."""
+    up = str(var_code).upper().split("__")[0]
+    kws: list[str] = []
+    onto = _ontology_index()
+    for key in _driver_match_keys(var_code):
+        kws.extend(onto["code_keywords"].get(key, []))
+        kws.extend(_DRIVER_ALIAS.get(key, {}).get("kw", []))
+        kws.extend(_DRIVER_KEYWORDS.get(key, []))
     # 기후 변인의 지역명(한글·영문) — 기사에 산지 이름이 등장하면 연관
     for reg_key, reg_ko in _REGION_KO.items():
         if up.endswith("_" + reg_key.upper()) or up.endswith(reg_key.upper()):
             kws.extend([reg_ko.split("(")[0], reg_key.split("_")[-1].lower()])
-    return list(dict.fromkeys(kws))
+    return [k for k in dict.fromkeys(kws) if k and len(k) >= 2]
+
+
+def _driver_edges(var_code: str) -> list[dict]:
+    """변인 코드 → 온톨로지 인과 경로 목록(검증됨 우선). 미등재면 빈 목록(상관 기반 참고 표기)."""
+    onto = _ontology_index()
+    out: list[dict] = []
+    seen: set[str] = set()
+    for key in _driver_match_keys(var_code):
+        recs = list(onto["code_edges"].get(key, []))
+        recs += [onto["edges"][eid] for eid in _DRIVER_ALIAS.get(key, {}).get("edges", []) if eid in onto["edges"]]
+        for r in recs:
+            if r["id"] not in seen:
+                seen.add(r["id"])
+                out.append(r)
+    return sorted(out, key=lambda r: (r["status"] != "validated", r["id"]))
+
+
+def _driver_link_line(var_code: str) -> str:
+    """변인→대두유 연결 근거 한 줄(화면용 — 내부 코드는 노출하지 않음, korean_style §5).
+
+    검증된 경로가 있으면 그 경로 문장을, 후보만 있으면 '검증 대기'를, 없으면 '상관 기반 참고'를 정직 표기.
+    """
+    edges = _driver_edges(var_code)
+    if not edges:
+        return "연결 근거: 상관 기반 참고 — 대두유까지의 인과 경로가 아직 등재되지 않음(등재 시 자동 표시)."
+    e = edges[0]
+    kind = "검증된 인과 경로" if e["status"] == "validated" else "후보 인과 경로(검증 대기)"
+    label = _humanize(e["label"])
+    extra = f" 외 {len(edges) - 1}개 경로" if len(edges) > 1 else ""
+    return f"연결 근거: {kind}{extra} — {label}"
 
 # 일별 비정형 지표 → 온톨로지 체인 (signal_tag_mapping·CE evidence 기반 정적 렌더 —
 # 실검증 상태는 ontology.yaml이 원천, 여기서는 표시용 최소 사본)
@@ -548,6 +747,68 @@ def _z90(vals: pd.Series) -> float | None:
     return float((vals.iloc[-1] - win.mean()) / sd) if sd and sd > 0 else None
 
 
+DISPLAY_Z_MAX_GAP_BDAYS = 5          # A-284: 조회일과 관측일이 5거래일 초과 벌어지면 '당시 값 없음'
+
+
+def _display_level_codes(code: str) -> list[str]:
+    """변인 코드 → 원시 수집 계열(indicator_code) 후보. 경보 코드는 별칭 체계(analogue_g1)를 따른다."""
+    base = str(code).split("__")[0]
+    if base.startswith("feat_"):
+        base = base[5:]
+    cands = [base]
+    try:
+        from src.forecasting.analogue_g1 import _ALERT_Z_ALIASES
+        for alias in _ALERT_Z_ALIASES.get(code, []) + _ALERT_Z_ALIASES.get(base, []):
+            cands.append(alias.split("__")[0])
+    except Exception:                                         # noqa: BLE001
+        pass
+    if base in ("ENSO_ONI", "ONI"):
+        cands += ["ONI", "ENSO_ONI"]
+    if base in ("BDI", "BDI_ZSCORE", "TE_BDI"):
+        cands += ["TE_BDI", "BDI"]
+    return list(dict.fromkeys(cands))
+
+
+def _display_z_at(frames: dict[str, pd.DataFrame], code: str,
+                  d: pd.Timestamp | date | None = None) -> tuple[float | None, str]:
+    """표시용 '평소 대비 편차' — **그 날짜 기준** 원시 수집 계열의 90일 롤링 표준화 (A-284 · 검증 1).
+
+    구 코드는 분석용 통합 표(분석창 2025-12 종료)를 `index ≤ d`로 조회해 2026년 변동일 전부가
+    2025-12-31 행을 읽었다(편차가 4건 동일 — 승인자 지적). 표시는 원시 계열에서 날짜별로 계산하고,
+    추정(변수 선별·유사일 탐색)은 분석창을 유지한다 — 표시와 추정의 분리.
+
+    반환: (z, 사유). z=None이면 사유에 '당시 값 없음(관측 …)' 등 정직 강등 문구.
+    조회 규칙: 관측일 ≤ d 중 최근값이되, d와 DISPLAY_Z_MAX_GAP_BDAYS 거래일 초과 차이면 None.
+    """
+    ser = _dated_series(frames, _display_level_codes(code))
+    if ser.empty:
+        return None, "당시 값 없음(원시 계열 미수집)"
+    s = ser.set_index("price_date")["value"].astype(float)
+    if d is None:
+        d_ts = s.index[-1]
+    else:
+        d_ts = pd.Timestamp(d).normalize()
+    try:
+        from src.forecasting.analogue_g1 import _z90_from_level
+        z_all = _z90_from_level(s)
+    except Exception:                                         # noqa: BLE001
+        m = s.rolling(90, min_periods=30).mean()
+        sd = s.rolling(90, min_periods=30).std(ddof=1)
+        z_all = (s - m) / sd
+    upto = z_all[z_all.index <= d_ts].dropna()
+    if upto.empty:
+        return None, "당시 값 없음(관측 부족 — 90일 기준 계산 불가)"
+    obs_d = upto.index[-1]
+    gap = int(np.busday_count(obs_d.date(), d_ts.date())) if obs_d < d_ts else 0
+    # 주기 인지 허용 간격: 일별 계열은 5거래일, 월별·연별 계열은 관측 간격 중앙값의 1.5배(월별 ≈ 33거래일).
+    spacing = s.index.to_series().diff().dt.days.dropna()
+    med_gap_bd = float(spacing.median()) * 5 / 7 if len(spacing) else 0.0
+    allowed = max(DISPLAY_Z_MAX_GAP_BDAYS, int(round(med_gap_bd * 1.5)))
+    if gap > allowed:
+        return None, f"당시 값 없음(최근 관측 {obs_d.strftime('%Y-%m-%d')} — {gap}거래일 전)"
+    return float(upto.iloc[-1]), obs_d.strftime("%Y-%m-%d")
+
+
 @dataclass
 class CloseKpi:
     close: float
@@ -620,21 +881,76 @@ def _first_url(text: str) -> str | None:
     return m.group(0).rstrip(".,;") if m else None
 
 
+_ASCII_KW_RE_CACHE: dict[str, re.Pattern] = {}
+
+
+def _kw_hits(kws: list[str], blob: str) -> int:
+    """키워드 적중 수 — 영문은 단어 경계(복수형 허용: 'diesel'이 'biodiesel'에 걸리지 않음), 한글은 부분 일치."""
+    n = 0
+    low = blob.lower()
+    for w in kws:
+        wl = w.lower()
+        if wl.isascii():
+            rx = _ASCII_KW_RE_CACHE.get(wl)
+            if rx is None:
+                rx = re.compile(r"(?<![a-z0-9])" + re.escape(wl) + r"(?:s|es)?(?![a-z0-9])")
+                _ASCII_KW_RE_CACHE[wl] = rx
+            if rx.search(low):
+                n += 1
+        elif wl in low:
+            n += 1
+    return n
+
+
 def _match_articles(var_code: str, signals: pd.DataFrame) -> list[dict]:
-    """변인 코드 ↔ 최근 기사 키워드 매칭 — 별점 재료."""
+    """변인 코드 ↔ 최근 기사 키워드 매칭 — 별점 재료 (A-284: 매체·지정학 기사는 기사 단위로 매칭).
+
+    매체 노트(여러 기사가 ' ⋅ '로 이어짐)는 기사별로 나눠 변인 키워드에 맞는 기사만 고른다 —
+    종전에는 노트 전체를 한 덩어리로 봐서 첫 기사(무관)가 제목으로 나갔다. 정렬: 적중 수 → 매체 기사 우선 → 최신.
+    """
     kws = _driver_keywords(var_code)
     if not kws or signals.empty:
         return []
     out = []
     for _, row in signals.iterrows():
-        blob = f"{row.get('indicator', '')} {row.get('note', '')}".lower()
-        hits = sum(1 for w in kws if w in blob)
-        if hits:
-            out.append({"hits": hits, "note": str(row.get("note", ""))[:160],
-                        "indicator": row.get("indicator", ""),
-                        "source": row.get("source_name", ""),
-                        "url": _first_url(row.get("note", ""))})
-    return sorted(out, key=lambda d: -d["hits"])[:3]
+        ind = str(row.get("indicator", ""))
+        note = str(row.get("note", ""))
+        d = row.get("date")
+        d_key = pd.Timestamp(d).strftime("%Y-%m-%d") if pd.notna(d) else ""
+        if ind.startswith("RSS_"):
+            for it in _media_items(note):
+                blob = f"{it.get('ko', '')} {it['title']} {it.get('desc', '')}"
+                hits = _kw_hits(kws, blob)
+                if hits:
+                    out.append({"hits": hits, "media": 1, "date": d_key,
+                                "note": f"{it['title']} — {it.get('desc', '')}"[:400],
+                                "ko": it.get("ko", ""), "title": it["title"],
+                                "indicator": ind, "source": row.get("source_name", ""), "url": it.get("url")})
+        else:
+            hits = _kw_hits(kws, f"{ind} {note}")
+            if hits:
+                out.append({"hits": hits, "media": 0, "date": d_key, "note": note[:400],
+                            "ko": _ko_of(note), "title": "", "indicator": ind,
+                            "source": row.get("source_name", ""), "url": _first_url(note)})
+    return sorted(out, key=lambda x: (-x["hits"], -x["media"], x["date"]), reverse=False)[:3]
+
+
+_KO_SEP = " ‖ "        # A-284: 다이제스트가 저장한 한국어 헤드라인 구분자 — `ko ‖ 원제 — 요약 (url)`
+
+
+def _split_ko(text: str) -> tuple[str, str]:
+    """`ko ‖ 나머지` → (ko, 나머지). 구분자 없으면 ('', text)."""
+    t = str(text or "")
+    if _KO_SEP in t:
+        ko, rest = t.split(_KO_SEP, 1)
+        return ko.strip(), rest.strip()
+    return "", t
+
+
+def _ko_of(note: str) -> str:
+    """프록시(산문) 노트의 한국어 헤드라인 — 접두 태그 뒤 `ko ‖`가 있을 때만."""
+    body = _PREFIX_TAG_RE.sub("", str(note or ""))
+    return _split_ko(body)[0]
 
 
 # ── SVG 생성 (서버측 — JS 0) ─────────────────────────────────────────────────
@@ -678,6 +994,77 @@ def _signals_around(center: pd.Timestamp, window_days: int = 2) -> pd.DataFrame:
     except Exception as e:                                    # noqa: BLE001 — 비치명
         print(f"[경고] 신호 아카이브 구간 조회 실패(비치명): {e}")
         return pd.DataFrame()
+
+
+def _proxy_value_changed(row: pd.Series, archive: pd.DataFrame) -> bool:
+    """매일 반복되는 검색 요약 행(수출세·바이오디젤 등)이 **직전 관측과 값이 달라졌는지** 판정.
+
+    같은 지표의 직전 행이 없으면(첫 관측) 변경으로 본다. 값 파싱 불가는 note 본문 비교로 대체.
+    """
+    ind = str(row.get("indicator", ""))
+    d = row.get("date")
+    prev = archive[(archive["indicator"].astype(str) == ind) & (archive["date"] < d)].sort_values("date")
+    if prev.empty:
+        return True
+    p = prev.iloc[-1]
+    try:
+        return float(str(row.get("value")).replace(",", "")) != float(str(p.get("value")).replace(",", ""))
+    except (TypeError, ValueError):
+        return _PREFIX_TAG_RE.sub("", str(row.get("note", "")))[:200] != _PREFIX_TAG_RE.sub("", str(p.get("note", "")))[:200]
+
+
+def _pick_signals_around(center: pd.Timestamp, kws: list[str], limit: int = 2,
+                         window_days: int = 2) -> list[dict]:
+    """변동일 '당시 신호' 선택 규칙 (A-284 · 검증 1 ②).
+
+    (a) 매체·지정학 기사 우선 (b) 검색 요약 행은 값이 직전 관측과 달라진 경우만 (c) 변인 키워드와 겹치는 행 우선.
+    반환: [{title, url, source, indicator, date, media}] 최대 limit건. 아카이브 밖은 빈 목록.
+    """
+    sig = _signals_around(center, window_days)
+    if sig.empty:
+        return []
+    try:
+        archive = pd.read_csv(SIGNALS_CSV)
+        archive["date"] = pd.to_datetime(archive["date"], errors="coerce")
+    except Exception:                                         # noqa: BLE001
+        archive = sig
+    kws_l = [k.lower() for k in kws]
+    cands: list[dict] = []
+    for _, row in sig.iterrows():
+        ind = str(row.get("indicator", ""))
+        note = str(row.get("note", ""))
+        is_media = ind.startswith("RSS_")
+        d_key = pd.Timestamp(row.get("date")).strftime("%Y-%m-%d") if pd.notna(row.get("date")) else ""
+        if is_media:
+            for it in _media_items(note)[:3]:
+                hits = _kw_hits(kws_l, f"{it.get('ko', '')} {it['title']} {it.get('desc', '')}")
+                cands.append({"title": it.get("ko") or it["title"][:110], "orig": it["title"] if it.get("ko") else "",
+                              "url": it.get("url"), "source": row.get("source_name", ""), "indicator": ind,
+                              "date": d_key, "media": 1, "hits": hits,
+                              "rank": (0 if hits else 1, -hits)})
+        else:
+            if not _proxy_value_changed(row, archive):
+                continue                                      # 매일 반복되는 동일 요약은 '당시 신호'가 아님
+            hits = _kw_hits(kws_l, f"{ind} {note}")
+            geo = ind in _GEO_CODES
+            cands.append({"title": _media_title(note, ind, n=110), "orig": "", "url": _first_url(note),
+                          "source": row.get("source_name", ""), "indicator": ind, "date": d_key,
+                          "media": 1 if geo else 0, "hits": hits,
+                          "rank": (0 if hits else 1, -hits)})
+    # 정렬: 키워드 적중 → 매체·지정학 → 적중 수 → 날짜 근접
+    cands.sort(key=lambda c: (c["rank"][0], -c["media"], c["rank"][1],
+                              abs((pd.Timestamp(c["date"]) - center).days) if c["date"] else 9))
+    out: list[dict] = []
+    seen: set[str] = set()
+    for c in cands:
+        key = _norm_title(c["title"])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(c)
+        if len(out) >= limit:
+            break
+    return out
 
 
 def _svg_price_chart(kpi: CloseKpi, rng: tuple[float, float, float] | None,
@@ -977,25 +1364,23 @@ def _stars(n: int) -> str:
     return "★" * max(1, min(3, n))
 
 
-def _inflection_block(points: list[dict], importance_df: pd.DataFrame) -> str:
-    """주요 변동일 목록 — 날짜·변화율·당시 신호·변인 상태·온톨로지 체인 (W-C · R2).
+def _inflection_block(points: list[dict], importance_df: pd.DataFrame,
+                      frames: dict[str, pd.DataFrame] | None = None) -> str:
+    """주요 변동일 목록 — 날짜·변화율·당시 신호·변인 상태·온톨로지 체인 (W-C · R2 · A-284 재설계).
 
-    신호 아카이브(2026-08-17~) 이전 날짜와 분석 데이터 미가용 상황은 정직 강등.
+    A-284(검증 1): 변인 편차는 **그 날짜 기준** 원시 계열에서 계산(`_display_z_at`) — 구 코드는 분석창이
+    2025-12에 끝나는 통합 표를 조회해 2026년 변동일 4건이 전부 같은 값을 보였다. '당시 신호'는
+    매일 반복되는 검색 요약 대신 매체·지정학 기사와 값이 바뀐 요약만 고른다(`_pick_signals_around`).
+    신호 아카이브(2026-08-17~) 이전 날짜와 원시 계열 미가용 상황은 정직 강등.
     """
     if not points:
         return ""
     top_codes = ([str(r["변수"]) for _, r in importance_df.head(3).iterrows()]
                  if not importance_df.empty else [])
-    analysis = None
-    try:
-        from src.forecasting.variable_importance_g1 import _load_g1_feature_mart
-        analysis, _lv, _t = _load_g1_feature_mart()
-    except Exception:                                         # noqa: BLE001 — 비치명
-        analysis = None
-    try:
-        from src.forecasting.analogue_g1 import _resolve_z_column
-    except Exception:                                         # noqa: BLE001
-        _resolve_z_column = None                              # type: ignore[assignment]
+    kws: list[str] = []
+    for c in top_codes:
+        kws.extend(_driver_keywords(c))
+    kws = list(dict.fromkeys(kws))
 
     cards = []
     for p in points:
@@ -1006,43 +1391,43 @@ def _inflection_block(points: list[dict], importance_df: pd.DataFrame) -> str:
         rows: list[str] = [
             f'<li>일간 변화율 <span class="chg {cls} num">{arrow} {chg:+.2f}%</span> · '
             f'종가 <span class="num">{p["close"]:.2f}</span> 센트/파운드</li>']
-        # ① 당시 수집 신호(±2일)
-        sig = _signals_around(d)
-        if not sig.empty:
-            shown = 0
-            for _, row in sig.iterrows():
-                if shown >= 2:
-                    break
-                note = str(row.get("note", ""))
-                title = _esc(_media_title(note, str(row.get("indicator", "")), n=90))
-                url = _first_url(note)
-                head = (f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>'
-                        if url else title)
-                rows.append(f'<li>당시 신호: {head} '
-                            f'<span class="src">{_esc(_source_ko(row.get("source_name", "")))}</span></li>')
-                chain = _ONTOLOGY_CHAINS.get(str(row.get("indicator", "")))
-                if chain and shown == 0:
+        # ① 당시 수집 신호(±2일) — 매체·지정학 우선 · 값이 바뀐 요약만 · 변인 키워드 우선
+        picks = _pick_signals_around(d, kws)
+        if picks:
+            for k, c in enumerate(picks):
+                title = _esc(c["title"])
+                head = (f'<a href="{_esc(c["url"])}" target="_blank" rel="noopener">{title}</a>'
+                        if c.get("url") else title)
+                orig = f' <span class="src">({_esc(c["orig"][:80])})</span>' if c.get("orig") else ""
+                rows.append(f'<li>당시 신호: {head}{orig} '
+                            f'<span class="src">{_esc(_source_ko(c["source"]))} · {c["date"][5:]}</span></li>')
+                chain = _ONTOLOGY_CHAINS.get(str(c["indicator"]))
+                if chain and k == 0:
                     rows.append(f'<li>연결 경로: {_esc(" → ".join(chain))}</li>')
-                shown += 1
+        elif not _signals_around(d).empty:
+            rows.append('<li><span class="src">당시 신호: 매체 기사 없음 · 검색 요약은 직전과 동일(변동 없음) '
+                        '— 변인 상태만 표시</span></li>')
         else:
             rows.append('<li><span class="src">당시 수집 신호 없음(신호 아카이브는 '
                         '2026-08-17부터) — 변인 상태만 표시</span></li>')
-        # ② 당시 변인 표준화 지수(분석 데이터 시점 조회)
+        # ② 당시 변인의 평소 대비 편차 — 그 날짜 기준 원시 계열(분석용 통합 표 조회 아님)
         z_parts: list[str] = []
-        if analysis is not None and _resolve_z_column is not None and top_codes:
-            idx = analysis.index[analysis.index <= d]
-            if len(idx):
-                row_z = analysis.loc[idx[-1]]
-                for c in top_codes:
-                    zc = _resolve_z_column(analysis.columns, c)
-                    if zc is not None and pd.notna(row_z.get(zc)):
-                        base = c.split("__")[0]
-                        z_parts.append(f'{_esc(_label_ko(base))} '
-                                       f'{float(row_z[zc]):+.1f}')
+        miss_parts: list[str] = []
+        if frames and top_codes:
+            for c in top_codes:
+                z, why = _display_z_at(frames, c, d)
+                base = c.split("__")[0]
+                if z is not None:
+                    z_parts.append(f'{_esc(_label_ko(base))} {z:+.1f}'
+                                   + (f' <span class="src">({why[5:]} 관측)</span>' if why[:10] != d.strftime("%Y-%m-%d") else ""))
+                else:
+                    miss_parts.append(f'{_esc(_label_ko(base))}: {_esc(why)}')
         if z_parts:
-            rows.append(f'<li>당시 상위 변인의 평소 대비 편차: {" · ".join(z_parts)}</li>')
-        elif analysis is None:
-            rows.append('<li><span class="src">변인 상태: 분석 데이터 미가용 — CI 실행에서 '
+            rows.append(f'<li>당시 상위 변인의 평소 대비 편차(그 날짜 기준 90일 표준화): {" · ".join(z_parts)}</li>')
+        if miss_parts:
+            rows.append(f'<li><span class="src">{" · ".join(miss_parts)}</span></li>')
+        if not z_parts and not miss_parts:
+            rows.append('<li><span class="src">변인 상태: 원시 계열 미가용 — CI 실행에서 '
                         '자동 표시</span></li>')
         cards.append(
             f'<details class="mech"><summary>{p["no"]} {d.strftime("%Y-%m-%d")} '
@@ -1050,24 +1435,33 @@ def _inflection_block(points: list[dict], importance_df: pd.DataFrame) -> str:
             f'<ul style="margin:6px 0 0 16px;line-height:1.7">{"".join(rows)}</ul></details>')
     return ('<div style="margin-top:8px"><b style="font-size:13px">주요 변동일 '
             f'{len(points)}건</b> <span class="cap">— 차트의 번호 표시와 대응 · 클릭 시 '
-            '당시 신호·변인 상태 표시(과거 사실 기술)</span>'
+            '당시 신호·변인 상태 표시(과거 사실 기술 · 편차는 그 날짜 기준 원시 계열로 계산)</span>'
             + "".join(cards) + "</div>")
 
 
-def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
+def _analogue_block(breach: list[dict], importance_df: pd.DataFrame,
+                    frames: dict[str, pd.DataFrame] | None = None) -> str:
     """과거 유사국면 실측 참조 블록 — 경보 변수 우선, 중요도 상위로 보충.
 
     A-191: 과거 관측의 요약까지만 — 전망·확률 주장 금지. mart 미가용 시 정직 강등.
+    A-284: '현재 편차'와 버킷 선택의 현재값은 원시 계열의 오늘 기준(`_display_z_at`)으로, 유사일 표본은 분석창 유지.
+    각 카드에 변수→대두유 연결 설명 한 줄, 배지는 날짜 농축 AND 변수–사례 인과 관련일 때만.
     """
     try:
         from src.forecasting.analogue_g1 import (badge_name, build_analogue_context,
                                                  case_narrative_lines,
-                                                 format_result_line,
-                                                 representative_badges)
+                                                 format_result_line, no_badge_line,
+                                                 representative_badges, variable_link_line)
         alert_codes = [str(a.get("변수", "")) for a in breach]
         top_codes = ([str(r["변수"]) for _, r in importance_df.head(4).iterrows()]
                      if not importance_df.empty else [])
-        results = build_analogue_context(alert_codes, top_codes)
+        cz_map: dict[str, float] = {}
+        if frames:
+            for c in alert_codes + top_codes:
+                z, _why = _display_z_at(frames, c)
+                if z is not None:
+                    cz_map[str(c).split("__")[0]] = z
+        results = build_analogue_context(alert_codes, top_codes, current_z_map=cz_map)
     except Exception as e:                                    # noqa: BLE001 — 비치명
         print(f"[정보] 유사국면 블록 생성 불가(비치명): {type(e).__name__}: {e}")
         results = []
@@ -1085,7 +1479,9 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
         lines = "".join(f"<li>{_esc(format_result_line(r))}</li>"
                         for r in sorted(rs, key=lambda x: x.horizon))
         badges = representative_badges(rs)          # A-270: 20일 지평 대표·밀도 검사 통과분만
-        badge_parts = []
+        badge_parts = [f'<div class="src">{_esc(variable_link_line(var))}</div>']   # A-284: 변수→대두유 연결
+        if not badges:
+            badge_parts.append(f'<div class="src">{_esc(no_badge_line(rs))}</div>')
         if badges:
             badge_parts.append(f'<div class="src">겹치는 위기 사례(1개월 기준·충분히 겹친 경우만): '
                                f'{_esc(" · ".join(badges))}</div>')
@@ -1113,7 +1509,11 @@ def _analogue_block(breach: list[dict], importance_df: pd.DataFrame) -> str:
       <b>실측</b> 가격 변화를 집계함(2010~ 전 구간). 유사일 사이에 최소 간격을 두어
       중복 시기를 제거하고, 최근 60거래일은 집계에서 제외함(전방 구간 겹침 방지).
       유사 시기가 8회 미만이면 산출을 보류함. <b>통계 검정 없음 — 기술 서술</b>이며,
-      감시 창(90일)은 기준 기간 확정 전 잠정값임.</details>"""
+      감시 창(90일)은 기준 기간 확정 전 잠정값임.
+      <b>현재 편차</b>는 원시 수집 계열의 최신 관측 기준(오늘)으로 계산하고, 과거 유사일 표본은
+      분석 기간(2010~2025년 말)에서 찾음 — 표시와 추정의 기준을 분리함.
+      <b>겹치는 위기 사례</b>는 유사일이 사례 기간에 몰려 있고(밀도 검사) <b>그 변수가 사례와 인과적으로
+      연결된 경우</b>에만 표시함 — 날짜만 겹친 사례는 '연결 근거 없음'으로 밝힘.</details>"""
     return (f'<div class="signals">{"".join(cards)}</div>' + mech
             + '<div class="cap" style="margin-top:8px">⚠️ 위 수치는 <b>과거 관측의 '
               '요약이며 향후 전망·확률 주장이 아님</b>. 유사 상황에서 어떤 변수를 '
@@ -1220,6 +1620,20 @@ def _chain_html(ind: str) -> str:
             f'<div class="meta">검증된 연결만 변인 분석에 반영함 · 근거 발췌 보존</div></details>')
 
 
+def _article_head_html(it: dict) -> tuple[str, str]:
+    """기사 항목 → (제목 HTML, 요약 HTML). 한국어 헤드라인이 있으면 제목으로, 원제는 보조줄(A-284 · 검증 4)."""
+    url = it.get("url") or ""
+    if it.get("ko"):
+        title = _esc(str(it["ko"])[:80])
+        sub = f'<div class="src">{_esc(it["title"][:120])}</div>'
+    else:
+        title = _esc(it["title"][:120])
+        sub = ""
+    head = (f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>' if url else title) + sub
+    desc_html = f'<div class="src">{_esc(it["desc"][:200])}</div>' if it.get("desc") else ""
+    return head, desc_html
+
+
 def _geo_cards_html(signals: pd.DataFrame, seen_titles: set[str] | None = None) -> str:
     """A-273: 지정학 동향 카드군 — 검색 요약 2종(최신 1건씩) + 통신사 지정학 기사 최대 2건(채널 간 제목 중복 제거)."""
     if signals.empty or "indicator" not in signals.columns:
@@ -1255,12 +1669,9 @@ def _geo_cards_html(signals: pd.DataFrame, seen_titles: set[str] | None = None) 
             continue
         it0 = items[0]
         seen_titles.add(_norm_title(it0["title"]))
-        url = it0["url"]
-        title = _esc(it0["title"][:120])
-        desc_html = f'<div class="src">{_esc(it0["desc"][:160])}</div>' if it0.get("desc") else ""
+        head, desc_html = _article_head_html(it0)              # A-284: 한국어 헤드라인 + 원제 보조줄
         more = f' <span class="src">외 {len(items) - 1}건</span>' if len(items) > 1 else ""
-        head = ((f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>' if url else title)
-                + more + desc_html)
+        head = head + more + desc_html
         when = pd.Timestamp(row.get("date")).strftime("%m-%d") if pd.notna(row.get("date")) else ""
         cards.append(f"""
     <div class="card sig-item">
@@ -1299,6 +1710,7 @@ def build_daily_brief(
     rng = _reference_range_usclb(full_close) if len(full_close) else None
     band_mt = _landed_band()
     signals = _load_signals()
+    signals14 = _load_signals(14)                             # A-284: 변인–기사 연결 창(뉴스 블록은 5일 유지)
 
     breach = [a for a in alerts if "🚨" in str(a.get("상태", ""))]
     watch = [a for a in alerts if "⚠️" in str(a.get("상태", "")) or "❓" in str(a.get("상태", ""))]
@@ -1421,25 +1833,32 @@ def build_daily_brief(
                            else ""))
         _mag = abs(r) if (ranking_basis == "pearson_fallback" and isinstance(r, float)) else (abs(coef) if isinstance(coef, float) else 0.0)
         width = int(_mag / max_abs * 100) if (max_abs and max_abs == max_abs) else 10   # NaN 가드(A-271)
-        arts = _match_articles(code, signals)
+        arts = _match_articles(code, signals14)               # A-284: 창 5→14일 · 기사 단위 매칭 · 지정학 카드 포함
         if arts:
             a0 = arts[0]
-            title = _esc(_media_title(a0["note"], str(a0["indicator"]), n=70))
-            link = (f'<a href="{_esc(a0["url"])}" target="_blank" rel="noopener">{title}…</a>'
-                    if a0["url"] else f"{title}…")
+            head_txt = a0.get("ko") or (a0["title"] if a0.get("media") else _media_title(a0["note"], str(a0["indicator"]), n=70))
+            title = _esc(str(head_txt)[:80])
+            link = (f'<a href="{_esc(a0["url"])}" target="_blank" rel="noopener">{title}</a>'
+                    if a0["url"] else title)
+            orig = (f' <span class="src">({_esc(a0["title"][:70])})</span>'
+                    if a0.get("ko") and a0.get("title") else "")
+            when = f" · {a0['date'][5:]}" if a0.get("date") else ""
             news = (f'<div class="news"><span class="stars">{_stars(len(arts))}</span> '
-                    f'{link} · {_esc(_source_ko(a0["source"]))}</div>')
+                    f'{link}{orig} · {_esc(_source_ko(a0["source"]))}{when}</div>')
         else:
-            news = '<div class="news">관련 기사 연결 없음</div>'
+            news = '<div class="news">최근 14일 기사 중 이 변인과 연결된 기사 없음(정량 신호만 반영)</div>'
+        link_line = f'<div class="news">{_esc(_driver_link_line(code))}</div>'   # A-284: 하이브리드 연결 근거
         drv_rows.append(f"""
       <div class="drv"><span class="rank num">{i}</span><div>
         <span class="name">{_esc(label)}</span>{direction}
         <div class="barrow"><div class="bar" style="width:{max(width, 8)}%"></div>
           <span class="shap num">영향 크기 {coef:+.4f} · 함께 움직인 정도 {r:+.3f}</span></div>
-        {news}</div></div>""")
-    drivers_cap = ("통계 선별에서 유의한 변인 없음 — 상관 기준 참고 순위 · 별점 = 최근 기사와의 연관 정도 · 제목 클릭 시 원문"
+        {news}{link_line}</div></div>""")
+    drivers_cap = ("통계 선별에서 유의한 변인 없음 — 상관 기준 참고 순위 · 별점 = 최근 14일 기사와의 연관 정도 · 제목 클릭 시 원문 · "
+                   "연결 근거 = 온톨로지 인과 경로(정량+비정형 하이브리드)"
                    if ranking_basis == "pearson_fallback"
-                   else "별점 = 최근 기사와 변인의 연관 정도 (★~★★★) · 제목 클릭 시 원문")
+                   else "별점 = 최근 14일 기사와 변인의 연관 정도 (★~★★★) · 제목 클릭 시 원문 · "
+                        "연결 근거 = 온톨로지 인과 경로(정량+비정형 하이브리드)")
     drivers_html = ("".join(drv_rows) if drv_rows
                     else '<p class="cap">변인 중요도 산출 결과가 없습니다 — 미수집.</p>')
 
@@ -1447,7 +1866,7 @@ def build_daily_brief(
     if kpi:
         inflections = _inflection_points(kpi)
         chart_svg = _svg_price_chart(kpi, rng, marks=inflections)
-        inflection_html = _inflection_block(inflections, importance_df)
+        inflection_html = _inflection_block(inflections, importance_df, frames)   # A-284: 날짜 기준 편차
         chart_start = kpi.series["price_date"].iloc[0].strftime("%Y-%m-%d")
         chart_cap = (f"실적: {chart_start} ~ {kpi.last_date} ({len(kpi.series)}거래일 · "
                      f"시카고 거래소 실측) · 참고 범위: 기준일 이후 약 90일(60거래일)")
@@ -1503,7 +1922,7 @@ def build_daily_brief(
         ("유의", "미수집 항목은 경보 불가 상태이므로 '정상'과 구분해 표기함.")])
 
     # ── 과거 유사국면 실측 참조 (D-051 — G1 재정립의 본질 블록) ──
-    analogue_html = _analogue_block(breach, importance_df)
+    analogue_html = _analogue_block(breach, importance_df, frames)   # A-284: 오늘 기준 편차·인과 필터
 
     # ── 지표 스냅샷 ──
     snap_rows = []
@@ -1563,17 +1982,15 @@ def build_daily_brief(
             seen_titles.add(_norm_title(items[0]["title"]))
             it0 = items[0]
             url = it0["url"]
-            title = _esc(it0["title"][:120])
-            desc_html = f'<div class="src">{_esc(it0["desc"][:160])}</div>' if it0.get("desc") else ""
+            head, desc_html = _article_head_html(it0)          # A-284: 한국어 헤드라인 + 원제 보조줄
             more = f' <span class="src">외 {len(items) - 1}건</span>' if len(items) > 1 else ""
-            head = ((f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>' if url else title)
-                    + more + desc_html)
+            head = head + more + desc_html
             n_media += 1
             seen_ind.add(ind)
         else:
             seen_ind.add(ind)
             url = _first_url(note)
-            llm = _llm_summary(note, ind) if not _parse_kv(note) else None
+            llm = _llm_summary(note, ind) if (not _parse_kv(note) and not _ko_of(note)) else None
             title = _esc(llm or _media_title(note, ind))
             head = (f'<a href="{_esc(url)}" target="_blank" rel="noopener">{title}</a>'
                     if url else title)
@@ -1637,8 +2054,12 @@ def build_daily_brief(
             art_html = ""
             for it in items:                                    # A-269: 기사별(제목·요약·원문) — 제목 뭉개기 해소
                 link = (f' <a href="{_esc(it["url"])}" target="_blank" rel="noopener">원문</a>' if it.get("url") else "")
-                desc = f'<div class="src">{_esc(it["desc"][:160])}</div>' if it.get("desc") else ""
-                art_html += f'<p>{_esc(it["title"][:140])}{link}</p>{desc}'
+                desc = f'<div class="src">{_esc(it["desc"][:200])}</div>' if it.get("desc") else ""
+                if it.get("ko"):                                # A-284: 한국어 헤드라인 + 원제 보조줄
+                    art_html += (f'<p>{_esc(it["ko"][:80])}{link}</p>'
+                                 f'<div class="src">{_esc(it["title"][:140])}</div>{desc}')
+                else:
+                    art_html += f'<p>{_esc(it["title"][:140])}{link}</p>{desc}'
             when = pd.Timestamp(row.get("date")).strftime("%m-%d") if pd.notna(row.get("date")) else ""
             appx_cards.append(f"""
     <div class="card appx-item"><div class="org">{_esc(org)} <span class="src">{when}</span></div>

@@ -45,6 +45,24 @@ class CaseProfile:
     price_fact: str     # 가격 반응 실측
     similarity: str     # 현재 국면과의 구조 유사점
     difference: str     # 현재 국면과의 구조 차이점
+    # A-284(검증 3): 사례와 인과적으로 연결되는 변수 접두 — 배지는 날짜 농축 AND 변수 관련성일 때만.
+    #   빈 튜플은 '연결 근거 미등재'(어떤 변수에도 배지를 주지 않음 — 정직 강등).
+    related: tuple[str, ...] = ()
+
+
+def case_related_to(name: str, var_code: str) -> bool:
+    """변수 코드가 사례의 관련 변수(접두·정확 일치)에 속하는가 — 인과 필터(검증 3)."""
+    p = CASE_PROFILES.get(name)
+    if p is None or not p.related:
+        return False
+    up = str(var_code).upper().split("__")[0]
+    if up.startswith("FEAT_"):
+        up = up[5:]
+    for r in p.related:
+        k = r.upper()
+        if up == k or up.startswith(k + "_") or up.startswith(k) and k.endswith("_") or f"_{k}_" in f"_{up}_":
+            return True
+    return False
 
 
 CASE_PROFILES: dict[str, CaseProfile] = {
@@ -56,7 +74,8 @@ CASE_PROFILES: dict[str, CaseProfile] = {
         "저점 38.0 → 고점 57.4 센트/파운드, 약 9개월 +51% 실측. ONI 전환이 가격에 "
         "2~3개월 선행함.",
         "기후 취약성이 깔린 상태에서 단일 정책 이벤트가 추가 충격으로 얹히는 중첩 구조.",
-        "당시 파급은 곡물發 대체 수요 경로였고, 물류(운임·해협) 요인의 비중은 크지 않았음."),
+        "당시 파급은 곡물發 대체 수요 경로였고, 물류(운임·해협) 요인의 비중은 크지 않았음.",
+        related=('ENSO', 'ONI', 'TE_WHEAT', 'TE_CORN', 'TE_SOYBEANS', 'WASDE', 'PSD', 'TE_SUNFLOWER_OIL', 'UKRAINE', 'RUSSIA', 'TE_BDI', 'BDI')),
     "사례 ② · 2012 미국 대가뭄": CaseProfile(
         "2012-05-01", "2013-08-31",
         "미국 중서부 대가뭄(예외적 가뭄 등급 면적 35%) — 7월 WASDE가 미국 대두 생산 "
@@ -65,7 +84,8 @@ CASE_PROFILES: dict[str, CaseProfile] = {
         "8개월 +13.6% 뒤 9월 한 달 만에 되돌림 실측 — 단일 공급 충격의 가역성 사례.",
         "발표 이벤트(WASDE) 전후로 가격이 빠르게 재평가되는 패턴.",
         "당시는 운임(BDI) 저수준·수입 수요 부진의 삼중 부정 구조 — 고점이 지속되지 "
-        "못한 조건이 겹쳐 있었음."),
+        "못한 조건이 겹쳐 있었음.",
+        related=('ENSO', 'ONI', 'T2M', 'PRECTOTCORR', 'PRECIPITATION', 'GWET', 'SOIL_', 'USDM', 'DROUGHT', 'CROP_CONDITION', 'SOYBEAN_PROD', 'WASDE', 'PSD_SOY', 'WASDE_CONSENSUS', 'FCST_')),
     "사례 ③ · 2021-22 복합 위기": CaseProfile(
         "2020-08-01", "2022-06-30",
         "2년 연속 라니냐(아르헨 감산) + 러시아-우크라이나 전쟁(해바라기유 공급 45~50% "
@@ -79,7 +99,8 @@ CASE_PROFILES: dict[str, CaseProfile] = {
         "국면과 동형임(당시는 COVID·흑해發 경로 차질).",
         "당시는 수요 측 충격(바이오디젤·인도 수입)이 동반됨 — 재평가 기록에서 "
         "유사도 7/10로 하향(우크라이나 요인 제외), 2024-25 미·중 관세 사례가 "
-        "9/10로 더 유사 판정."),
+        "9/10로 더 유사 판정.",
+        related=('TE_BDI', 'BDI', 'BDI_ZSCORE', 'GPR', 'HORMUZ', 'SUEZ', 'AIS_', 'BCAA', 'BCTI', 'TE_BRENT_CRUDE_OIL', 'TE_WTI_CRUDE_OIL', 'TE_HEATING_OIL', 'TE_GASOLINE', 'TE_NATURAL_GAS', 'INDIA', 'BIODIESEL', 'UKRAINE', 'TE_SUNFLOWER_OIL', 'TE_PALM_OIL', 'CPO', 'US_IRAN', 'RUSSIA_EU', 'GEOINTEL', 'SBO_STRAIT', 'VIXCLS')),
     "사례 ④ · 2022-23 아르헨 가뭄": CaseProfile(
         "2022-12-01", "2023-04-30",
         "3년 연속 라니냐로 아르헨티나 대두 생산 −42%(4,340만→2,500만 톤), "
@@ -89,7 +110,8 @@ CASE_PROFILES: dict[str, CaseProfile] = {
         "충격 크기를 결정함.",
         "주요 원산지 한 곳의 충격이 발생해도 대체 원산지 물량이 완충하는 구조 — 현재도 "
         "브라질 생산이 역대 최고 수준이라는 점이 같은 완충 요인임.",
-        "당시는 기후 단일 요인 — 물류·정책 충격이 결합하지 않았음."),
+        "당시는 기후 단일 요인 — 물류·정책 충격이 결합하지 않았음.",
+        related=('ENSO', 'ONI', 'ARG', 'ARS_USD', 'DEXBZUS', 'FX_BRL', 'PSD_SOY', 'PSD_', 'SOYBEAN_PROD', 'WASDE_SBO', 'T2M', 'PRECTOTCORR', 'GWET', 'KCS', 'CROP_CONDITION')),
 }
 
 # 하위 호환: 창(window)만 쓰는 기존 경로용 파생 뷰
@@ -140,6 +162,7 @@ class AnalogueResult:
     case_badges: list[str] = field(default_factory=list)
     relax_step: int = 0               # 0=십분위 · 1=오분위(완화 사용 표기)
     guard_note: str = ""              # ""=정상 · 그 외 = 산출 보류 사유
+    date_only_badges: list[str] = field(default_factory=list)   # A-284: 날짜만 겹친 사례(연결 근거 없음)
 
 
 def _resolve_z_column(columns: pd.Index, code: str) -> str | None:
@@ -158,12 +181,17 @@ def _resolve_z_column(columns: pd.Index, code: str) -> str | None:
 def find_analogue_days_quantile(
     z_series: pd.Series, bins: int = ANALOGUE_QUANTILE_BINS,
     exclude_recent: int = EXCLUDE_RECENT_TRADING_DAYS,
+    current: float | None = None,
 ) -> tuple[pd.DatetimeIndex, float]:
-    """현재 z와 동일 분위 버킷의 과거 거래일 반환 (직전 exclude_recent 거래일 제외)."""
+    """현재 z와 동일 분위 버킷의 과거 거래일 반환 (직전 exclude_recent 거래일 제외).
+
+    A-284: `current`를 주면 그 값을 현재 편차로 쓴다 — 분석창(2025-12 종료) 마지막 행이 아니라
+    **원시 계열의 오늘 기준** 편차로 버킷을 고른다(표시·버킷 선택의 시점 분리 해소). 미지정은 종전 동작.
+    """
     z = z_series.dropna()
     if len(z) < bins * 3:
         return pd.DatetimeIndex([]), float("nan")
-    current = float(z.iloc[-1])
+    current = float(z.iloc[-1]) if (current is None or current != current) else float(current)
     # 버킷 경계는 전체 관측 분포 기준(현재 포함 — 순위 판정일 뿐 전방 정보 아님)
     edges = np.quantile(z.values, np.linspace(0, 1, bins + 1))
     edges[0], edges[-1] = -np.inf, np.inf
@@ -199,12 +227,15 @@ BADGE_ENRICHMENT = 1.5         # 창 안 비중이 표본 기준 비중(창 길�
 
 
 def case_badges_for(days: pd.DatetimeIndex,
-                    sample_index: pd.DatetimeIndex | None = None) -> list[str]:
+                    sample_index: pd.DatetimeIndex | None = None,
+                    var_code: str | None = None) -> list[str]:
     """위기 사례 배지 — A-270: 존재 검사(창 안 1일)에서 **밀도 검사**로 교체.
 
     구 규칙은 2010~2025에 고르게 퍼진 에피소드면 4사례 창(전체의 ~34%)에 전부 걸려 배지가 정보량 0이었다.
     신 규칙: 창 안 에피소드 ≥ MIN_BADGE_EPISODES **그리고** 창 안 비중이 창의 표본 비중 × BADGE_ENRICHMENT 이상.
     반환 형식 '이름 (n회)' — 서사 조회는 `badge_name()`으로 이름만 추출.
+    A-284(검증 3): `var_code`를 주면 **날짜 농축 AND 변수–사례 인과 관련(`CaseProfile.related`)**일 때만 부여 —
+    난방유가 '아르헨 가뭄' 사례에 붙던 오연결 차단. 날짜만 겹친 사례는 `date_only_case_badges()`로 별도 조회.
     """
     if len(days) == 0:
         return []
@@ -219,8 +250,18 @@ def case_badges_for(days: pd.DatetimeIndex,
         base_share = max((min(e_ts, sample_index.max()) - max(s_ts, sample_index.min())).days, 0) / span
         share = inside / total
         if inside >= MIN_BADGE_EPISODES and base_share > 0 and share >= base_share * BADGE_ENRICHMENT:
+            if var_code is not None and not case_related_to(name, var_code):
+                continue
             badges.append(f"{name} ({inside}회)")
     return badges
+
+
+def date_only_case_badges(days: pd.DatetimeIndex, sample_index: pd.DatetimeIndex | None,
+                          var_code: str) -> list[str]:
+    """날짜 농축은 통과했으나 변수–사례 연결 근거가 없어 **제외된** 사례 — 화면에 '연결 근거 없음'으로 정직 표기."""
+    all_b = case_badges_for(days, sample_index, var_code=None)
+    kept = set(case_badges_for(days, sample_index, var_code=var_code))
+    return [b for b in all_b if b not in kept]
 
 
 def badge_name(badge: str) -> str:
@@ -256,7 +297,8 @@ def _z90_from_level(level: pd.Series) -> pd.Series:
 
 def _analogue_for_var(analysis: pd.DataFrame, code: str,
                       horizons: tuple[int, ...],
-                      levels_all: pd.DataFrame | None = None) -> list[AnalogueResult]:
+                      levels_all: pd.DataFrame | None = None,
+                      current_z: float | None = None) -> list[AnalogueResult]:
     z_col = _resolve_z_column(analysis.columns, code)
     base = code.split("__")[0]
     if z_col is None and levels_all is not None and not levels_all.empty:
@@ -280,16 +322,18 @@ def _analogue_for_var(analysis: pd.DataFrame, code: str,
     for h in horizons:
         res = None
         for step, bins in enumerate((ANALOGUE_QUANTILE_BINS, RELAX_BINS)):
-            days, cur_z = find_analogue_days_quantile(analysis[z_col], bins=bins)
+            days, cur_z = find_analogue_days_quantile(analysis[z_col], bins=bins, current=current_z)
             episodes = dedup_episodes(days, analysis.index, gap_trading_days=h)
             n, n_up, n_down, p10, p50, p90, years = summarize_forward(analysis, episodes, h)
             if n >= MIN_ANALOGUE_EPISODES:
                 res = AnalogueResult(base, z_col, cur_z, "quantile_slice", h,
                                      int(len(days)), n, n_up, n_down, p10, p50, p90,
-                                     years, case_badges_for(episodes, analysis.index), relax_step=step)
+                                     years, case_badges_for(episodes, analysis.index, var_code=base),
+                                     relax_step=step,
+                                     date_only_badges=date_only_case_badges(episodes, analysis.index, base))
                 break
         if res is None:
-            days, cur_z = find_analogue_days_quantile(analysis[z_col])
+            days, cur_z = find_analogue_days_quantile(analysis[z_col], current=current_z)
             res = AnalogueResult(base, z_col,
                                  cur_z if cur_z == cur_z else math.nan,
                                  "quantile_slice", h, int(len(days)), 0, 0, 0,
@@ -304,10 +348,12 @@ def build_analogue_context(
     alert_codes: list[str], top_codes: list[str],
     horizons: tuple[int, ...] = ANALOGUE_HORIZONS,
     analysis: pd.DataFrame | None = None,
+    current_z_map: dict[str, float] | None = None,
 ) -> list[AnalogueResult]:
     """경보 변수 우선 + 중요도 상위로 보충한 변수 집합의 유사국면 실측 집계.
 
     analysis 미지정 시 mart 로더 사용(실패 시 빈 목록 — 호출측 정직 강등).
+    current_z_map: {변수 코드(base): 오늘 기준 편차} — 있으면 버킷 선택의 '현재'로 사용(A-284).
     """
     levels_all: pd.DataFrame | None = None
     if analysis is None:
@@ -332,12 +378,34 @@ def build_analogue_context(
         if len(codes) >= MAX_ANALOGUE_VARS:
             break
     results: list[AnalogueResult] = []
+    cz = current_z_map or {}
     for c in codes:
-        results.extend(_analogue_for_var(analysis, c, horizons, levels_all))
+        base = str(c).split("__")[0]
+        results.extend(_analogue_for_var(analysis, c, horizons, levels_all,
+                                         current_z=cz.get(c, cz.get(base))))
     return results
 
 
 _H_LABEL = {5: "약 1주", 20: "약 1개월", 60: "약 3개월"}
+
+
+def variable_link_line(var_code: str) -> str:
+    """변수→대두유 연결 설명 한 줄(검증 3) — 온톨로지 인과 경로 기반(daily_brief 파생표 재사용). 실패 시 정직 문구."""
+    try:
+        from src.reporting.daily_brief import _driver_link_line
+        return _driver_link_line(var_code).replace("연결 근거:", "이 변수가 대두유에 닿는 경로:", 1)
+    except Exception:                                        # noqa: BLE001
+        return "이 변수가 대두유에 닿는 경로: 온톨로지 조회 불가 — 상관 기반 참고"
+
+
+def no_badge_line(rs: list[AnalogueResult]) -> str:
+    """배지가 없을 때의 정직 문구 — 날짜만 겹친 사례가 있으면 그 사실을 밝힌다(검증 3)."""
+    by_h = {r.horizon: r for r in rs}
+    r = by_h.get(20) or (rs[0] if rs else None)
+    if r is not None and r.date_only_badges:
+        names = " · ".join(badge_name(b) for b in r.date_only_badges)
+        return f"겹치는 위기 사례 없음 — 날짜상 겹친 사례({names})는 있으나 변수–사례 연결 근거가 없어 표시하지 않음"
+    return "겹치는 위기 사례 없음(변수–사례 연결 근거 없음)"
 
 
 def representative_badges(rs: list[AnalogueResult]) -> list[str]:
@@ -377,9 +445,12 @@ def render_analogue_md(results: list[AnalogueResult]) -> list[str]:
         except Exception:                                        # noqa: BLE001
             var_label = var
         lines.append(f"### {var_label} (현재 편차 {z_txt})")
+        lines.append(f"- {variable_link_line(var)}")
         for r in sorted(rs, key=lambda x: x.horizon):
             lines.append(f"- {format_result_line(r)}")
         badges = representative_badges(rs)
+        if not badges:
+            lines.append(f"- {no_badge_line(rs)}")
         if badges:
             lines.append(f"- 겹치는 위기 사례(1개월 기준·충분히 겹친 경우만): {' · '.join(badges)} "
                          f"(→ `_reference/soybean_oil_historical_crisis_analysis.md` — "
