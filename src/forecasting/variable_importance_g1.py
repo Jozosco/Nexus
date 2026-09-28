@@ -518,7 +518,10 @@ def _load_g1_feature_mart(
         base = column.removeprefix("feat_").split("__", 1)[0]
         if base in contaminated or base == G1_TARGET_COL:
             continue
-        if base.startswith("STR_KR_"):     # A-291: 한국 조달 노출도 지표 — 시카고 가격 순위 대상 아님(도착가 층 전용)
+        # A-291: 한국 수입·수출 흐름(관세청 KCS_)과 한국 구조 지표(STR_KR_)는 한국 도착가·조달 노출 지표 — 시카고 가격
+        #   20일 수익률 순위 대상이 아님. 월별 계단 계열이라 겹치는 수익률과 우연 상관이 커짐(런 #118: 팜 올레인 대베트남
+        #   무역수지가 r=+0.30으로 1위). 도착가·G2/G3 층과 브리프 표에서는 그대로 사용.
+        if base.startswith(("STR_KR_", "KCS_")):
             continue
         if pd.api.types.is_numeric_dtype(mart[column]) and mart[column].notna().mean() >= 0.60:
             predictor_columns.append(column)

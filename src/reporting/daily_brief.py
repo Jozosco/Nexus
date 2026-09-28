@@ -1896,7 +1896,7 @@ def _structural_block(frames: dict[str, pd.DataFrame], importance_df: pd.DataFra
         return ""
     return ("<h3 style='margin-top:14px'>시장·유통 구조 지표</h3>"
             "<div class='cap'>실무에서 놓치기 쉬운 구조 요인을 수치로 표시 — 백분위 = 2010년 이후 분포에서 현재 위치 · "
-            "순위 = 전체 변인 중 20거래일 뒤 시카고 가격 변화와의 관련 순위(인과 아님) · 한국 수입 구조 지표는 도착가·조달 노출 지표라 순위에서 제외</div>"
+            "순위 = 전체 변인 중 20거래일 뒤 시카고 가격 변화와의 관련 순위(인과 아님) · 한국 수입 구조·관세청 흐름 지표는 도착가·조달 노출 지표라 시카고 가격 순위에서 제외</div>"
             "<div class='tablewrap'><table style='min-width:0'><thead><tr><th>지표</th><th>최근</th><th>1년 전</th>"
             "<th>백분위</th><th>순위·상관</th></tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>")
 
