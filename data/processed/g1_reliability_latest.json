@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-28T02:07:22+00:00",
+ "generated_at": "2026-09-28T02:49:00+00:00",
  "mode": "full",
  "window": [
   "2010-01-01",
@@ -17,7 +17,7 @@
   },
   "R2_asof_accuracy": {
    "status": "산출",
-   "n_features": 2500,
+   "n_features": 2502,
    "revision_contaminated": 98,
    "asof_rule": "모델의 t일 입력 = available_at <= t 인 최근값 (CLAUDE.md §1)",
    "window": {
@@ -28,22 +28,22 @@
   },
   "R3_alert_consistency": {
    "status": "산출",
-   "stamp_date": "2026-09-27",
+   "stamp_date": "2026-09-28",
    "stamp_alerts": 1,
    "report_alerts": 1,
    "consistent": true
   },
   "R4_publication_integrity": {
    "status": "산출",
-   "rows": 27,
+   "rows": 28,
    "from": "2026-08-26",
-   "to": "2026-09-27",
+   "to": "2026-09-28",
    "verdicts": {
-    "⚠️": 15,
+    "⚠️": 16,
     "✅": 10,
     "🔴": 2
    },
-   "gate_pass_streak_runs": 16,
+   "gate_pass_streak_runs": 17,
    "contaminated_note": "8/26~9/1 6행은 경보 열 오염(A-245) — 사실 기록 유지"
   },
   "R5_collection_channels": {
@@ -104,16 +104,16 @@
  },
  "ledger": {
   "status": "산출",
-  "rows": 12,
+  "rows": 13,
   "from": "2026-09-09",
-  "to": "2026-09-27",
+  "to": "2026-09-28",
   "matured": {
    "5": 0,
    "20": 0,
    "60": 0
   },
   "by_variable": {
-   "ENSO_ONI": 12
+   "ENSO_ONI": 13
   },
   "note": "성숙 경보 8회 미만은 사후 성적 보류(실발행 원장은 2026-09-14 개설)"
  },
@@ -350,6 +350,6 @@
    }
   }
  },
- "historical_asof": "2026-09-28T02:07:22+00:00",
+ "historical_asof": "2026-09-28T02:49:00+00:00",
  "ledger_matured_now": 0
 }
