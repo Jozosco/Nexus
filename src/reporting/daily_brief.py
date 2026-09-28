@@ -81,6 +81,7 @@ VAR_LABELS: dict[str, str] = {
     "TE_RAPESEED": "유채씨 선물(유럽)", "TE_CANOLA": "카놀라 선물(캐나다)", "TE_CORN": "옥수수 선물(시카고)",
     "TE_WHEAT": "밀 선물(시카고)", "TE_SUGAR": "설탕 선물", "TE_CRB_INDEX": "CRB 상품지수", "TE_GSCI": "GSCI 상품지수",
     "WASDE_US_SBO_EXPORTS": "USDA 미국 대두유 수출 전망(WASDE)", "WASDE_USDOM_SBO_EXPORTS": "USDA 미국 대두유 수출 전망(WASDE)",
+    "WASDE_USDOM_SBO_FOOD_USE": "USDA 미국 대두유 식품·산업용 사용 전망(WASDE)", "WASDE_USDOM_SBO_BIODIESEL_USE": "USDA 미국 대두유 바이오연료 사용 전망(WASDE)",
     "WASDE_SBO_EXPORTS": "USDA 세계 대두유 수출 전망(WASDE)",
     "KRW_USD": "원/달러 환율", "CBOT_BO_ROLLDAY": "대두유 선물 만기 교체일",
 }
@@ -267,7 +268,7 @@ _KCS_FLOW_KO = {"IMP": "수입", "EXP": "수출", "BAL": "무역수지"}
 _KCS_UNIT_KO = {"USD": "금액(달러)", "KG": "물량(kg)"}
 _ICE_MARKET_KO = {"EU": "유럽", "US": "미국"}
 _ICE_CONTRACT_KO = {"FUTURES": "선물", "OPTIONS": "옵션", "FO": "선물·옵션"}
-_ICE_PRODUCT_KO = {"OIL_PRODUCTS": "석유제품", "BRENT": "브렌트유", "GASOIL": "경유", "WTI": "WTI 원유", "NATURAL_GAS": "천연가스",
+_ICE_PRODUCT_KO = {"OIL_PRODUCTS": "석유제품", "CURRENCIES": "통화", "BRENT": "브렌트유", "GASOIL": "경유", "WTI": "WTI 원유", "NATURAL_GAS": "천연가스",
                    "SUGAR": "설탕", "CANOLA": "카놀라", "COFFEE": "커피", "COCOA": "코코아", "COTTON": "면화", "AGRICULTURE": "농산물",
                    "ENERGY": "에너지", "TOTAL": "전체", "CRUDE_OIL": "원유", "EMISSIONS": "탄소배출권", "POWER": "전력"}
 
