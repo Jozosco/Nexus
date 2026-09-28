@@ -37,6 +37,7 @@ from src.pipeline.asof import attach_asof  # noqa: E402
 TE_ROOT   = Path("data/raw/Trading Economics/Markets/Commodities")
 RAW_ROOT  = Path("data/raw")
 OUT_PATH  = Path("data/raw/te_commodities_historical.parquet")
+CORRECTIONS_PATH = Path("config/te_price_corrections.yaml")   # A-290: 공식 정산가 대조 정정(원본 xlsx 불변)
 
 # 품목 → 카테고리 (폴더 미존재 시 파일명 기반 분류)
 _AGRI = {"canola", "palm oil", "rapeseed", "soybeans", "sunflower oil"}
@@ -252,6 +253,51 @@ def parse_te_file(path: Path) -> pd.DataFrame:
     return out.sort_values("price_date").reset_index(drop=True)
 
 
+def apply_corrections(df: pd.DataFrame, path: Path = CORRECTIONS_PATH) -> pd.DataFrame:
+    """공식 정산가 대조 정정 오버레이 적용 (A-290). 원본 xlsx는 건드리지 않는다.
+
+    replace: value 교체 + 시가·고가·저가 결측화(다른 월물의 봉이라 쓸 수 없음) · drop: 행 제거.
+    원본 값이 기대(te_value)와 다르면 원본이 이미 바뀐 것이므로 적용하지 않고 경고한다.
+    """
+    import yaml
+    if not path.exists():
+        return df
+    spec = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    df = df.copy()
+    for code, items in spec.items():
+        for it in items or []:
+            mask = (df["indicator_code"] == code) & (df["price_date"] == pd.Timestamp(it["date"]))
+            if not mask.any():
+                print(f"  [경고] 정정 대상 없음: {code} {it['date']}")
+                continue
+            cur = float(df.loc[mask, "value"].iloc[0])
+            if abs(cur - float(it["te_value"])) > 0.5:
+                print(f"  [경고] 정정 보류: {code} {it['date']} 원본 {cur} ≠ 기대 {it['te_value']} — 원본 갱신 여부 확인")
+                continue
+            if it["action"] == "drop":
+                df = df[~mask]
+            else:
+                df.loc[mask, "value"] = float(it["value"])
+                df.loc[mask, ["open", "high", "low"]] = pd.NA
+                df.loc[mask, "source_name"] = "Bursa_settlement_correction"
+            print(f"  [정정] {code} {it['date']}: {cur:,.0f} → "
+                  f"{'결측' if it['action'] == 'drop' else format(float(it['value']), ',.0f')} ({it['label']})")
+    return df
+
+
+def flag_reversal_spikes(df: pd.DataFrame, code: str = "TE_PALM_OIL",
+                         days: int = 120) -> list[str]:
+    """최근 구간에서 '급변 후 같은 크기로 되돌림'(월물 혼입 의심) 일자를 찾는다 — 정정 목록에 없으면 경고만(A-290)."""
+    import numpy as np
+    s = df[df["indicator_code"] == code].set_index("price_date")["value"].sort_index().tail(days + 60)
+    r = np.log(s.astype(float)).diff()
+    sd = r.rolling(60, min_periods=20).std().shift(1)
+    out = [str(d.date()) for i, d in enumerate(r.index[:-1])
+           if pd.notna(sd.iloc[i]) and abs(r.iloc[i]) > 3 * sd.iloc[i]
+           and abs(r.iloc[i + 1]) > 2.5 * sd.iloc[i] and np.sign(r.iloc[i]) != np.sign(r.iloc[i + 1])]
+    return out[-10:]
+
+
 def run() -> None:
     files = _iter_te_files()
     if not files:
@@ -270,7 +316,10 @@ def run() -> None:
         print("[경고] 정형화된 데이터 없음.")
         return
 
-    combined = pd.concat(frames, ignore_index=True)
+    combined = apply_corrections(pd.concat(frames, ignore_index=True))
+    suspects = flag_reversal_spikes(combined)
+    if suspects:
+        print(f"  [경고] 팜유 급변·되돌림 의심일(공식 정산가 대조 필요 — config/te_price_corrections.yaml): {suspects}")
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
     combined = attach_asof(combined, source="TE_")

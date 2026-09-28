@@ -1,0 +1,34 @@
+# Trading Economics 수동 업로드본 가격 정정 오버레이 (A-290 · 2026-09-28 승인자 지시)
+# 원본 xlsx는 수정하지 않는다 — scripts/ingest_te_xlsx.py가 정형화 단계에서 이 목록을 덮어쓴다.
+# 기준: 부르사 말레이시아 파생상품거래소 팜유 선물(FCPO) **3번째 월물(벤치마크) 정산가** — TE 팜유는
+#       평소 이 값과 링깃 단위까지 일치함(8/3~8/27 대조). 불일치는 월물 교체 지연·만기 월물 혼입뿐.
+# action: replace(검증된 정산가로 교체) | drop(값이 다른 월물로 보이나 정답 미확인 — 결측 처리)
+# label: CONFIRMED(당일 공식 정산가 인용) / INFERENCE(전후일 변동폭에서 역산하거나 패턴으로 판정)
+TE_PALM_OIL:
+  - date: 2026-08-17
+    te_value: 4717
+    action: replace
+    value: 4819
+    basis: "2026년 11월물(벤치마크) — TE는 10월물 정산가를 유지(월물 교체 지연)"
+    source: "Reuters/Business Recorder 2026-08-17 'benchmark ... November delivery ... 4,819 ringgit ... at close'"
+    label: CONFIRMED
+  - date: 2026-08-18
+    te_value: 4754
+    action: replace
+    value: 4860
+    basis: "11월물 정산가 = 8/19 정산가 4,893 − 전일 대비 +33 (Bernama 8/19) — TE 4,754는 10월물"
+    source: "Bernama 2026-08-19 'November 2026 increased RM33 to RM4,893' · 'October 2026 gained RM40 to RM4,794'"
+    label: INFERENCE
+  - date: 2026-08-28
+    te_value: 4628
+    action: replace
+    value: 4894
+    basis: "11월물 정산가 — TE는 9월물(만기 월물) 정산가 4,628을 기록(8/31 공휴일 전 월말 혼입)"
+    source: "Bernama 2026-08-28 'September 2026 rose RM35 to RM4,628 ... November 2026 advanced RM78 to RM4,894'"
+    label: CONFIRMED
+  - date: 2026-09-02
+    te_value: 4648
+    action: drop
+    basis: "전후일 4,973 → 4,648 → 4,904로 하루 −6.8%·+5.4% 왕복 — 8/28과 같은 만기 월물 혼입 패턴. 공식 정산가 미확인"
+    source: "검증 미완(웹 검색 한도 소진) — 확인 요청 목록"
+    label: INFERENCE

@@ -55,8 +55,10 @@ REQUIRED_FEATURES: list[tuple[str, list[str], str]] = [
      "Data Integration · connector=economic"),
     ("⑥ ENSO ONI", ["ONI", "ENSO_ONI"], "Data Integration · connector=climate"),
     ("⑦ 대두 압착량", ["WASDE_SOY_CRUSH", "PSD_SOY_CRUSH"], "수동 업로드 — 확보됨"),
+    # A-291: 조유 폴더 2017~ 파일 오염(내용=1507904020) 차단 후 조유 계열은 2010~16만 남음 — 정제유 코드가
+    #   A-121 이후 _4020/_4050으로 분리됐는데 후보명이 옛 이름이라 오염 계열로만 통과하던 것을 바로잡음.
     ("⑧ GATS 미국→한국 대두유 수출", ["GATS_US_SBO_EXPORT_KOREA",
-                                      "GATS_US_RSBO_EXPORT_KOREA"],
+                                      "GATS_US_RSBO_4020_EXPORT_KOREA", "GATS_US_RSBO_4050_EXPORT_KOREA"],
      "수동 업로드 — 확보됨"),
 ]
 TARGET_TIME_BASES = {"CME_SESSION", "EXCHANGE_SETTLEMENT"}

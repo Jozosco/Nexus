@@ -432,6 +432,8 @@ FILE_PATTERNS: dict[str, str] = {
     "enso_oni_historical":   "기후(ENSO ONI 1950~ 업로드 — NOAA PSL)",
     # A-274: AIS 해협 탱커 파케이(ais_strait_risk_*) — 미등록이라 해상 위험 카드 '선박 위치 미수집'이 구조적이었음
     "ais_strait_risk":       "해협 탱커 통항(AIS·검색 요약)",
+    # A-291: 시장·유통 구조 지표(대두유–팜유 차이·BOHO·기름 가치 비중·바이오연료 비중·한국 수입 원산지)
+    "structural_indicators": "시장·유통 구조 지표(파생 — src/features/structural_indicators.py)",
 }
 
 
@@ -515,6 +517,8 @@ def _load_g1_feature_mart(
             continue
         base = column.removeprefix("feat_").split("__", 1)[0]
         if base in contaminated or base == G1_TARGET_COL:
+            continue
+        if base.startswith("STR_KR_"):     # A-291: 한국 조달 노출도 지표 — 시카고 가격 순위 대상 아님(도착가 층 전용)
             continue
         if pd.api.types.is_numeric_dtype(mart[column]) and mart[column].notna().mean() >= 0.60:
             predictor_columns.append(column)

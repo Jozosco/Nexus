@@ -1,0 +1,21 @@
+dataset: structural_indicators
+source_connector: src/features/structural_indicators.py (원시 parquet → 파생, 2026-09-28 · A-291)
+output_path: data/raw/structural_indicators.parquet
+description: "대두유 시장·유통 구조 지표 8종(대두유–팜유 차이·BOHO·기름 가치 비중·미국 바이오연료 비중·한국 수입 원산지 집중도·베트남 비중·도착 단가 프리미엄·수입 압착 마진)"
+note: >
+  파생 지표 — as-of는 입력 관측의 available_at 최댓값(환율은 그 날짜에 이미 공표된 값만). 월별 지표는 기간 종료 전
+  공표 불가(available_at ≥ 월말). 결정적 재생성 산출물이라 커밋하지 않음(CI Readiness·G1 잡에서 생성).
+columns:
+  - {name: indicator_code, dtype: object, nullable: false, description: "STR_* 코드"}
+  - {name: price_date, dtype: "datetime64[ns]", nullable: false, description: "관측일(일별) 또는 대상월 1일(월별)"}
+  - {name: value, dtype: float64, nullable: false, description: "지표 값(unit 참조)"}
+  - {name: unit, dtype: object, nullable: false, description: "USD/MT | USD/gal | ratio | 0-1"}
+  - {name: note, dtype: object, nullable: false, description: "산식"}
+  - {name: source_name, dtype: object, nullable: false, description: "NEXUS_STRUCTURAL"}
+  - {name: ingested_at, dtype: "datetime64[ns, UTC]", nullable: false, description: "산출 시각"}
+  - {name: event_time, dtype: "datetime64[ns]", nullable: false, description: "= price_date"}
+  - {name: period_end, dtype: "datetime64[ns]", nullable: false, description: "일별=관측일 · 월별=월말"}
+  - {name: release_time, dtype: "datetime64[ns]", nullable: false, description: "= available_at"}
+  - {name: available_at, dtype: "datetime64[ns]", nullable: false, description: "입력 available_at 최댓값(≥ period_end)"}
+  - {name: source_vintage, dtype: object, nullable: true, description: "null"}
+  - {name: vintage_known, dtype: bool, nullable: false, description: "False"}

@@ -107,6 +107,18 @@ def parse_quantity_file(xlsx_path: Path, hs_prefix: str) -> pd.DataFrame:
     band_row  = max(sub_row - 1, 0)
     first_data = sub_row + 1
 
+    # A-291: 폴더(HS)와 파일 내용의 품목 코드가 다르면 적재하지 않는다 — 1507.10.0000(조유) 폴더의
+    #   2017~2026 수출 파일이 실제로는 1507904020(1회 정제유) 내용이었다(조유 계열 오염·M-015 착시 원인).
+    folder_hs = re.sub(r"\D", "", xlsx_path.parent.name)[:6]
+    pc_col = next((i for i in range(raw.shape[1])
+                   if str(raw.iat[sub_row, i]).strip().lower() == "product code"), None)
+    if len(folder_hs) == 6 and pc_col is not None:
+        codes = {c for c in (re.sub(r"\D", "", str(v)) for v in raw.iloc[first_data:, pc_col]) if len(c) >= 6}   # HS 코드만(구 포맷 품목군 코드 0226 제외)
+        if codes and not any(c.startswith(folder_hs) for c in codes):
+            print(f"  [경고] 품목 코드 불일치로 건너뜀: {xlsx_path.parent.name}/{xlsx_path.name} — 파일 내용 {sorted(codes)[:2]}"
+                  f" (재다운로드 필요)")
+            return pd.DataFrame()
+
     band = raw.iloc[band_row].astype(str).where(lambda s: s != "nan").ffill()
     sub  = raw.iloc[sub_row].astype(str)
 

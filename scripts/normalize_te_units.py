@@ -32,9 +32,9 @@ OUT_PATH   = Path("data/raw/te_commodities_usd_mt.parquet")
 # FX 시리즈 의미: DEXUSEU=USD per EUR(곱), DEXCAUS=CAD per USD(나눗셈),
 #                 DEXINUS=INR per USD(나눗셈), DEXMAUS=MYR per USD(나눗셈)
 RULES: dict[str, tuple[float, str | None, str]] = {
-    "Soybeans":      (36.7437, None, "none"),          # USD/bu → USD/MT
-    "Wheat":         (36.7437, None, "none"),
-    "Corn":          (39.3683, None, "none"),
+    "Soybeans":      (0.367437, None, "none"),         # A-291: TE 값은 ¢/bu(라벨만 USD) → ÷100 × 36.7437
+    "Wheat":         (0.367437, None, "none"),         # ¢/bu
+    "Corn":          (0.393683, None, "none"),         # ¢/bu
     "Sugar":         (22.0462, None, "none"),          # USc/lb → USD/MT
     "Palm Oil":      (1.0, "DEXMAUS", "divide"),       # MYR/MT ÷ (MYR per USD)
     "Rapeseed":      (1.0, "DEXUSEU", "multiply"),     # EUR/ton × (USD per EUR)

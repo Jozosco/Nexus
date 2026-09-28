@@ -790,6 +790,7 @@ jobs:
           python scripts/ingest_customs_gw_uploads.py   # A-247: 관세청 GW 업로드본 172파일 → 롱포맷(일별 편입)
           python scripts/ingest_fx_brl_usd_xlsx.py       # A-266: BRL/USD 15개년 업로드(준비도 ⑤)
           python scripts/ingest_enso_oni_xlsx.py         # A-266: ENSO ONI 1950~ 업로드(준비도 ⑥)
+          python -m src.features.structural_indicators || echo "::warning::구조 지표 산출 실패(비치명)"   # A-291: 시장·유통 구조 지표(파생) — mart·변인 순위 편입
       - name: Run model readiness gate
         run: python scripts/data_readiness.py
       - name: Build and independently verify feature mart
@@ -856,6 +857,7 @@ jobs:
                    ingest_nasa_power_xlsx ingest_customs_gw_uploads ingest_fx_brl_usd_xlsx ingest_enso_oni_xlsx; do
             python "scripts/$s.py" > "/tmp/$s.log" 2>&1 && echo "재구성: $s" || { echo "::warning::$s 실패(비치명) — $(tail -n 2 /tmp/$s.log)"; }
           done
+          python -m src.features.structural_indicators || echo "::warning::구조 지표 산출 실패(비치명) — 브리프 구조 지표 표 생략"   # A-291
       - name: Restore feature mart to data/gold (A-178 — merge 다운로드 착지 보정)
         # Readiness 잡이 만든 mart(gold)는 아티팩트 내부 경로가 data/gold/*라서
         # merge 다운로드 시 data/raw/data/gold/에 착지 — G1 로더 기대 경로로 복원.

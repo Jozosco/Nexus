@@ -379,7 +379,9 @@ def derive_features(wide: pd.DataFrame, freq: dict[str, float],
                 cols[f"{code}__ret{h}"] = np.log(pos / pos.shift(h))
             win = 90
         else:                                          # 월·연간 계열 — 전년동기 대비가 의미
-            cols[f"{code}__chg12m"] = s.pct_change(252, fill_method=None)
+            # A-291: 0을 지나는 계열(가격 차이·도착 단가 차이)은 변화율이 무의미 — 12개월 차이로 대체
+            cols[f"{code}__chg12m"] = (s.diff(252) if (s <= 0).any()
+                                       else s.pct_change(252, fill_method=None))
             win = 252
 
         # 롤링 z — 전체표본 표준화와 달리 t 이전 창만 쓰므로 fold 재적합이 필요 없다

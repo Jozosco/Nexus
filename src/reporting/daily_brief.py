@@ -35,6 +35,12 @@ LEADTIME_DAYS = 50                # CIF 한국 리드타임 상단(40~50일) 보
 
 # 변인 코드 → 한국어 표시명 (미등재 코드는 원 코드 노출)
 VAR_LABELS: dict[str, str] = {
+    # A-291: 시장·유통 구조 지표(src/features/structural_indicators.py)
+    "STR_SBO_PALM_SPREAD": "대두유–팜유 가격 차이($/톤)", "STR_BOHO_SPREAD": "대두유–난방유 가격 차이(바이오디젤 원료 경제성, $/갤런)",
+    "STR_OIL_VALUE_SHARE": "대두 가격 중 대두유 가치 비중", "STR_US_SBO_BIOFUEL_SHARE": "미국 대두유 중 바이오연료 사용 비중",
+    "STR_KR_CRUDE_SBO_ORIGIN_HHI": "한국 조대두유 수입 원산지 집중도", "STR_KR_CRUDE_SBO_VN_SHARE": "한국 조대두유 수입 중 베트남 비중",
+    "STR_KR_CRUDE_SBO_CIF_PREMIUM": "한국 조대두유 도착 단가 − 시카고 선물($/톤)",
+    "STR_KR_IMPORT_CRUSH_MARGIN": "한국 수입 원료 기준 압착 마진($/톤 대두)",
     "CBOT_BO_CLOSE": "CBOT 대두유(ZL) 종가",
     "TE_BDI": "BDI 해상운임지수", "BDI": "BDI 해상운임지수", "BDI_ZSCORE": "BDI 해상운임지수",
     "DEXBZUS": "브라질 헤알 환율(BRL/USD)", "DEXCHUS": "위안 환율(CNY/USD)",
@@ -464,6 +470,15 @@ _DRIVER_ALIAS: dict[str, dict[str, list[str]]] = {
     "WASDE_US_SBO_EXPORTS": {"kw": ["wasde", "usda", "soybean oil export", "soyoil export", "export sales", "renewable diesel",
                                     "biofuel", "대두유 수출", "재생디젤", "수출 판매"], "edges": ["CE-022", "CE-001"]},
     "WASDE": {"kw": ["wasde", "usda", "stocks", "재고", "수급"], "edges": ["CE-008"]},
+    "STR_SBO_PALM_SPREAD": {"kw": ["palm oil", "soyoil", "soybean oil", "spread", "discount", "premium", "팜유", "가격 차이"],
+                            "edges": ["CE-015"]},
+    "STR_BOHO_SPREAD": {"kw": ["biodiesel", "renewable diesel", "heating oil", "diesel", "rin", "boho", "바이오디젤", "경유"],
+                        "edges": ["CE-020"]},
+    "STR_OIL_VALUE_SHARE": {"kw": ["crush", "oil share", "nopa", "soybean meal", "압착", "대두박"], "edges": ["CE-022"]},
+    "STR_US_SBO_BIOFUEL_SHARE": {"kw": ["rvo", "rfs", "45z", "biofuel", "renewable diesel", "small refinery", "바이오연료"],
+                                 "edges": ["CE-022"]},
+    "STR_KR": {"kw": ["vietnam soybean oil", "korea import", "soybean oil import", "crude soybean oil", "베트남", "대두유 수입", "도착가"],
+               "edges": ["CE-024", "CE-022"]},
     "TE_PALM_OIL": {"kw": ["palm", "mpob", "팜유", "올레인", "indonesia", "malaysia", "인도네시아", "말레이시아"],
                     "edges": ["CE-015", "CE-002"]},
     "CPO": {"kw": ["palm", "mpob", "팜유"], "edges": ["CE-015", "CE-002"]},
@@ -600,6 +615,9 @@ def _driver_edges(var_code: str) -> list[dict]:
 # A-289: 같은 경로를 재는 변인 묶음 — 난방유·휘발유·원유는 일간 상관 0.73~0.80(2025-08~2026-08 실측)으로
 #   사실상 같은 에너지 경로. 순위에서 두 번째부터는 '앞 순위와 같은 경로'로 묶고 기사·사례를 반복하지 않는다.
 _CHANNEL_GROUPS: list[tuple[str, tuple[str, ...]]] = [
+    ("바이오연료 경제성(구조)", ("STR_BOHO", "STR_OIL_VALUE", "STR_US_SBO_BIOFUEL")),   # A-291
+    ("대두유–팜유 가격 차이(구조)", ("STR_SBO_PALM",)),
+    ("한국 수입 구조", ("STR_KR_",)),
     ("에너지(경유·원유)", ("TE_HEATING_OIL", "TE_GASOLINE", "TE_BRENT", "TE_WTI", "TE_NAPHTHA", "TE_ETHANOL", "ICE_EU_OIL_PRODUCTS",
                            "ICE_EU_BRENT", "ICE_EU_GASOIL", "HEATING_OIL")),
     ("경쟁 식물성유", ("TE_PALM_OIL", "CPO", "TE_CANOLA", "TE_RAPESEED", "TE_SUNFLOWER_OIL")),
@@ -1842,6 +1860,47 @@ def _geo_cards_html(signals: pd.DataFrame, seen_titles: set[str] | None = None) 
     return "".join(cards)
 
 
+_STRUCTURAL_CODES = ["STR_SBO_PALM_SPREAD", "STR_BOHO_SPREAD", "STR_OIL_VALUE_SHARE", "STR_US_SBO_BIOFUEL_SHARE",
+                     "STR_KR_CRUDE_SBO_CIF_PREMIUM", "STR_KR_IMPORT_CRUSH_MARGIN", "STR_KR_CRUDE_SBO_ORIGIN_HHI",
+                     "STR_KR_CRUDE_SBO_VN_SHARE"]
+
+
+def _structural_block(frames: dict[str, pd.DataFrame], importance_df: pd.DataFrame) -> str:
+    """A-291: 시장·유통 구조 지표 표 — 흔한 동인(에너지)에 가려 순위 상위 5개에 안 들어도 매일 보이게 한다.
+
+    열: 최근값 · 1년 전 · 2010년 이후 분포 내 위치(백분위) · 전체 변인 중 순위와 20거래일 뒤 가격 변화와의 상관.
+    """
+    names = importance_df["변수"].astype(str).str.split("__").str[0].tolist() if not importance_df.empty else []
+    rows = []
+    for code in _STRUCTURAL_CODES:
+        s = _dated_series(frames, [code])
+        if s.empty:
+            continue
+        s = s.set_index("price_date")["value"]
+        last, d = float(s.iloc[-1]), s.index[-1]
+        prev = s[s.index <= d - pd.Timedelta(days=365)]
+        pct = float((s <= last).mean() * 100)
+        try:
+            k = names.index(code)
+            r = importance_df.iloc[k]["피어슨_r"]
+            rank = f"{k + 1:,}위/{len(names):,} · r {r:+.2f}"
+        except ValueError:
+            rank = ("한국 도착가 지표 — 시카고 가격 순위 대상 아님" if code.startswith("STR_KR_")
+                    else "순위 산출 제외(분석 기간 표본·커버리지 기준 미달)")
+        fmt = "{:,.0f}" if abs(last) >= 100 else "{:.2f}"
+        rows.append(f"<tr><td>{_esc(_label_ko(code))}</td><td class='num'>{fmt.format(last)}"
+                    f" <span class='src'>{d:%m-%d}</span></td>"
+                    f"<td class='num'>{fmt.format(float(prev.iloc[-1])) if len(prev) else '—'}</td>"
+                    f"<td class='num'>{pct:.0f}%</td><td class='num'>{_esc(rank)}</td></tr>")
+    if not rows:
+        return ""
+    return ("<h3 style='margin-top:14px'>시장·유통 구조 지표</h3>"
+            "<div class='cap'>실무에서 놓치기 쉬운 구조 요인을 수치로 표시 — 백분위 = 2010년 이후 분포에서 현재 위치 · "
+            "순위 = 전체 변인 중 20거래일 뒤 시카고 가격 변화와의 관련 순위(인과 아님) · 한국 수입 구조 지표는 도착가·조달 노출 지표라 순위에서 제외</div>"
+            "<div class='tablewrap'><table style='min-width:0'><thead><tr><th>지표</th><th>최근</th><th>1년 전</th>"
+            "<th>백분위</th><th>순위·상관</th></tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>")
+
+
 def build_daily_brief(
     frames: dict[str, pd.DataFrame],
     importance_df: pd.DataFrame,
@@ -2034,6 +2093,7 @@ def build_daily_brief(
                         "연결 근거 = 용어·인과 사전에 등재된 경로(사전의 검증 상태 표기 — 당일 인과 식별 아님)")
     drivers_html = ("".join(drv_rows) if drv_rows
                     else '<p class="cap">변인 중요도 산출 결과가 없습니다 — 미수집.</p>')
+    drivers_html += _structural_block(frames, importance_df)          # A-291
 
     # ── 차트 ──
     if kpi:

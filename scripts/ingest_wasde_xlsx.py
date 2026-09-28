@@ -76,6 +76,9 @@ _ATTR_MAP = {
     "Area Planted":      "AREA_PLANTED",
     "Avg. Farm Price":   "FARM_PRICE",
     "For Methyl Ester":  "BIODIESEL_USE",
+    "Biodiesel":         "BIODIESEL_USE",   # A-291: 2011~ 명칭 — 구 매핑은 2010~11만 적재(이후 전량 누락)
+    "Biofuel":           "BIODIESEL_USE",   # A-291: 2024/25~ 명칭(재생디젤 포함) — 계열 연속성 위해 같은 코드
+    "Food, Feed & other Industrial": "FOOD_USE",
     "Ethanol for Fuel":  "ETHANOL_USE",
     "Food Seed & Industrial":  "FSI",
     "Food, Seed & Industrial": "FSI",
@@ -295,7 +298,13 @@ def run(wasde_dir: Path = WASDE_DIR, output_dir: Path = OUTPUT_DIR) -> None:
     out_path = output_dir / "wasde_historical.parquet"
     output_dir.mkdir(parents=True, exist_ok=True)
     # D-023: 저장 직전 as-of 5필드 부여 — 규칙은 src/pipeline/asof.py 단일 관리
-    combined = attach_asof(combined, source="WASDE_")
+    # A-291: 발표일 실측 — note의 '… / Nov 14'(보고서 시트명)가 실제 발표일. 고정 12일 규칙은 11/14·5/13 회차에서
+    #   발표 전 가시화(1~2일 누수)를 만들었다. 시트명이 없는 행만 규칙(12일)으로 둔다.
+    md = combined["note"].astype(str).str.extract(r"/\s*([A-Za-z]{3})\s+(\d{1,2})\s*$")
+    pdt = pd.to_datetime(combined["price_date"], errors="coerce")
+    rel = pd.to_datetime(pdt.dt.year.astype("Int64").astype(str) + "-" + md[0] + "-" + md[1],
+                         format="%Y-%b-%d", errors="coerce")
+    combined = attach_asof(combined, source="WASDE_", release_series=rel.where(rel.notna()))
     combined.to_parquet(out_path, index=False)
 
     print(f"\n[완료] {len(combined)}건 → {out_path}")
