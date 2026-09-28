@@ -57,3 +57,6 @@ htmlcov/
 
 # Feature mart — data/raw에서 결정적으로 재생성되는 산출물(계약 yaml·리포트만 추적)
 data/gold/*.parquet
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

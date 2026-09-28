@@ -71,7 +71,6 @@ feat:     add LSTM price band module (G2)
 fix:      correct T+2 FX settlement offset in pipeline
 refactor: extract regime detector into src/risk/
 data:     update soybean oil prices to Q1-2026
-docs:     revise CLAUDE.md session protocol
 ```
 
 ---
@@ -86,6 +85,7 @@ docs:     revise CLAUDE.md session protocol
 | Any `src/` module | `.claude/rules/libraries.md` | Approved libraries with version pins (Python + R) |
 | Any test file | `.claude/rules/testing.md` | pytest, great_expectations, time-aware split protocol |
 | `docs/research_desk/references/` (공유 PDF) | `.claude/rules/references.md` | PDF→Markdown 변환·요약 절차 (PDF 직접 판독 금지) |
+| **모든 작업** (도구 선택) | `.claude/rules/tooling.md` | 코딩=Ponytail · 아키텍처·워크플로우 도식=drawio-skill · 비정형 자료=Graft (승인자 지시 2026-09-28) |
 
 ---
 

@@ -102,3 +102,13 @@ Real-time market research           → Perplexity Pro (sonar-pro)
 Large document analysis              → Claude Sonnet 5 (Gemini 배제 — C-012; P1-05/06 secondary=gemini-3.1-pro는 C-010 예외)
 PDF/Excel extraction                → C-04 (claude-sonnet-5)
 ```
+
+---
+
+## 외부 공개 도구 스킬 (승인자 지시 2026-09-28 — `.claude/rules/tooling.md`)
+
+| 작업 유형 | 스킬 | 폴더 | 출처 |
+|---|---|---|---|
+| 코딩 | `ponytail` | `ponytail/` | DietrichGebert/ponytail (MIT) |
+| 아키텍처·워크플로우 도식 | `drawio-skill` | `drawio-skill/` | Agents365-ai/drawio-skill (MIT) |
+| 비정형 자료 작업의 코드 탐색 | `graft` | `graft/` (graft init 생성) | nanonets/Graft (MIT) |
