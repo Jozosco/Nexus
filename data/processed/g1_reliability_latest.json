@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-09-27T22:40:06+00:00",
- "mode": "alert",
+ "generated_at": "2026-09-28T02:07:22+00:00",
+ "mode": "full",
  "window": [
   "2010-01-01",
   "2025-12-31"
@@ -17,7 +17,7 @@
   },
   "R2_asof_accuracy": {
    "status": "산출",
-   "n_features": 2493,
+   "n_features": 2500,
    "revision_contaminated": 98,
    "asof_rule": "모델의 t일 입력 = available_at <= t 인 최근값 (CLAUDE.md §1)",
    "window": {
@@ -48,18 +48,18 @@
   },
   "R5_collection_channels": {
    "status": "산출",
-   "rows": 455,
+   "rows": 469,
    "indicators": 30,
    "from": "2026-08-17",
-   "to": "2026-09-27",
-   "bday_arrival_rate": 0.933,
+   "to": "2026-09-28",
+   "bday_arrival_rate": 0.935,
    "by_category": {
-    "정책 뉴스": 136,
-    "지정학 이벤트": 132,
+    "정책 뉴스": 140,
+    "지정학 이벤트": 136,
     "전문 매체": 91,
-    "지정학 위험": 44,
-    "GeoIntel 복합": 38,
-    "지정학 동향": 12,
+    "지정학 위험": 46,
+    "GeoIntel 복합": 40,
+    "지정학 동향": 14,
     "운임(실시간)": 2
    },
    "media_channel_winners": {
@@ -97,7 +97,7 @@
    {
     "유형": "비정형(정책·지정학·매체)",
     "과거 규칙": "수집 시점 가용 · 마감 후 수집분은 +1일",
-    "실시간 관측": "아카이브 영업일 도달률 0.933",
+    "실시간 관측": "아카이브 영업일 도달률 0.935",
     "판정": "일치"
    }
   ]
@@ -117,6 +117,8 @@
   },
   "note": "성숙 경보 8회 미만은 사후 성적 보류(실발행 원장은 2026-09-14 개설)"
  },
+ "basis": "진단(부분) — 이력 종가·수동 업로드 26지표",
+ "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv",
  "historical": {
   "H1_rank_stability": {
    "status": "산출",
@@ -348,7 +350,6 @@
    }
   }
  },
- "historical_asof": "2026-09-27T13:03:55+00:00",
- "basis": "진단(부분) — 이력 종가·수동 업로드 26지표",
- "source": "data/raw/Databento/GLBX.MDP3/ZL_ohlcv-1d_2010-06-06_2026-08-12.csv"
+ "historical_asof": "2026-09-28T02:07:22+00:00",
+ "ledger_matured_now": 0
 }
